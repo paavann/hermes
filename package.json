@@ -24,6 +24,7 @@
     "@nx/vitest": "23.1.0",
     "@nx/web": "23.1.0",
     "@nx/workspace": "23.1.0",
+    "@nxlv/python": "^22.2.2",
     "@playwright/test": "^1.37.0",
     "@react-router/dev": "^7.14.2",
     "@swc/cli": "~0.8.1",

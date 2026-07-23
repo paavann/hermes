@@ -74,6 +74,12 @@
       "options": {
         "targetName": "e2e"
       }
+    },
+    {
+      "plugin": "@nxlv/python",
+      "options": {
+        "packageManager": "uv"
+      }
     }
   ],
   "targetDefaults": {
