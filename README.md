@@ -1,101 +1,84 @@
 # Hermes
 
-<a alt="Nx logo" href="https://nx.dev" target="_blank" rel="noreferrer"><img src="https://raw.githubusercontent.com/nrwl/nx/master/images/nx-logo.png" width="45"></a>
+Hermes is a full-stack monorepo managed with [Nx](https://nx.dev/). It features a modern React frontend and a robust FastAPI backend.
 
-✨ Your new, shiny [Nx workspace](https://nx.dev) is ready ✨.
+## 🏗 Project Structure
 
-[Learn more about this workspace setup and its capabilities](https://nx.dev/getting-started/tutorials/react-monorepo-tutorial?utm_source=nx_project&amp;utm_medium=readme&amp;utm_campaign=nx_projects) or run `npx nx graph` to visually explore what was created. Now, let's get you up to speed!
+This workspace contains the following applications:
 
-## Run tasks
+- **`apps/hermes`**: The frontend application. Built with React, React Router 7, and Vite.
+- **`apps/hermes-api`**: The backend API. Built with Python and [FastAPI](https://fastapi.tiangolo.com/), using `uv` for dependency management.
+- **`apps/hermes-e2e`**: End-to-end testing suite for the frontend, typically using Playwright.
 
-To run the dev server for your app, use:
+## 🚀 Getting Started
 
-```sh
+### Prerequisites
+
+Ensure you have the following installed:
+- Node.js (v18+)
+- npm, yarn, or pnpm
+- Python (v3.9+)
+- [uv](https://github.com/astral-sh/uv) (for Python dependency management)
+
+### Installation
+
+Clone the repository and install the dependencies:
+
+```bash
+# Install Node.js dependencies
+npm install
+
+# The Python dependencies for hermes-api are managed by uv and Nx automatically
+```
+
+### Running the Development Servers
+
+You can run the applications locally using Nx CLI.
+
+**Start the Frontend:**
+```bash
 npx nx serve hermes
 ```
+The frontend should be accessible at `http://localhost:4200` (or another port specified in the console).
 
-To create a production bundle:
+**Start the Backend API:**
+```bash
+npx nx serve hermes-api
+```
+The FastAPI application will be accessible locally. You can view the interactive API documentation at `http://localhost:8000/docs` (default FastAPI port unless configured otherwise).
 
-```sh
+## 🧪 Testing and Building
+
+### Running Tests
+
+To execute unit tests for a specific project:
+```bash
+npx nx test hermes
+npx nx test hermes-api
+```
+
+To run end-to-end tests for the frontend:
+```bash
+npx nx e2e hermes-e2e
+```
+
+### Building for Production
+
+To create a production bundle for your applications:
+```bash
 npx nx build hermes
+npx nx build hermes-api
 ```
+The build artifacts will be stored in the `dist/` directory at the root of the workspace.
 
-To see all available targets to run for a project, run:
+## 🛠 Useful Commands
 
-```sh
-npx nx show project hermes
-```
+- `npx nx graph` - Visually explore the workspace dependency graph.
+- `npx nx show project hermes` - See all available tasks for the frontend project.
+- `npx nx show project hermes-api` - See all available tasks for the backend project.
 
-These targets are either [inferred automatically](https://nx.dev/concepts/inferred-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) or defined in the `project.json` or `package.json` files.
+## 📚 Learn More
 
-[More about running tasks in the docs &raquo;](https://nx.dev/features/run-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-## Add new projects
-
-While you could add new projects to your workspace manually, you might want to leverage [Nx plugins](https://nx.dev/concepts/nx-plugins?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) and their [code generation](https://nx.dev/features/generate-code?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) feature.
-
-Use the plugin's generator to create new projects.
-
-To generate a new application, use:
-
-```sh
-npx nx g @nx/react:app demo
-```
-
-To generate a new library, use:
-
-```sh
-npx nx g @nx/react:lib mylib
-```
-
-You can use `npx nx list` to get a list of installed plugins. Then, run `npx nx list <plugin-name>` to learn about more specific capabilities of a particular plugin. Alternatively, [install Nx Console](https://nx.dev/getting-started/editor-setup?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) to browse plugins and generators in your IDE.
-
-[Learn more about Nx plugins &raquo;](https://nx.dev/concepts/nx-plugins?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) | [Browse the plugin registry &raquo;](https://nx.dev/plugin-registry?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-## Set up CI!
-
-### Step 1
-
-To connect to Nx Cloud, run the following command:
-
-```sh
-npx nx connect
-```
-
-Connecting to Nx Cloud ensures a [fast and scalable CI](https://nx.dev/ci/intro/why-nx-cloud?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) pipeline. It includes features such as:
-
-- [Remote caching](https://nx.dev/ci/features/remote-cache?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Task distribution across multiple machines](https://nx.dev/ci/features/distribute-task-execution?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Automated e2e test splitting](https://nx.dev/ci/features/split-e2e-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Task flakiness detection and rerunning](https://nx.dev/ci/features/flaky-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-### Step 2
-
-Use the following command to configure a CI workflow for your workspace:
-
-```sh
-npx nx g ci-workflow
-```
-
-[Learn more about Nx on CI](https://nx.dev/ci/intro/ci-with-nx#ready-get-started-with-your-provider?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-## Install Nx Console
-
-Nx Console is an editor extension that enriches your developer experience. It lets you run tasks, generate code, and improves code autocompletion in your IDE. It is available for VSCode and IntelliJ.
-
-[Install Nx Console &raquo;](https://nx.dev/getting-started/editor-setup?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-## Useful links
-
-Learn more:
-
-- [Learn more about this workspace setup](https://nx.dev/getting-started/tutorials/react-monorepo-tutorial?utm_source=nx_project&amp;utm_medium=readme&amp;utm_campaign=nx_projects)
-- [Learn about Nx on CI](https://nx.dev/ci/intro/ci-with-nx?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Releasing Packages with Nx release](https://nx.dev/features/manage-releases?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [What are Nx plugins?](https://nx.dev/concepts/nx-plugins?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-And join the Nx community:
-- [Discord](https://go.nx.dev/community)
-- [Follow us on X](https://twitter.com/nxdevtools) or [LinkedIn](https://www.linkedin.com/company/nrwl)
-- [Our Youtube channel](https://www.youtube.com/@nxdevtools)
-- [Our blog](https://nx.dev/blog?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+- [Nx Documentation](https://nx.dev)
+- [React Router Documentation](https://reactrouter.com/)
+- [FastAPI Documentation](https://fastapi.tiangolo.com/)
