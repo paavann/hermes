@@ -77,7 +77,7 @@
     "serve": {
       "executor": "@nxlv/python:run-commands",
       "options": {
-        "command": "uv run fastapi dev src/main.py --port 8000",
+        "command": "uv run fastapi dev src/hermes_api/main.py --port 8000 --reload",
         "cwd": "{projectRoot}"
       }
     }

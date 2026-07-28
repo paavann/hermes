@@ -53,3 +53,8 @@ test-output
 #python.
 **/.venv
 **/__pycache__
+
+#environment files.
+.env
+.env.*
+!.env.example
