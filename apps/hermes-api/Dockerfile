@@ -1,0 +1,17 @@
+FROM python:3.9-slim
+
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
+
+WORKDIR /app
+
+COPY pyproject.toml uv.lock ./
+
+RUN uv sync --locked --no-install-project
+
+COPY . .
+
+RUN uv sync --locked
+
+EXPOSE 8000
+
+CMD ["uv", "run", "fastapi", "dev", "src/hermes_api/main.py", "--host", "0.0.0.0", "--port", "8000"]
