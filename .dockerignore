@@ -1,0 +1,11 @@
+node_modules
+.git
+.nx
+**/dist
+**/.venv
+**/__pycache__
+**/.env
+**/.env.*
+**/test-output
+apps/hermes-e2e
+apps/hermes-api

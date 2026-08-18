@@ -7,11 +7,11 @@ export default defineConfig(() => ({
   cacheDir: '../../node_modules/.vite/apps/hermes',
   server:{
     port: 4200,
-    host: 'localhost',
+    host: process.env.HOST || 'localhost',
   },
   preview:{
     port: 4300,
-    host: 'localhost',
+    host: process.env.HOST || 'localhost',
   },
   plugins: [!process.env.VITEST && reactRouter()],
   // Uncomment this if you are using workers.

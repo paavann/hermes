@@ -35,5 +35,19 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  hermes:
+    build:
+      context: .
+      dockerfile: apps/hermes/Dockerfile
+    ports:
+      - "${FRONTEND_PORT}:4200"
+    volumes:
+      - ./apps/hermes/app:/app/apps/hermes/app
+      - ./apps/hermes/styles.css:/app/apps/hermes/styles.css
+      - ./apps/hermes/public:/app/apps/hermes/public
+    environment:
+      HOST: 0.0.0.0
+    restart: unless-stopped
+
 volumes:
   hermes_data:
