@@ -1,5 +1,6 @@
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 from hermes_api.core.config import settings
+import hermes_api.db.models
 
 
 engine = create_async_engine(
