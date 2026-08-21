@@ -17,8 +17,8 @@ if TYPE_CHECKING:
 class Article(Base, UUIDPrimaryKeyMixin):
     __tablename__ = "articles"
 
-    event_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("events.id"), ondelete="CASCADE")
-    source_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("sources.id"), ondelete="CASCADE")
+    event_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("events.id", ondelete="CASCADE"))
+    source_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("sources.id", ondelete="CASCADE"))
 
     title: Mapped[str] = mapped_column(Text)
     url: Mapped[str] = mapped_column(Text)

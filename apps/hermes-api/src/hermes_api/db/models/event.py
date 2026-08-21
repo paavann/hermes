@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import Optional, TYPE_CHECKING
 import uuid
 
-from sqlalchemy import String, Text, Float, Integer, ForeignKey, Index
+from sqlalchemy import String, Text, Float, Integer, ForeignKey, Index, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from geoalchemy2 import Geometry
 
@@ -48,8 +48,8 @@ class Event(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     #indexes.
     __table_args__ = (
         Index("idx_events_location", "location", postgresql_using="gist"),
-        Index("idx_events_active_score", "status", "trending_score", postgresql_where=(status==EventStatus.ACTIVE)),
+        Index("idx_events_active_score", "status", "trending_score", postgresql_where=text("status = 'ACTIVE'")),
         Index("idx_events_scope", "scope", "status"),
-        Index("idx_events_country", "country_code", postgresql_where=(country_code.isnot(None))),
+        Index("idx_events_country", "country_code", postgresql_where=text("country_code IS NOT NULL")),
     )
     
