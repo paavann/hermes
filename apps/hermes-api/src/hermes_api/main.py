@@ -1,32 +1,45 @@
-"""Sample Hello World application."""
-import logging
-from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from sqlalchemy import text
+from contextlib import asynccontextmanager
+import logging
 from hermes_api.db.db import engine
+from hermes_api.core.logger import setup_logging
 
+
+setup_logging()
 logger = logging.getLogger(__name__)
+
+
+
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: Verify DB connection
+    # server startup.
     try:
         async with engine.begin() as conn:
             await conn.execute(text("SELECT 1"))
-        logger.info("Successfully connected to the database!")
-    except Exception as e:
-        logger.error(f"Failed to connect to the database: {e}")
-        raise e
-        
+        logger.info("successfully connected to the database.")
+    except Exception:
+        logger.exception("failed to connect to the database.")
+        raise
+
+    # server runtime.
     yield
-    
-    # Shutdown: Clean up DB engine
-    logger.info("Disposing database engine...")
+
+    # server shutdown.
+    logger.info("disposing database engine...")
     await engine.dispose()
 
-app = FastAPI(lifespan=lifespan)
 
+
+
+
+app = FastAPI(
+    lifespan=lifespan,
+    root_path="/api/v1"
+)
 
 @app.get("/")
-def read_root():
-    return {"Hello": "Hermes-API"}
+def index():
+    return { "message": "hermes is running..." }
