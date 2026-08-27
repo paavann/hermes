@@ -1,3 +1,4 @@
+from pydantic_core.core_schema import nullable_schema
 from unicodedata import category
 from datetime import datetime
 from typing import Optional, TYPE_CHECKING
@@ -29,12 +30,12 @@ class Event(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     scope: Mapped[EventScope] = mapped_column(default=EventScope.COUNTRY)
 
 
-    location: Mapped[str] = mapped_column(Geometry(
+    location: Mapped[Optional[str]] = mapped_column(Geometry(
         geometry_type="POINT",
         srid=4326,
         spatial_index=False,
-    ))
-    location_name: Mapped[str] = mapped_column(String(255))
+    ), nullable=True)
+    location_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     country_code: Mapped[Optional[str]] = mapped_column(String(2))
     
     trending_score: Mapped[float] = mapped_column(Float, default=0.0)
