@@ -23,9 +23,13 @@ requires-python = ">=3.9,<4"
 readme = 'README.md'
 dependencies = [
     "alembic>=1.16.5",
+    "apscheduler>=3.11.3",
     "asyncpg>=0.31.0",
     "fastapi[standard]>=0.128.8",
+    "feedparser>=6.0.12",
     "geoalchemy2>=0.17.1",
+    "google-genai>=1.47.0",
+    "httpx>=0.28.1",
     "pydantic-settings>=2.11.0",
     "python-dotenv>=1.2.1",
     "sqlalchemy>=2.0.51",
