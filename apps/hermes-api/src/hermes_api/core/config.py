@@ -15,6 +15,15 @@ class Settings(BaseSettings):
     DB_PASSWORD: str = ""
     DB_NAME: str = "hermes"
 
+    GEMINI_API_KEY: str = ""
+
+    NOMINATIM_USER_AGENT: str = "hermes-api"
+
+    RSS_FETCH_INTERVAL_MINUTES: int = 15
+
+    EVENT_STALE_HOURS: int = 24
+    EVENT_ARCHIVE_HOURS: int = 48
+
     @property
     def db_url(self) -> URL:
         return URL.create(
