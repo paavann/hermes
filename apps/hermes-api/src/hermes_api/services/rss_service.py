@@ -16,25 +16,6 @@ MAX_CONTENT_WORDS: int = 500
 
 
 
-class ParsedArticle(BaseModel):
-    title: str
-    url: str
-    description: str
-    content: Optional[str] = None
-    published_at: Optional[datetime] = None
-
-    @computed_field
-    @property
-    def text_for_ai(self) -> str:
-        if self.content:
-            return _truncate_to_words(self.content, MAX_CONTENT_WORDS)
-        else:
-            return self.description
-        
-
-
-
-
 def _parse_date(entry: dict) -> Optional[datetime]:
     parsed_time = entry.get("published_parsed")
     if parsed_time:
@@ -63,6 +44,25 @@ def _extract_content(entry: dict) -> Optional[str]:
         return encoded.strip() or None
 
     return None
+
+
+
+
+
+class ParsedArticle(BaseModel):
+    title: str
+    url: str
+    description: str
+    content: Optional[str] = None
+    published_at: Optional[datetime] = None
+
+    @computed_field
+    @property
+    def text_for_ai(self) -> str:
+        if self.content:
+            return _truncate_to_words(self.content, MAX_CONTENT_WORDS)
+        else:
+            return self.description
 
 
 
