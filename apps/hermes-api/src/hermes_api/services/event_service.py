@@ -38,9 +38,9 @@ class EventService:
     ) -> Event:
         location_wkt = None
         if geocoding:
-            location_wkt = f"SRID=4326;POINT({geocoding.longitude}{geocoding.latitude})"
+            location_wkt = f"SRID=4326;POINT({geocoding.longitude} {geocoding.latitude})"
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
         event = Event(
             ai_headline=extraction.headline,
             ai_summary=extraction.summary,
@@ -96,7 +96,7 @@ class EventService:
 
         event.article_count += 1
         event.trending_score = float(event.article_count)
-        event.last_updated_at = datetime.now(timezone.utc)
+        event.last_updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
         if event.status == EventStatus.STALE:
             event.status = EventStatus.ACTIVE
             logger.info(f"reactivated stale event: '{event.ai_headline}'.")
@@ -147,7 +147,7 @@ class EventService:
 
     # lifecycle management.
     async def run_lifecycle_transitions(self) -> dict[str, int]:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
         stale_cutoff = now - timedelta(hours=settings.EVENT_STALE_HOURS)
         archive_cutoff = now - timedelta(hours=settings.EVENT_ARCHIVE_HOURS)
 

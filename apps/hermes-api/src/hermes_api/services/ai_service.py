@@ -141,7 +141,7 @@ class AiService:
         if not settings.GEMINI_API_KEY:
             raise ValueError("api key is missing.")
         self._client = genai.Client(api_key=settings.GEMINI_API_KEY)
-        self._model = "gemini-3.6-flash"
+        self._model = "gemini-3.5-flash-lite"
 
 
     async def extract_metadata(self, title: str, content: str, existing_events: list[dict[str, str]]) -> Optional[ExtractionResult]:

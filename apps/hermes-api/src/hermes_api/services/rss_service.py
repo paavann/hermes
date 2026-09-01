@@ -20,7 +20,7 @@ def _parse_date(entry: dict) -> Optional[datetime]:
     parsed_time = entry.get("published_parsed")
     if parsed_time:
         try:
-            return datetime(*parsed_time[:6], tzinfo=timezone.utc)
+            return datetime(*parsed_time[:6])
         except (ValueError, TypeError):
             return None
     return None
