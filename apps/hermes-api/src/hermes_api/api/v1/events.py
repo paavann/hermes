@@ -7,7 +7,7 @@ from geoalchemy2.functions import ST_Within, ST_MakeEnvelope, ST_X, ST_Y
 
 from hermes_api.db.db import AsyncSessionLocal
 from hermes_api.db.models.event import Event
-from hermes_api.db.enums import EventStatus, EventScope
+from hermes_api.db.enums import EventStatus
 from hermes_api.schemas.events import EventResponse, EventDetailResponse, MapEventResponse
 
 
@@ -43,16 +43,6 @@ async def get_events(
 
 
 
-@router.get("/{event_id}", response_model=EventDetailResponse)
-async def get_event(event_id: uuid.UUID, db: AsyncSession=Depends(get_db)) -> Event:
-    event = await db.get(Event, event_id)
-    if not event:
-        raise HTTPException(status_code=404, detail="event not found.")
-    else:
-        return event
-
-
-    
 @router.get("/bbox", response_model=list[MapEventResponse])
 async def get_events_by_bbox(
     north: float = Query(..., ge=-90, le=90, description="northern latitude boundary."),
@@ -90,3 +80,13 @@ async def get_events_by_bbox(
         )
         for row in rows
     ]
+
+
+
+@router.get("/{event_id}", response_model=EventDetailResponse)
+async def get_event(event_id: uuid.UUID, db: AsyncSession=Depends(get_db)) -> Event:
+    event = await db.get(Event, event_id)
+    if not event:
+        raise HTTPException(status_code=404, detail="event not found.")
+    else:
+        return event
