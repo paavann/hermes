@@ -15,7 +15,7 @@ scheduler = AsyncIOScheduler()
 
 
 
-async def run_ingestion_job():
+async def run_ingestion_job() -> None:
     logger.info("starting scheduled ingestion job...")
     try:
         service = IngestionService()
@@ -26,7 +26,7 @@ async def run_ingestion_job():
 
 
 
-async def run_lifecycle_job():
+async def run_lifecycle_job() -> None:
     logger.info("starting scheduled lifecycle job...")
     try:
         async with AsyncSessionLocal() as session:
@@ -38,7 +38,7 @@ async def run_lifecycle_job():
 
 
     
-def setup_scheduler():
+def setup_scheduler() -> None:
     logger.info("settings up background jobs...")
     scheduler.add_job(
         run_ingestion_job,
@@ -57,6 +57,6 @@ def setup_scheduler():
 
 
 
-def shutdown_scheduler():
+def shutdown_scheduler() -> None:
     logger.info("shutting down scheduler...")
     scheduler.shutdown(wait=False)

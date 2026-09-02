@@ -1,3 +1,4 @@
+from collections.abc import AsyncGenerator
 from fastapi import FastAPI
 from sqlalchemy import text
 from contextlib import asynccontextmanager
@@ -17,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # server startup.
     try:
         async with engine.begin() as conn:
@@ -50,5 +51,5 @@ app = FastAPI(
 app.include_router(api_router)
 
 @app.get("/")
-def index():
+def index() -> dict[str, str]:
     return { "message": "hermes is running..." }
