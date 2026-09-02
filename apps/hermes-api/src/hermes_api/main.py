@@ -2,8 +2,11 @@ from fastapi import FastAPI
 from sqlalchemy import text
 from contextlib import asynccontextmanager
 import logging
+
 from hermes_api.db.db import engine
 from hermes_api.core.logger import setup_logging
+from hermes_api.api.v1.router import api_router
+from hermes_api.scheduler.jobs import setup_scheduler, shutdown_scheduler
 
 
 setup_logging()
@@ -24,11 +27,14 @@ async def lifespan(app: FastAPI):
         logger.exception("failed to connect to the database.")
         raise
 
+    setup_scheduler()
+
     # server runtime.
     yield
 
     # server shutdown.
-    logger.info("disposing database engine...")
+    logger.info("shutting down server...")
+    shutdown_scheduler()
     await engine.dispose()
 
 
@@ -36,9 +42,12 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
+    title="hermes api",
     lifespan=lifespan,
     root_path="/api/v1"
 )
+
+app.include_router(api_router)
 
 @app.get("/")
 def index():

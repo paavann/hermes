@@ -1,0 +1,51 @@
+from fastapi import APIRouter, Depends, Query, HTTPException
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
+from typing import Optional, AsyncGenerator
+import uuid
+
+from hermes_api.db.db import AsyncSessionLocal
+from hermes_api.db.models.event import Event
+from hermes_api.db.enums import EventStatus, EventScope
+from hermes_api.schemas.event import EventResponse, EventDetailResponse
+
+
+router = APIRouter()
+
+
+
+
+
+async def get_db() -> AsyncGenerator[AsyncSession, None]:
+    async with AsyncSessionLocal() as session:
+        yield session
+
+
+
+@router.get("/", response_model=list[EventResponse])
+async def get_events(
+    status: Optional[EventStatus] = Query(EventStatus.ACTIVE, description="filter events by status."),
+    scope: Optional[EventStatus] = Query(None, description="filter by event scope."),
+    limit: int = Query(50, ge=1, le=200, description="maximum number of events to return."),
+    db: AsyncSession = Depends(get_db)
+) -> list[Event]:
+    stmt = select(Event)
+    if status:
+        stmt = stmt.where(Event.status==status)
+    if scope:
+        stmt = stmt.where(Event.scope==scope)
+    
+    stmt = stmt.order_by(Event.trending_score.desc()).limit(limit)
+    result = await db.execute(stmt)
+    events = list(result.scalars().all())
+    return [EventResponse.model_validate(e) for e in events]
+
+
+
+@router.get("/{event_id}", response_model=EventDetailResponse)
+async def get_event(event_id: uuid.UUID, db: AsyncSession=Depends(get_db)) -> Event:
+    event = await db.get(Event, event_id)
+    if not event:
+        raise HTTPException(status_code=404, detail="event not found.")
+    else:
+        return event
