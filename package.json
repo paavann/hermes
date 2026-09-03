@@ -5,13 +5,13 @@
   "scripts": {},
   "private": true,
   "dependencies": {
-    "@react-router/node": "^7.14.2",
-    "@react-router/serve": "^7.14.2",
+    "@react-router/node": "^7.18.3",
+    "@react-router/serve": "^7.18.3",
     "isbot": "^4.4.0",
     "mapbox-gl": "^3.29.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
-    "react-router": "^7.14.2",
+    "react-router": "^7.18.3",
     "zustand": "^5.0.15"
   },
   "devDependencies": {
@@ -28,7 +28,7 @@
     "@nx/workspace": "23.1.0",
     "@nxlv/python": "^22.2.2",
     "@playwright/test": "^1.37.0",
-    "@react-router/dev": "^7.14.2",
+    "@react-router/dev": "^7.18.3",
     "@swc/cli": "~0.8.1",
     "@swc/core": "~1.15.5",
     "@swc/helpers": "~0.5.18",
