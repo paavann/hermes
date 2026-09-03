@@ -48,6 +48,7 @@ services:
       - ./apps/hermes/public:/app/apps/hermes/public
     environment:
       HOST: 0.0.0.0
+      VITE_MAPBOX_TOKEN: ${VITE_MAPBOX_TOKEN}
     restart: unless-stopped
 
 volumes:

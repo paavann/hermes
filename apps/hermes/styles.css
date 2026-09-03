@@ -1,1 +1,21 @@
-/* You can add global styles to this file, and also import other style files */
+/* Required for Mapbox to render correctly */
+@import 'mapbox-gl/dist/mapbox-gl.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html, body {
+    margin: 0;
+    padding: 0;
+    /* Use 100dvh for modern mobile viewport support */
+    width: 100dvw;
+    height: 100dvh;
+    overflow: hidden;
+    background-color: #050505; /* Deep space black */
+    color: #e2e8f0;
+    /* Techy crosshair cursor by default across the app */
+    cursor: crosshair;
+  }
+}
