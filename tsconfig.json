@@ -8,6 +8,9 @@
     },
     {
       "path": "./apps/hermes"
+    },
+    {
+      "path": "./libs/shared/ui-components"
     }
   ]
 }
