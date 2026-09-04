@@ -11,6 +11,9 @@
     },
     {
       "path": "./libs/shared/ui-components"
+    },
+    {
+      "path": "./libs/shared/utils"
     }
   ]
 }

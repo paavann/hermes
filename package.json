@@ -55,6 +55,7 @@
     "eslint-plugin-react-hooks": "5.0.0",
     "jiti": "2.4.2",
     "jsdom": "^27.1.0",
+    "jsonc-eslint-parser": "^2.1.0",
     "nx": "23.1.0",
     "postcss": "^8.5.26",
     "prettier": "~3.6.2",
