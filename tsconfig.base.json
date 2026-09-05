@@ -16,6 +16,12 @@
     "skipLibCheck": true,
     "strict": true,
     "target": "es2022",
-    "customConditions": ["@hermes/source"]
+    "customConditions": ["@hermes/source"],
+    "baseUrl": ".",
+    "paths": {
+      "@hermes/util-types": ["./libs/shared/util-types/src/index.ts"],
+      "@hermes/ui-components": ["./libs/shared/ui-components/src/index.ts"],
+      "@hermes/feature-map": ["./libs/feature-map/src/index.ts"]
+    }
   }
 }

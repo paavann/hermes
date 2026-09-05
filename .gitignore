@@ -50,11 +50,14 @@ vitest.config.*.timestamp*
 test-output
 
 
-#python.
+# python.
 **/.venv
 **/__pycache__
 
-#environment files.
+# environment files.
 .env
 .env.*
 !.env.example
+
+# build outputs.
+*.tsbuildinfo
