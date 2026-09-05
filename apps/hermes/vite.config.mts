@@ -1,6 +1,7 @@
 /// <reference types='vitest' />
 import { defineConfig } from 'vite';
 import { reactRouter } from '@react-router/dev/vite';
+import tsconfigPaths from 'vite-tsconfig-paths';
 
 export default defineConfig(() => ({
   root: import.meta.dirname,
@@ -13,7 +14,10 @@ export default defineConfig(() => ({
     port: 4300,
     host: process.env.HOST || 'localhost',
   },
-  plugins: [!process.env.VITEST && reactRouter()],
+  plugins: [
+    tsconfigPaths(),
+    !process.env.VITEST && reactRouter()
+  ],
   // Uncomment this if you are using workers.
   // worker: {
   //  plugins: [],

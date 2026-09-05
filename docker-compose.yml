@@ -46,6 +46,7 @@ services:
       - ./apps/hermes/app:/app/apps/hermes/app
       - ./apps/hermes/styles.css:/app/apps/hermes/styles.css
       - ./apps/hermes/public:/app/apps/hermes/public
+      - ./libs:/app/libs
     environment:
       HOST: 0.0.0.0
       VITE_MAPBOX_TOKEN: ${VITE_MAPBOX_TOKEN}

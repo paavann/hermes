@@ -4,6 +4,7 @@ WORKDIR /app
 
 COPY package.json package-lock.json nx.json tsconfig.base.json ./
 COPY apps/hermes/package.json ./apps/hermes/
+COPY libs/ ./libs
 
 RUN npm ci
 
