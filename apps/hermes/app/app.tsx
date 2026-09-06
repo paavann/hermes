@@ -1,10 +1,17 @@
-import { MapView } from "@hermes/feature-map"
+import { MapView } from '@hermes/feature-map'
+import { QueryClient, QueryClientProvider, } from '@tanstack/react-query'
+
+const queryClient = new QueryClient()
+
+
 
 export function App() {
   return (
-    <main className="w-full h-full">
-      <MapView />
-    </main>
+    <QueryClientProvider client={queryClient}>
+      <main className="w-full h-full">
+        <MapView />
+      </main>
+    </QueryClientProvider>
   );
 }
 
