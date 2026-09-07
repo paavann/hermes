@@ -1,3 +1,4 @@
+from sqlalchemy.orm import selectinload
 import uuid
 from typing import Optional, AsyncGenerator
 from fastapi import APIRouter, Depends, Query, HTTPException
@@ -85,7 +86,9 @@ async def get_events_by_bbox(
 
 @router.get("/{event_id}", response_model=EventDetailResponse)
 async def get_event(event_id: uuid.UUID, db: AsyncSession=Depends(get_db)) -> Event:
-    event = await db.get(Event, event_id)
+    stmt = select(Event).options(selectinload(Event.articles)).where(Event.id==event_id)
+    result = await db.execute(stmt)
+    event = result.scalar_one_or_none()
     if not event:
         raise HTTPException(status_code=404, detail="event not found.")
     else:

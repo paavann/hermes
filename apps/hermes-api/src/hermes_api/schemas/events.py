@@ -8,6 +8,13 @@ from hermes_api.db.enums import EventStatus
 
 
 
+class ArticleResponse(BaseModel):
+    id: uuid.UUID
+    title: str
+    url: str
+    published_at: Optional[datetime]
+    model_config = ConfigDict(from_attributes=True)
+
 class EventResponse(BaseModel):
     id: uuid.UUID
     ai_headline: str
@@ -24,6 +31,7 @@ class EventResponse(BaseModel):
 
 class EventDetailResponse(EventResponse):
     ai_summary: str
+    articles: list[ArticleResponse]
 
 
 class MapEventResponse(BaseModel):
