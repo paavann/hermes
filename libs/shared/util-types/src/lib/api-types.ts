@@ -1,3 +1,10 @@
+export interface ArticleResponse {
+    id: string;
+    title: string;
+    url: string;
+    published_at: string | null;
+}
+
 export interface MapEventResponse {
     id: string;
     ai_headline: string;
@@ -23,6 +30,7 @@ export interface EventResponse {
     last_updated_at: string;
 }
 
-export interface EventDetailResponse {
+export interface EventDetailResponse extends EventResponse {
     ai_summary: string;
+    articles: ArticleResponse[];
 }

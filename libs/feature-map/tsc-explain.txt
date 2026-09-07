@@ -1,0 +1,704 @@
+src/lib/ui/components/eventSidePanel.tsx(39,59): error TS2339: Property 'category_color' does not exist on type 'EventDetailResponse'.
+src/lib/ui/components/eventSidePanel.tsx(39,94): error TS2339: Property 'category_color' does not exist on type 'EventDetailResponse'.
+src/lib/ui/components/eventSidePanel.tsx(40,44): error TS2339: Property 'category' does not exist on type 'EventDetailResponse'.
+src/lib/ui/components/eventSidePanel.tsx(43,44): error TS2339: Property 'status' does not exist on type 'EventDetailResponse'.
+src/lib/ui/components/eventSidePanel.tsx(48,82): error TS2339: Property 'ai_headline' does not exist on type 'EventDetailResponse'.
+src/lib/ui/components/eventSidePanel.tsx(57,44): error TS2339: Property 'articles' does not exist on type 'EventDetailResponse'.
+src/lib/ui/components/eventSidePanel.tsx(57,58): error TS7006: Parameter 'article' implicitly has an 'any' type.
+tsconfig.lib.json(3,3): error TS5101: Option 'baseUrl' is deprecated and will stop functioning in TypeScript 7.0. Specify compilerOption '"ignoreDeprecations": "6.0"' to silence this error.
+  Visit https://aka.ms/ts6 for migration information.
+../../node_modules/typescript/lib/lib.es5.d.ts
+  Library referenced via 'es5' from file '../../node_modules/typescript/lib/lib.es2015.d.ts'
+../../node_modules/typescript/lib/lib.es2015.d.ts
+  Library referenced via 'es2015' from file '../../node_modules/typescript/lib/lib.es2016.d.ts'
+../../node_modules/typescript/lib/lib.es2016.d.ts
+  Library referenced via 'es2016' from file '../../node_modules/typescript/lib/lib.es2017.d.ts'
+../../node_modules/typescript/lib/lib.es2017.d.ts
+  Library referenced via 'es2017' from file '../../node_modules/typescript/lib/lib.es2018.d.ts'
+../../node_modules/typescript/lib/lib.es2018.d.ts
+  Library referenced via 'es2018' from file '../../node_modules/typescript/lib/lib.es2019.d.ts'
+../../node_modules/typescript/lib/lib.es2019.d.ts
+  Library referenced via 'es2019' from file '../../node_modules/typescript/lib/lib.es2020.d.ts'
+../../node_modules/typescript/lib/lib.es2020.d.ts
+  Library referenced via 'es2020' from file '../../node_modules/@types/node/index.d.ts'
+  Library referenced via 'es2020' from file '../../node_modules/typescript/lib/lib.es2021.d.ts'
+../../node_modules/typescript/lib/lib.es2021.d.ts
+  Library referenced via 'es2021' from file '../../node_modules/typescript/lib/lib.es2022.d.ts'
+../../node_modules/typescript/lib/lib.es2022.d.ts
+  Library 'lib.es2022.d.ts' specified in compilerOptions
+../../node_modules/typescript/lib/lib.es2015.core.d.ts
+  Library referenced via 'es2015.core' from file '../../node_modules/typescript/lib/lib.es2015.d.ts'
+../../node_modules/typescript/lib/lib.es2015.collection.d.ts
+  Library referenced via 'es2015.collection' from file '../../node_modules/typescript/lib/lib.es2015.d.ts'
+../../node_modules/typescript/lib/lib.es2015.generator.d.ts
+  Library referenced via 'es2015.generator' from file '../../node_modules/typescript/lib/lib.es2015.d.ts'
+../../node_modules/typescript/lib/lib.es2015.iterable.d.ts
+  Library referenced via 'es2015.iterable' from file '../../node_modules/typescript/lib/lib.es2015.d.ts'
+  Library referenced via 'es2015.iterable' from file '../../node_modules/typescript/lib/lib.es2015.generator.d.ts'
+  Library referenced via 'es2015.iterable' from file '../../node_modules/typescript/lib/lib.es2018.asynciterable.d.ts'
+  Library referenced via 'es2015.iterable' from file '../../node_modules/typescript/lib/lib.es2019.object.d.ts'
+  Library referenced via 'es2015.iterable' from file '../../node_modules/typescript/lib/lib.es2020.string.d.ts'
+  Library referenced via 'es2015.iterable' from file '../../node_modules/typescript/lib/lib.es2020.symbol.wellknown.d.ts'
+../../node_modules/typescript/lib/lib.es2015.promise.d.ts
+  Library referenced via 'es2015.promise' from file '../../node_modules/typescript/lib/lib.es2015.d.ts'
+../../node_modules/typescript/lib/lib.es2015.proxy.d.ts
+  Library referenced via 'es2015.proxy' from file '../../node_modules/typescript/lib/lib.es2015.d.ts'
+../../node_modules/typescript/lib/lib.es2015.reflect.d.ts
+  Library referenced via 'es2015.reflect' from file '../../node_modules/typescript/lib/lib.es2015.d.ts'
+../../node_modules/typescript/lib/lib.es2015.symbol.d.ts
+  Library referenced via 'es2015.symbol' from file '../../node_modules/typescript/lib/lib.es2015.iterable.d.ts'
+  Library referenced via 'es2015.symbol' from file '../../node_modules/typescript/lib/lib.es2015.d.ts'
+  Library referenced via 'es2015.symbol' from file '../../node_modules/typescript/lib/lib.es2015.symbol.wellknown.d.ts'
+  Library referenced via 'es2015.symbol' from file '../../node_modules/typescript/lib/lib.es2017.sharedmemory.d.ts'
+  Library referenced via 'es2015.symbol' from file '../../node_modules/typescript/lib/lib.es2018.asynciterable.d.ts'
+  Library referenced via 'es2015.symbol' from file '../../node_modules/typescript/lib/lib.es2020.symbol.wellknown.d.ts'
+../../node_modules/typescript/lib/lib.es2015.symbol.wellknown.d.ts
+  Library referenced via 'es2015.symbol.wellknown' from file '../../node_modules/typescript/lib/lib.es2015.d.ts'
+  Library referenced via 'es2015.symbol.wellknown' from file '../../node_modules/typescript/lib/lib.es2017.sharedmemory.d.ts'
+  Library referenced via 'es2015.symbol.wellknown' from file '../../node_modules/typescript/lib/lib.es2021.weakref.d.ts'
+../../node_modules/typescript/lib/lib.es2016.array.include.d.ts
+  Library referenced via 'es2016.array.include' from file '../../node_modules/typescript/lib/lib.es2016.d.ts'
+../../node_modules/typescript/lib/lib.es2016.intl.d.ts
+  Library referenced via 'es2016.intl' from file '../../node_modules/typescript/lib/lib.es2016.d.ts'
+../../node_modules/typescript/lib/lib.es2017.arraybuffer.d.ts
+  Library referenced via 'es2017.arraybuffer' from file '../../node_modules/typescript/lib/lib.es2017.d.ts'
+../../node_modules/typescript/lib/lib.es2017.date.d.ts
+  Library referenced via 'es2017.date' from file '../../node_modules/typescript/lib/lib.es2017.d.ts'
+../../node_modules/typescript/lib/lib.es2017.object.d.ts
+  Library referenced via 'es2017.object' from file '../../node_modules/typescript/lib/lib.es2017.d.ts'
+../../node_modules/typescript/lib/lib.es2017.sharedmemory.d.ts
+  Library referenced via 'es2017.sharedmemory' from file '../../node_modules/typescript/lib/lib.es2017.d.ts'
+../../node_modules/typescript/lib/lib.es2017.string.d.ts
+  Library referenced via 'es2017.string' from file '../../node_modules/typescript/lib/lib.es2017.d.ts'
+../../node_modules/typescript/lib/lib.es2017.intl.d.ts
+  Library referenced via 'es2017.intl' from file '../../node_modules/typescript/lib/lib.es2017.d.ts'
+../../node_modules/typescript/lib/lib.es2017.typedarrays.d.ts
+  Library referenced via 'es2017.typedarrays' from file '../../node_modules/typescript/lib/lib.es2017.d.ts'
+../../node_modules/typescript/lib/lib.es2018.asyncgenerator.d.ts
+  Library referenced via 'es2018.asyncgenerator' from file '../../node_modules/typescript/lib/lib.es2018.d.ts'
+../../node_modules/typescript/lib/lib.es2018.asynciterable.d.ts
+  Library referenced via 'es2018.asynciterable' from file '../../node_modules/typescript/lib/lib.es2018.d.ts'
+  Library referenced via 'es2018.asynciterable' from file '../../node_modules/typescript/lib/lib.es2018.asyncgenerator.d.ts'
+../../node_modules/typescript/lib/lib.es2018.intl.d.ts
+  Library referenced via 'es2018.intl' from file '../../node_modules/typescript/lib/lib.es2018.d.ts'
+  Library referenced via 'es2018.intl' from file '../../node_modules/typescript/lib/lib.es2020.intl.d.ts'
+../../node_modules/typescript/lib/lib.es2018.promise.d.ts
+  Library referenced via 'es2018.promise' from file '../../node_modules/typescript/lib/lib.es2018.d.ts'
+../../node_modules/typescript/lib/lib.es2018.regexp.d.ts
+  Library referenced via 'es2018.regexp' from file '../../node_modules/typescript/lib/lib.es2018.d.ts'
+../../node_modules/typescript/lib/lib.es2019.array.d.ts
+  Library referenced via 'es2019.array' from file '../../node_modules/typescript/lib/lib.es2019.d.ts'
+../../node_modules/typescript/lib/lib.es2019.object.d.ts
+  Library referenced via 'es2019.object' from file '../../node_modules/typescript/lib/lib.es2019.d.ts'
+../../node_modules/typescript/lib/lib.es2019.string.d.ts
+  Library referenced via 'es2019.string' from file '../../node_modules/typescript/lib/lib.es2019.d.ts'
+../../node_modules/typescript/lib/lib.es2019.symbol.d.ts
+  Library referenced via 'es2019.symbol' from file '../../node_modules/typescript/lib/lib.es2019.d.ts'
+../../node_modules/typescript/lib/lib.es2019.intl.d.ts
+  Library referenced via 'es2019.intl' from file '../../node_modules/typescript/lib/lib.es2019.d.ts'
+../../node_modules/typescript/lib/lib.es2020.bigint.d.ts
+  Library referenced via 'es2020.bigint' from file '../../node_modules/typescript/lib/lib.es2020.d.ts'
+  Library referenced via 'es2020.bigint' from file '../../node_modules/typescript/lib/lib.es2020.sharedmemory.d.ts'
+../../node_modules/typescript/lib/lib.es2020.date.d.ts
+  Library referenced via 'es2020.date' from file '../../node_modules/typescript/lib/lib.es2020.d.ts'
+../../node_modules/typescript/lib/lib.es2020.promise.d.ts
+  Library referenced via 'es2020.promise' from file '../../node_modules/typescript/lib/lib.es2020.d.ts'
+../../node_modules/typescript/lib/lib.es2020.sharedmemory.d.ts
+  Library referenced via 'es2020.sharedmemory' from file '../../node_modules/typescript/lib/lib.es2020.d.ts'
+../../node_modules/typescript/lib/lib.es2020.string.d.ts
+  Library referenced via 'es2020.string' from file '../../node_modules/typescript/lib/lib.es2020.d.ts'
+../../node_modules/typescript/lib/lib.es2020.symbol.wellknown.d.ts
+  Library referenced via 'es2020.symbol.wellknown' from file '../../node_modules/typescript/lib/lib.es2020.string.d.ts'
+  Library referenced via 'es2020.symbol.wellknown' from file '../../node_modules/typescript/lib/lib.es2020.d.ts'
+../../node_modules/typescript/lib/lib.es2020.intl.d.ts
+  Library referenced via 'es2020.intl' from file '../../node_modules/typescript/lib/lib.es2020.bigint.d.ts'
+  Library referenced via 'es2020.intl' from file '../../node_modules/typescript/lib/lib.es2020.date.d.ts'
+  Library referenced via 'es2020.intl' from file '../../node_modules/typescript/lib/lib.es2020.number.d.ts'
+  Library referenced via 'es2020.intl' from file '../../node_modules/typescript/lib/lib.es2020.string.d.ts'
+  Library referenced via 'es2020.intl' from file '../../node_modules/typescript/lib/lib.es2020.d.ts'
+../../node_modules/typescript/lib/lib.es2020.number.d.ts
+  Library referenced via 'es2020.number' from file '../../node_modules/typescript/lib/lib.es2020.d.ts'
+../../node_modules/typescript/lib/lib.es2021.promise.d.ts
+  Library referenced via 'es2021.promise' from file '../../node_modules/typescript/lib/lib.es2021.d.ts'
+  Library referenced via 'es2021.promise' from file '../../node_modules/typescript/lib/lib.es2022.error.d.ts'
+../../node_modules/typescript/lib/lib.es2021.string.d.ts
+  Library referenced via 'es2021.string' from file '../../node_modules/typescript/lib/lib.es2021.d.ts'
+../../node_modules/typescript/lib/lib.es2021.weakref.d.ts
+  Library referenced via 'es2021.weakref' from file '../../node_modules/typescript/lib/lib.es2021.d.ts'
+../../node_modules/typescript/lib/lib.es2021.intl.d.ts
+  Library referenced via 'es2021.intl' from file '../../node_modules/typescript/lib/lib.es2021.d.ts'
+../../node_modules/typescript/lib/lib.es2022.array.d.ts
+  Library referenced via 'es2022.array' from file '../../node_modules/typescript/lib/lib.es2022.d.ts'
+../../node_modules/typescript/lib/lib.es2022.error.d.ts
+  Library referenced via 'es2022.error' from file '../../node_modules/typescript/lib/lib.es2022.d.ts'
+../../node_modules/typescript/lib/lib.es2022.intl.d.ts
+  Library referenced via 'es2022.intl' from file '../../node_modules/typescript/lib/lib.es2022.d.ts'
+../../node_modules/typescript/lib/lib.es2022.object.d.ts
+  Library referenced via 'es2022.object' from file '../../node_modules/typescript/lib/lib.es2022.d.ts'
+../../node_modules/typescript/lib/lib.es2022.string.d.ts
+  Library referenced via 'es2022.string' from file '../../node_modules/typescript/lib/lib.es2022.d.ts'
+../../node_modules/typescript/lib/lib.es2022.regexp.d.ts
+  Library referenced via 'es2022.regexp' from file '../../node_modules/typescript/lib/lib.es2022.d.ts'
+../../node_modules/typescript/lib/lib.decorators.d.ts
+  Library referenced via 'decorators' from file '../../node_modules/typescript/lib/lib.es5.d.ts'
+../../node_modules/typescript/lib/lib.decorators.legacy.d.ts
+  Library referenced via 'decorators.legacy' from file '../../node_modules/typescript/lib/lib.es5.d.ts'
+../../node_modules/tslib/tslib.d.ts
+  Imported via '../tslib.js' from file '../../node_modules/tslib/modules/index.d.ts' with packageId 'tslib/tslib.d.ts@2.8.1'
+  Imported via '../tslib.js' from file '../../node_modules/tslib/modules/index.d.ts' with packageId 'tslib/tslib.d.ts@2.8.1'
+../../node_modules/tslib/modules/index.d.ts
+  Imported via "tslib" from file 'src/index.ts' with packageId 'tslib/modules/index.d.ts@2.8.1' to import 'importHelpers' as specified in compilerOptions
+  Imported via "tslib" from file 'src/lib/feature-map.tsx' with packageId 'tslib/modules/index.d.ts@2.8.1' to import 'importHelpers' as specified in compilerOptions
+  Imported via "tslib" from file 'src/lib/store/store.ts' with packageId 'tslib/modules/index.d.ts@2.8.1' to import 'importHelpers' as specified in compilerOptions
+  Imported via "tslib" from file 'src/lib/ui/map-view.tsx' with packageId 'tslib/modules/index.d.ts@2.8.1' to import 'importHelpers' as specified in compilerOptions
+  Imported via "tslib" from file 'src/lib/hooks/datasync.ts' with packageId 'tslib/modules/index.d.ts@2.8.1' to import 'importHelpers' as specified in compilerOptions
+  Imported via "tslib" from file 'src/lib/hooks/eventDetails.ts' with packageId 'tslib/modules/index.d.ts@2.8.1' to import 'importHelpers' as specified in compilerOptions
+  Imported via "tslib" from file 'src/lib/ui/components/eventSidePanel.tsx' with packageId 'tslib/modules/index.d.ts@2.8.1' to import 'importHelpers' as specified in compilerOptions
+  File is ECMAScript module because '../../node_modules/tslib/modules/package.json' has field "type" with value "module"
+../../node_modules/@types/react/global.d.ts
+  Referenced via 'global.d.ts' from file '../../node_modules/@types/react/index.d.ts'
+../../node_modules/csstype/index.d.ts
+  Imported via "csstype" from file '../../node_modules/@types/react/index.d.ts' with packageId 'csstype/index.d.ts@3.2.3'
+../../node_modules/@types/react/index.d.ts
+  Imported via "./" from file '../../node_modules/@types/react/jsx-runtime.d.ts' with packageId '@types/react/ndex.d.ts@19.2.17'
+  Imported via "./" from file '../../node_modules/@types/react/jsx-runtime.d.ts' with packageId '@types/react/ndex.d.ts@19.2.17'
+  Imported via 'react' from file 'src/lib/ui/map-view.tsx' with packageId '@types/react/index.d.ts@19.2.17'
+  Imported via "react" from file '../../node_modules/@tanstack/react-query/build/modern/HydrationBoundary.d.ts' with packageId '@types/react/index.d.ts@19.2.17'
+  Imported via "react" from file '../../node_modules/@tanstack/react-query/build/modern/IsRestoringProvider.d.ts' with packageId '@types/react/index.d.ts@19.2.17'
+  Imported via "react" from file '../../node_modules/@tanstack/react-query/build/modern/QueryClientProvider.d.ts' with packageId '@types/react/index.d.ts@19.2.17'
+  Imported via "react" from file '../../node_modules/@tanstack/react-query/build/modern/QueryErrorResetBoundary.d.ts' with packageId '@types/react/index.d.ts@19.2.17'
+  Type library referenced via 'react' from file '../../node_modules/@nx/react/dist/typings/image.d.ts' with packageId '@types/react/index.d.ts@19.2.17'
+  Imported via "react" from file '../../node_modules/@types/react-dom/index.d.ts' with packageId '@types/react/index.d.ts@19.2.17'
+  Imported via 'react' from file '../../node_modules/@nx/react/dist/typings/image.d.ts' with packageId '@types/react/index.d.ts@19.2.17'
+../../node_modules/@types/react/jsx-runtime.d.ts
+  Imported via "react/jsx-runtime" from file 'src/index.ts' with packageId '@types/react/jsx-runtime.d.ts@19.2.17' to import 'jsx' and 'jsxs' factory functions
+  Imported via "react/jsx-runtime" from file 'src/lib/feature-map.tsx' with packageId '@types/react/jsx-runtime.d.ts@19.2.17' to import 'jsx' and 'jsxs' factory functions
+  Imported via "react/jsx-runtime" from file 'src/lib/store/store.ts' with packageId '@types/react/jsx-runtime.d.ts@19.2.17' to import 'jsx' and 'jsxs' factory functions
+  Imported via "react/jsx-runtime" from file 'src/lib/ui/map-view.tsx' with packageId '@types/react/jsx-runtime.d.ts@19.2.17' to import 'jsx' and 'jsxs' factory functions
+  Imported via "react/jsx-runtime" from file 'src/lib/hooks/datasync.ts' with packageId '@types/react/jsx-runtime.d.ts@19.2.17' to import 'jsx' and 'jsxs' factory functions
+  Imported via "react/jsx-runtime" from file '../../node_modules/@tanstack/react-query/build/modern/QueryErrorResetBoundary.d.ts' with packageId '@types/react/jsx-runtime.d.ts@19.2.17'
+  Imported via "react/jsx-runtime" from file 'src/lib/hooks/eventDetails.ts' with packageId '@types/react/jsx-runtime.d.ts@19.2.17' to import 'jsx' and 'jsxs' factory functions
+  Imported via "react/jsx-runtime" from file 'src/lib/ui/components/eventSidePanel.tsx' with packageId '@types/react/jsx-runtime.d.ts@19.2.17' to import 'jsx' and 'jsxs' factory functions
+src/lib/feature-map.tsx
+  Imported via './lib/feature-map' from file 'src/index.ts'
+  Matched by include pattern 'src/**/*.tsx' in 'tsconfig.lib.json'
+../../node_modules/zustand/esm/vanilla.d.mts
+  Imported via 'zustand/vanilla' from file '../../node_modules/zustand/esm/index.d.mts' with packageId 'zustand/esm/vanilla.d.mts@5.0.15+@types/react@19.2.17+react@19.2.8'
+  Imported via 'zustand/vanilla' from file '../../node_modules/zustand/esm/react.d.mts' with packageId 'zustand/esm/vanilla.d.mts@5.0.15+@types/react@19.2.17+react@19.2.8'
+../../node_modules/zustand/esm/react.d.mts
+  Imported via 'zustand/react' from file '../../node_modules/zustand/esm/index.d.mts' with packageId 'zustand/esm/react.d.mts@5.0.15+@types/react@19.2.17+react@19.2.8'
+../../node_modules/zustand/esm/index.d.mts
+  Imported via 'zustand' from file 'src/lib/store/store.ts' with packageId 'zustand/esm/index.d.mts@5.0.15+@types/react@19.2.17+react@19.2.8'
+src/lib/store/store.ts
+  Imported via './lib/store/store' from file 'src/index.ts'
+  Imported via '../store/store' from file 'src/lib/ui/map-view.tsx'
+  Imported via '../store/store' from file 'src/lib/hooks/datasync.ts'
+  Matched by include pattern 'src/**/*.ts' in 'tsconfig.lib.json'
+  Imported via '../../store/store' from file 'src/lib/ui/components/eventSidePanel.tsx'
+../../node_modules/mapbox-gl/dist/mapbox-gl.d.ts
+  Imported via 'mapbox-gl' from file 'src/lib/ui/map-view.tsx' with packageId 'mapbox-gl/dist/mapbox-gl.d.ts@3.29.0'
+../../node_modules/@tanstack/query-core/build/modern/environmentManager.d.ts
+  Imported via "./environmentManager.js" from file '../../node_modules/@tanstack/query-core/build/modern/index.d.ts' with packageId '@tanstack/query-core/build/modern/environmentManager.d.ts@5.102.8'
+  File is ECMAScript module because '../../node_modules/@tanstack/query-core/package.json' has field "type" with value "module"
+../../node_modules/@tanstack/query-core/build/modern/subscribable-CbifVTKz.d.ts
+  Imported via "./subscribable-CbifVTKz.js" from file '../../node_modules/@tanstack/query-core/build/modern/focusManager.d.ts' with packageId '@tanstack/query-core/build/modern/subscribable-CbifVTKz.d.ts@5.102.8'
+  Imported via "./subscribable-CbifVTKz.js" from file '../../node_modules/@tanstack/query-core/build/modern/hydration-Bjs0MSgg.d.ts' with packageId '@tanstack/query-core/build/modern/subscribable-CbifVTKz.d.ts@5.102.8'
+  Imported via "./subscribable-CbifVTKz.js" from file '../../node_modules/@tanstack/query-core/build/modern/infiniteQueryObserver.d.ts' with packageId '@tanstack/query-core/build/modern/subscribable-CbifVTKz.d.ts@5.102.8'
+  Imported via "./subscribable-CbifVTKz.js" from file '../../node_modules/@tanstack/query-core/build/modern/onlineManager.d.ts' with packageId '@tanstack/query-core/build/modern/subscribable-CbifVTKz.d.ts@5.102.8'
+  Imported via "./subscribable-CbifVTKz.js" from file '../../node_modules/@tanstack/query-core/build/modern/queriesObserver.d.ts' with packageId '@tanstack/query-core/build/modern/subscribable-CbifVTKz.d.ts@5.102.8'
+  File is ECMAScript module because '../../node_modules/@tanstack/query-core/package.json' has field "type" with value "module"
+../../node_modules/@tanstack/query-core/build/modern/focusManager.d.ts
+  Imported via "./focusManager.js" from file '../../node_modules/@tanstack/query-core/build/modern/index.d.ts' with packageId '@tanstack/query-core/build/modern/focusManager.d.ts@5.102.8'
+  File is ECMAScript module because '../../node_modules/@tanstack/query-core/package.json' has field "type" with value "module"
+../../node_modules/@tanstack/query-core/build/modern/removable-DeMjhW5M.d.ts
+  Imported via "./removable-DeMjhW5M.js" from file '../../node_modules/@tanstack/query-core/build/modern/hydration-Bjs0MSgg.d.ts' with packageId '@tanstack/query-core/build/modern/removable-DeMjhW5M.d.ts@5.102.8'
+  File is ECMAScript module because '../../node_modules/@tanstack/query-core/package.json' has field "type" with value "module"
+../../node_modules/@tanstack/query-core/build/modern/hydration-Bjs0MSgg.d.ts
+  Imported via "./hydration-Bjs0MSgg.js" from file '../../node_modules/@tanstack/query-core/build/modern/index.d.ts' with packageId '@tanstack/query-core/build/modern/hydration-Bjs0MSgg.d.ts@5.102.8'
+  Imported via "./hydration-Bjs0MSgg.js" from file '../../node_modules/@tanstack/query-core/build/modern/infiniteQueryObserver.d.ts' with packageId '@tanstack/query-core/build/modern/hydration-Bjs0MSgg.d.ts@5.102.8'
+  Imported via "./hydration-Bjs0MSgg.js" from file '../../node_modules/@tanstack/query-core/build/modern/queriesObserver.d.ts' with packageId '@tanstack/query-core/build/modern/hydration-Bjs0MSgg.d.ts@5.102.8'
+  Imported via "./hydration-Bjs0MSgg.js" from file '../../node_modules/@tanstack/query-core/build/modern/streamedQuery.d.ts' with packageId '@tanstack/query-core/build/modern/hydration-Bjs0MSgg.d.ts@5.102.8'
+  File is ECMAScript module because '../../node_modules/@tanstack/query-core/package.json' has field "type" with value "module"
+../../node_modules/@tanstack/query-core/build/modern/infiniteQueryObserver.d.ts
+  Imported via "./infiniteQueryObserver.js" from file '../../node_modules/@tanstack/query-core/build/modern/index.d.ts' with packageId '@tanstack/query-core/build/modern/infiniteQueryObserver.d.ts@5.102.8'
+  File is ECMAScript module because '../../node_modules/@tanstack/query-core/package.json' has field "type" with value "module"
+../../node_modules/@tanstack/query-core/build/modern/notifyManager.d.ts
+  Imported via "./notifyManager.js" from file '../../node_modules/@tanstack/query-core/build/modern/index.d.ts' with packageId '@tanstack/query-core/build/modern/notifyManager.d.ts@5.102.8'
+  File is ECMAScript module because '../../node_modules/@tanstack/query-core/package.json' has field "type" with value "module"
+../../node_modules/@tanstack/query-core/build/modern/onlineManager.d.ts
+  Imported via "./onlineManager.js" from file '../../node_modules/@tanstack/query-core/build/modern/index.d.ts' with packageId '@tanstack/query-core/build/modern/onlineManager.d.ts@5.102.8'
+  File is ECMAScript module because '../../node_modules/@tanstack/query-core/package.json' has field "type" with value "module"
+../../node_modules/@tanstack/query-core/build/modern/queriesObserver.d.ts
+  Imported via "./queriesObserver.js" from file '../../node_modules/@tanstack/query-core/build/modern/index.d.ts' with packageId '@tanstack/query-core/build/modern/queriesObserver.d.ts@5.102.8'
+  File is ECMAScript module because '../../node_modules/@tanstack/query-core/package.json' has field "type" with value "module"
+../../node_modules/@tanstack/query-core/build/modern/timeoutManager.d.ts
+  Imported via "./timeoutManager.js" from file '../../node_modules/@tanstack/query-core/build/modern/index.d.ts' with packageId '@tanstack/query-core/build/modern/timeoutManager.d.ts@5.102.8'
+  File is ECMAScript module because '../../node_modules/@tanstack/query-core/package.json' has field "type" with value "module"
+../../node_modules/@tanstack/query-core/build/modern/streamedQuery.d.ts
+  Imported via "./streamedQuery.js" from file '../../node_modules/@tanstack/query-core/build/modern/index.d.ts' with packageId '@tanstack/query-core/build/modern/streamedQuery.d.ts@5.102.8'
+  File is ECMAScript module because '../../node_modules/@tanstack/query-core/package.json' has field "type" with value "module"
+../../node_modules/@tanstack/query-core/build/modern/index.d.ts
+  Imported via "@tanstack/query-core" from file '../../node_modules/@tanstack/react-query/build/modern/HydrationBoundary.d.ts' with packageId '@tanstack/query-core/build/modern/index.d.ts@5.102.8'
+  Imported via "@tanstack/query-core" from file '../../node_modules/@tanstack/react-query/build/modern/QueryClientProvider.d.ts' with packageId '@tanstack/query-core/build/modern/index.d.ts@5.102.8'
+  Imported via "@tanstack/query-core" from file '../../node_modules/@tanstack/react-query/build/modern/types.d.ts' with packageId '@tanstack/query-core/build/modern/index.d.ts@5.102.8'
+  Imported via "@tanstack/query-core" from file '../../node_modules/@tanstack/react-query/build/modern/useQueries.d.ts' with packageId '@tanstack/query-core/build/modern/index.d.ts@5.102.8'
+  Imported via "@tanstack/query-core" from file '../../node_modules/@tanstack/react-query/build/modern/queryOptions.d.ts' with packageId '@tanstack/query-core/build/modern/index.d.ts@5.102.8'
+  Imported via "@tanstack/query-core" from file '../../node_modules/@tanstack/react-query/build/modern/useQuery.d.ts' with packageId '@tanstack/query-core/build/modern/index.d.ts@5.102.8'
+  Imported via "@tanstack/query-core" from file '../../node_modules/@tanstack/react-query/build/modern/useSuspenseQuery.d.ts' with packageId '@tanstack/query-core/build/modern/index.d.ts@5.102.8'
+  Imported via "@tanstack/query-core" from file '../../node_modules/@tanstack/react-query/build/modern/useSuspenseInfiniteQuery.d.ts' with packageId '@tanstack/query-core/build/modern/index.d.ts@5.102.8'
+  Imported via "@tanstack/query-core" from file '../../node_modules/@tanstack/react-query/build/modern/useSuspenseQueries.d.ts' with packageId '@tanstack/query-core/build/modern/index.d.ts@5.102.8'
+  Imported via "@tanstack/query-core" from file '../../node_modules/@tanstack/react-query/build/modern/usePrefetchQuery.d.ts' with packageId '@tanstack/query-core/build/modern/index.d.ts@5.102.8'
+  Imported via "@tanstack/query-core" from file '../../node_modules/@tanstack/react-query/build/modern/usePrefetchInfiniteQuery.d.ts' with packageId '@tanstack/query-core/build/modern/index.d.ts@5.102.8'
+  Imported via "@tanstack/query-core" from file '../../node_modules/@tanstack/react-query/build/modern/infiniteQueryOptions.d.ts' with packageId '@tanstack/query-core/build/modern/index.d.ts@5.102.8'
+  Imported via "@tanstack/query-core" from file '../../node_modules/@tanstack/react-query/build/modern/useIsFetching.d.ts' with packageId '@tanstack/query-core/build/modern/index.d.ts@5.102.8'
+  Imported via "@tanstack/query-core" from file '../../node_modules/@tanstack/react-query/build/modern/useMutationState.d.ts' with packageId '@tanstack/query-core/build/modern/index.d.ts@5.102.8'
+  Imported via "@tanstack/query-core" from file '../../node_modules/@tanstack/react-query/build/modern/useMutation.d.ts' with packageId '@tanstack/query-core/build/modern/index.d.ts@5.102.8'
+  Imported via "@tanstack/query-core" from file '../../node_modules/@tanstack/react-query/build/modern/mutationOptions.d.ts' with packageId '@tanstack/query-core/build/modern/index.d.ts@5.102.8'
+  Imported via "@tanstack/query-core" from file '../../node_modules/@tanstack/react-query/build/modern/useInfiniteQuery.d.ts' with packageId '@tanstack/query-core/build/modern/index.d.ts@5.102.8'
+  Imported via "@tanstack/query-core" from file '../../node_modules/@tanstack/react-query/build/modern/index.d.ts' with packageId '@tanstack/query-core/build/modern/index.d.ts@5.102.8'
+  File is ECMAScript module because '../../node_modules/@tanstack/query-core/package.json' has field "type" with value "module"
+../../node_modules/@tanstack/react-query/build/modern/HydrationBoundary.d.ts
+  Imported via "./HydrationBoundary.js" from file '../../node_modules/@tanstack/react-query/build/modern/index.d.ts' with packageId '@tanstack/react-query/build/modern/HydrationBoundary.d.ts@5.102.8+react@19.2.8'
+  File is ECMAScript module because '../../node_modules/@tanstack/react-query/package.json' has field "type" with value "module"
+../../node_modules/@tanstack/react-query/build/modern/IsRestoringProvider.d.ts
+  Imported via "./IsRestoringProvider.js" from file '../../node_modules/@tanstack/react-query/build/modern/index.d.ts' with packageId '@tanstack/react-query/build/modern/IsRestoringProvider.d.ts@5.102.8+react@19.2.8'
+  File is ECMAScript module because '../../node_modules/@tanstack/react-query/package.json' has field "type" with value "module"
+../../node_modules/@tanstack/react-query/build/modern/QueryClientProvider.d.ts
+  Imported via "./QueryClientProvider.js" from file '../../node_modules/@tanstack/react-query/build/modern/index.d.ts' with packageId '@tanstack/react-query/build/modern/QueryClientProvider.d.ts@5.102.8+react@19.2.8'
+  File is ECMAScript module because '../../node_modules/@tanstack/react-query/package.json' has field "type" with value "module"
+../../node_modules/@tanstack/react-query/build/modern/QueryErrorResetBoundary.d.ts
+  Imported via "./QueryErrorResetBoundary.js" from file '../../node_modules/@tanstack/react-query/build/modern/index.d.ts' with packageId '@tanstack/react-query/build/modern/QueryErrorResetBoundary.d.ts@5.102.8+react@19.2.8'
+  File is ECMAScript module because '../../node_modules/@tanstack/react-query/package.json' has field "type" with value "module"
+../../node_modules/@tanstack/react-query/build/modern/types.d.ts
+  Imported via "./types.js" from file '../../node_modules/@tanstack/react-query/build/modern/index.d.ts' with packageId '@tanstack/react-query/build/modern/types.d.ts@5.102.8+react@19.2.8'
+  Imported via "./types.js" from file '../../node_modules/@tanstack/react-query/build/modern/useQueries.d.ts' with packageId '@tanstack/react-query/build/modern/types.d.ts@5.102.8+react@19.2.8'
+  Imported via "./types.js" from file '../../node_modules/@tanstack/react-query/build/modern/queryOptions.d.ts' with packageId '@tanstack/react-query/build/modern/types.d.ts@5.102.8+react@19.2.8'
+  Imported via "./types.js" from file '../../node_modules/@tanstack/react-query/build/modern/useQuery.d.ts' with packageId '@tanstack/react-query/build/modern/types.d.ts@5.102.8+react@19.2.8'
+  Imported via "./types.js" from file '../../node_modules/@tanstack/react-query/build/modern/useSuspenseQuery.d.ts' with packageId '@tanstack/react-query/build/modern/types.d.ts@5.102.8+react@19.2.8'
+  Imported via "./types.js" from file '../../node_modules/@tanstack/react-query/build/modern/useSuspenseInfiniteQuery.d.ts' with packageId '@tanstack/react-query/build/modern/types.d.ts@5.102.8+react@19.2.8'
+  Imported via "./types.js" from file '../../node_modules/@tanstack/react-query/build/modern/useSuspenseQueries.d.ts' with packageId '@tanstack/react-query/build/modern/types.d.ts@5.102.8+react@19.2.8'
+  Imported via "./types.js" from file '../../node_modules/@tanstack/react-query/build/modern/usePrefetchQuery.d.ts' with packageId '@tanstack/react-query/build/modern/types.d.ts@5.102.8+react@19.2.8'
+  Imported via "./types.js" from file '../../node_modules/@tanstack/react-query/build/modern/usePrefetchInfiniteQuery.d.ts' with packageId '@tanstack/react-query/build/modern/types.d.ts@5.102.8+react@19.2.8'
+  Imported via "./types.js" from file '../../node_modules/@tanstack/react-query/build/modern/infiniteQueryOptions.d.ts' with packageId '@tanstack/react-query/build/modern/types.d.ts@5.102.8+react@19.2.8'
+  Imported via "./types.js" from file '../../node_modules/@tanstack/react-query/build/modern/useMutation.d.ts' with packageId '@tanstack/react-query/build/modern/types.d.ts@5.102.8+react@19.2.8'
+  Imported via "./types.js" from file '../../node_modules/@tanstack/react-query/build/modern/mutationOptions.d.ts' with packageId '@tanstack/react-query/build/modern/types.d.ts@5.102.8+react@19.2.8'
+  Imported via "./types.js" from file '../../node_modules/@tanstack/react-query/build/modern/useInfiniteQuery.d.ts' with packageId '@tanstack/react-query/build/modern/types.d.ts@5.102.8+react@19.2.8'
+  File is ECMAScript module because '../../node_modules/@tanstack/react-query/package.json' has field "type" with value "module"
+../../node_modules/@tanstack/react-query/build/modern/useQueries.d.ts
+  Imported via "./useQueries.js" from file '../../node_modules/@tanstack/react-query/build/modern/index.d.ts' with packageId '@tanstack/react-query/build/modern/useQueries.d.ts@5.102.8+react@19.2.8'
+  File is ECMAScript module because '../../node_modules/@tanstack/react-query/package.json' has field "type" with value "module"
+../../node_modules/@tanstack/react-query/build/modern/queryOptions.d.ts
+  Imported via "./queryOptions.js" from file '../../node_modules/@tanstack/react-query/build/modern/index.d.ts' with packageId '@tanstack/react-query/build/modern/queryOptions.d.ts@5.102.8+react@19.2.8'
+  Imported via "./queryOptions.js" from file '../../node_modules/@tanstack/react-query/build/modern/useQuery.d.ts' with packageId '@tanstack/react-query/build/modern/queryOptions.d.ts@5.102.8+react@19.2.8'
+  File is ECMAScript module because '../../node_modules/@tanstack/react-query/package.json' has field "type" with value "module"
+../../node_modules/@tanstack/react-query/build/modern/useQuery.d.ts
+  Imported via "./useQuery.js" from file '../../node_modules/@tanstack/react-query/build/modern/index.d.ts' with packageId '@tanstack/react-query/build/modern/useQuery.d.ts@5.102.8+react@19.2.8'
+  File is ECMAScript module because '../../node_modules/@tanstack/react-query/package.json' has field "type" with value "module"
+../../node_modules/@tanstack/react-query/build/modern/useSuspenseQuery.d.ts
+  Imported via "./useSuspenseQuery.js" from file '../../node_modules/@tanstack/react-query/build/modern/index.d.ts' with packageId '@tanstack/react-query/build/modern/useSuspenseQuery.d.ts@5.102.8+react@19.2.8'
+  File is ECMAScript module because '../../node_modules/@tanstack/react-query/package.json' has field "type" with value "module"
+../../node_modules/@tanstack/react-query/build/modern/useSuspenseInfiniteQuery.d.ts
+  Imported via "./useSuspenseInfiniteQuery.js" from file '../../node_modules/@tanstack/react-query/build/modern/index.d.ts' with packageId '@tanstack/react-query/build/modern/useSuspenseInfiniteQuery.d.ts@5.102.8+react@19.2.8'
+  File is ECMAScript module because '../../node_modules/@tanstack/react-query/package.json' has field "type" with value "module"
+../../node_modules/@tanstack/react-query/build/modern/useSuspenseQueries.d.ts
+  Imported via "./useSuspenseQueries.js" from file '../../node_modules/@tanstack/react-query/build/modern/index.d.ts' with packageId '@tanstack/react-query/build/modern/useSuspenseQueries.d.ts@5.102.8+react@19.2.8'
+  File is ECMAScript module because '../../node_modules/@tanstack/react-query/package.json' has field "type" with value "module"
+../../node_modules/@tanstack/react-query/build/modern/usePrefetchQuery.d.ts
+  Imported via "./usePrefetchQuery.js" from file '../../node_modules/@tanstack/react-query/build/modern/index.d.ts' with packageId '@tanstack/react-query/build/modern/usePrefetchQuery.d.ts@5.102.8+react@19.2.8'
+  File is ECMAScript module because '../../node_modules/@tanstack/react-query/package.json' has field "type" with value "module"
+../../node_modules/@tanstack/react-query/build/modern/usePrefetchInfiniteQuery.d.ts
+  Imported via "./usePrefetchInfiniteQuery.js" from file '../../node_modules/@tanstack/react-query/build/modern/index.d.ts' with packageId '@tanstack/react-query/build/modern/usePrefetchInfiniteQuery.d.ts@5.102.8+react@19.2.8'
+  File is ECMAScript module because '../../node_modules/@tanstack/react-query/package.json' has field "type" with value "module"
+../../node_modules/@tanstack/react-query/build/modern/infiniteQueryOptions.d.ts
+  Imported via "./infiniteQueryOptions.js" from file '../../node_modules/@tanstack/react-query/build/modern/index.d.ts' with packageId '@tanstack/react-query/build/modern/infiniteQueryOptions.d.ts@5.102.8+react@19.2.8'
+  Imported via "./infiniteQueryOptions.js" from file '../../node_modules/@tanstack/react-query/build/modern/useInfiniteQuery.d.ts' with packageId '@tanstack/react-query/build/modern/infiniteQueryOptions.d.ts@5.102.8+react@19.2.8'
+  File is ECMAScript module because '../../node_modules/@tanstack/react-query/package.json' has field "type" with value "module"
+../../node_modules/@tanstack/react-query/build/modern/useIsFetching.d.ts
+  Imported via "./useIsFetching.js" from file '../../node_modules/@tanstack/react-query/build/modern/index.d.ts' with packageId '@tanstack/react-query/build/modern/useIsFetching.d.ts@5.102.8+react@19.2.8'
+  File is ECMAScript module because '../../node_modules/@tanstack/react-query/package.json' has field "type" with value "module"
+../../node_modules/@tanstack/react-query/build/modern/useMutationState.d.ts
+  Imported via "./useMutationState.js" from file '../../node_modules/@tanstack/react-query/build/modern/index.d.ts' with packageId '@tanstack/react-query/build/modern/useMutationState.d.ts@5.102.8+react@19.2.8'
+  File is ECMAScript module because '../../node_modules/@tanstack/react-query/package.json' has field "type" with value "module"
+../../node_modules/@tanstack/react-query/build/modern/useMutation.d.ts
+  Imported via "./useMutation.js" from file '../../node_modules/@tanstack/react-query/build/modern/index.d.ts' with packageId '@tanstack/react-query/build/modern/useMutation.d.ts@5.102.8+react@19.2.8'
+  File is ECMAScript module because '../../node_modules/@tanstack/react-query/package.json' has field "type" with value "module"
+../../node_modules/@tanstack/react-query/build/modern/mutationOptions.d.ts
+  Imported via "./mutationOptions.js" from file '../../node_modules/@tanstack/react-query/build/modern/index.d.ts' with packageId '@tanstack/react-query/build/modern/mutationOptions.d.ts@5.102.8+react@19.2.8'
+  File is ECMAScript module because '../../node_modules/@tanstack/react-query/package.json' has field "type" with value "module"
+../../node_modules/@tanstack/react-query/build/modern/useInfiniteQuery.d.ts
+  Imported via "./useInfiniteQuery.js" from file '../../node_modules/@tanstack/react-query/build/modern/index.d.ts' with packageId '@tanstack/react-query/build/modern/useInfiniteQuery.d.ts@5.102.8+react@19.2.8'
+  File is ECMAScript module because '../../node_modules/@tanstack/react-query/package.json' has field "type" with value "module"
+../../node_modules/@tanstack/react-query/build/modern/index.d.ts
+  Imported via '@tanstack/react-query' from file 'src/lib/hooks/datasync.ts' with packageId '@tanstack/react-query/build/modern/index.d.ts@5.102.8+react@19.2.8'
+  Imported via '@tanstack/react-query' from file 'src/lib/hooks/eventDetails.ts' with packageId '@tanstack/react-query/build/modern/index.d.ts@5.102.8+react@19.2.8'
+  File is ECMAScript module because '../../node_modules/@tanstack/react-query/package.json' has field "type" with value "module"
+../../node_modules/axios/index.d.ts
+  Imported via 'axios' from file 'src/lib/hooks/datasync.ts' with packageId 'axios/index.d.ts@1.20.0'
+  Imported via 'axios' from file 'src/lib/hooks/eventDetails.ts' with packageId 'axios/index.d.ts@1.20.0'
+  File is ECMAScript module because '../../node_modules/axios/package.json' has field "type" with value "module"
+../shared/util-types/dist/lib/util-types.d.ts
+  Imported via './lib/util-types.js' from file '../shared/util-types/dist/index.d.ts'
+  File is output of project reference source '../shared/util-types/src/lib/util-types.ts'
+../shared/util-types/dist/lib/api-types.d.ts
+  Imported via './lib/api-types.js' from file '../shared/util-types/dist/index.d.ts'
+  File is output of project reference source '../shared/util-types/src/lib/api-types.ts'
+../shared/util-types/dist/index.d.ts
+  Imported via '@hermes/util-types' from file 'src/lib/hooks/datasync.ts'
+  Imported via '@hermes/util-types' from file 'src/lib/ui/map-view.tsx'
+  Imported via '@hermes/util-types' from file 'src/lib/hooks/eventDetails.ts'
+  File is output of project reference source '../shared/util-types/src/index.ts'
+src/lib/hooks/datasync.ts
+  Imported via '../hooks/datasync' from file 'src/lib/ui/map-view.tsx'
+  Matched by include pattern 'src/**/*.ts' in 'tsconfig.lib.json'
+../../node_modules/@types/geojson/index.d.ts
+  Imported via 'geojson' from file 'src/lib/ui/map-view.tsx' with packageId '@types/geojson/index.d.ts@7946.0.16'
+src/lib/ui/map-view.tsx
+  Imported via './lib/ui/map-view' from file 'src/index.ts'
+  Matched by include pattern 'src/**/*.tsx' in 'tsconfig.lib.json'
+src/index.ts
+  Matched by include pattern 'src/**/*.ts' in 'tsconfig.lib.json'
+src/lib/hooks/eventDetails.ts
+  Matched by include pattern 'src/**/*.ts' in 'tsconfig.lib.json'
+  Imported via '../../hooks/eventDetails' from file 'src/lib/ui/components/eventSidePanel.tsx'
+src/lib/ui/components/eventSidePanel.tsx
+  Matched by include pattern 'src/**/*.tsx' in 'tsconfig.lib.json'
+../../node_modules/@types/node/compatibility/disposable.d.ts
+  Referenced via 'disposable.d.ts' from file '../../node_modules/@types/node/compatibility/index.d.ts'
+../../node_modules/@types/node/compatibility/indexable.d.ts
+  Referenced via 'indexable.d.ts' from file '../../node_modules/@types/node/compatibility/index.d.ts'
+../../node_modules/@types/node/compatibility/iterators.d.ts
+  Referenced via 'iterators.d.ts' from file '../../node_modules/@types/node/compatibility/index.d.ts'
+../../node_modules/@types/node/compatibility/index.d.ts
+  Referenced via 'compatibility/index.d.ts' from file '../../node_modules/@types/node/index.d.ts'
+../../node_modules/@types/node/globals.typedarray.d.ts
+  Referenced via 'globals.typedarray.d.ts' from file '../../node_modules/@types/node/index.d.ts'
+../../node_modules/@types/node/buffer.buffer.d.ts
+  Referenced via 'buffer.buffer.d.ts' from file '../../node_modules/@types/node/index.d.ts'
+../../node_modules/@types/node/globals.d.ts
+  Referenced via 'globals.d.ts' from file '../../node_modules/@types/node/index.d.ts'
+../../node_modules/@types/node/web-globals/abortcontroller.d.ts
+  Referenced via 'web-globals/abortcontroller.d.ts' from file '../../node_modules/@types/node/index.d.ts'
+../../node_modules/@types/node/web-globals/domexception.d.ts
+  Referenced via 'web-globals/domexception.d.ts' from file '../../node_modules/@types/node/index.d.ts'
+../../node_modules/@types/node/web-globals/events.d.ts
+  Referenced via 'web-globals/events.d.ts' from file '../../node_modules/@types/node/index.d.ts'
+../../node_modules/buffer/index.d.ts
+  Imported via 'buffer' from file '../../node_modules/undici-types/dispatcher.d.ts' with packageId 'buffer/index.d.ts@5.7.1'
+  Imported via 'buffer' from file '../../node_modules/undici-types/readable.d.ts' with packageId 'buffer/index.d.ts@5.7.1'
+  Imported via 'buffer' from file '../../node_modules/undici-types/file.d.ts' with packageId 'buffer/index.d.ts@5.7.1'
+  Imported via 'buffer' from file '../../node_modules/undici-types/fetch.d.ts' with packageId 'buffer/index.d.ts@5.7.1'
+  Imported via 'buffer' from file '../../node_modules/undici-types/websocket.d.ts' with packageId 'buffer/index.d.ts@5.7.1'
+  Imported via 'buffer' from file '../../node_modules/undici-types/filereader.d.ts' with packageId 'buffer/index.d.ts@5.7.1'
+  Imported via "buffer" from file '../../node_modules/@types/node/os.d.ts' with packageId 'buffer/index.d.ts@5.7.1'
+  Imported via "buffer" from file '../../node_modules/@types/node/process.d.ts' with packageId 'buffer/index.d.ts@5.7.1'
+../../node_modules/undici-types/header.d.ts
+  Imported via './header' from file '../../node_modules/undici-types/dispatcher.d.ts' with packageId 'undici-types/header.d.ts@6.21.0'
+  Imported via "./header" from file '../../node_modules/undici-types/errors.d.ts' with packageId 'undici-types/header.d.ts@6.21.0'
+  Imported via './header' from file '../../node_modules/undici-types/mock-interceptor.d.ts' with packageId 'undici-types/header.d.ts@6.21.0'
+  Imported via './header' from file '../../node_modules/undici-types/proxy-agent.d.ts' with packageId 'undici-types/header.d.ts@6.21.0'
+../../node_modules/undici-types/readable.d.ts
+  Imported via './readable' from file '../../node_modules/undici-types/dispatcher.d.ts' with packageId 'undici-types/readable.d.ts@6.21.0'
+../../node_modules/undici-types/file.d.ts
+  Imported via './file' from file '../../node_modules/undici-types/formdata.d.ts' with packageId 'undici-types/file.d.ts@6.21.0'
+  Imported via './file' from file '../../node_modules/undici-types/index.d.ts' with packageId 'undici-types/file.d.ts@6.21.0'
+  Imported via './file' from file '../../node_modules/undici-types/index.d.ts' with packageId 'undici-types/file.d.ts@6.21.0'
+../../node_modules/undici-types/fetch.d.ts
+  Imported via './fetch' from file '../../node_modules/undici-types/formdata.d.ts' with packageId 'undici-types/fetch.d.ts@6.21.0'
+  Imported via './fetch' from file '../../node_modules/undici-types/mock-interceptor.d.ts' with packageId 'undici-types/fetch.d.ts@6.21.0'
+  Imported via './fetch' from file '../../node_modules/undici-types/cookies.d.ts' with packageId 'undici-types/fetch.d.ts@6.21.0'
+  Imported via './fetch' from file '../../node_modules/undici-types/websocket.d.ts' with packageId 'undici-types/fetch.d.ts@6.21.0'
+  Imported via './fetch' from file '../../node_modules/undici-types/index.d.ts' with packageId 'undici-types/fetch.d.ts@6.21.0'
+  Imported via './fetch' from file '../../node_modules/undici-types/cache.d.ts' with packageId 'undici-types/fetch.d.ts@6.21.0'
+  Imported via './fetch' from file '../../node_modules/undici-types/index.d.ts' with packageId 'undici-types/fetch.d.ts@6.21.0'
+  Imported via './fetch' from file '../../node_modules/undici-types/index.d.ts' with packageId 'undici-types/fetch.d.ts@6.21.0'
+  Imported via './fetch' from file '../../node_modules/undici-types/index.d.ts' with packageId 'undici-types/fetch.d.ts@6.21.0'
+  Imported via './fetch' from file '../../node_modules/undici-types/index.d.ts' with packageId 'undici-types/fetch.d.ts@6.21.0'
+../../node_modules/undici-types/formdata.d.ts
+  Imported via './formdata' from file '../../node_modules/undici-types/dispatcher.d.ts' with packageId 'undici-types/formdata.d.ts@6.21.0'
+  Imported via './formdata' from file '../../node_modules/undici-types/fetch.d.ts' with packageId 'undici-types/formdata.d.ts@6.21.0'
+  Imported via './formdata' from file '../../node_modules/undici-types/index.d.ts' with packageId 'undici-types/formdata.d.ts@6.21.0'
+  Imported via './formdata' from file '../../node_modules/undici-types/index.d.ts' with packageId 'undici-types/formdata.d.ts@6.21.0'
+../../node_modules/undici-types/connector.d.ts
+  Imported via "./connector" from file '../../node_modules/undici-types/client.d.ts' with packageId 'undici-types/connector.d.ts@6.21.0'
+  Imported via './connector' from file '../../node_modules/undici-types/index.d.ts' with packageId 'undici-types/connector.d.ts@6.21.0'
+  Imported via './connector' from file '../../node_modules/undici-types/proxy-agent.d.ts' with packageId 'undici-types/connector.d.ts@6.21.0'
+  Imported via "./connector" from file '../../node_modules/undici-types/diagnostics-channel.d.ts' with packageId 'undici-types/connector.d.ts@6.21.0'
+  Imported via './connector' from file '../../node_modules/undici-types/index.d.ts' with packageId 'undici-types/connector.d.ts@6.21.0'
+../../node_modules/undici-types/client.d.ts
+  Imported via './client' from file '../../node_modules/undici-types/errors.d.ts' with packageId 'undici-types/client.d.ts@6.21.0'
+  Imported via './client' from file '../../node_modules/undici-types/pool.d.ts' with packageId 'undici-types/client.d.ts@6.21.0'
+  Imported via './client' from file '../../node_modules/undici-types/index.d.ts' with packageId 'undici-types/client.d.ts@6.21.0'
+  Imported via './client' from file '../../node_modules/undici-types/mock-client.d.ts' with packageId 'undici-types/client.d.ts@6.21.0'
+  Imported via './client' from file '../../node_modules/undici-types/index.d.ts' with packageId 'undici-types/client.d.ts@6.21.0'
+../../node_modules/undici-types/errors.d.ts
+  Imported via './errors' from file '../../node_modules/undici-types/dispatcher.d.ts' with packageId 'undici-types/errors.d.ts@6.21.0'
+  Imported via './errors' from file '../../node_modules/undici-types/index.d.ts' with packageId 'undici-types/errors.d.ts@6.21.0'
+  Imported via './errors' from file '../../node_modules/undici-types/mock-errors.d.ts' with packageId 'undici-types/errors.d.ts@6.21.0'
+  Imported via './errors' from file '../../node_modules/undici-types/index.d.ts' with packageId 'undici-types/errors.d.ts@6.21.0'
+../../node_modules/undici-types/dispatcher.d.ts
+  Imported via './dispatcher' from file '../../node_modules/undici-types/index.d.ts' with packageId 'undici-types/dispatcher.d.ts@6.21.0'
+  Imported via './dispatcher' from file '../../node_modules/undici-types/fetch.d.ts' with packageId 'undici-types/dispatcher.d.ts@6.21.0'
+  Imported via './dispatcher' from file '../../node_modules/undici-types/client.d.ts' with packageId 'undici-types/dispatcher.d.ts@6.21.0'
+  Imported via "./dispatcher" from file '../../node_modules/undici-types/global-dispatcher.d.ts' with packageId 'undici-types/dispatcher.d.ts@6.21.0'
+  Imported via "./dispatcher" from file '../../node_modules/undici-types/pool.d.ts' with packageId 'undici-types/dispatcher.d.ts@6.21.0'
+  Imported via "./dispatcher" from file '../../node_modules/undici-types/handlers.d.ts' with packageId 'undici-types/dispatcher.d.ts@6.21.0'
+  Imported via './dispatcher' from file '../../node_modules/undici-types/balanced-pool.d.ts' with packageId 'undici-types/dispatcher.d.ts@6.21.0'
+  Imported via "./dispatcher" from file '../../node_modules/undici-types/agent.d.ts' with packageId 'undici-types/dispatcher.d.ts@6.21.0'
+  Imported via './dispatcher' from file '../../node_modules/undici-types/mock-client.d.ts' with packageId 'undici-types/dispatcher.d.ts@6.21.0'
+  Imported via './dispatcher' from file '../../node_modules/undici-types/mock-agent.d.ts' with packageId 'undici-types/dispatcher.d.ts@6.21.0'
+  Imported via './dispatcher' from file '../../node_modules/undici-types/mock-interceptor.d.ts' with packageId 'undici-types/dispatcher.d.ts@6.21.0'
+  Imported via './dispatcher' from file '../../node_modules/undici-types/mock-pool.d.ts' with packageId 'undici-types/dispatcher.d.ts@6.21.0'
+  Imported via './dispatcher' from file '../../node_modules/undici-types/proxy-agent.d.ts' with packageId 'undici-types/dispatcher.d.ts@6.21.0'
+  Imported via './dispatcher' from file '../../node_modules/undici-types/env-http-proxy-agent.d.ts' with packageId 'undici-types/dispatcher.d.ts@6.21.0'
+  Imported via "./dispatcher" from file '../../node_modules/undici-types/retry-handler.d.ts' with packageId 'undici-types/dispatcher.d.ts@6.21.0'
+  Imported via './dispatcher' from file '../../node_modules/undici-types/retry-agent.d.ts' with packageId 'undici-types/dispatcher.d.ts@6.21.0'
+  Imported via './dispatcher' from file '../../node_modules/undici-types/api.d.ts' with packageId 'undici-types/dispatcher.d.ts@6.21.0'
+  Imported via "./dispatcher" from file '../../node_modules/undici-types/interceptors.d.ts' with packageId 'undici-types/dispatcher.d.ts@6.21.0'
+  Imported via './dispatcher' from file '../../node_modules/undici-types/websocket.d.ts' with packageId 'undici-types/dispatcher.d.ts@6.21.0'
+  Imported via './dispatcher' from file '../../node_modules/undici-types/eventsource.d.ts' with packageId 'undici-types/dispatcher.d.ts@6.21.0'
+  Imported via "./dispatcher" from file '../../node_modules/undici-types/diagnostics-channel.d.ts' with packageId 'undici-types/dispatcher.d.ts@6.21.0'
+  Imported via './dispatcher' from file '../../node_modules/undici-types/index.d.ts' with packageId 'undici-types/dispatcher.d.ts@6.21.0'
+../../node_modules/undici-types/global-dispatcher.d.ts
+  Imported via './global-dispatcher' from file '../../node_modules/undici-types/index.d.ts' with packageId 'undici-types/global-dispatcher.d.ts@6.21.0'
+  Imported via './global-dispatcher' from file '../../node_modules/undici-types/index.d.ts' with packageId 'undici-types/global-dispatcher.d.ts@6.21.0'
+  Imported via './global-dispatcher' from file '../../node_modules/undici-types/index.d.ts' with packageId 'undici-types/global-dispatcher.d.ts@6.21.0'
+../../node_modules/undici-types/global-origin.d.ts
+  Imported via './global-origin' from file '../../node_modules/undici-types/index.d.ts' with packageId 'undici-types/global-origin.d.ts@6.21.0'
+../../node_modules/undici-types/pool-stats.d.ts
+  Imported via './pool-stats' from file '../../node_modules/undici-types/pool.d.ts' with packageId 'undici-types/pool-stats.d.ts@6.21.0'
+../../node_modules/undici-types/pool.d.ts
+  Imported via './pool' from file '../../node_modules/undici-types/index.d.ts' with packageId 'undici-types/pool.d.ts@6.21.0'
+  Imported via "./pool" from file '../../node_modules/undici-types/pool-stats.d.ts' with packageId 'undici-types/pool.d.ts@6.21.0'
+  Imported via './pool' from file '../../node_modules/undici-types/balanced-pool.d.ts' with packageId 'undici-types/pool.d.ts@6.21.0'
+  Imported via './pool' from file '../../node_modules/undici-types/agent.d.ts' with packageId 'undici-types/pool.d.ts@6.21.0'
+  Imported via './pool' from file '../../node_modules/undici-types/mock-pool.d.ts' with packageId 'undici-types/pool.d.ts@6.21.0'
+  Imported via './pool' from file '../../node_modules/undici-types/index.d.ts' with packageId 'undici-types/pool.d.ts@6.21.0'
+../../node_modules/undici-types/handlers.d.ts
+  Imported via './handlers' from file '../../node_modules/undici-types/index.d.ts' with packageId 'undici-types/handlers.d.ts@6.21.0'
+  Imported via './handlers' from file '../../node_modules/undici-types/index.d.ts' with packageId 'undici-types/handlers.d.ts@6.21.0'
+  Imported via './handlers' from file '../../node_modules/undici-types/index.d.ts' with packageId 'undici-types/handlers.d.ts@6.21.0'
+../../node_modules/undici-types/balanced-pool.d.ts
+  Imported via './balanced-pool' from file '../../node_modules/undici-types/index.d.ts' with packageId 'undici-types/balanced-pool.d.ts@6.21.0'
+  Imported via './balanced-pool' from file '../../node_modules/undici-types/index.d.ts' with packageId 'undici-types/balanced-pool.d.ts@6.21.0'
+../../node_modules/undici-types/agent.d.ts
+  Imported via './agent' from file '../../node_modules/undici-types/index.d.ts' with packageId 'undici-types/agent.d.ts@6.21.0'
+  Imported via './agent' from file '../../node_modules/undici-types/mock-agent.d.ts' with packageId 'undici-types/agent.d.ts@6.21.0'
+  Imported via './agent' from file '../../node_modules/undici-types/proxy-agent.d.ts' with packageId 'undici-types/agent.d.ts@6.21.0'
+  Imported via './agent' from file '../../node_modules/undici-types/env-http-proxy-agent.d.ts' with packageId 'undici-types/agent.d.ts@6.21.0'
+  Imported via './agent' from file '../../node_modules/undici-types/index.d.ts' with packageId 'undici-types/agent.d.ts@6.21.0'
+../../node_modules/undici-types/mock-interceptor.d.ts
+  Imported via './mock-interceptor' from file '../../node_modules/undici-types/mock-agent.d.ts' with packageId 'undici-types/mock-interceptor.d.ts@6.21.0'
+  Imported via './mock-interceptor' from file '../../node_modules/undici-types/mock-client.d.ts' with packageId 'undici-types/mock-interceptor.d.ts@6.21.0'
+  Imported via './mock-interceptor' from file '../../node_modules/undici-types/mock-pool.d.ts' with packageId 'undici-types/mock-interceptor.d.ts@6.21.0'
+  Imported via './mock-interceptor' from file '../../node_modules/undici-types/index.d.ts' with packageId 'undici-types/mock-interceptor.d.ts@6.21.0'
+../../node_modules/undici-types/mock-agent.d.ts
+  Imported via './mock-agent' from file '../../node_modules/undici-types/mock-client.d.ts' with packageId 'undici-types/mock-agent.d.ts@6.21.0'
+  Imported via './mock-agent' from file '../../node_modules/undici-types/mock-pool.d.ts' with packageId 'undici-types/mock-agent.d.ts@6.21.0'
+  Imported via './mock-agent' from file '../../node_modules/undici-types/index.d.ts' with packageId 'undici-types/mock-agent.d.ts@6.21.0'
+  Imported via './mock-agent' from file '../../node_modules/undici-types/index.d.ts' with packageId 'undici-types/mock-agent.d.ts@6.21.0'
+../../node_modules/undici-types/mock-client.d.ts
+  Imported via './mock-client' from file '../../node_modules/undici-types/index.d.ts' with packageId 'undici-types/mock-client.d.ts@6.21.0'
+  Imported via './mock-client' from file '../../node_modules/undici-types/index.d.ts' with packageId 'undici-types/mock-client.d.ts@6.21.0'
+../../node_modules/undici-types/mock-pool.d.ts
+  Imported via './mock-pool' from file '../../node_modules/undici-types/index.d.ts' with packageId 'undici-types/mock-pool.d.ts@6.21.0'
+  Imported via './mock-pool' from file '../../node_modules/undici-types/index.d.ts' with packageId 'undici-types/mock-pool.d.ts@6.21.0'
+../../node_modules/undici-types/mock-errors.d.ts
+  Imported via './mock-errors' from file '../../node_modules/undici-types/index.d.ts' with packageId 'undici-types/mock-errors.d.ts@6.21.0'
+  Imported via './mock-errors' from file '../../node_modules/undici-types/index.d.ts' with packageId 'undici-types/mock-errors.d.ts@6.21.0'
+../../node_modules/undici-types/proxy-agent.d.ts
+  Imported via './proxy-agent' from file '../../node_modules/undici-types/index.d.ts' with packageId 'undici-types/proxy-agent.d.ts@6.21.0'
+../../node_modules/undici-types/env-http-proxy-agent.d.ts
+  Imported via './env-http-proxy-agent' from file '../../node_modules/undici-types/index.d.ts' with packageId 'undici-types/env-http-proxy-agent.d.ts@6.21.0'
+../../node_modules/undici-types/retry-handler.d.ts
+  Imported via './retry-handler' from file '../../node_modules/undici-types/index.d.ts' with packageId 'undici-types/retry-handler.d.ts@6.21.0'
+  Imported via './retry-handler' from file '../../node_modules/undici-types/retry-agent.d.ts' with packageId 'undici-types/retry-handler.d.ts@6.21.0'
+  Imported via "./retry-handler" from file '../../node_modules/undici-types/interceptors.d.ts' with packageId 'undici-types/retry-handler.d.ts@6.21.0'
+  Imported via './retry-handler' from file '../../node_modules/undici-types/index.d.ts' with packageId 'undici-types/retry-handler.d.ts@6.21.0'
+../../node_modules/undici-types/retry-agent.d.ts
+  Imported via './retry-agent' from file '../../node_modules/undici-types/index.d.ts' with packageId 'undici-types/retry-agent.d.ts@6.21.0'
+../../node_modules/undici-types/api.d.ts
+  Imported via './api' from file '../../node_modules/undici-types/index.d.ts' with packageId 'undici-types/api.d.ts@6.21.0'
+  Imported via './api' from file '../../node_modules/undici-types/index.d.ts' with packageId 'undici-types/api.d.ts@6.21.0'
+  Imported via './api' from file '../../node_modules/undici-types/index.d.ts' with packageId 'undici-types/api.d.ts@6.21.0'
+  Imported via './api' from file '../../node_modules/undici-types/index.d.ts' with packageId 'undici-types/api.d.ts@6.21.0'
+  Imported via './api' from file '../../node_modules/undici-types/index.d.ts' with packageId 'undici-types/api.d.ts@6.21.0'
+  Imported via './api' from file '../../node_modules/undici-types/index.d.ts' with packageId 'undici-types/api.d.ts@6.21.0'
+../../node_modules/undici-types/interceptors.d.ts
+  Imported via './interceptors' from file '../../node_modules/undici-types/index.d.ts' with packageId 'undici-types/interceptors.d.ts@6.21.0'
+  Imported via './interceptors' from file '../../node_modules/undici-types/index.d.ts' with packageId 'undici-types/interceptors.d.ts@6.21.0'
+  Imported via './interceptors' from file '../../node_modules/undici-types/index.d.ts' with packageId 'undici-types/interceptors.d.ts@6.21.0'
+../../node_modules/undici-types/util.d.ts
+  Imported via './util' from file '../../node_modules/undici-types/index.d.ts' with packageId 'undici-types/util.d.ts@6.21.0'
+../../node_modules/undici-types/cookies.d.ts
+  Imported via './cookies' from file '../../node_modules/undici-types/index.d.ts' with packageId 'undici-types/cookies.d.ts@6.21.0'
+../../node_modules/undici-types/patch.d.ts
+  Imported via './patch' from file '../../node_modules/undici-types/websocket.d.ts' with packageId 'undici-types/patch.d.ts@6.21.0'
+  Imported via './patch' from file '../../node_modules/undici-types/eventsource.d.ts' with packageId 'undici-types/patch.d.ts@6.21.0'
+  Imported via './patch' from file '../../node_modules/undici-types/filereader.d.ts' with packageId 'undici-types/patch.d.ts@6.21.0'
+../../node_modules/undici-types/websocket.d.ts
+  Imported via './websocket' from file '../../node_modules/undici-types/eventsource.d.ts' with packageId 'undici-types/websocket.d.ts@6.21.0'
+  Imported via './websocket' from file '../../node_modules/undici-types/index.d.ts' with packageId 'undici-types/websocket.d.ts@6.21.0'
+../../node_modules/undici-types/eventsource.d.ts
+  Imported via './eventsource' from file '../../node_modules/undici-types/index.d.ts' with packageId 'undici-types/eventsource.d.ts@6.21.0'
+../../node_modules/undici-types/filereader.d.ts
+  Imported via './filereader' from file '../../node_modules/undici-types/index.d.ts' with packageId 'undici-types/filereader.d.ts@6.21.0'
+  Imported via './filereader' from file '../../node_modules/undici-types/index.d.ts' with packageId 'undici-types/filereader.d.ts@6.21.0'
+../../node_modules/undici-types/diagnostics-channel.d.ts
+  Imported via './diagnostics-channel' from file '../../node_modules/undici-types/index.d.ts' with packageId 'undici-types/diagnostics-channel.d.ts@6.21.0'
+../../node_modules/undici-types/content-type.d.ts
+  Imported via './content-type' from file '../../node_modules/undici-types/index.d.ts' with packageId 'undici-types/content-type.d.ts@6.21.0'
+../../node_modules/undici-types/cache.d.ts
+  Imported via './cache' from file '../../node_modules/undici-types/index.d.ts' with packageId 'undici-types/cache.d.ts@6.21.0'
+  Imported via './cache' from file '../../node_modules/undici-types/index.d.ts' with packageId 'undici-types/cache.d.ts@6.21.0'
+../../node_modules/undici-types/index.d.ts
+  Imported via "undici-types" from file '../../node_modules/@types/node/web-globals/fetch.d.ts' with packageId 'undici-types/index.d.ts@6.21.0'
+  Imported via "undici-types" from file '../../node_modules/@types/node/http.d.ts' with packageId 'undici-types/index.d.ts@6.21.0'
+  Imported via "undici-types" from file '../../node_modules/@types/node/http.d.ts' with packageId 'undici-types/index.d.ts@6.21.0'
+  Imported via "undici-types" from file '../../node_modules/@types/node/http.d.ts' with packageId 'undici-types/index.d.ts@6.21.0'
+  Imported via "undici-types" from file '../../node_modules/@types/node/worker_threads.d.ts' with packageId 'undici-types/index.d.ts@6.21.0'
+../../node_modules/@types/node/web-globals/fetch.d.ts
+  Referenced via 'web-globals/fetch.d.ts' from file '../../node_modules/@types/node/index.d.ts'
+../../node_modules/@types/node/web-globals/navigator.d.ts
+  Referenced via 'web-globals/navigator.d.ts' from file '../../node_modules/@types/node/index.d.ts'
+../../node_modules/@types/node/web-globals/storage.d.ts
+  Referenced via 'web-globals/storage.d.ts' from file '../../node_modules/@types/node/index.d.ts'
+../../node_modules/@types/node/web-globals/streams.d.ts
+  Referenced via 'web-globals/streams.d.ts' from file '../../node_modules/@types/node/index.d.ts'
+../../node_modules/@types/node/assert.d.ts
+  Referenced via 'assert.d.ts' from file '../../node_modules/@types/node/index.d.ts'
+../../node_modules/@types/node/assert/strict.d.ts
+  Referenced via 'assert/strict.d.ts' from file '../../node_modules/@types/node/index.d.ts'
+../../node_modules/@types/node/async_hooks.d.ts
+  Referenced via 'async_hooks.d.ts' from file '../../node_modules/@types/node/index.d.ts'
+../../node_modules/@types/node/buffer.d.ts
+  Referenced via 'buffer.d.ts' from file '../../node_modules/@types/node/index.d.ts'
+../../node_modules/@types/node/child_process.d.ts
+  Referenced via 'child_process.d.ts' from file '../../node_modules/@types/node/index.d.ts'
+../../node_modules/@types/node/cluster.d.ts
+  Referenced via 'cluster.d.ts' from file '../../node_modules/@types/node/index.d.ts'
+../../node_modules/@types/node/console.d.ts
+  Referenced via 'console.d.ts' from file '../../node_modules/@types/node/index.d.ts'
+../../node_modules/@types/node/constants.d.ts
+  Referenced via 'constants.d.ts' from file '../../node_modules/@types/node/index.d.ts'
+../../node_modules/@types/node/crypto.d.ts
+  Referenced via 'crypto.d.ts' from file '../../node_modules/@types/node/index.d.ts'
+../../node_modules/@types/node/dgram.d.ts
+  Referenced via 'dgram.d.ts' from file '../../node_modules/@types/node/index.d.ts'
+../../node_modules/@types/node/diagnostics_channel.d.ts
+  Referenced via 'diagnostics_channel.d.ts' from file '../../node_modules/@types/node/index.d.ts'
+../../node_modules/@types/node/dns.d.ts
+  Referenced via 'dns.d.ts' from file '../../node_modules/@types/node/index.d.ts'
+../../node_modules/@types/node/dns/promises.d.ts
+  Referenced via 'dns/promises.d.ts' from file '../../node_modules/@types/node/index.d.ts'
+../../node_modules/@types/node/domain.d.ts
+  Referenced via 'domain.d.ts' from file '../../node_modules/@types/node/index.d.ts'
+../../node_modules/@types/node/events.d.ts
+  Referenced via 'events.d.ts' from file '../../node_modules/@types/node/index.d.ts'
+../../node_modules/@types/node/fs.d.ts
+  Referenced via 'fs.d.ts' from file '../../node_modules/@types/node/index.d.ts'
+../../node_modules/@types/node/fs/promises.d.ts
+  Referenced via 'fs/promises.d.ts' from file '../../node_modules/@types/node/index.d.ts'
+../../node_modules/@types/node/http.d.ts
+  Referenced via 'http.d.ts' from file '../../node_modules/@types/node/index.d.ts'
+../../node_modules/@types/node/http2.d.ts
+  Referenced via 'http2.d.ts' from file '../../node_modules/@types/node/index.d.ts'
+../../node_modules/@types/node/https.d.ts
+  Referenced via 'https.d.ts' from file '../../node_modules/@types/node/index.d.ts'
+../../node_modules/@types/node/inspector.d.ts
+  Referenced via 'inspector.d.ts' from file '../../node_modules/@types/node/index.d.ts'
+../../node_modules/@types/node/inspector.generated.d.ts
+  Referenced via 'inspector.generated.d.ts' from file '../../node_modules/@types/node/index.d.ts'
+../../node_modules/@types/node/module.d.ts
+  Referenced via 'module.d.ts' from file '../../node_modules/@types/node/index.d.ts'
+../../node_modules/@types/node/net.d.ts
+  Referenced via 'net.d.ts' from file '../../node_modules/@types/node/index.d.ts'
+../../node_modules/@types/node/os.d.ts
+  Referenced via 'os.d.ts' from file '../../node_modules/@types/node/index.d.ts'
+../../node_modules/@types/node/path.d.ts
+  Referenced via 'path.d.ts' from file '../../node_modules/@types/node/index.d.ts'
+../../node_modules/@types/node/perf_hooks.d.ts
+  Referenced via 'perf_hooks.d.ts' from file '../../node_modules/@types/node/index.d.ts'
+../../node_modules/@types/node/process.d.ts
+  Referenced via 'process.d.ts' from file '../../node_modules/@types/node/index.d.ts'
+../../node_modules/@types/node/punycode.d.ts
+  Referenced via 'punycode.d.ts' from file '../../node_modules/@types/node/index.d.ts'
+../../node_modules/@types/node/querystring.d.ts
+  Referenced via 'querystring.d.ts' from file '../../node_modules/@types/node/index.d.ts'
+../../node_modules/@types/node/readline.d.ts
+  Referenced via 'readline.d.ts' from file '../../node_modules/@types/node/index.d.ts'
+../../node_modules/@types/node/readline/promises.d.ts
+  Referenced via 'readline/promises.d.ts' from file '../../node_modules/@types/node/index.d.ts'
+../../node_modules/@types/node/repl.d.ts
+  Referenced via 'repl.d.ts' from file '../../node_modules/@types/node/index.d.ts'
+../../node_modules/@types/node/sea.d.ts
+  Referenced via 'sea.d.ts' from file '../../node_modules/@types/node/index.d.ts'
+../../node_modules/@types/node/sqlite.d.ts
+  Referenced via 'sqlite.d.ts' from file '../../node_modules/@types/node/index.d.ts'
+../../node_modules/@types/node/stream.d.ts
+  Referenced via 'stream.d.ts' from file '../../node_modules/@types/node/index.d.ts'
+../../node_modules/@types/node/stream/promises.d.ts
+  Referenced via 'stream/promises.d.ts' from file '../../node_modules/@types/node/index.d.ts'
+../../node_modules/@types/node/stream/consumers.d.ts
+  Referenced via 'stream/consumers.d.ts' from file '../../node_modules/@types/node/index.d.ts'
+../../node_modules/@types/node/stream/web.d.ts
+  Referenced via 'stream/web.d.ts' from file '../../node_modules/@types/node/index.d.ts'
+../../node_modules/@types/node/string_decoder.d.ts
+  Referenced via 'string_decoder.d.ts' from file '../../node_modules/@types/node/index.d.ts'
+../../node_modules/@types/node/test.d.ts
+  Referenced via 'test.d.ts' from file '../../node_modules/@types/node/index.d.ts'
+../../node_modules/@types/node/timers.d.ts
+  Referenced via 'timers.d.ts' from file '../../node_modules/@types/node/index.d.ts'
+../../node_modules/@types/node/timers/promises.d.ts
+  Referenced via 'timers/promises.d.ts' from file '../../node_modules/@types/node/index.d.ts'
+../../node_modules/@types/node/tls.d.ts
+  Referenced via 'tls.d.ts' from file '../../node_modules/@types/node/index.d.ts'
+../../node_modules/@types/node/trace_events.d.ts
+  Referenced via 'trace_events.d.ts' from file '../../node_modules/@types/node/index.d.ts'
+../../node_modules/@types/node/tty.d.ts
+  Referenced via 'tty.d.ts' from file '../../node_modules/@types/node/index.d.ts'
+../../node_modules/@types/node/url.d.ts
+  Referenced via 'url.d.ts' from file '../../node_modules/@types/node/index.d.ts'
+../../node_modules/@types/node/util.d.ts
+  Referenced via 'util.d.ts' from file '../../node_modules/@types/node/index.d.ts'
+../../node_modules/@types/node/v8.d.ts
+  Referenced via 'v8.d.ts' from file '../../node_modules/@types/node/index.d.ts'
+../../node_modules/@types/node/vm.d.ts
+  Referenced via 'vm.d.ts' from file '../../node_modules/@types/node/index.d.ts'
+../../node_modules/@types/node/wasi.d.ts
+  Referenced via 'wasi.d.ts' from file '../../node_modules/@types/node/index.d.ts'
+../../node_modules/@types/node/worker_threads.d.ts
+  Referenced via 'worker_threads.d.ts' from file '../../node_modules/@types/node/index.d.ts'
+../../node_modules/@types/node/zlib.d.ts
+  Referenced via 'zlib.d.ts' from file '../../node_modules/@types/node/index.d.ts'
+../../node_modules/@types/node/index.d.ts
+  Entry point of type library 'node' specified in compilerOptions with packageId '@types/node/index.d.ts@22.20.1'
+  Type library referenced via 'node' from file '../../node_modules/undici-types/formdata.d.ts' with packageId '@types/node/index.d.ts@22.20.1'
+  Type library referenced via 'node' from file '../../node_modules/undici-types/file.d.ts' with packageId '@types/node/index.d.ts@22.20.1'
+  Type library referenced via 'node' from file '../../node_modules/undici-types/fetch.d.ts' with packageId '@types/node/index.d.ts@22.20.1'
+  Type library referenced via 'node' from file '../../node_modules/undici-types/cookies.d.ts' with packageId '@types/node/index.d.ts@22.20.1'
+  Type library referenced via 'node' from file '../../node_modules/undici-types/websocket.d.ts' with packageId '@types/node/index.d.ts@22.20.1'
+  Type library referenced via 'node' from file '../../node_modules/undici-types/patch.d.ts' with packageId '@types/node/index.d.ts@22.20.1'
+  Type library referenced via 'node' from file '../../node_modules/undici-types/filereader.d.ts' with packageId '@types/node/index.d.ts@22.20.1'
+  Type library referenced via 'node' from file '../../node_modules/undici-types/content-type.d.ts' with packageId '@types/node/index.d.ts@22.20.1'
+../../node_modules/vite/types/hmrPayload.d.ts
+  Imported via './hmrPayload.js' from file '../../node_modules/vite/types/customEvent.d.ts' with packageId 'vite/types/hmrPayload.d.ts@8.1.5+@types/node@22.20.1+jiti@2.4.2+yaml@2.9.0'
+  File is ECMAScript module because '../../node_modules/vite/package.json' has field "type" with value "module"
+../../node_modules/vite/types/customEvent.d.ts
+  Imported via './customEvent.js' from file '../../node_modules/vite/types/hot.d.ts' with packageId 'vite/types/customEvent.d.ts@8.1.5+@types/node@22.20.1+jiti@2.4.2+yaml@2.9.0'
+  File is ECMAScript module because '../../node_modules/vite/package.json' has field "type" with value "module"
+../../node_modules/vite/types/hot.d.ts
+  Imported via './hot.js' from file '../../node_modules/vite/types/importMeta.d.ts' with packageId 'vite/types/hot.d.ts@8.1.5+@types/node@22.20.1+jiti@2.4.2+yaml@2.9.0'
+  File is ECMAScript module because '../../node_modules/vite/package.json' has field "type" with value "module"
+../../node_modules/vite/types/importGlob.d.ts
+  Imported via './importGlob.js' from file '../../node_modules/vite/types/importMeta.d.ts' with packageId 'vite/types/importGlob.d.ts@8.1.5+@types/node@22.20.1+jiti@2.4.2+yaml@2.9.0'
+  File is ECMAScript module because '../../node_modules/vite/package.json' has field "type" with value "module"
+../../node_modules/vite/types/importMeta.d.ts
+  Referenced via './types/importMeta.d.ts' from file '../../node_modules/vite/client.d.ts'
+../../node_modules/vite/client.d.ts
+  Entry point of type library 'vite/client' specified in compilerOptions with packageId 'vite/client.d.ts@8.1.5+@types/node@22.20.1+jiti@2.4.2+yaml@2.9.0'
+../../node_modules/@nx/react/dist/typings/cssmodule.d.ts
+  Entry point of type library '@nx/react/typings/cssmodule.d.ts' specified in compilerOptions with packageId '@nx/react/dist/typings/cssmodule.d.ts@23.2.0+react@19.2.8+react-dom@19.2.8+express@4.22.2'
+../../node_modules/@types/react-dom/index.d.ts
+  Type library referenced via 'react-dom' from file '../../node_modules/@nx/react/dist/typings/image.d.ts' with packageId '@types/react-dom/index.d.ts@19.2.3+@types/react@19.2.17'
+../../node_modules/@nx/react/dist/typings/image.d.ts
+  Entry point of type library '@nx/react/typings/image.d.ts' specified in compilerOptions with packageId '@nx/react/dist/typings/image.d.ts@23.2.0+react@19.2.8+react-dom@19.2.8+express@4.22.2'

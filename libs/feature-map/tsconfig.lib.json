@@ -10,7 +10,8 @@
     ],
     "rootDir": "src",
     "jsx": "react-jsx",
-    "tsBuildInfoFile": "dist/tsconfig.lib.tsbuildinfo"
+    "tsBuildInfoFile": "dist/tsconfig.lib.tsbuildinfo",
+    "lib": ["ES2022", "DOM"]
   },
   "exclude": [
     "out-tsc",
@@ -43,6 +44,9 @@
   "references": [
     {
       "path": "../shared/util-types/tsconfig.lib.json"
+    },
+    {
+      "path": "../shared/ui-components/tsconfig.lib.json"
     }
   ]
 }

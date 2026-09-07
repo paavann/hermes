@@ -1,0 +1,9 @@
+src/lib/ui/components/eventSidePanel.tsx(39,59): error TS2339: Property 'category_color' does not exist on type 'EventDetailResponse'.
+src/lib/ui/components/eventSidePanel.tsx(39,94): error TS2339: Property 'category_color' does not exist on type 'EventDetailResponse'.
+src/lib/ui/components/eventSidePanel.tsx(40,44): error TS2339: Property 'category' does not exist on type 'EventDetailResponse'.
+src/lib/ui/components/eventSidePanel.tsx(43,44): error TS2339: Property 'status' does not exist on type 'EventDetailResponse'.
+src/lib/ui/components/eventSidePanel.tsx(48,82): error TS2339: Property 'ai_headline' does not exist on type 'EventDetailResponse'.
+src/lib/ui/components/eventSidePanel.tsx(57,44): error TS2339: Property 'articles' does not exist on type 'EventDetailResponse'.
+src/lib/ui/components/eventSidePanel.tsx(57,58): error TS7006: Parameter 'article' implicitly has an 'any' type.
+tsconfig.lib.json(3,3): error TS5101: Option 'baseUrl' is deprecated and will stop functioning in TypeScript 7.0. Specify compilerOption '"ignoreDeprecations": "6.0"' to silence this error.
+  Visit https://aka.ms/ts6 for migration information.

@@ -3,6 +3,7 @@ import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
 import { useMapStore } from '../store/store'
 import { useMapDataSync } from '../hooks/datasync'
+import { EventSidePanel } from './components/eventSidePanel'
 import type { FeatureCollection } from 'geojson'
 import type { MapEventResponse } from '@hermes/util-types'
 
@@ -36,6 +37,7 @@ export function MapView() {
     const map = useRef<mapboxgl.Map | null>(null)
     const setViewport = useMapStore((state) => state.setViewport)
     const { data: events, isFetching, } = useMapDataSync()
+    const setSelectedId = useMapStore((s) => s.setSelectedEventId)
 
     useEffect(() => {
         if(!mapContainer.current || map.current) return
@@ -66,6 +68,19 @@ export function MapView() {
         }
 
         map.current.on('load', () => {
+            map.current?.on('click', 'unclustered-point', (e) => {
+                if(e.features && e.features[0]) {
+                    const eventId = e.features[0].properties?.id
+                    if(eventId) setSelectedId(eventId)
+                }
+            })
+            map.current?.on('mouseenter', 'unclustered-point', () => {
+                if (map.current) map.current.getCanvas().style.cursor = 'pointer'
+            })
+            map.current?.on('mouseleave', 'unclustered-point', () => {
+                if(map.current) map.current.getCanvas().style.cursor = 'default'
+            })
+
             updateBounds()
             map.current?.addSource('events-source', {
                 type: 'geojson',
@@ -126,14 +141,15 @@ export function MapView() {
                     'circle-stroke-width': 1,
                     'circle-stroke-color': "#000000",
                 }
-            })
+            })            
         })
+
         map.current.on('moveend', updateBounds)
         return () => {
             map.current?.remove()
             map.current = null
         }
-    }, [setViewport])
+    }, [setViewport, setSelectedId])
 
     useEffect(() => {
         if(!map.current || !map.current.isStyleLoaded()) return
@@ -151,6 +167,7 @@ export function MapView() {
                 ref={mapContainer}
                 className='fixed inset-0 w-screen h-screen z-0'
             />
+            <EventSidePanel />
             {isFetching && (
                 <div
                     className='fixed top-4 right-4 bg-hud-bg border border-hud-border text-hud-glow px-4 py-2 text-sm font-mono z-10 backdrop-blur-md uppercase shadow-lg shadow-blue-900/20'
