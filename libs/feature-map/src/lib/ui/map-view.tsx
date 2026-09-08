@@ -93,7 +93,7 @@ export function MapView() {
                 if (map.current) map.current.getCanvas().style.cursor = 'pointer'
             })
             map.current?.on('mouseleave', 'unclustered-point', () => {
-                if(map.current) map.current.getCanvas().style.cursor = 'crosshair'
+                if(map.current) map.current.getCanvas().style.cursor = ''
             })
 
             // Cluster robotic zoom interaction
@@ -123,7 +123,7 @@ export function MapView() {
                 if (map.current) map.current.getCanvas().style.cursor = 'pointer'
             })
             map.current?.on('mouseleave', 'clusters', () => {
-                if(map.current) map.current.getCanvas().style.cursor = 'crosshair'
+                if(map.current) map.current.getCanvas().style.cursor = ''
             })
 
             updateBounds()

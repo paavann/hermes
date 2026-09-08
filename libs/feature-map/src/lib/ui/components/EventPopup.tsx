@@ -76,7 +76,7 @@ export function EventPopup({ map }: { map: mapboxgl.Map | null }) {
           <span className="text-neon-blue font-bold tracking-[0.2em] text-xs">DATA</span>
           <button 
             onClick={() => setSelectedEventId(null)}
-            className="text-red-500 hover:text-red-400 cursor-crosshair text-sm font-bold tracking-widest"
+            className="text-red-500 hover:text-red-400 cursor-pointer text-sm font-bold tracking-widest"
           >
             [X]
           </button>
@@ -129,12 +129,13 @@ export function EventPopup({ map }: { map: mapboxgl.Map | null }) {
                     const formattedTitle = article.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
                     
                     return (
-                      <li key={article.id}>
+                      <li key={article.id} className="flex items-center gap-2">
+                        <span className="text-neon-blue text-[8px]">■</span>
                         <a 
                           href={article.url} 
                           target="_blank" 
                           rel="noopener noreferrer"
-                          className="text-gray-400 hover:text-neon-blue text-[10px] hover:underline cursor-crosshair block truncate tracking-wider"
+                          className="text-gray-400 hover:text-neon-blue text-[10px] hover:underline cursor-pointer block truncate tracking-wider"
                         >
                           <span className="text-neon-blue">{domain}</span>/{formattedTitle}
                         </a>
