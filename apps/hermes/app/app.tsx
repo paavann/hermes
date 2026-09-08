@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { MapView } from '@hermes/feature-map'
 import { QueryClient, QueryClientProvider, } from '@tanstack/react-query'
-import { BootSequence } from '@hermes/ui-components'
+import { BootSequence, LiveClock } from '@hermes/ui-components'
 
 const queryClient = new QueryClient()
 
@@ -13,6 +13,7 @@ export function App() {
       <main className="relative w-full h-full overflow-hidden bg-black">
         {!isBooted && <BootSequence onComplete={() => setIsBooted(true)} />}
         <MapView />
+        <LiveClock />
       </main>
     </QueryClientProvider>
   );

@@ -9,17 +9,17 @@ export interface BoundingBox {
 
 interface MapState {
     selectedEventId: string | null;
+    selectedEventLngLat: [number, number] | null;
     viewport: BoundingBox | null;
 
-    setSelectedEventId: (id: string | null) => void;
+    setSelectedEventId: (id: string | null, lngLat?: [number, number]) => void;
     setViewport: (viewport: BoundingBox) => void;
 }
 
-
-
 export const useMapStore = create<MapState>((set) => ({
     selectedEventId: null,
+    selectedEventLngLat: null,
     viewport: null,
-    setSelectedEventId: (id) => set({ selectedEventId: id }),
+    setSelectedEventId: (id, lngLat = null) => set({ selectedEventId: id, selectedEventLngLat: lngLat }),
     setViewport: (viewport) => set({ viewport }),
 }))

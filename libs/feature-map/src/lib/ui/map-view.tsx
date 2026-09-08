@@ -1,9 +1,9 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
 import { useMapStore } from '../store/store'
 import { useMapDataSync } from '../hooks/datasync'
-import { EventSidePanel } from './components/eventSidePanel'
+import { EventPopup } from './components/EventPopup'
 import type { FeatureCollection } from 'geojson'
 import type { MapEventResponse } from '@hermes/util-types'
 
@@ -35,6 +35,7 @@ const createGeoJson = (events: MapEventResponse[]): FeatureCollection => {
 export function MapView() {
     const mapContainer = useRef<HTMLDivElement>(null)
     const map = useRef<mapboxgl.Map | null>(null)
+    const [isMapReady, setIsMapReady] = useState(false)
     const setViewport = useMapStore((state) => state.setViewport)
     const { data: events, isFetching, } = useMapDataSync()
     const setSelectedId = useMapStore((s) => s.setSelectedEventId)
@@ -52,6 +53,8 @@ export function MapView() {
             maxPitch: 0,
             dragRotate: false,
             touchPitch: false,
+            attributionControl: false,
+            renderWorldCopies: false,
         })
 
         const updateBounds = () => {
@@ -68,17 +71,59 @@ export function MapView() {
         }
 
         map.current.on('load', () => {
+            setIsMapReady(true)
+            
             map.current?.on('click', 'unclustered-point', (e) => {
-                if(e.features && e.features[0]) {
+                if(e.features && e.features[0] && map.current) {
                     const eventId = e.features[0].properties?.id
-                    if(eventId) setSelectedId(eventId)
+                    if(eventId) {
+                        const lngLat: [number, number] = [e.lngLat.lng, e.lngLat.lat]
+                        setSelectedId(eventId, lngLat)
+                        
+                        // Automatically pan the camera so the popup is perfectly centered
+                        map.current.easeTo({
+                            center: lngLat,
+                            duration: 800,
+                            easing: (t) => t * (2 - t) // smooth ease out
+                        })
+                    }
                 }
             })
             map.current?.on('mouseenter', 'unclustered-point', () => {
                 if (map.current) map.current.getCanvas().style.cursor = 'pointer'
             })
             map.current?.on('mouseleave', 'unclustered-point', () => {
-                if(map.current) map.current.getCanvas().style.cursor = 'default'
+                if(map.current) map.current.getCanvas().style.cursor = 'crosshair'
+            })
+
+            // Cluster robotic zoom interaction
+            map.current?.on('click', 'clusters', (e) => {
+                const features = map.current?.queryRenderedFeatures(e.point, { layers: ['clusters'] });
+                if (!features || !features[0]) return;
+                
+                const clusterId = features[0].properties?.cluster_id;
+                const source = map.current?.getSource('events-source') as mapboxgl.GeoJSONSource;
+                
+                source.getClusterExpansionZoom(clusterId, (err, zoom) => {
+                    if (err || !map.current) return;
+                    
+                    const geometry = features[0].geometry;
+                    if (geometry.type === 'Point') {
+                        map.current.easeTo({
+                            center: geometry.coordinates as [number, number],
+                            zoom: zoom,
+                            duration: 400,
+                            easing: (t) => t // Pure linear easing for robotic feel
+                        });
+                    }
+                });
+            });
+            
+            map.current?.on('mouseenter', 'clusters', () => {
+                if (map.current) map.current.getCanvas().style.cursor = 'pointer'
+            })
+            map.current?.on('mouseleave', 'clusters', () => {
+                if(map.current) map.current.getCanvas().style.cursor = 'crosshair'
             })
 
             updateBounds()
@@ -95,7 +140,13 @@ export function MapView() {
                 source: 'events-source',
                 filter: ['has', 'point_count'],
                 paint: {
-                    'circle-color': "#475569",
+                    'circle-color': [
+                        'step',
+                        ['zoom'],
+                        '#475569', // Solid slate color at low zoom
+                        8, // At zoom level 8...
+                        'rgba(0, 0, 0, 0)' // Become transparent (hollow outline)
+                    ],
                     'circle-radius': [
                         'step',
                         ['get', 'point_count'],
@@ -167,12 +218,12 @@ export function MapView() {
                 ref={mapContainer}
                 className='fixed inset-0 w-screen h-screen z-0'
             />
-            <EventSidePanel />
+            {isMapReady && <EventPopup map={map.current} />}
             {isFetching && (
                 <div
-                    className='fixed top-4 right-4 bg-hud-bg border border-hud-border text-hud-glow px-4 py-2 text-sm font-mono z-10 backdrop-blur-md uppercase shadow-lg shadow-blue-900/20'
+                    className='fixed top-4 right-4 bg-hud-bg border border-hud-border text-neon-blue px-4 py-1.5 text-xs font-mono tracking-[0.15em] z-10 backdrop-blur-md uppercase shadow-[0_0_15px_rgba(59,130,246,0.3)] animate-pulse'
                 >
-                    Scanning region...
+                    SCANNING...
                 </div>
             )}
         </>

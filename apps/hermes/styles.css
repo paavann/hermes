@@ -20,3 +20,20 @@
     cursor: crosshair;
   }
 }
+
+/* Hide Mapbox logo for the clean UI */
+.mapboxgl-ctrl-logo {
+  display: none !important;
+}
+
+/* Custom Scrollbar for pop-up */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #1e3a8a; /* hud-border */
+  border-radius: 0px;
+}
