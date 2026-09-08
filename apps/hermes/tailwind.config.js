@@ -16,6 +16,8 @@ export default {
         'hud-bg': 'rgba(10, 15, 25, 0.85)',
         'hud-border': '#1e3a8a', // Dark blue border
         'hud-glow': '#3b82f6', // Neon blue glow
+        'neon-blue': '#00f0ff', // Cyberpunk bright blue
+        'warning-yellow': '#fbbf24', // Yellow for highlights
       }
     },
   },
