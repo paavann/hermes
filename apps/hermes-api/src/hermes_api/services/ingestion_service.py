@@ -1,17 +1,17 @@
 import logging
 import uuid
-import asyncio
-from typing import Optional
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from hermes_api.core.config import settings
+from hermes_api.core.rate_limiter import TokenBucketRateLimiter
 from hermes_api.db.db import AsyncSessionLocal
 from hermes_api.db.models.source import Source
 from hermes_api.services.ai_service import AiService
 from hermes_api.services.event_service import EventService
 from hermes_api.services.geocoding_service import GeocodingService
 from hermes_api.services.rss_service import fetch_feed
-
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +23,7 @@ class IngestionService:
     def __init__(self) -> None:
         self._ai = AiService()
         self._geocoding = GeocodingService()
+        self._rate_limiter = TokenBucketRateLimiter(settings.GEMINI_RPM_LIMIT)
 
     
     async def _ingest_source(self, source: dict) -> dict[str, int]:
@@ -53,7 +54,10 @@ class IngestionService:
                             stats["articles_skipped_duplicate"] += 1
                             continue
                         
-                        existing_events = await event_service.get_active_events_for_matching()
+                        existing_events = (
+                            await event_service.get_active_events_for_matching()
+                        )
+                        await self._rate_limiter.acquire()
                         extraction = await self._ai.extract_metadata(
                             title=article.title,
                             content=article.text_for_ai,
@@ -102,9 +106,6 @@ class IngestionService:
                 except Exception:
                     logger.exception(f"failed to process article: {article.title}.")
                     stats["articles_failed"] += 1
-                finally:
-                    # rate limit: this is to avoid the rate limit setting of 15 requests per minute to stay under gemini free tier. this is a limitation and varies depending on the plan and the api key that is used.
-                    await asyncio.sleep(4.0)
     
         logger.info(
             f"finished source '{source_name}': "
@@ -119,7 +120,7 @@ class IngestionService:
     async def _get_active_sources(self, session: AsyncSession) -> list[dict]:
         stmt = (
             select(Source.id, Source.name, Source.feed_url)
-            .where(Source.is_active == True)
+            .where(Source.is_active.is_(True))
             .where(Source.feed_url.isnot(None))
         )
         result = await session.execute(stmt)

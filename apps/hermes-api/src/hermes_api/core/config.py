@@ -1,8 +1,7 @@
-from pydantic_settings import BaseSettings, SettingsConfigDict
 from functools import lru_cache
+
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy import URL
-
-
 
 
 class Settings(BaseSettings):
@@ -20,6 +19,9 @@ class Settings(BaseSettings):
     NOMINATIM_USER_AGENT: str = "hermes-api"
 
     RSS_FETCH_INTERVAL_MINUTES: int = 15
+
+    INGESTION_CRON_HOURS: str = "6,14,22"
+    GEMINI_RPM_LIMIT: int = 15
 
     EVENT_STALE_HOURS: int = 24
     EVENT_ARCHIVE_HOURS: int = 48
@@ -47,7 +49,7 @@ class Settings(BaseSettings):
 
 
 
-@lru_cache()
+@lru_cache
 def get_settings() -> Settings:
     return Settings()
 
