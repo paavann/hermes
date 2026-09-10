@@ -28,6 +28,10 @@ class Settings(BaseSettings):
 
     @property
     def db_url(self) -> URL:
+        query = {}
+        if self.DB_HOST != "localhost":
+            query["ssl"] = "require"
+
         return URL.create(
             drivername="postgresql+asyncpg",
             username=self.DB_USER,
@@ -35,6 +39,7 @@ class Settings(BaseSettings):
             host=self.DB_HOST,
             port=self.DB_PORT,
             database=self.DB_NAME,
+            query=query
         )
 
     @property
