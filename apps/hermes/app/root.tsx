@@ -13,7 +13,7 @@ import {
 import stylesheetUrl from "../styles.css?url";
 
 export const meta: MetaFunction = () => ([{
-  title: "New Nx React Router App",
+  title: "hermes",
 }]);
 
 export const links: LinksFunction = () => [

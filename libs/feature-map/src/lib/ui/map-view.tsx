@@ -12,9 +12,26 @@ mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN
 
 
 const createGeoJson = (events: MapEventResponse[]): FeatureCollection => {
+    const uniqueEvents = new Map<string, MapEventResponse>();
+    
+    // Deduplicate by location to prevent concentric circles for the same event
+    events.forEach(event => {
+        // Use 4 decimal places (~11m precision) to group virtually identical locations
+        const key = `${event.latitude.toFixed(4)},${event.longitude.toFixed(4)}`;
+        if (!uniqueEvents.has(key)) {
+            uniqueEvents.set(key, event);
+        } else {
+            // If they overlap, keep the one with the higher trending score
+            const existing = uniqueEvents.get(key)!;
+            if (event.trending_score > existing.trending_score) {
+                uniqueEvents.set(key, event);
+            }
+        }
+    });
+
     return {
         type: 'FeatureCollection',
-        features: events.map((event, index) => ({
+        features: Array.from(uniqueEvents.values()).map((event, index) => ({
             type: 'Feature',
             geometry: {
                 type: 'Point',
@@ -45,7 +62,7 @@ export function MapView() {
 
         map.current = new mapboxgl.Map({
             container: mapContainer.current,
-            style: 'mapbox://styles/mapbox/dark-v11',
+            style: 'mapbox://styles/pavann/cmtvb17eo006j01s727jq81q8',
             center: [0, 20],
             zoom: 1.5,
             projection: 'mercator',
@@ -73,7 +90,7 @@ export function MapView() {
         map.current.on('load', () => {
             setIsMapReady(true)
             
-            map.current?.on('click', 'unclustered-point', (e) => {
+            map.current?.on('click', 'hermes-unclustered-point', (e) => {
                 if(e.features && e.features[0] && map.current) {
                     const eventId = e.features[0].properties?.id
                     if(eventId) {
@@ -89,16 +106,16 @@ export function MapView() {
                     }
                 }
             })
-            map.current?.on('mouseenter', 'unclustered-point', () => {
+            map.current?.on('mouseenter', 'hermes-unclustered-point', () => {
                 if (map.current) map.current.getCanvas().style.cursor = 'pointer'
             })
-            map.current?.on('mouseleave', 'unclustered-point', () => {
+            map.current?.on('mouseleave', 'hermes-unclustered-point', () => {
                 if(map.current) map.current.getCanvas().style.cursor = ''
             })
 
             // Cluster robotic zoom interaction
-            map.current?.on('click', 'clusters', (e) => {
-                const features = map.current?.queryRenderedFeatures(e.point, { layers: ['clusters'] });
+            map.current?.on('click', 'hermes-clusters', (e) => {
+                const features = map.current?.queryRenderedFeatures(e.point, { layers: ['hermes-clusters'] });
                 if (!features || !features[0]) return;
                 
                 const clusterId = features[0].properties?.cluster_id;
@@ -119,10 +136,10 @@ export function MapView() {
                 });
             });
             
-            map.current?.on('mouseenter', 'clusters', () => {
+            map.current?.on('mouseenter', 'hermes-clusters', () => {
                 if (map.current) map.current.getCanvas().style.cursor = 'pointer'
             })
-            map.current?.on('mouseleave', 'clusters', () => {
+            map.current?.on('mouseleave', 'hermes-clusters', () => {
                 if(map.current) map.current.getCanvas().style.cursor = ''
             })
 
@@ -135,7 +152,7 @@ export function MapView() {
                 clusterRadius: 50,
             })
             map.current?.addLayer({
-                id: 'clusters',
+                id: 'hermes-clusters',
                 type: 'circle',
                 source: 'events-source',
                 filter: ['has', 'point_count'],
@@ -143,7 +160,7 @@ export function MapView() {
                     'circle-color': [
                         'step',
                         ['zoom'],
-                        '#475569', // Solid slate color at low zoom
+                        '#808080', // Pure grey instead of slate navy
                         8, // At zoom level 8...
                         'rgba(0, 0, 0, 0)' // Become transparent (hollow outline)
                     ],
@@ -158,24 +175,26 @@ export function MapView() {
                     ],
                     'circle-stroke-width': 2,
                     'circle-stroke-color': "#94a3b8",
+                    'circle-emissive-strength': 1,
                 }
             })
             map.current?.addLayer({
-                id: 'cluster-count',
+                id: 'hermes-cluster-count',
                 type: 'symbol',
                 source: 'events-source',
                 filter: ['has', 'point_count'],
                 layout: {
                     'text-field': '{point_count_abbreviated}',
-                    'text-font': ['Arial Unicode MS Bold'],
+                    'text-font': ['JetBrains Mono Regular', 'Arial Unicode MS Bold'],
                     'text-size': 12,
                 },
                 paint: {
                     'text-color': '#ffffff',
+                    'text-emissive-strength': 1,
                 }
             })
             map.current?.addLayer({
-                id: 'unclustered-point',
+                id: 'hermes-unclustered-point',
                 type: 'circle',
                 source: 'events-source',
                 filter: ['!', ['has', 'point_count']],
@@ -191,6 +210,7 @@ export function MapView() {
                     ],
                     'circle-stroke-width': 1,
                     'circle-stroke-color': "#000000",
+                    'circle-emissive-strength': 1,
                 }
             })            
         })
