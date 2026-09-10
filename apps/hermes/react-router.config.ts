@@ -7,5 +7,5 @@ export default {
   //   v8_passThroughRequests: true,
   //   v8_trailingSlashAwareDataRequests: true,
   // },
-  ssr: true,
+  ssr: false,
 } satisfies Config;
