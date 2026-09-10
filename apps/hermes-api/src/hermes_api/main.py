@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 
 from hermes_api.api.v1.router import api_router
+from hermes_api.core.config import settings
 from hermes_api.core.logger import setup_logging
 from hermes_api.db.db import AsyncSessionLocal, engine
 from hermes_api.scheduler.jobs import setup_scheduler, shutdown_scheduler
@@ -59,7 +60,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:4200"],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

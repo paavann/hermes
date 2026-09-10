@@ -7,6 +7,7 @@ from sqlalchemy import URL
 class Settings(BaseSettings):
     APP: str = "hermes"
     ENV: str = "dev"
+    FRONTEND_URL: str = "http://localhost:4200"
 
     DB_HOST: str = "localhost"
     DB_PORT: int = 5432
