@@ -3,12 +3,10 @@ import axios from 'axios'
 import { useMapStore } from '../store/store'
 import type { MapEventResponse } from '@hermes/util-types'
 
-// const BASE_URL = import.meta.env.VITE_BASE_URL
-// const API_VER = import.meta.env.VITE_API_VER
-
-
+import { useMapConfig } from '../config-context'
 
 export function useMapDataSync() {
+    const config = useMapConfig()
     const viewport = useMapStore((state) => state.viewport)
 
     return useQuery({
@@ -24,8 +22,8 @@ export function useMapDataSync() {
             east = Math.min(Math.max(east, -180), 180)
             west = Math.min(Math.max(west, -180), 180)
 
-            // const url = `${BASE_URL}/${API_VER}/events/bbox`
-            const url = `http://localhost:8000/api/v1/events/bbox`
+            const url = `${config.baseUrl}/api/${config.apiVer}/events/bbox`
+            console.log("constructed url: ", url)
             const res = await axios.get<MapEventResponse[]>(url, {
                 params: { north, south, east, west, }
             })

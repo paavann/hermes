@@ -6,8 +6,7 @@ import { useMapDataSync } from '../hooks/datasync'
 import { EventPopup } from './components/EventPopup'
 import type { FeatureCollection } from 'geojson'
 import type { MapEventResponse } from '@hermes/util-types'
-
-mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN
+import { useMapConfig } from '../config-context'
 
 
 
@@ -49,7 +48,11 @@ const createGeoJson = (events: MapEventResponse[]): FeatureCollection => {
 
 
 
+
 export function MapView() {
+    const config = useMapConfig()
+    mapboxgl.accessToken = config.mapboxToken
+
     const mapContainer = useRef<HTMLDivElement>(null)
     const map = useRef<mapboxgl.Map | null>(null)
     const [isMapReady, setIsMapReady] = useState(false)

@@ -30,7 +30,7 @@ class Settings(BaseSettings):
     @property
     def db_url(self) -> URL:
         query = {}
-        if self.DB_HOST != "localhost":
+        if self.DB_HOST not in ("localhost", "hermes-db", "127.0.0.1"):
             query["ssl"] = "require"
 
         return URL.create(

@@ -50,6 +50,8 @@ services:
     environment:
       HOST: 0.0.0.0
       VITE_MAPBOX_TOKEN: ${VITE_MAPBOX_TOKEN}
+      VITE_BASE_URL: ${VITE_BASE_URL}
+      VITE_API_VER: ${VITE_API_VER}
     restart: unless-stopped
 
 volumes:

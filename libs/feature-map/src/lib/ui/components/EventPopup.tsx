@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useMapStore } from '../../store/store';
 import { useEventDetails } from '../../hooks/eventDetails';
 
@@ -10,6 +10,7 @@ export function EventPopup({ map }: { map: mapboxgl.Map | null }) {
   const { data: event, isLoading, isError } = useEventDetails(selectedEventId);
   const [pos, setPos] = useState({ x: -9999, y: -9999 });
   const [scrambledSummary, setScrambledSummary] = useState('');
+  const popupRef = useRef<HTMLDivElement>(null);
   
   // Track position flawlessly using requestAnimationFrame and Mapbox projection
   useEffect(() => {
@@ -19,7 +20,18 @@ export function EventPopup({ map }: { map: mapboxgl.Map | null }) {
     
     const updatePosition = () => {
       const p = map.project(selectedEventLngLat as [number, number]);
-      setPos({ x: p.x, y: p.y });
+      let x = p.x;
+      let y = p.y;
+      
+      if (popupRef.current) {
+        const width = popupRef.current.offsetWidth;
+        const height = popupRef.current.offsetHeight;
+        const padding = 20;
+        x = Math.max(width / 2 + padding, Math.min(window.innerWidth - width / 2 - padding, x));
+        y = Math.max(height / 2 + padding, Math.min(window.innerHeight - height / 2 - padding, y));
+      }
+      
+      setPos({ x, y });
       animationFrameId = requestAnimationFrame(updatePosition);
     };
     
@@ -69,14 +81,22 @@ export function EventPopup({ map }: { map: mapboxgl.Map | null }) {
         transform: `translate(calc(${pos.x}px - 50%), calc(${pos.y}px - 50%))`,
       }}
     >
-      <div className="pointer-events-auto bg-hud-bg/95 backdrop-blur-md border border-hud-border shadow-[0_0_20px_rgba(59,130,246,0.2)] flex flex-col w-96 max-h-[70vh] font-mono">
+      <div ref={popupRef} className="pointer-events-auto bg-hud-bg/95 backdrop-blur-md border border-hud-border shadow-[0_0_20px_rgba(59,130,246,0.2)] flex flex-col w-96 max-h-[70vh] font-mono">
         
         {/* Header */}
-        <div className="flex justify-between items-center p-3 border-b border-hud-border bg-black/40">
-          <span className="text-neon-blue font-bold tracking-[0.2em] text-xs">DATA</span>
+        <div className="flex justify-between items-start p-3 border-b border-hud-border bg-black/40">
+          <div className="flex flex-col gap-1">
+            <span className="text-neon-blue font-bold tracking-[0.2em] text-xs uppercase">OVERVIEW</span>
+            {event && selectedEventLngLat && (
+              <span className="text-gray-400 text-[10px] tracking-wider">
+                {event.location_name ? `${event.location_name} • ` : ''}
+                {selectedEventLngLat[1].toFixed(4)}°, {selectedEventLngLat[0].toFixed(4)}°
+              </span>
+            )}
+          </div>
           <button 
             onClick={() => setSelectedEventId(null)}
-            className="text-red-500 hover:text-red-400 cursor-pointer text-sm font-bold tracking-widest"
+            className="text-red-500 hover:text-red-400 cursor-pointer text-sm font-bold tracking-widest mt-0.5"
           >
             [X]
           </button>
@@ -115,7 +135,7 @@ export function EventPopup({ map }: { map: mapboxgl.Map | null }) {
 
               {/* Verified Sources */}
               <div>
-                <h3 className="text-neon-blue text-[10px] mb-3 tracking-[0.15em] uppercase">Verified Sources</h3>
+                <h3 className="text-neon-blue text-[10px] mb-3 tracking-[0.15em] uppercase">Sources</h3>
                 <ul className="flex flex-col gap-2">
                   {event.articles.map((article) => {
                     let domain = '';

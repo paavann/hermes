@@ -51,6 +51,9 @@
   ],
   "references": [
     {
+      "path": "../../libs/shared/ui-components/tsconfig.lib.json"
+    },
+    {
       "path": "../../libs/feature-map/tsconfig.lib.json"
     }
   ]
