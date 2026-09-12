@@ -7,11 +7,18 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from hermes_api.core.config import settings
-from hermes_api.db.enums import EventStatus
+from hermes_api.db.enums import EventStatus, CredibilityTier
 from hermes_api.db.models.article import Article
 from hermes_api.db.models.event import Event
 from hermes_api.services.ai_service import ExtractionResult
 from hermes_api.services.geocoding_service import GeocodingResult
+
+CREDIBILITY_WEIGHTS = {
+    CredibilityTier.TIER_1: 3.0,
+    CredibilityTier.TIER_2: 2.0,
+    CredibilityTier.TIER_3: 1.0,
+    CredibilityTier.TIER_4: 0.5,
+}
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +40,7 @@ class EventService:
         article_title: str,
         article_url: str,
         source_id: uuid.UUID,
+        source_credibility: CredibilityTier,
         published_at: Optional[datetime] = None,
         embedding: Optional[list[float]] = None,
     ) -> Event:
@@ -41,6 +49,10 @@ class EventService:
             location_wkt = f"SRID=4326;POINT({geocoding.longitude} {geocoding.latitude})"
 
         now = datetime.now(timezone.utc).replace(tzinfo=None)
+        
+        # Initial score based on source credibility
+        initial_score = CREDIBILITY_WEIGHTS.get(source_credibility, 1.0)
+        
         event = Event(
             ai_headline=extraction.headline,
             ai_summary=extraction.summary,
@@ -49,7 +61,7 @@ class EventService:
             location=location_wkt,
             location_name=extraction.location_name,
             embedding=embedding,
-            trending_score=1.0,
+            trending_score=initial_score,
             article_count=1,
             first_reported_at=now,
             last_updated_at=now,
@@ -79,6 +91,7 @@ class EventService:
         article_title: str,
         article_url: str,
         source_id: uuid.UUID,
+        source_credibility: CredibilityTier,
         published_at: Optional[datetime] = None,
     ) -> Optional[Event]:
         event = await self._session.get(Event, event_id)
@@ -96,7 +109,11 @@ class EventService:
         self._session.add(article)
 
         event.article_count += 1
-        event.trending_score = float(event.article_count)
+        
+        # Add credibility weight to existing trending score
+        added_score = CREDIBILITY_WEIGHTS.get(source_credibility, 1.0)
+        event.trending_score += added_score
+        
         event.last_updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
         if event.status == EventStatus.STALE:
             event.status = EventStatus.ACTIVE
@@ -191,6 +208,14 @@ class EventService:
         now = datetime.now(timezone.utc).replace(tzinfo=None)
         stale_cutoff = now - timedelta(hours=settings.EVENT_STALE_HOURS)
         archive_cutoff = now - timedelta(hours=settings.EVENT_ARCHIVE_HOURS)
+
+        # Decay active event scores by 10% every time this runs (every 30 mins)
+        decay_stmt = (
+            update(Event)
+            .where(Event.status == EventStatus.ACTIVE)
+            .values(trending_score=Event.trending_score * 0.90)
+        )
+        await self._session.execute(decay_stmt)
 
         stale_stmt = (
             update(Event)

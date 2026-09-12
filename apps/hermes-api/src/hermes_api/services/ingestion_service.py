@@ -141,6 +141,7 @@ class IngestionService:
                                     article_title=article.title,
                                     article_url=article.url,
                                     source_id=source_id,
+                                    source_credibility=source["credibility"],
                                     published_at=article.published_at,
                                 )
                             )
@@ -153,6 +154,7 @@ class IngestionService:
                                     article_title=article.title,
                                     article_url=article.url,
                                     source_id=source_id,
+                                    source_credibility=source["credibility"],
                                     published_at=article.published_at,
                                     embedding=article_embedding,
                                 )
@@ -164,6 +166,7 @@ class IngestionService:
                                 article_title=article.title,
                                 article_url=article.url,
                                 source_id=source_id,
+                                source_credibility=source["credibility"],
                                 published_at=article.published_at,
                                 embedding=article_embedding,
                             )
@@ -193,6 +196,7 @@ class IngestionService:
                 Source.feed_url,
                 Source.last_fetched_at,
                 Source.fetch_interval_minutes,
+                Source.credibility,
             )
             .where(Source.is_active.is_(True))
             .where(Source.feed_url.isnot(None))
@@ -208,7 +212,8 @@ class IngestionService:
                 due_sources.append({
                     "id": row.id, 
                     "name": row.name, 
-                    "feed_url": row.feed_url
+                    "feed_url": row.feed_url,
+                    "credibility": row.credibility,
                 })
                 continue
                 
@@ -221,7 +226,8 @@ class IngestionService:
                 due_sources.append({
                     "id": row.id, 
                     "name": row.name, 
-                    "feed_url": row.feed_url
+                    "feed_url": row.feed_url,
+                    "credibility": row.credibility,
                 })
                 
         return due_sources
