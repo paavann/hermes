@@ -28,17 +28,18 @@ class GeocodingResult:
 
 
 class GeocodingService:
-    def __init__(self, session: AsyncSession) -> None:
-        self.session = session
+    def __init__(self) -> None:
         self._lock: asyncio.Lock = asyncio.Lock()
 
 
-    async def geocode(self, location_name: str) -> Optional[GeocodingResult]:
+    async def geocode(
+        self, session: AsyncSession, location_name: str
+    ) -> Optional[GeocodingResult]:
         norm_cache_key = location_name.strip().lower()
         
         # 1. Check DB Cache
         stmt = select(GeocodeCache).where(GeocodeCache.location_name == norm_cache_key)
-        result = await self.session.execute(stmt)
+        result = await session.execute(stmt)
         cached = result.scalar_one_or_none()
         
         if cached:
@@ -62,8 +63,8 @@ class GeocodingService:
             longitude=api_result.longitude if api_result else None,
             display_name=api_result.display_name if api_result else None,
         )
-        self.session.add(new_cache)
-        await self.session.commit()
+        session.add(new_cache)
+        await session.commit()
         
         return api_result
 

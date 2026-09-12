@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import uuid
 from datetime import datetime, timedelta, timezone
@@ -27,6 +28,7 @@ logger = logging.getLogger(__name__)
 class IngestionService:
     def __init__(self) -> None:
         self._ai = AiService()
+        self._geocoding = GeocodingService()
         self._rate_limiter = TokenBucketRateLimiter(settings.GEMINI_RPM_LIMIT)
 
     
@@ -114,7 +116,6 @@ class IngestionService:
 
                 try:
                     async with AsyncSessionLocal() as session:
-                        geocoding_service = GeocodingService(session)
                         event_service = EventService(session)
 
                         geocoding = None
@@ -122,8 +123,8 @@ class IngestionService:
                             extraction.has_location
                             and extraction.location_name
                         ):
-                            geocoding = await geocoding_service.geocode(
-                                extraction.location_name,
+                            geocoding = await self._geocoding.geocode(
+                                session, extraction.location_name,
                             )
 
                         if extraction.matched_event_id:
@@ -238,20 +239,37 @@ class IngestionService:
             return stats
 
         logger.info(f"starting ingestion for {len(sources)} sources.")
-        for source in sources:
-            source_stats = await self._ingest_source(source)
+        
+        semaphore = asyncio.Semaphore(5)
+
+        async def _process_source(source: dict) -> dict[str, int]:
+            async with semaphore:
+                try:
+                    s_stats = await self._ingest_source(source)
+                    # Record that this source was just fetched
+                    async with AsyncSessionLocal() as db_session:
+                        await db_session.execute(
+                            update(Source)
+                            .where(Source.id == source["id"])
+                            .values(last_fetched_at=func.now())
+                        )
+                        await db_session.commit()
+                    return s_stats
+                except Exception:
+                    logger.exception(
+                        f"Unhandled error ingesting source {source['name']}"
+                    )
+                    # Return empty stats so the aggregator doesn't crash
+                    return {k: 0 for k in stats if k != "sources_processed"}
+                    
+        tasks = [_process_source(s) for s in sources]
+        results = await asyncio.gather(*tasks)
+        
+        for source_stats in results:
             for key in source_stats:
-                stats[key] = stats.get(key, 0) + source_stats[key]
+                if key in stats:
+                    stats[key] += source_stats[key]
             stats["sources_processed"] += 1
-            
-            # Record that this source was just fetched
-            async with AsyncSessionLocal() as session:
-                await session.execute(
-                    update(Source)
-                    .where(Source.id == source["id"])
-                    .values(last_fetched_at=func.now())
-                )
-                await session.commit()
 
         logger.info(
             f"ingestion complete: {stats['sources_processed']} sources, "
