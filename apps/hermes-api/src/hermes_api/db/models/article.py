@@ -21,7 +21,7 @@ class Article(Base, UUIDPrimaryKeyMixin):
     source_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("sources.id", ondelete="CASCADE"))
 
     title: Mapped[str] = mapped_column(Text)
-    url: Mapped[str] = mapped_column(Text)
+    url: Mapped[str] = mapped_column(Text, unique=True)
     thumbnail_url: Mapped[Optional[str]] = mapped_column(Text)
     
     published_at: Mapped[Optional[datetime]] = mapped_column()
