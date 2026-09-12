@@ -81,11 +81,47 @@ class ExtractionResult(BaseModel):
     )
 
 
+class ArticleInput(BaseModel):
+    """A single article to include in a batch extraction request."""
+
+    title: str
+    content: str
+
+
+class BatchArticleResult(ExtractionResult):
+    """Extraction result for one article within a batch response."""
+
+    article_index: int = Field(
+        description=(
+            "The 0-based index of the article this result corresponds "
+            "to from the input list."
+        )
+    )
+
+
+class BatchExtractionResponse(BaseModel):
+    """Top-level response schema for batch article extraction."""
+
+    results: list[BatchArticleResult] = Field(
+        description=(
+            "One extraction result per input article. Must contain "
+            "exactly one entry for each article provided, identified "
+            "by article_index."
+        )
+    )
+
+
+EXTRACTION_BATCH_SIZE: int = 10
 
 
 SYSTEM_PROMPT = """You are a news analyst for Hermes, a geospatial news aggregator.
 Your job is to extract structured metadata from news articles so they can be
 plotted on a world map.
+
+You will receive one or more articles to analyse in a single request. Return
+exactly one result per input article, using the article_index field to map
+each result back to its corresponding input article (0-based).
+
 Rules:
 1. Be factual and neutral. Do not editorialize.
 2. For location, identify WHERE the event is physically happening, not where
@@ -118,6 +154,46 @@ def _build_user_prompt(title: str, content: str, existing_events: list[dict[str,
 
     return prompt
 
+
+
+def _build_batch_user_prompt(
+    articles: list[ArticleInput],
+    existing_events: list[dict[str, str]],
+) -> str:
+    """Build a user prompt containing multiple numbered articles.
+
+    Each article is labelled with a 0-based index that the LLM must echo
+    back in its ``article_index`` response field so results can be mapped
+    back to their source articles.
+
+    Args:
+        articles: The batch of articles to include in the prompt.
+        existing_events: Active events for deduplication matching context.
+
+    Returns:
+        The fully formatted user prompt string.
+    """
+    prompt = "# Articles to analyse\n\n"
+    for i, article in enumerate(articles):
+        prompt += (
+            f"## Article {i}\n"
+            f"Title: {article.title}\n\n"
+            f"Content:\n{article.content}\n\n"
+        )
+
+    if existing_events:
+        prompt += "# Existing active events (match if applicable)\n\n"
+        for event in existing_events:
+            prompt += (
+                f"ID: {event['id']}\n"
+                f"Headline: {event['headline']} | "
+                f"Location: {event.get('location_name', 'N/A')} | "
+                f"Category: {event['category']}\n"
+            )
+    else:
+        prompt += "# Existing active events\n\nNone currently.\n"
+
+    return prompt
 
 
 def _resolve_category_color(result: ExtractionResult) -> ExtractionResult:
@@ -171,3 +247,93 @@ class AiService:
         except Exception:
             logger.exception(f"failed to extract metadata for article: {title}")
             return None
+
+    async def extract_metadata_batch(
+        self,
+        articles: list[ArticleInput],
+        existing_events: list[dict[str, str]],
+    ) -> list[Optional[ExtractionResult]]:
+        """Extract metadata for a batch of articles in a single LLM call.
+
+        Sends all articles to Gemini at once with a batch-aware prompt.
+        Each result is mapped back to its input article via article_index.
+
+        Args:
+            articles: The batch of articles to extract metadata from.
+            existing_events: Active events for deduplication matching.
+
+        Returns:
+            An ordered list matching the input articles. Each element
+            is an ExtractionResult on success or None on failure.
+        """
+        if not articles:
+            return []
+
+        user_prompt = _build_batch_user_prompt(
+            articles=articles,
+            existing_events=existing_events or [],
+        )
+
+        try:
+            res = await self._client.aio.models.generate_content(
+                model=self._model,
+                contents=user_prompt,
+                config={
+                    "system_instruction": SYSTEM_PROMPT,
+                    "response_mime_type": "application/json",
+                    "response_schema": BatchExtractionResponse,
+                },
+            )
+
+            if not res.parsed:
+                logger.error(
+                    "batch extraction returned no parsed response "
+                    f"for {len(articles)} articles."
+                )
+                return [None] * len(articles)
+
+            batch_response: BatchExtractionResponse = res.parsed
+
+            # Map results by article_index, resolve category colors.
+            results_by_index: dict[int, ExtractionResult] = {}
+            for batch_result in batch_response.results:
+                idx = batch_result.article_index
+                if idx in results_by_index:
+                    logger.warning(
+                        f"duplicate article_index {idx} in batch "
+                        "response — keeping first."
+                    )
+                    continue
+
+                resolved = _resolve_category_color(batch_result)
+                extraction = ExtractionResult.model_validate(
+                    resolved.model_dump(exclude={"article_index"})
+                )
+                results_by_index[idx] = extraction
+
+            # Build ordered result list matching input order.
+            ordered_results: list[Optional[ExtractionResult]] = []
+            for i, article in enumerate(articles):
+                extraction = results_by_index.get(i)
+                if extraction:
+                    logger.info(
+                        f"extracted: '{extraction.headline}' | "
+                        f"category={extraction.category} | "
+                        f"location={extraction.location_name} | "
+                        f"matched={extraction.matched_event_id}"
+                    )
+                else:
+                    logger.warning(
+                        f"no extraction result for article "
+                        f"index {i}: '{article.title}'"
+                    )
+                ordered_results.append(extraction)
+
+            return ordered_results
+
+        except Exception:
+            logger.exception(
+                "batch extraction failed for "
+                f"{len(articles)} articles."
+            )
+            return [None] * len(articles)

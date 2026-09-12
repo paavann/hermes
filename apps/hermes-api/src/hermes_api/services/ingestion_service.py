@@ -8,10 +8,14 @@ from hermes_api.core.config import settings
 from hermes_api.core.rate_limiter import TokenBucketRateLimiter
 from hermes_api.db.db import AsyncSessionLocal
 from hermes_api.db.models.source import Source
-from hermes_api.services.ai_service import AiService
+from hermes_api.services.ai_service import (
+    AiService,
+    ArticleInput,
+    EXTRACTION_BATCH_SIZE,
+)
 from hermes_api.services.event_service import EventService
 from hermes_api.services.geocoding_service import GeocodingService
-from hermes_api.services.rss_service import fetch_feed
+from hermes_api.services.rss_service import ParsedArticle, fetch_feed
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +31,15 @@ class IngestionService:
 
     
     async def _ingest_source(self, source: dict) -> dict[str, int]:
+        """Ingest a single RSS source: fetch, dedup, batch-extract, persist.
+
+        Args:
+            source: Dict with 'id', 'name', and 'feed_url' keys.
+
+        Returns:
+            A stats dict with counts of fetched, skipped, processed,
+            failed, created, and matched articles.
+        """
         stats = {
             "articles_fetched": 0,
             "articles_skipped_duplicate": 0,
@@ -44,41 +57,84 @@ class IngestionService:
         stats["articles_fetched"] = len(articles)
         if not articles:
             return stats
-        else:
+
+        # Phase 1: Filter out already-processed article URLs.
+        articles_to_process: list[ParsedArticle] = []
+        async with AsyncSessionLocal() as session:
+            event_service = EventService(session)
             for article in articles:
+                if await event_service.article_url_exists(article.url):
+                    stats["articles_skipped_duplicate"] += 1
+                else:
+                    articles_to_process.append(article)
+
+        if not articles_to_process:
+            logger.info(
+                f"source '{source_name}': all "
+                f"{len(articles)} articles already processed."
+            )
+            return stats
+
+        # Phase 2: Batch AI extraction — one LLM call per batch.
+        for batch_start in range(
+            0, len(articles_to_process), EXTRACTION_BATCH_SIZE
+        ):
+            batch = articles_to_process[
+                batch_start:batch_start + EXTRACTION_BATCH_SIZE
+            ]
+
+            # Refresh active events per batch so newly created
+            # events from earlier batches are visible for matching.
+            async with AsyncSessionLocal() as session:
+                event_service = EventService(session)
+                existing_events = (
+                    await event_service.get_active_events_for_matching()
+                )
+
+            ai_inputs = [
+                ArticleInput(
+                    title=article.title,
+                    content=article.text_for_ai,
+                )
+                for article in batch
+            ]
+
+            await self._rate_limiter.acquire()
+            extractions = await self._ai.extract_metadata_batch(
+                articles=ai_inputs,
+                existing_events=existing_events,
+            )
+
+            # Phase 3: Geocode and persist each result individually.
+            for i, extraction in enumerate(extractions):
+                article = batch[i]
+                if not extraction:
+                    stats["articles_failed"] += 1
+                    continue
+
                 try:
+                    geocoding = None
+                    if (
+                        extraction.has_location
+                        and extraction.location_name
+                    ):
+                        geocoding = await self._geocoding.geocode(
+                            extraction.location_name,
+                        )
+
                     async with AsyncSessionLocal() as session:
                         event_service = EventService(session)
-                        
-                        if await event_service.article_url_exists(article.url):
-                            stats["articles_skipped_duplicate"] += 1
-                            continue
-                        
-                        existing_events = (
-                            await event_service.get_active_events_for_matching()
-                        )
-                        await self._rate_limiter.acquire()
-                        extraction = await self._ai.extract_metadata(
-                            title=article.title,
-                            content=article.text_for_ai,
-                            existing_events=existing_events,
-                        )
-                        if not extraction:
-                            stats["articles_failed"] += 1
-                            continue
-                        geocoding = None
-                        if extraction.has_location and extraction.location_name:
-                            geocoding = await self._geocoding.geocode(
-                                extraction.location_name,
-                            )
-                        
                         if extraction.matched_event_id:
-                            matched = await event_service.add_article_to_event(
-                                event_id=uuid.UUID(extraction.matched_event_id),
-                                article_title=article.title,
-                                article_url=article.url,
-                                source_id=source_id,
-                                published_at=article.published_at,
+                            matched = (
+                                await event_service.add_article_to_event(
+                                    event_id=uuid.UUID(
+                                        extraction.matched_event_id,
+                                    ),
+                                    article_title=article.title,
+                                    article_url=article.url,
+                                    source_id=source_id,
+                                    published_at=article.published_at,
+                                )
                             )
                             if matched:
                                 stats["events_matched"] += 1
@@ -104,9 +160,11 @@ class IngestionService:
                             stats["events_created"] += 1
                         stats["articles_processed"] += 1
                 except Exception:
-                    logger.exception(f"failed to process article: {article.title}.")
+                    logger.exception(
+                        f"failed to process article: {article.title}."
+                    )
                     stats["articles_failed"] += 1
-    
+
         logger.info(
             f"finished source '{source_name}': "
             f"{stats['articles_processed']} processed, "
