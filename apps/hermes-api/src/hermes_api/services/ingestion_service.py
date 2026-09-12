@@ -1,7 +1,8 @@
 import logging
 import uuid
+from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import select
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from hermes_api.core.config import settings
@@ -178,20 +179,44 @@ class IngestionService:
 
     async def _get_active_sources(self, session: AsyncSession) -> list[dict]:
         stmt = (
-            select(Source.id, Source.name, Source.feed_url)
+            select(
+                Source.id,
+                Source.name,
+                Source.feed_url,
+                Source.last_fetched_at,
+                Source.fetch_interval_minutes,
+            )
             .where(Source.is_active.is_(True))
             .where(Source.feed_url.isnot(None))
         )
         result = await session.execute(stmt)
         rows = result.all()
-        return [
-            {
-                "id": row.id,
-                "name": row.name,
-                "feed_url": row.feed_url,
-            }
-            for row in rows
-        ]
+        
+        due_sources = []
+        now = datetime.now(timezone.utc)
+        
+        for row in rows:
+            if not row.last_fetched_at:
+                due_sources.append({
+                    "id": row.id, 
+                    "name": row.name, 
+                    "feed_url": row.feed_url
+                })
+                continue
+                
+            last = row.last_fetched_at
+            if last.tzinfo is None:
+                last = last.replace(tzinfo=timezone.utc)
+                
+            delta = timedelta(minutes=row.fetch_interval_minutes)
+            if now >= last + delta:
+                due_sources.append({
+                    "id": row.id, 
+                    "name": row.name, 
+                    "feed_url": row.feed_url
+                })
+                
+        return due_sources
 
 
 
@@ -218,6 +243,15 @@ class IngestionService:
             for key in source_stats:
                 stats[key] = stats.get(key, 0) + source_stats[key]
             stats["sources_processed"] += 1
+            
+            # Record that this source was just fetched
+            async with AsyncSessionLocal() as session:
+                await session.execute(
+                    update(Source)
+                    .where(Source.id == source["id"])
+                    .values(last_fetched_at=func.now())
+                )
+                await session.commit()
 
         logger.info(
             f"ingestion complete: {stats['sources_processed']} sources, "

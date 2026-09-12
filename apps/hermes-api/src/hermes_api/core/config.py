@@ -21,7 +21,7 @@ class Settings(BaseSettings):
 
     RSS_FETCH_INTERVAL_MINUTES: int = 15
 
-    INGESTION_CRON_HOURS: str = "6,14,22"
+    INGESTION_HEARTBEAT_MINUTES: int = 5
     GEMINI_RPM_LIMIT: int = 15
 
     EVENT_STALE_HOURS: int = 24

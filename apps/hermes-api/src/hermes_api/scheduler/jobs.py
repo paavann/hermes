@@ -2,7 +2,6 @@ import asyncio
 import logging
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger
 
 from hermes_api.core.config import settings
@@ -43,10 +42,10 @@ async def run_lifecycle_job() -> None:
 def setup_scheduler() -> None:
     logger.info("setting up background jobs...")
 
-    # Ingestion: runs at configured cron hours (default: 6, 14, 22 UTC).
+    # Ingestion: runs a frequent heartbeat to check for due sources.
     scheduler.add_job(
         run_ingestion_job,
-        trigger=CronTrigger(hour=settings.INGESTION_CRON_HOURS),
+        trigger=IntervalTrigger(minutes=settings.INGESTION_HEARTBEAT_MINUTES),
         id="ingestion_job",
         replace_existing=True,
     )
@@ -61,8 +60,8 @@ def setup_scheduler() -> None:
 
     scheduler.start()
     logger.info(
-        f"scheduler started. ingestion cron hours: "
-        f"{settings.INGESTION_CRON_HOURS} UTC."
+        f"scheduler started. ingestion heartbeat: "
+        f"every {settings.INGESTION_HEARTBEAT_MINUTES} minutes."
     )
 
     # Fire one immediate ingestion run on startup so the map
