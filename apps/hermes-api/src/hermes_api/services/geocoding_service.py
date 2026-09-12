@@ -3,7 +3,12 @@ import logging
 import httpx
 from dataclasses import dataclass
 from typing import Optional
+
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from hermes_api.core.config import settings
+from hermes_api.db.models.geocode_cache import GeocodeCache
 
 
 logger = logging.getLogger(__name__)
@@ -23,20 +28,44 @@ class GeocodingResult:
 
 
 class GeocodingService:
-    def __init__(self) -> None:
-        self._cache: dict[str, Optional[GeocodingResult]] = {}
+    def __init__(self, session: AsyncSession) -> None:
+        self.session = session
         self._lock: asyncio.Lock = asyncio.Lock()
 
 
     async def geocode(self, location_name: str) -> Optional[GeocodingResult]:
         norm_cache_key = location_name.strip().lower()
-        if norm_cache_key in self._cache:
-            logger.debug(f"geocoding cache hit: {location_name}")
-            return self._cache[norm_cache_key]
-        else:
-            result = await self._call_nominatim(location_name)
-            self._cache[norm_cache_key] = result
-            return result
+        
+        # 1. Check DB Cache
+        stmt = select(GeocodeCache).where(GeocodeCache.location_name == norm_cache_key)
+        result = await self.session.execute(stmt)
+        cached = result.scalar_one_or_none()
+        
+        if cached:
+            logger.debug(f"geocoding db cache hit: {location_name}")
+            # Support for negative caching (not found)
+            if cached.latitude is None or cached.longitude is None:
+                return None
+            return GeocodingResult(
+                latitude=cached.latitude,
+                longitude=cached.longitude,
+                display_name=cached.display_name or location_name,
+            )
+            
+        # 2. Call API on cache miss
+        api_result = await self._call_nominatim(location_name)
+        
+        # 3. Save to DB Cache
+        new_cache = GeocodeCache(
+            location_name=norm_cache_key,
+            latitude=api_result.latitude if api_result else None,
+            longitude=api_result.longitude if api_result else None,
+            display_name=api_result.display_name if api_result else None,
+        )
+        self.session.add(new_cache)
+        await self.session.commit()
+        
+        return api_result
 
 
     async def _call_nominatim(self, location_name: str) -> Optional[GeocodingResult]:
@@ -77,6 +106,3 @@ class GeocodingService:
                 await asyncio.sleep(1.0)
 
 
-    @property
-    def cache_size(self) -> int:
-        return len(self._cache)

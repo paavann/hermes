@@ -26,7 +26,6 @@ logger = logging.getLogger(__name__)
 class IngestionService:
     def __init__(self) -> None:
         self._ai = AiService()
-        self._geocoding = GeocodingService()
         self._rate_limiter = TokenBucketRateLimiter(settings.GEMINI_RPM_LIMIT)
 
     
@@ -113,17 +112,19 @@ class IngestionService:
                     continue
 
                 try:
-                    geocoding = None
-                    if (
-                        extraction.has_location
-                        and extraction.location_name
-                    ):
-                        geocoding = await self._geocoding.geocode(
-                            extraction.location_name,
-                        )
-
                     async with AsyncSessionLocal() as session:
+                        geocoding_service = GeocodingService(session)
                         event_service = EventService(session)
+
+                        geocoding = None
+                        if (
+                            extraction.has_location
+                            and extraction.location_name
+                        ):
+                            geocoding = await geocoding_service.geocode(
+                                extraction.location_name,
+                            )
+
                         if extraction.matched_event_id:
                             matched = (
                                 await event_service.add_article_to_event(
