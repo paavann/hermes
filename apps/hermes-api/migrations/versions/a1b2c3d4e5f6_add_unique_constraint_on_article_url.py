@@ -19,6 +19,15 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     """Upgrade schema."""
+    # Deduplicate existing articles by URL, keeping the latest physically inserted row
+    op.execute("""
+        DELETE FROM articles
+        WHERE ctid NOT IN (
+            SELECT max(ctid)
+            FROM articles
+            GROUP BY url
+        )
+    """)
     op.create_unique_constraint(
         "uq_articles_url",
         "articles",

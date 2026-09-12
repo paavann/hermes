@@ -1,10 +1,11 @@
 import logging
 from typing import Optional
+
 from google import genai
 from pydantic import BaseModel, Field
+
 from hermes_api.core.config import settings
 from hermes_api.core.constants import PREDEFINED_CATEGORIES
-
 
 logger = logging.getLogger(__name__)
 
@@ -337,3 +338,20 @@ class AiService:
                 f"{len(articles)} articles."
             )
             return [None] * len(articles)
+
+    async def generate_embeddings_batch(self, texts: list[str]) -> list[list[float]]:
+        """Generate vector embeddings for a batch of strings using text-embedding-004."""
+        if not texts:
+            return []
+        
+        try:
+            response = await self._client.aio.models.embed_content(
+                model="text-embedding-004",
+                contents=texts,
+            )
+            return [embedding.values for embedding in response.embeddings]
+            
+        except Exception:
+            logger.exception("failed to generate embeddings")
+            # Return empty lists or zeroes on failure so callers don't crash
+            return [[] for _ in texts]

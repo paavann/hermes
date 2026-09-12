@@ -30,6 +30,7 @@ dependencies = [
     "geoalchemy2>=0.17.1",
     "google-genai>=1.47.0",
     "httpx>=0.28.1",
+    "pgvector>=0.4.2",
     "pydantic-settings>=2.11.0",
     "python-dotenv>=1.2.1",
     "sqlalchemy>=2.0.51",

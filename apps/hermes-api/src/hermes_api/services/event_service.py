@@ -1,18 +1,17 @@
 import logging
 import uuid
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
-from sqlalchemy import select, update, func
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from hermes_api.core.config import settings
 from hermes_api.db.enums import EventStatus
-from hermes_api.db.models.event import Event
 from hermes_api.db.models.article import Article
+from hermes_api.db.models.event import Event
 from hermes_api.services.ai_service import ExtractionResult
 from hermes_api.services.geocoding_service import GeocodingResult
-
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +34,7 @@ class EventService:
         article_url: str,
         source_id: uuid.UUID,
         published_at: Optional[datetime] = None,
+        embedding: Optional[list[float]] = None,
     ) -> Event:
         location_wkt = None
         if geocoding:
@@ -48,6 +48,7 @@ class EventService:
             category_color=extraction.category_color,
             location=location_wkt,
             location_name=extraction.location_name,
+            embedding=embedding,
             trending_score=1.0,
             article_count=1,
             first_reported_at=now,
@@ -136,6 +137,46 @@ class EventService:
             for row in rows
         ]
     
+
+
+    async def get_active_events_by_embeddings(
+        self, embeddings: list[list[float]]
+    ) -> list[dict[str, str]]:
+        if not embeddings:
+            return []
+            
+        unique_events = {}
+        for emb in embeddings:
+            if not emb:
+                continue
+            
+            # Use cosine distance (<=> operator in pgvector)
+            stmt = (
+                select(
+                    Event.id,
+                    Event.ai_headline,
+                    Event.location_name,
+                    Event.category,
+                )
+                .where(Event.status == EventStatus.ACTIVE)
+                .where(Event.embedding.cosine_distance(emb) < 0.25)
+                .order_by(Event.embedding.cosine_distance(emb))
+                .limit(5)
+            )
+            result = await self._session.execute(stmt)
+            rows = result.all()
+            
+            for row in rows:
+                row_id = str(row.id)
+                if row_id not in unique_events:
+                    unique_events[row_id] = {
+                        "id": row_id,
+                        "headline": row.ai_headline,
+                        "location_name": row.location_name or "N/A",
+                        "category": row.category,
+                    }
+                    
+        return list(unique_events.values())
 
 
     async def article_url_exists(self, url: str) -> bool:

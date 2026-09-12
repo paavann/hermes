@@ -11,9 +11,9 @@ from hermes_api.core.rate_limiter import TokenBucketRateLimiter
 from hermes_api.db.db import AsyncSessionLocal
 from hermes_api.db.models.source import Source
 from hermes_api.services.ai_service import (
+    EXTRACTION_BATCH_SIZE,
     AiService,
     ArticleInput,
-    EXTRACTION_BATCH_SIZE,
 )
 from hermes_api.services.event_service import EventService
 from hermes_api.services.geocoding_service import GeocodingService
@@ -85,14 +85,6 @@ class IngestionService:
                 batch_start:batch_start + EXTRACTION_BATCH_SIZE
             ]
 
-            # Refresh active events per batch so newly created
-            # events from earlier batches are visible for matching.
-            async with AsyncSessionLocal() as session:
-                event_service = EventService(session)
-                existing_events = (
-                    await event_service.get_active_events_for_matching()
-                )
-
             ai_inputs = [
                 ArticleInput(
                     title=article.title,
@@ -100,6 +92,18 @@ class IngestionService:
                 )
                 for article in batch
             ]
+            
+            # Semantic Pre-filtering
+            # Generate embeddings for the new articles
+            batch_texts = [f"{a.title}\n{a.text_for_ai}" for a in batch]
+            embeddings = await self._ai.generate_embeddings_batch(batch_texts)
+
+            # Find semantically similar active events
+            async with AsyncSessionLocal() as session:
+                event_service = EventService(session)
+                existing_events = (
+                    await event_service.get_active_events_by_embeddings(embeddings)
+                )
 
             await self._rate_limiter.acquire()
             extractions = await self._ai.extract_metadata_batch(
@@ -110,6 +114,7 @@ class IngestionService:
             # Phase 3: Geocode and persist each result individually.
             for i, extraction in enumerate(extractions):
                 article = batch[i]
+                article_embedding = embeddings[i] if i < len(embeddings) else None
                 if not extraction:
                     stats["articles_failed"] += 1
                     continue
@@ -149,6 +154,7 @@ class IngestionService:
                                     article_url=article.url,
                                     source_id=source_id,
                                     published_at=article.published_at,
+                                    embedding=article_embedding,
                                 )
                                 stats["events_created"] += 1
                         else:
@@ -159,6 +165,7 @@ class IngestionService:
                                 article_url=article.url,
                                 source_id=source_id,
                                 published_at=article.published_at,
+                                embedding=article_embedding,
                             )
                             stats["events_created"] += 1
                         stats["articles_processed"] += 1

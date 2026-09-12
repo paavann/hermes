@@ -1,6 +1,12 @@
 services:
   hermes-db:
-    image: postgis/postgis
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM postgis/postgis
+        RUN apt-get update \
+            && apt-get install -y --no-install-recommends postgresql-$$PG_MAJOR-pgvector \
+            && rm -rf /var/lib/apt/lists/*
     restart: always
     environment:
       POSTGRES_DB: ${DB_NAME}
