@@ -8,11 +8,12 @@ This document provides backend-specific architectural context for the `hermes-ap
 
 This is the **backend API and data ingestion engine** of Project Hermes. It is a Python application built with FastAPI, using `uv` for dependency management and `@nxlv/python` for Nx integration. Its responsibilities are:
 
-1. **Ingest** raw news from RSS feeds on a schedule.
-2. **Deduplicate** articles to avoid redundant AI processing.
-3. **Extract** geospatial data from article text using Google GenAI.
-4. **Store** structured event data in a PostGIS-enabled PostgreSQL database.
-5. **Serve** processed events to the frontend via a RESTful API and real-time stream.
+1. **Ingest** raw news concurrently from RSS feeds on dynamic, per-source schedules.
+2. **Deduplicate** articles using `pgvector` semantic similarity and Gemini embeddings to avoid redundant LLM processing.
+3. **Extract** geospatial data and metadata from article text using Google GenAI (batched).
+4. **Geocode** location names to exact coordinates using Nominatim, backed by a persistent PostGIS cache.
+5. **Store** structured event data, embeddings, and geometries in a PostGIS-enabled PostgreSQL database.
+6. **Serve** processed events to the frontend via a RESTful API and real-time streams.
 
 ---
 
@@ -22,72 +23,61 @@ This is the **backend API and data ingestion engine** of Project Hermes. It is a
 
 ### Pipeline Flow
 
-```
-┌─────────────┐     ┌─────────────┐     ┌──────────────────┐     ┌──────────────┐     ┌─────────┐
-│ APScheduler  │────▶│ feedparser  │────▶│ Deduplication    │────▶│ Google GenAI │────▶│ PostGIS │
-│ (cron jobs)  │     │ (RSS fetch) │     │ (URL/hash check) │     │ (extraction) │     │ (save)  │
-└─────────────┘     └─────────────┘     └──────────────────┘     └──────────────┘     └─────────┘
+```text
+┌─────────────┐   ┌────────────┐   ┌────────────────┐   ┌──────────────┐   ┌─────────────┐   ┌───────────┐
+│ APScheduler │──▶│ feedparser │──▶│ Gemini Embeds  │──▶│ pgvector     │──▶│ Gemini LLM  │──▶│ Nominatim │──▶ PostGIS
+│ (5m tick)   │   │ (Parallel) │   │ (Vector Array) │   │ (Similarity) │   │ (Batch Ext) │   │ (Geocode) │
+└─────────────┘   └────────────┘   └────────────────┘   └──────────────┘   └─────────────┘   └───────────┘
 ```
 
 ### Stage Details
 
-1. **Scheduling (`apscheduler`)**: Background jobs run on a configurable interval to fetch new articles from a list of RSS feed URLs. The feed list should be configurable (database or config file), not hardcoded.
-
-2. **Fetching (`feedparser`)**: Each RSS feed is parsed to extract individual articles. Extract the title, summary/description, publication date, source URL, and the full article link.
-
-3. **Deduplication (Critical for Cost Control)**:
-   - Before sending any article to GenAI, check the database for an existing record with the same URL or a content hash.
-   - This is **non-negotiable** — GenAI API calls are expensive, and processing the same article twice is pure waste.
-   - Use a combination of the article URL (primary) and a hash of the title + summary (secondary) for robust deduplication.
-   - Articles that have already been processed must be skipped silently (no error, just a debug log).
-
-4. **AI Extraction (`google-genai`)**:
-   - Send the article text to Google GenAI with a carefully crafted prompt that instructs the model to extract:
-     - **Event summary** (translated to English if the source is in another language)
-     - **Event category** (e.g., conflict, economic, diplomatic, environmental, humanitarian)
-     - **Severity level** (critical, high, moderate, low, positive)
-     - **Primary coordinates** (latitude, longitude) — the exact location where the event is happening
-     - **Secondary/target coordinates** (optional) — for events involving relationships between two locations (e.g., sanctions between countries)
-     - **Affected region** (optional) — polygon/boundary data for territorial events
-     - **Source entities** (countries, organizations involved)
-   - **Structured Output**: Always use Pydantic models as the expected response schema. Never accept raw unstructured text from the LLM.
-   - **Hallucination Handling**: If the model returns invalid coordinates (e.g., lat > 90), missing required fields, or clearly hallucinated data — log the error with `logging.warning()`, skip that specific article, and continue processing the rest of the batch. **Never crash the pipeline** because of one bad LLM response.
-   - **Translation**: The prompt must instruct the model to translate all event summaries into English by default, regardless of the source language.
-
-5. **Storage (`geoalchemy2` + PostGIS)**:
-   - Save the extracted, validated event data to PostGIS using GeoAlchemy2.
-   - Store coordinates as PostGIS `GEOMETRY(Point, 4326)` columns.
-   - Store affected regions as PostGIS `GEOMETRY(Polygon, 4326)` or `GEOMETRY(MultiPolygon, 4326)`.
+1. **Scheduling (`apscheduler`)**: Runs a high-frequency "tick-and-check" heartbeat (e.g., every 5 minutes). It dynamically queries the database for active sources where `last_fetched_at + fetch_interval_minutes <= NOW`, ensuring each source is polled on its own independent, optimal schedule.
+2. **Fetching (`feedparser`)**: Uses `asyncio.gather` and semaphores to concurrently fetch and parse multiple RSS feeds in parallel. Basic URL-based deduplication is performed instantly against the database to drop already-known articles.
+3. **Semantic Filtering (`google-genai` + `pgvector`)**: Instead of naive text hashing, incoming articles are batched and sent to Gemini (`text-embedding-004`) to generate 768-dimensional vector embeddings. We then query PostGIS using the `<=>` cosine distance operator to retrieve only active events that are conceptually identical.
+4. **AI Batch Extraction (`google-genai`)**:
+   - Send the raw article text and the list of semantically similar candidate events to the Gemini LLM in **batches of 10** (`EXTRACTION_BATCH_SIZE`).
+   - The prompt instructs the model to either **merge** the article into an existing candidate event or **create a new event**.
+   - **Data Extracted**: Headline, summary (translated to English), category, severity, and **location name** (e.g., "Paris, France").
+   - **Hallucination Handling**: If the model fails or returns invalid schemas, log the error and continue. Do not crash the batch.
+5. **Geocoding (`geopy` + PostGIS Cache)**: 
+   - The extracted location string is passed to Nominatim to get exact lat/long coordinates (replacing pure LLM coordinate hallucination). 
+   - Because Nominatim strictly rate-limits (1 req/sec), we use an `asyncio.Lock()`.
+   - **Caching**: All geocoding results are permanently stored in a `geocode_cache` PostGIS table to avoid re-querying identical location strings, drastically saving time and preventing IP bans.
+6. **Storage (`geoalchemy2` + PostGIS)**:
+   - Save the structured event, embedding array, and geocoded coordinates to the database.
 
 ### Prompt Management
-- All GenAI prompts must be **version-controlled** in the codebase (e.g., stored as constants in `src/hermes_api/prompts/` or a similar module).
-- This allows prompts to be unit-tested, diffed in code review, and tracked historically.
+- All GenAI prompts must be **version-controlled** in the codebase (e.g., `src/hermes_api/prompts/`).
 - Never hardcode prompts as inline strings in service functions.
 
 ---
 
 ## 3. Smart Editor Algorithm
 
-The backend must implement a ranking algorithm so the frontend's initial load shows only the most critical events, not everything in the database. The algorithm considers:
+The backend implements a sophisticated ranking algorithm so the frontend's initial load surfaces only the most critical events. The algorithm calculates a `trending_score` based on:
 
-- **Source Consensus**: Events reported by multiple independent RSS sources are ranked higher. If 10 different feeds mention the same event (detected via location + time proximity + topic similarity), it is more significant than an event from a single source.
-- **Time Decay**: Recent events are weighted more heavily. An event from 1 hour ago outranks a similar event from 3 days ago. The decay function should be configurable.
-- **Severity**: The AI-extracted severity level contributes to the ranking.
+- **Source Credibility Weighting**: Events reported by multiple sources gain score. However, not all sources are equal. A `Source` has a `CredibilityTier` (1 through 4) which dictates its weight. For example, a Tier 1 source (e.g., Reuters) adds +3.0 to an event's score, whereas a Tier 4 tabloid adds +0.5.
+- **Semantic Consensus**: If 10 different feeds mention the same event (detected via semantic vector proximity and matched by the LLM), the score compounds rapidly based on those credibility tiers.
+- **Time Decay**: To prevent old news from dominating the map, a lifecycle cron job runs every 30 minutes and executes a strict **-10% decay** on the `trending_score` of all `ACTIVE` events. Over 24 hours, an old event will organically drop down the rankings unless continuously refreshed by new articles.
 
-The API must expose this as a query parameter (e.g., `?min_score=0.7`) so the frontend can request only top-ranked events for the initial globe view and progressively load lower-ranked events as the user zooms in.
+The API exposes this ranking (e.g., `ORDER BY trending_score DESC LIMIT 100`) so the frontend can request top-ranked events.
 
 ---
 
-## 4. Database Architecture (PostGIS)
+## 4. Database Architecture (PostGIS + pgvector)
 
-### Spatial Indexing
-- **GIST indexes** must be created on all geometry columns (`location`, `target_location`, `affected_region`). Without these, spatial queries will perform full table scans and be unusable at scale.
-- Use `ST_Intersects` with bounding box queries for viewport-based filtering. The frontend sends its current viewport as a bounding box (SW corner, NE corner), and the API returns only events within that box.
+### Spatial & Vector Indexing
+- **pgvector**: The PostgreSQL Docker image is injected with `postgresql-$PG_MAJOR-pgvector` at runtime via `dockerfile_inline`. 
+- **Embeddings**: The `events` table contains an `embedding` column of type `Vector(768)` with an **HNSW index** to enable ultra-fast cosine similarity lookups.
+- **GIST indexes**: Required on all geometry columns (`location`, `target_location`). Use `ST_Intersects` with bounding box queries for viewport filtering.
+
+### Caching Tables
+- **`geocode_cache`**: Explicitly stores historical location strings and their solved coordinates to bypass external API rate limits (Nominatim).
 
 ### Time-Series & Historical Data
-- The system retains all historical events for playback (e.g., a time-slider on the frontend).
-- Architect the database with **time-based table partitioning** (e.g., monthly partitions on `created_at`) to keep query performance stable as the dataset grows into millions of rows.
-- Consider adding a `is_active` or `expires_at` column so stale events can be filtered out of the default "live" view without being deleted.
+- The system retains all historical events. Consider time-based table partitioning as data grows.
+- A lifecycle cron job periodically marks events as `STALE` and eventually `ARCHIVED` based on `last_updated_at`, naturally filtering them out of the live map queries.
 
 ### Multi-Location Events (Arcs)
 - Events involving relationships between two locations (e.g., "Country A sanctions Country B") must store both a `source_location` (Point) and a `target_location` (Point).
@@ -120,7 +110,7 @@ The API must expose this as a query parameter (e.g., `?min_score=0.7`) so the fr
 
 The backend follows a modular architecture:
 
-```
+```text
 src/hermes_api/
 ├── main.py              # FastAPI app factory — thin, imports routers
 ├── api/                 # Route handlers (APIRouter modules)

@@ -35,7 +35,7 @@ As an agent, you must design features that align with these core mechanics:
 - **Smart Editor Algorithm**: The application must not overwhelm the user with raw data. Instead, it relies on a backend algorithm that ranks news based on **source consensus** and **time decay**. The initial load must display only the most critical global events.
 - **Dynamic Viewport Queries**: As users zoom into specific regions, the application must instantly query the spatial database to populate hyper-local news exactly within their viewport.
 - **Visual Categorization**: Use color-coded pins to categorize events (e.g., economic shifts, conflicts). These pins must automatically cluster at higher zoom levels to prevent screen clutter.
-- **Hybrid AI Geoparsing**: The system relies on an AI pipeline to extract *exact* physical coordinates from raw article text to ensure pinpoint accuracy on the map.
+- **Hybrid Geoparsing & Geocoding**: The system uses an AI pipeline to extract location *names* from raw article text, which are then passed through a dedicated geocoding service (Nominatim) backed by a PostgreSQL cache. This eliminates AI coordinate hallucinations and ensures pinpoint map accuracy.
 - **Geopolitical Nuance Visualization**: You must visually handle complex relationships. Use dynamic **relationship arcs** to illustrate intangible ties (like trade agreements or sanctions across the globe) and **territorial shading** to clearly depict ongoing states of conflict within national borders.
 
 ### Key User Journeys
@@ -59,9 +59,9 @@ To maintain consistency across the codebase, the following terms have precise me
 | Term | Definition |
 |------|-----------|
 | **Event** | A single newsworthy occurrence that has been extracted from one or more RSS articles, geolocated, categorized, and scored. An Event is the fundamental data unit in Hermes — it has coordinates, a category, a severity, a summary, and optionally a target location and affected region. |
-| **Source Consensus** | A ranking signal. When multiple independent RSS feeds report the same event (detected via location + time proximity + topic similarity), the event's score increases. Higher consensus = more significant event. |
-| **Time Decay** | A ranking signal. Recent events are weighted more heavily than older ones. An event from 1 hour ago outranks a similar event from 3 days ago. The decay rate is configurable. |
-| **Geoparsing** | The AI-driven process of extracting exact latitude/longitude coordinates from unstructured article text (e.g., extracting `[33.5138, 36.2765]` from "an explosion near central Damascus"). |
+| **Source Consensus** | A ranking signal. When multiple independent RSS feeds report the same event (detected via semantic vector similarity using `pgvector` and Gemini embeddings), the event's score increases. We also use **Source Credibility** tiers (e.g., Tier 1 vs Tier 4) to weight how much an event's score increases per article. |
+| **Time Decay** | A ranking signal. Recent events are weighted more heavily than older ones. A lifecycle cron job periodically applies a strict percentage decay to all active trending scores so that old news organically drops down the rankings over 24 hours. |
+| **Geoparsing** | The process of extracting a geographic location name from unstructured article text (e.g., 'central Damascus') via AI, and subsequently resolving it to exact latitude/longitude coordinates using a geocoding API. |
 | **Relationship Arc** | A visual curved line on the map connecting two locations to represent an intangible geopolitical relationship (e.g., Country A sanctioning Country B, or a trade agreement between two regions). Arcs are directional (source → target). |
 | **Territorial Shading** | A semi-transparent polygon fill overlaid on a geographic region to depict an ongoing state (e.g., an active conflict zone, a disputed territory, or an area under sanctions). |
 | **Viewport** | The currently visible geographic area on the user's map screen, defined by a bounding box (southwest corner and northeast corner coordinates). The backend uses this to return only spatially relevant events. |
@@ -124,7 +124,7 @@ This is an Nx monorepo. The workspace contains the following projects:
 
 | Project | Path | Role | Key Tech |
 |---------|------|------|----------|
-| **hermes** | `apps/hermes/` | React frontend — interactive map and UI | React 19, React Router 7, Vite, Mapbox GL JS, Zustand, Tailwind CSS 4 |
+| **hermes** | `apps/hermes/` | React frontend — interactive map and UI | React 19, React Router 8, Vite, Mapbox GL JS, Zustand, Tailwind CSS 4 |
 | **hermes-api** | `apps/hermes-api/` | Python backend — ingestion, AI, and API | FastAPI, SQLAlchemy 2.0, GeoAlchemy2, google-genai, apscheduler, feedparser, uv |
 | **hermes-e2e** | `apps/hermes-e2e/` | End-to-end tests for the frontend | Playwright |
 
