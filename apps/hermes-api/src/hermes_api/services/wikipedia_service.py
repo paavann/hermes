@@ -13,6 +13,7 @@ reused throughout.
 """
 
 import logging
+import re
 from typing import Optional
 
 import httpx
@@ -154,9 +155,90 @@ async def fetch_page_extracts(
     return results
 
 
+async def enumerate_timeline_pages(main_title: str) -> list[str]:
+    """Discover and enumerate all pages that contain the timeline's content.
+
+    Given a story's main 'Timeline of X' title, this determines whether the
+    page is a self-contained article or an index pointing to sub-pages.
+
+    It checks for empty sections or 'Main article:' links in the main page's
+    extract, combined with an `intitle` search for sub-pages.
+
+    Args:
+        main_title: The main Wikipedia timeline title to start from.
+
+    Returns:
+        An ordered list of titles whose content needs to be fetched.
+        Returns just the main page if it's self-contained, or all discovered
+        sub-pages if it's split.
+    """
+    extracts = await fetch_page_extracts([main_title])
+    extract = extracts.get(main_title)
+
+    if not extract:
+        return []
+
+    search_results = await search_timeline_titles(main_title)
+
+    def _norm(s: str) -> str:
+        return s.lower().replace("–", "-").replace("—", "-")
+
+    norm_main = _norm(main_title)
+    sub_pages = [
+        t for t in search_results
+        if t != main_title and _norm(t).startswith(norm_main)
+    ]
+
+    if not sub_pages:
+        return [main_title]
+
+    # Check if the main page is an index
+    lines = [line.strip() for line in extract.splitlines() if line.strip()]
+    is_index = False
+
+    for i in range(len(lines) - 1):
+        if lines[i].startswith("==") and lines[i].endswith("=="):
+            next_line = lines[i + 1].lower()
+            if (
+                (next_line.startswith("==") and next_line.endswith("==")) or
+                next_line.startswith("see also:") or
+                next_line.startswith("main article:") or
+                next_line.startswith("further information:")
+            ):
+                is_index = True
+                break
+
+    return _sort_timeline_titles(sub_pages) if is_index else [main_title]
+
+
 # ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
+
+_MONTHS = {
+    "january": 1, "february": 2, "march": 3, "april": 4, "may": 5, "june": 6,
+    "july": 7, "august": 8, "september": 9, "october": 10, "november": 11, "december": 12
+}
+
+
+def _sort_timeline_titles(titles: list[str]) -> list[str]:
+    """Sort sub-page titles chronologically based on embedded years/months."""
+    def sort_key(title: str) -> tuple:
+        year_match = re.search(r'\b(19|20)\d{2}\b', title)
+        year = int(year_match.group(0)) if year_match else 0
+
+        month = 0
+        for m_name, m_val in _MONTHS.items():
+            if m_name in title.lower():
+                month = m_val
+                break
+
+        phase_match = re.search(r'\bphase\s+(\d+)\b', title.lower())
+        phase = int(phase_match.group(1)) if phase_match else 0
+
+        return (year, month, phase, title)
+
+    return sorted(titles, key=sort_key)
 
 
 async def _fetch_extracts_batch(
