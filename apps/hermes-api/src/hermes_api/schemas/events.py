@@ -44,3 +44,29 @@ class MapEventResponse(BaseModel):
     trending_score: float
     article_count: int
     model_config = ConfigDict(from_attributes=True)
+
+
+class LineageEdgeResponse(BaseModel):
+    source_id: uuid.UUID
+    target_id: uuid.UUID
+    relationship_type: str
+    model_config = ConfigDict(from_attributes=True)
+
+
+class LineageNodeResponse(BaseModel):
+    id: uuid.UUID
+    ai_headline: str
+    category: str
+    category_color: str
+    location_name: Optional[str]
+    latitude: Optional[float]
+    longitude: Optional[float]
+    trending_score: float
+    article_count: int
+    first_reported_at: datetime
+    model_config = ConfigDict(from_attributes=True)
+
+
+class LineageGraphResponse(BaseModel):
+    nodes: list[LineageNodeResponse]
+    edges: list[LineageEdgeResponse]

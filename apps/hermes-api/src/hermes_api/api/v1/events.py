@@ -4,16 +4,20 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from geoalchemy2.functions import ST_X, ST_Y, ST_MakeEnvelope, ST_Within
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from hermes_api.db.db import AsyncSessionLocal
 from hermes_api.db.enums import EventStatus
 from hermes_api.db.models.event import Event
+from hermes_api.db.models.event_edge import EventEdge
 from hermes_api.schemas.events import (
     EventDetailResponse,
     EventResponse,
+    LineageEdgeResponse,
+    LineageGraphResponse,
+    LineageNodeResponse,
     MapEventResponse,
 )
 
@@ -98,3 +102,88 @@ async def get_event(event_id: uuid.UUID, db: AsyncSession=Depends(get_db)) -> Ev
         raise HTTPException(status_code=404, detail="event not found.")
     else:
         return event
+
+
+
+
+
+@router.get("/{event_id}/lineage", response_model=LineageGraphResponse)
+async def get_event_lineage(event_id: uuid.UUID, db: AsyncSession = Depends(get_db)) -> LineageGraphResponse:
+    # 1. Walk the graph backward using a recursive CTE with cycle protection
+    query = text("""
+        WITH RECURSIVE lineage_cte AS (
+            -- Anchor: start with the requested event
+            SELECT 
+                id, 
+                first_reported_at, 
+                ARRAY[id] as path
+            FROM events
+            WHERE id = :start_id
+
+            UNION ALL
+
+            -- Recursive step: find related events through edges
+            SELECT 
+                e.id, 
+                e.first_reported_at, 
+                cte.path || e.id
+            FROM events e
+            JOIN event_edges ee ON (e.id = ee.event_a_id OR e.id = ee.event_b_id)
+            JOIN lineage_cte cte ON (cte.id = ee.event_a_id OR cte.id = ee.event_b_id)
+            WHERE e.id != cte.id
+              AND e.first_reported_at <= cte.first_reported_at
+              AND NOT (e.id = ANY(cte.path))
+        )
+        SELECT DISTINCT id FROM lineage_cte;
+    """)
+    result = await db.execute(query, {"start_id": event_id})
+    node_ids = [row.id for row in result.all()]
+    
+    if not node_ids:
+        # If the start_id itself didn't exist, node_ids will be empty
+        raise HTTPException(status_code=404, detail="event not found or no lineage available.")
+
+    # 2. Fetch all nodes with spatial decomposition
+    nodes_stmt = (
+        select(
+            Event,
+            ST_X(Event.location).label("longitude"),
+            ST_Y(Event.location).label("latitude")
+        )
+        .where(Event.id.in_(node_ids))
+        .order_by(Event.first_reported_at.asc())
+    )
+    nodes_result = await db.execute(nodes_stmt)
+    node_rows = nodes_result.all()
+    
+    nodes = []
+    for row in node_rows:
+        nodes.append(LineageNodeResponse(
+            id=row.Event.id,
+            ai_headline=row.Event.ai_headline,
+            category=row.Event.category,
+            category_color=row.Event.category_color,
+            location_name=row.Event.location_name,
+            latitude=row.latitude,
+            longitude=row.longitude,
+            trending_score=row.Event.trending_score,
+            article_count=row.Event.article_count,
+            first_reported_at=row.Event.first_reported_at
+        ))
+        
+    # 3. Fetch all edges connecting these nodes
+    edges_stmt = select(EventEdge).where(
+        EventEdge.event_a_id.in_(node_ids),
+        EventEdge.event_b_id.in_(node_ids)
+    )
+    edges_result = await db.execute(edges_stmt)
+    edges = [
+        LineageEdgeResponse(
+            source_id=edge.event_a_id,
+            target_id=edge.event_b_id,
+            relationship_type=edge.relationship_type
+        )
+        for edge in edges_result.scalars().all()
+    ]
+
+    return LineageGraphResponse(nodes=nodes, edges=edges)
