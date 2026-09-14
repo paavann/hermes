@@ -12,6 +12,7 @@ from hermes_api.db.db import AsyncSessionLocal
 from hermes_api.db.enums import EventStatus
 from hermes_api.db.models.event import Event
 from hermes_api.db.models.event_edge import EventEdge
+from hermes_api.db.models.story_allowlist import StoryAllowlist
 from hermes_api.schemas.events import (
     EventDetailResponse,
     EventResponse,
@@ -39,8 +40,11 @@ async def get_events(
     scope: Optional[EventStatus] = Query(None, description="filter by event scope."),
     limit: int = Query(50, ge=1, le=200, description="maximum number of events to return."),
     db: AsyncSession = Depends(get_db)
-) -> list[Event]:
-    stmt = select(Event)
+) -> list[EventResponse]:
+    stmt = select(
+        Event,
+        select(StoryAllowlist.id).where(StoryAllowlist.event_id == Event.id).exists().label("has_lineage")
+    )
     if status:
         stmt = stmt.where(Event.status==status)
     if scope:
@@ -48,7 +52,14 @@ async def get_events(
     
     stmt = stmt.order_by(Event.trending_score.desc()).limit(limit)
     result = await db.execute(stmt)
-    events = list(result.scalars().all())
+    rows = result.all()
+    
+    events = []
+    for row in rows:
+        event, has_lineage = row
+        event.has_lineage = has_lineage
+        events.append(event)
+        
     return [EventResponse.model_validate(e) for e in events]
 
 
@@ -67,6 +78,7 @@ async def get_events_by_bbox(
             Event,
             ST_X(Event.location).label("longitude"),
             ST_Y(Event.location).label("latitude"),
+            select(StoryAllowlist.id).where(StoryAllowlist.event_id == Event.id).exists().label("has_lineage"),
         )
         .where(Event.location.isnot(None))
         .where(ST_Within(Event.location, bbox_poly))
@@ -87,6 +99,7 @@ async def get_events_by_bbox(
             longitude=row.longitude,
             trending_score=row.Event.trending_score,
             article_count=row.Event.article_count,
+            has_lineage=row.has_lineage,
         )
         for row in rows
     ]
@@ -94,14 +107,23 @@ async def get_events_by_bbox(
 
 
 @router.get("/{event_id}", response_model=EventDetailResponse)
-async def get_event(event_id: uuid.UUID, db: AsyncSession=Depends(get_db)) -> Event:
-    stmt = select(Event).options(selectinload(Event.articles)).where(Event.id==event_id)
+async def get_event(event_id: uuid.UUID, db: AsyncSession=Depends(get_db)) -> EventDetailResponse:
+    stmt = (
+        select(
+            Event,
+            select(StoryAllowlist.id).where(StoryAllowlist.event_id == Event.id).exists().label("has_lineage")
+        )
+        .options(selectinload(Event.articles))
+        .where(Event.id==event_id)
+    )
     result = await db.execute(stmt)
-    event = result.scalar_one_or_none()
-    if not event:
+    row = result.first()
+    if not row:
         raise HTTPException(status_code=404, detail="event not found.")
-    else:
-        return event
+    
+    event, has_lineage = row
+    event.has_lineage = has_lineage
+    return event
 
 
 

@@ -25,12 +25,14 @@ class EventResponse(BaseModel):
     status: EventStatus
     first_reported_at: datetime
     last_updated_at: datetime
+    has_lineage: bool = False
     model_config = ConfigDict(from_attributes=True)
 
 
 class EventDetailResponse(EventResponse):
     ai_summary: str
     articles: list[ArticleResponse]
+    has_lineage: bool = False
 
 
 class MapEventResponse(BaseModel):
@@ -43,6 +45,7 @@ class MapEventResponse(BaseModel):
     longitude: float
     trending_score: float
     article_count: int
+    has_lineage: bool = False
     model_config = ConfigDict(from_attributes=True)
 
 
