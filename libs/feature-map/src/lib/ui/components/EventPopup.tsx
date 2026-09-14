@@ -133,6 +133,19 @@ export function EventPopup({ map }: { map: mapboxgl.Map | null }) {
                 </p>
               </div>
 
+              {/* Lineage Analyze Button */}
+              {event.has_lineage && (
+                <button
+                  onClick={() => {
+                    useMapStore.getState().setLineageMode(true, event.id);
+                    setSelectedEventId(null);
+                  }}
+                  className="w-full py-2 bg-neon-blue/20 hover:bg-neon-blue/40 border border-neon-blue text-neon-blue text-xs font-bold tracking-widest uppercase transition-colors"
+                >
+                  [ ANALYZE TIMELINE ]
+                </button>
+              )}
+
               {/* Verified Sources */}
               <div>
                 <h3 className="text-neon-blue text-[10px] mb-3 tracking-[0.15em] uppercase">Sources</h3>
