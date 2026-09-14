@@ -112,6 +112,46 @@ class BatchExtractionResponse(BaseModel):
     )
 
 
+class TimelineEvent(BaseModel):
+    date: str = Field(
+        description=(
+            "The date of the event in YYYY-MM-DD format if possible. "
+            "If exact day is unknown, use YYYY-MM. If only year, use YYYY."
+        )
+    )
+    headline: str = Field(
+        description="A concise, neutral, factual headline for the event. Maximum 100 characters."
+    )
+    summary: str = Field(
+        description="A 2-3 sentence summary of the event. Focus on what happened, where, and why it matters."
+    )
+    location_name: str = Field(
+        description=(
+            "The most specific place name for where this event happened. "
+            "Use the format 'City, Country' when possible. If no specific location "
+            "is mentioned, use the most precise region mentioned."
+        )
+    )
+
+
+class BatchTimelinePageResult(BaseModel):
+    page_index: int = Field(
+        description="The 0-based index of the page this result corresponds to from the input list."
+    )
+    events: list[TimelineEvent] = Field(
+        description="The chronological list of events extracted from this page."
+    )
+
+
+class BatchTimelineExtractionResponse(BaseModel):
+    results: list[BatchTimelinePageResult] = Field(
+        description=(
+            "One extraction result per input page. Must contain exactly one "
+            "entry for each page provided, identified by page_index."
+        )
+    )
+
+
 EXTRACTION_BATCH_SIZE: int = 10
 
 
@@ -136,6 +176,33 @@ Rules:
    incident. "Turkey earthquake" and "Turkey earthquake aftermath" are the
    same event. "Turkey earthquake" and "Japan earthquake" are NOT.
 """
+
+
+TIMELINE_SYSTEM_PROMPT = """You are a news historian for Hermes, a geospatial news aggregator.
+Your job is to extract a chronological list of structured historical events from Wikipedia timeline prose.
+
+You will receive the text of one or more Wikipedia pages in a single request. Return
+exactly one result per input page, using the page_index field to map each result back
+to its corresponding input page (0-based).
+
+Rules:
+1. Be factual and neutral. Do not editorialize.
+2. For location, identify WHERE the event is physically happening. "BBC reports an earthquake in Turkey" → location is Turkey.
+3. Extract only the distinct, major events from the prose. Merge tightly related consecutive sentences into a single event.
+4. Format dates as YYYY-MM-DD when possible.
+"""
+
+
+def _build_timeline_batch_user_prompt(pages: list[ArticleInput]) -> str:
+    """Build a user prompt containing multiple numbered Wikipedia pages."""
+    prompt = "# Wikipedia Timeline Pages to analyse\n\n"
+    for i, page in enumerate(pages):
+        prompt += (
+            f"## Page {i}\n"
+            f"Title: {page.title}\n\n"
+            f"Content:\n{page.content}\n\n"
+        )
+    return prompt
 
 
 
@@ -355,3 +422,75 @@ class AiService:
             logger.exception("failed to generate embeddings")
             # Return empty lists or zeroes on failure so callers don't crash
             return [[] for _ in texts]
+
+    async def extract_timeline_events_batch(
+        self,
+        pages: list[ArticleInput],
+    ) -> list[list[TimelineEvent]]:
+        """Extract timeline events for a batch of Wikipedia pages.
+
+        Sends all pages to Gemini at once. Each result is mapped back to its
+        input page via page_index. Uses gemini-2.5-flash for complex reasoning.
+
+        Args:
+            pages: The batch of pages (title and content) to extract events from.
+
+        Returns:
+            An ordered list matching the input pages. Each element is a list
+            of TimelineEvent objects extracted from that page.
+        """
+        if not pages:
+            return []
+
+        user_prompt = _build_timeline_batch_user_prompt(pages)
+
+        try:
+            res = await self._client.aio.models.generate_content(
+                model="gemini-2.5-flash",
+                contents=user_prompt,
+                config={
+                    "system_instruction": TIMELINE_SYSTEM_PROMPT,
+                    "response_mime_type": "application/json",
+                    "response_schema": BatchTimelineExtractionResponse,
+                },
+            )
+
+            if not res.parsed:
+                logger.error(
+                    "timeline batch extraction returned no parsed response "
+                    f"for {len(pages)} pages."
+                )
+                return [[] for _ in pages]
+
+            batch_response: BatchTimelineExtractionResponse = res.parsed
+
+            # Map results by page_index
+            events_by_index: dict[int, list[TimelineEvent]] = {}
+            for batch_result in batch_response.results:
+                idx = batch_result.page_index
+                if idx in events_by_index:
+                    logger.warning(
+                        f"duplicate page_index {idx} in timeline batch "
+                        "response — keeping first."
+                    )
+                    continue
+                events_by_index[idx] = batch_result.events
+
+            # Build ordered result list matching input order.
+            ordered_results: list[list[TimelineEvent]] = []
+            for i, page in enumerate(pages):
+                events = events_by_index.get(i, [])
+                logger.info(
+                    f"extracted {len(events)} events from page index {i}: "
+                    f"'{page.title}'"
+                )
+                ordered_results.append(events)
+
+            return ordered_results
+
+        except Exception:
+            logger.exception(
+                "timeline batch extraction failed for "
+                f"{len(pages)} pages."
+            )
+            return [[] for _ in pages]
