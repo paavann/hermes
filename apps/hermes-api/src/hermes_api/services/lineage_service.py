@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from hermes_api.db.enums import CredibilityTier
 from hermes_api.db.models.article import Article
 from hermes_api.db.models.event import Event
+from hermes_api.db.models.event_edge import EventEdge
 from hermes_api.db.models.source import Source
 from hermes_api.services.ai_service import TimelineEvent
 from hermes_api.services.geocoding_service import GeocodingService
@@ -115,6 +116,16 @@ class LineageService:
                 published_at=event_date,
             )
             self._session.add(article)
+
+            # 4. Persist Edge (link lineage event to target event)
+            edge = EventEdge(
+                event_a_id=event.id,
+                event_b_id=target_event_id,
+                relationship_type="related",
+                confidence=1.0,
+            )
+            self._session.add(edge)
+            
             persisted_events.append(event)
 
         await self._session.commit()

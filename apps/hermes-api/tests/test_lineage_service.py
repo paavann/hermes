@@ -92,9 +92,9 @@ def test_persist_lineage_events(mock_geo_cls):
     assert event.first_reported_at.year == 2023
     assert event.first_reported_at.month == 10
 
-    # Ensure session.add was called for both Event and Article
+    # Ensure session.add was called for Event, Article, and EventEdge
     adds = mock_session.add.call_args_list
-    assert len(adds) == 2  # 1 event, 1 article (source was cached in scalar_one_or_none)
+    assert len(adds) == 3  # 1 event, 1 article, 1 edge (source cached)
     
     article: Article = adds[1][0][0]
     assert isinstance(article, Article)
@@ -103,3 +103,10 @@ def test_persist_lineage_events(mock_geo_cls):
     assert "Timeline_of_Gaza_war" in article.url
     assert str(event.id) in article.url  # unique anchor
     assert article.published_at.year == 2023
+
+    from hermes_api.db.models.event_edge import EventEdge
+    edge: EventEdge = adds[2][0][0]
+    assert isinstance(edge, EventEdge)
+    assert edge.event_a_id == event.id
+    assert edge.event_b_id == target_event_id
+    assert edge.relationship_type == "related"
