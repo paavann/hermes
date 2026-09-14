@@ -1,12 +1,11 @@
-from datetime import datetime
-from typing import Optional, TYPE_CHECKING
 import uuid
+from datetime import datetime
+from typing import TYPE_CHECKING, Optional
 
-from sqlalchemy import Text, ForeignKey
+from sqlalchemy import ForeignKey, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from hermes_api.db.base import Base, UUIDPrimaryKeyMixin
-
 
 if TYPE_CHECKING:
     from hermes_api.db.models.event import Event

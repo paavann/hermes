@@ -11,6 +11,7 @@ from hermes_api.db.enums import EventScope, EventStatus
 
 if TYPE_CHECKING:
     from hermes_api.db.models.article import Article
+    from hermes_api.db.models.event_timeline import EventTimeline
 
 
 
@@ -42,6 +43,11 @@ class Event(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     last_updated_at: Mapped[datetime] = mapped_column(server_default="now()",)
 
     articles: Mapped[list["Article"]] = relationship(back_populates="event", cascade="all, delete-orphan")
+    timeline: Mapped[Optional["EventTimeline"]] = relationship(
+        back_populates="event",
+        uselist=False,
+        cascade="all, delete-orphan",
+    )
 
     # Semantic Embedding for fast deduplication
     embedding: Mapped[Optional["Vector"]] = mapped_column(Vector(768))

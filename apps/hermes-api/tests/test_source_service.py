@@ -6,16 +6,15 @@ the upsert/disable logic in isolation.
 
 import asyncio
 import json
+from pathlib import Path
 from typing import Optional
 from unittest.mock import AsyncMock, MagicMock, patch
-from pathlib import Path
 
-from hermes_api.services.source_service import (
-    sync_sources_from_config,
-    _load_sources_config,
-)
 from hermes_api.db.models.source import Source
-
+from hermes_api.services.source_service import (
+    _load_sources_config,
+    sync_sources_from_config,
+)
 
 # --- Helpers ---
 

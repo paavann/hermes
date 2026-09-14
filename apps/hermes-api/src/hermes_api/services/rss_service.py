@@ -1,13 +1,13 @@
-from pydantic import computed_field
-from pydantic import BaseModel
-from feedparser.datetimes import _parse_date
+import logging
+from datetime import datetime
+from typing import Optional
+
 import feedparser
 import httpx
-import logging
-from datetime import datetime, timezone
-from typing import Optional
-from hermes_api.core.config import settings
+from feedparser.datetimes import _parse_date
+from pydantic import BaseModel, computed_field
 
+from hermes_api.core.config import settings
 
 logger = logging.getLogger(__name__)
 MAX_CONTENT_WORDS: int = 500
@@ -78,7 +78,7 @@ async def fetch_feed(feed_url: str) -> list[ParsedArticle]:
                 headers={ "User-Agent": settings.NOMINATIM_USER_AGENT },
             )
             res.raise_for_status()
-    except httpx.HTTPError as e:
+    except httpx.HTTPError:
         logger.exception(f"failed to fetch RSS feed: {feed_url}")
         return []
 

@@ -7,7 +7,7 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from hermes_api.core.config import settings
-from hermes_api.db.enums import EventStatus, CredibilityTier
+from hermes_api.db.enums import CredibilityTier, EventStatus
 from hermes_api.db.models.article import Article
 from hermes_api.db.models.event import Event
 from hermes_api.services.ai_service import ExtractionResult

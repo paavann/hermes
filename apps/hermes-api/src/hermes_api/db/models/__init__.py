@@ -8,9 +8,10 @@ importing all models here serves two purposes:
        imported, alembic won't generate a migration for it.
 """
 
-from hermes_api.db.models.source import Source
-from hermes_api.db.models.event import Event
 from hermes_api.db.models.article import Article
+from hermes_api.db.models.event import Event
+from hermes_api.db.models.event_timeline import EventTimeline
 from hermes_api.db.models.geocode_cache import GeocodeCache
+from hermes_api.db.models.source import Source
 
-__all__ = ["Source", "Event", "Article", "GeocodeCache"]
+__all__ = ["Source", "Event", "Article", "GeocodeCache", "EventTimeline"]

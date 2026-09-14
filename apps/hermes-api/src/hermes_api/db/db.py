@@ -1,7 +1,6 @@
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
-from hermes_api.core.config import settings
-import hermes_api.db.models
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
+from hermes_api.core.config import settings
 
 engine = create_async_engine(
     settings.db_url, 

@@ -1,4 +1,5 @@
 from fastapi import APIRouter
+
 from hermes_api.api.v1.events import router as events_router
 
 api_router = APIRouter()

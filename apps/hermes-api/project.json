@@ -74,6 +74,13 @@
         "debug": false
       }
     },
+    "migrate": {
+      "executor": "@nxlv/python:run-commands",
+      "options": {
+        "command": "uv run alembic upgrade head",
+        "cwd": "{projectRoot}"
+      }
+    },
     "serve": {
       "executor": "@nxlv/python:run-commands",
       "options": {

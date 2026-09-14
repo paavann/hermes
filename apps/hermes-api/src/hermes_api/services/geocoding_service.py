@@ -1,15 +1,14 @@
 import asyncio
 import logging
-import httpx
 from dataclasses import dataclass
 from typing import Optional
 
+import httpx
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from hermes_api.core.config import settings
 from hermes_api.db.models.geocode_cache import GeocodeCache
-
 
 logger = logging.getLogger(__name__)
 NOMINATIM_SEARCH_URL = "https://nominatim.openstreetmap.org/search"
@@ -97,7 +96,7 @@ class GeocodingService:
                     )
                     logger.info(f"geocoded '{location_name}' -> ({result.latitude}, {result.longitude})")
                     return result
-            except httpx.HTTPError as e:
+            except httpx.HTTPError:
                 logger.exception(f"failed to geocode '{location_name}'")
                 return None
             except (KeyError, ValueError, IndexError):

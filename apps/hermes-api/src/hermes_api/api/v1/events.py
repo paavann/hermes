@@ -1,16 +1,21 @@
-from sqlalchemy.orm import selectinload
 import uuid
-from typing import Optional, AsyncGenerator
-from fastapi import APIRouter, Depends, Query, HTTPException
-from sqlalchemy.ext.asyncio import AsyncSession
+from collections.abc import AsyncGenerator
+from typing import Optional
+
+from fastapi import APIRouter, Depends, HTTPException, Query
+from geoalchemy2.functions import ST_X, ST_Y, ST_MakeEnvelope, ST_Within
 from sqlalchemy import select
-from geoalchemy2.functions import ST_Within, ST_MakeEnvelope, ST_X, ST_Y
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from hermes_api.db.db import AsyncSessionLocal
-from hermes_api.db.models.event import Event
 from hermes_api.db.enums import EventStatus
-from hermes_api.schemas.events import EventResponse, EventDetailResponse, MapEventResponse
-
+from hermes_api.db.models.event import Event
+from hermes_api.schemas.events import (
+    EventDetailResponse,
+    EventResponse,
+    MapEventResponse,
+)
 
 router = APIRouter()
 

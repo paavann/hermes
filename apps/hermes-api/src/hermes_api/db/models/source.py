@@ -1,12 +1,11 @@
 from datetime import datetime
 from typing import TYPE_CHECKING, Optional
-import uuid
 
-from sqlalchemy import String, Text, Boolean, Integer
+from sqlalchemy import Boolean, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from hermes_api.db.base import Base, UUIDPrimaryKeyMixin, TimestampMixin
-from hermes_api.db.enums import SourceType, CredibilityTier
+from hermes_api.db.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
+from hermes_api.db.enums import CredibilityTier, SourceType
 
 if TYPE_CHECKING:
     from hermes_api.db.models.article import Article
