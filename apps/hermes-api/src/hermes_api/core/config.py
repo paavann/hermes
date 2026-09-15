@@ -40,7 +40,7 @@ class Settings(BaseSettings):
             host=self.DB_HOST,
             port=self.DB_PORT,
             database=self.DB_NAME,
-            query=query
+            query=query,
         )
 
     @property
@@ -50,13 +50,13 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=(".env", ".env.local", "../../.env"),
         env_file_encoding="utf-8",
-        extra="ignore"
+        extra="ignore",
     )
-
 
 
 @lru_cache
 def get_settings() -> Settings:
     return Settings()
+
 
 settings = get_settings()

@@ -10,9 +10,6 @@ from hermes_api.core.constants import PREDEFINED_CATEGORIES
 logger = logging.getLogger(__name__)
 
 
-
-
-
 class ExtractionResult(BaseModel):
     has_location: bool = Field(
         description=(
@@ -29,7 +26,7 @@ class ExtractionResult(BaseModel):
             "happening. Use the format 'City, Country' when possible. "
             "Examples: 'Ankara, Turkey', 'London, UK'. "
             "Null if has_location is false."
-        )
+        ),
     )
 
     country_code: Optional[str] = Field(
@@ -37,7 +34,7 @@ class ExtractionResult(BaseModel):
         description=(
             "The ISO 3166-1 alpha-2 country code. "
             "Examples: 'TR', 'GB', 'US'. Null if has_location is false."
-        )
+        ),
     )
 
     headline: str = Field(
@@ -68,7 +65,7 @@ class ExtractionResult(BaseModel):
             "A hex color code for the category. Only provide this if "
             "the category is NOT one of the predefined ones. "
             "Example: '#7C3AED'. Null if using a predefined category."
-        )
+        ),
     )
 
     matched_event_id: Optional[str] = Field(
@@ -78,7 +75,7 @@ class ExtractionResult(BaseModel):
             "existing events listed below, set this to that event's ID. "
             "Only match if the articles are clearly about the same specific "
             "incident — not just the same general topic. Null if no match."
-        )
+        ),
     )
 
 
@@ -152,7 +149,7 @@ class BatchTimelineExtractionResponse(BaseModel):
     )
 
 
-EXTRACTION_BATCH_SIZE: int = 10
+ARTICLE_BATCH_SIZE: int = 10
 
 
 SYSTEM_PROMPT = """You are a news analyst for Hermes, a geospatial news aggregator.
@@ -197,16 +194,13 @@ def _build_timeline_batch_user_prompt(pages: list[ArticleInput]) -> str:
     """Build a user prompt containing multiple numbered Wikipedia pages."""
     prompt = "# Wikipedia Timeline Pages to analyse\n\n"
     for i, page in enumerate(pages):
-        prompt += (
-            f"## Page {i}\n"
-            f"Title: {page.title}\n\n"
-            f"Content:\n{page.content}\n\n"
-        )
+        prompt += f"## Page {i}\nTitle: {page.title}\n\nContent:\n{page.content}\n\n"
     return prompt
 
 
-
-def _build_user_prompt(title: str, content: str, existing_events: list[dict[str, str]]) -> str:
+def _build_user_prompt(
+    title: str, content: str, existing_events: list[dict[str, str]]
+) -> str:
     prompt = f"# Article to analyse\n\nTitle: {title}\n\nContent:\n{content}\n"
     if existing_events:
         prompt += "\n# Existing active events (match if applicable)\n\n"
@@ -221,7 +215,6 @@ def _build_user_prompt(title: str, content: str, existing_events: list[dict[str,
         prompt += "\n# Existing active events\n\nNone currently.\n"
 
     return prompt
-
 
 
 def _build_batch_user_prompt(
@@ -244,9 +237,7 @@ def _build_batch_user_prompt(
     prompt = "# Articles to analyse\n\n"
     for i, article in enumerate(articles):
         prompt += (
-            f"## Article {i}\n"
-            f"Title: {article.title}\n\n"
-            f"Content:\n{article.content}\n\n"
+            f"## Article {i}\nTitle: {article.title}\n\nContent:\n{article.content}\n\n"
         )
 
     if existing_events:
@@ -279,18 +270,20 @@ def _resolve_category_color(result: ExtractionResult) -> ExtractionResult:
         return result
 
 
-
 class AiService:
     def __init__(self) -> None:
         if not settings.GEMINI_API_KEY:
             raise ValueError("api key is missing.")
         self._client = genai.Client(api_key=settings.GEMINI_API_KEY)
-        self._model = "gemini-3.5-flash-lite"
+        self._model = "gemini-3.6-flash"
 
-
-    async def extract_metadata(self, title: str, content: str, existing_events: list[dict[str, str]]) -> Optional[ExtractionResult]:
+    async def extract_metadata(
+        self, title: str, content: str, existing_events: list[dict[str, str]]
+    ) -> Optional[ExtractionResult]:
         user_prompt = _build_user_prompt(
-            title=title, content=content, existing_events=existing_events or [],
+            title=title,
+            content=content,
+            existing_events=existing_events or [],
         )
         try:
             res = await self._client.aio.models.generate_content(
@@ -300,7 +293,7 @@ class AiService:
                     "system_instruction": SYSTEM_PROMPT,
                     "response_mime_type": "application/json",
                     "response_schema": ExtractionResult,
-                }
+                },
             )
             result: ExtractionResult = res.parsed
             result = _resolve_category_color(result)
@@ -316,7 +309,7 @@ class AiService:
             logger.exception(f"failed to extract metadata for article: {title}")
             return None
 
-    async def extract_metadata_batch(
+    async def get_metadata(
         self,
         articles: list[ArticleInput],
         existing_events: list[dict[str, str]],
@@ -392,32 +385,28 @@ class AiService:
                     )
                 else:
                     logger.warning(
-                        f"no extraction result for article "
-                        f"index {i}: '{article.title}'"
+                        f"no extraction result for article index {i}: '{article.title}'"
                     )
                 ordered_results.append(extraction)
 
             return ordered_results
 
         except Exception:
-            logger.exception(
-                "batch extraction failed for "
-                f"{len(articles)} articles."
-            )
+            logger.exception(f"batch extraction failed for {len(articles)} articles.")
             return [None] * len(articles)
 
-    async def generate_embeddings_batch(self, texts: list[str]) -> list[list[float]]:
+    async def generate_embeddings(self, texts: list[str]) -> list[list[float]]:
         """Generate vector embeddings for a batch of strings using text-embedding-004."""
         if not texts:
             return []
-        
+
         try:
             response = await self._client.aio.models.embed_content(
                 model="text-embedding-004",
                 contents=texts,
             )
             return [embedding.values for embedding in response.embeddings]
-            
+
         except Exception:
             logger.exception("failed to generate embeddings")
             # Return empty lists or zeroes on failure so callers don't crash
@@ -446,7 +435,7 @@ class AiService:
 
         try:
             res = await self._client.aio.models.generate_content(
-                model="gemini-2.5-flash",
+                model=self._model,
                 contents=user_prompt,
                 config={
                     "system_instruction": TIMELINE_SYSTEM_PROMPT,
@@ -490,7 +479,6 @@ class AiService:
 
         except Exception:
             logger.exception(
-                "timeline batch extraction failed for "
-                f"{len(pages)} pages."
+                f"timeline batch extraction failed for {len(pages)} pages."
             )
             return [[] for _ in pages]

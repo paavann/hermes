@@ -12,7 +12,7 @@ description: Strict rules for React, Tailwind, State Management, and TypeScript.
 - **File Naming & Casing**: Strictly use `kebab-case.tsx` for all React files (e.g., `event-marker.tsx`). Use `camelCase` for naming variables, functions, and filenames in the JS/TS ecosystem.
 - **Props**: ALWAYS destructure React props in the function signature (e.g., `function Map({ data }):`) rather than accessing them via `props.data`.
 - **Exhaustive Deps**: Strictly follow React's `exhaustive-deps` rule. NEVER suppress the eslint warning (`// eslint-disable-next-line`) to make a bug go away.
-- **TypeScript Strictness**: 
+- **TypeScript Strictness**:
   - NEVER use the `any` type. If unknown, use `unknown` and type-guard it.
   - Strictly use `interface` instead of `type` for object definitions (unless defining unions/intersections).
   - Use absolute path aliases (e.g., `import { Button } from '@hermes/ui'`) and avoid deep relative paths.

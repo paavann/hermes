@@ -13,9 +13,6 @@ logger = logging.getLogger(__name__)
 MAX_CONTENT_WORDS: int = 500
 
 
-
-
-
 def _parse_date(entry: dict) -> Optional[datetime]:
     parsed_time = entry.get("published_parsed")
     if parsed_time:
@@ -38,15 +35,12 @@ def _extract_content(entry: dict) -> Optional[str]:
     content_list = entry.get("content", [])
     if content_list:
         return content_list[0].get("value", "").strip() or None
-    
+
     encoded = entry.get("content_encoded", "")
     if encoded:
         return encoded.strip() or None
 
     return None
-
-
-
 
 
 class ParsedArticle(BaseModel):
@@ -65,9 +59,6 @@ class ParsedArticle(BaseModel):
             return self.description
 
 
-
-
-
 async def fetch_feed(feed_url: str) -> list[ParsedArticle]:
     try:
         async with httpx.AsyncClient() as client:
@@ -75,7 +66,7 @@ async def fetch_feed(feed_url: str) -> list[ParsedArticle]:
                 feed_url,
                 timeout=30.0,
                 follow_redirects=True,
-                headers={ "User-Agent": settings.NOMINATIM_USER_AGENT },
+                headers={"User-Agent": settings.NOMINATIM_USER_AGENT},
             )
             res.raise_for_status()
     except httpx.HTTPError:
@@ -86,7 +77,6 @@ async def fetch_feed(feed_url: str) -> list[ParsedArticle]:
     if feed.bozo and not feed.bozo_exception:
         logger.warning(f"malformed feed with no entries: {feed_url}")
         return []
-
 
     articles: list[ParsedArticle] = []
     for entry in feed.entries:
@@ -108,7 +98,6 @@ async def fetch_feed(feed_url: str) -> list[ParsedArticle]:
                     published_at=published_at,
                 )
             )
-
 
     logger.info(f"parsed {len(articles)} articles from {feed_url}")
     return articles

@@ -16,4 +16,12 @@ from hermes_api.db.models.geocode_cache import GeocodeCache
 from hermes_api.db.models.source import Source
 from hermes_api.db.models.story_allowlist import StoryAllowlist
 
-__all__ = ["Source", "Event", "Article", "GeocodeCache", "EventTimeline", "EventEdge", "StoryAllowlist"]
+__all__ = [
+    "Source",
+    "Event",
+    "Article",
+    "GeocodeCache",
+    "EventTimeline",
+    "EventEdge",
+    "StoryAllowlist",
+]

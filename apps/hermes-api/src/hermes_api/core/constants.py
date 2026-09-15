@@ -5,6 +5,7 @@ when the AI categorizes an event as one of these, the color is
 looked up from this dict. For custom/niche categories, the AI
 picks both the name and the color.
 """
+
 PREDEFINED_CATEGORIES: dict[str, dict[str, str]] = {
     "CONFLICT": {
         "display_name": "Conflict & Crisis",

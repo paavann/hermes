@@ -18,6 +18,7 @@ from hermes_api.services.source_service import (
 
 # --- Helpers ---
 
+
 def _make_source(
     slug: str,
     name: str = "Test",
@@ -93,6 +94,7 @@ def _mock_session(
 
 # --- Tests for _load_sources_config ---
 
+
 def test_load_sources_config_valid():
     """Should parse a valid JSON array from the config file."""
     sample = [{"slug": "bbc-world", "name": "BBC World"}]
@@ -121,6 +123,7 @@ def test_load_sources_config_file_not_found():
 
 
 # --- Tests for sync_sources_from_config ---
+
 
 def test_sync_inserts_new_sources():
     """New sources from the config should be inserted into the DB."""

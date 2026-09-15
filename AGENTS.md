@@ -2,7 +2,7 @@
 
 Welcome to Hermes! This document provides the high-level context, domain knowledge, and architectural vision required to effectively contribute to this codebase. As an AI agent working on this repository, you must read and internalize this document before making structural changes.
 
-*(Note: For strict, non-negotiable coding standards, refer to the `.agents/rules/` directory).*
+_(Note: For strict, non-negotiable coding standards, refer to the `.agents/rules/` directory)._
 
 ---
 
@@ -10,8 +10,8 @@ Welcome to Hermes! This document provides the high-level context, domain knowled
 
 - **Role**: You are a Senior Full-Stack Spatial/AI Engineer.
 - **Behavior**: Be highly autonomous and proactive. Suggest architectural improvements and optimizations when you see them. However, always ask for explicit user permission before introducing new third-party dependencies to `package.json` or `pyproject.toml`.
-- **Workflow**: 
-  - Proactively verify your changes by running `nx test <app>` and `nx lint <app>` locally. 
+- **Workflow**:
+  - Proactively verify your changes by running `nx test <app>` and `nx lint <app>` locally.
   - Always write tests for your execution.
   - Leave the actual `git commit` and push execution entirely to the user.
 - **Consistency Watchdog**: This project's AI context is distributed across multiple files: the root `AGENTS.md`, app-level `AGENTS.md` files (`apps/hermes/AGENTS.md`, `apps/hermes-api/AGENTS.md`), and strict rules in `.agents/rules/`. If you ever detect a **contradiction, inconsistency, or ambiguity** between any of these files — for example, a rule in `.agents/rules/backend-python.md` that conflicts with architectural guidance in `apps/hermes-api/AGENTS.md`, or an outdated tech stack reference that no longer matches `package.json` / `pyproject.toml` — OR if you find any **inconsistency between the actual implementation in the codebase and the guidelines documented in any `AGENTS.md` file**, you must **immediately alert the user** before proceeding. Do NOT silently pick one interpretation over another. Clearly explain the conflict, cite the specific files, code sections, and documentation involved, and ask the user to resolve it so they can either update the code or the relevant context file. Keeping these context files accurate and in sync with the codebase is critical.
@@ -23,9 +23,10 @@ Welcome to Hermes! This document provides the high-level context, domain knowled
 Project Hermes is a real-time geospatial news aggregator designed to combat modern news fatigue by transforming traditional text-heavy feeds into a unified, interactive global map.
 
 ### Target Audience
+
 - **Journalists, analysts, and researchers** who need to track global events spatially and see patterns across regions.
 - **Geopolitically curious individuals** who want a visual, intuitive alternative to scrolling through text-heavy news feeds.
-- **Anyone experiencing "news fatigue"** from traditional aggregators — Hermes lets them *observe* the world instead of *reading* about it.
+- **Anyone experiencing "news fatigue"** from traditional aggregators — Hermes lets them _observe_ the world instead of _reading_ about it.
 
 ### Core Mechanics
 
@@ -35,7 +36,7 @@ As an agent, you must design features that align with these core mechanics:
 - **Smart Editor Algorithm**: The application must not overwhelm the user with raw data. Instead, it relies on a backend algorithm that ranks news based on **source consensus** and **time decay**. The initial load must display only the most critical global events.
 - **Dynamic Viewport Queries**: As users zoom into specific regions, the application must instantly query the spatial database to populate hyper-local news exactly within their viewport.
 - **Visual Categorization**: Use color-coded pins to categorize events (e.g., economic shifts, conflicts). These pins must automatically cluster at higher zoom levels to prevent screen clutter.
-- **Hybrid Geoparsing & Geocoding**: The system uses an AI pipeline to extract location *names* from raw article text, which are then passed through a dedicated geocoding service (Nominatim) backed by a PostgreSQL cache. This eliminates AI coordinate hallucinations and ensures pinpoint map accuracy.
+- **Hybrid Geoparsing & Geocoding**: The system uses an AI pipeline to extract location _names_ from raw article text, which are then passed through a dedicated geocoding service (Nominatim) backed by a PostgreSQL cache. This eliminates AI coordinate hallucinations and ensures pinpoint map accuracy.
 - **Geopolitical Nuance Visualization**: You must visually handle complex relationships. Use dynamic **relationship arcs** to illustrate intangible ties (like trade agreements or sanctions across the globe) and **territorial shading** to clearly depict ongoing states of conflict within national borders.
 
 ### Key User Journeys
@@ -56,22 +57,22 @@ When building any feature, keep these critical user journeys in mind — they de
 
 To maintain consistency across the codebase, the following terms have precise meanings in the Hermes domain. Use them consistently in code, comments, API names, and database schemas:
 
-| Term | Definition |
-|------|-----------|
-| **Event** | A single newsworthy occurrence that has been extracted from one or more RSS articles, geolocated, categorized, and scored. An Event is the fundamental data unit in Hermes — it has coordinates, a category, a severity, a summary, and optionally a target location and affected region. |
-| **Source Consensus** | A ranking signal. When multiple independent RSS feeds report the same event (detected via semantic vector similarity using `pgvector` and Gemini embeddings), the event's score increases. We also use **Source Credibility** tiers (e.g., Tier 1 vs Tier 4) to weight how much an event's score increases per article. |
-| **Time Decay** | A ranking signal. Recent events are weighted more heavily than older ones. A lifecycle cron job periodically applies a strict percentage decay to all active trending scores so that old news organically drops down the rankings over 24 hours. |
-| **Geoparsing** | The process of extracting a geographic location name from unstructured article text (e.g., 'central Damascus') via AI, and subsequently resolving it to exact latitude/longitude coordinates using a geocoding API. |
-| **Relationship Arc** | A visual curved line on the map connecting two locations to represent an intangible geopolitical relationship (e.g., Country A sanctioning Country B, or a trade agreement between two regions). Arcs are directional (source → target). |
-| **Territorial Shading** | A semi-transparent polygon fill overlaid on a geographic region to depict an ongoing state (e.g., an active conflict zone, a disputed territory, or an area under sanctions). |
-| **Viewport** | The currently visible geographic area on the user's map screen, defined by a bounding box (southwest corner and northeast corner coordinates). The backend uses this to return only spatially relevant events. |
-| **Cluster** | A visual grouping of multiple nearby event pins at higher zoom levels, showing a count badge. Clusters prevent screen clutter when thousands of events are dense in a region. |
+| Term                    | Definition                                                                                                                                                                                                                                                                                                              |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Event**               | A single newsworthy occurrence that has been extracted from one or more RSS articles, geolocated, categorized, and scored. An Event is the fundamental data unit in Hermes — it has coordinates, a category, a severity, a summary, and optionally a target location and affected region.                               |
+| **Source Consensus**    | A ranking signal. When multiple independent RSS feeds report the same event (detected via semantic vector similarity using `pgvector` and Gemini embeddings), the event's score increases. We also use **Source Credibility** tiers (e.g., Tier 1 vs Tier 4) to weight how much an event's score increases per article. |
+| **Time Decay**          | A ranking signal. Recent events are weighted more heavily than older ones. A lifecycle cron job periodically applies a strict percentage decay to all active trending scores so that old news organically drops down the rankings over 24 hours.                                                                        |
+| **Geoparsing**          | The process of extracting a geographic location name from unstructured article text (e.g., 'central Damascus') via AI, and subsequently resolving it to exact latitude/longitude coordinates using a geocoding API.                                                                                                     |
+| **Relationship Arc**    | A visual curved line on the map connecting two locations to represent an intangible geopolitical relationship (e.g., Country A sanctioning Country B, or a trade agreement between two regions). Arcs are directional (source → target).                                                                                |
+| **Territorial Shading** | A semi-transparent polygon fill overlaid on a geographic region to depict an ongoing state (e.g., an active conflict zone, a disputed territory, or an area under sanctions).                                                                                                                                           |
+| **Viewport**            | The currently visible geographic area on the user's map screen, defined by a bounding box (southwest corner and northeast corner coordinates). The backend uses this to return only spatially relevant events.                                                                                                          |
+| **Cluster**             | A visual grouping of multiple nearby event pins at higher zoom levels, showing a count badge. Clusters prevent screen clutter when thousands of events are dense in a region.                                                                                                                                           |
 
 ---
 
 ## 4. System Architecture Overview
 
-**Crucial Note on Flexibility**: The architecture described below is the *current* iteration. It is highly prone to change as newer and better approaches are discovered. You must remain flexible, actively thrive for better performant approaches, and not just blindly stick to this specific architecture if a superior one exists.
+**Crucial Note on Flexibility**: The architecture described below is the _current_ iteration. It is highly prone to change as newer and better approaches are discovered. You must remain flexible, actively thrive for better performant approaches, and not just blindly stick to this specific architecture if a superior one exists.
 
 ### High-Level Data Flow
 
@@ -110,9 +111,11 @@ RSS Feeds (Global Sources)
 - The frontend and backend communicate via REST API for queries and WebSocket/SSE for real-time event pushes.
 
 ### Scalability Target
+
 - The system must be architected to comfortably handle **10,000+ active events** simultaneously with fast spatial and temporal queries.
 
 ### Infrastructure
+
 - **Database**: PostGIS runs via `docker-compose.yml` at the workspace root using the `postgis/postgis` Docker image.
 - **Environment Variables**: Loaded from `.env` at the workspace root (shared variables like DB credentials) and `.env.local` inside `apps/hermes-api/` (backend-specific secrets like `GEMINI_API_KEY`). The frontend reads its variables via Vite's `import.meta.env` (e.g., `VITE_MAPBOX_TOKEN`).
 
@@ -122,13 +125,14 @@ RSS Feeds (Global Sources)
 
 This is an Nx monorepo. The workspace contains the following projects:
 
-| Project | Path | Role | Key Tech |
-|---------|------|------|----------|
-| **hermes** | `apps/hermes/` | React frontend — interactive map and UI | React 19, React Router 8, Vite, Mapbox GL JS, Zustand, Tailwind CSS 4 |
+| Project        | Path               | Role                                    | Key Tech                                                                        |
+| -------------- | ------------------ | --------------------------------------- | ------------------------------------------------------------------------------- |
+| **hermes**     | `apps/hermes/`     | React frontend — interactive map and UI | React 19, React Router 8, Vite, Mapbox GL JS, Zustand, Tailwind CSS 4           |
 | **hermes-api** | `apps/hermes-api/` | Python backend — ingestion, AI, and API | FastAPI, SQLAlchemy 2.0, GeoAlchemy2, google-genai, apscheduler, feedparser, uv |
-| **hermes-e2e** | `apps/hermes-e2e/` | End-to-end tests for the frontend | Playwright |
+| **hermes-e2e** | `apps/hermes-e2e/` | End-to-end tests for the frontend       | Playwright                                                                      |
 
 Each app has its own `AGENTS.md` with detailed, app-specific architectural context:
+
 - **Frontend context**: See `apps/hermes/AGENTS.md`
 - **Backend context**: See `apps/hermes-api/AGENTS.md`
 - **Strict coding rules**: See `.agents/rules/`

@@ -1,13 +1,13 @@
 /* Required for Mapbox to render correctly */
 @import 'mapbox-gl/dist/mapbox-gl.css';
 
-@import "tailwindcss";
+@import 'tailwindcss';
 @source "../../libs";
 @config "./tailwind.config.js";
 
-
 @layer base {
-  html, body {
+  html,
+  body {
     margin: 0;
     padding: 0;
     /* Use 100dvh for modern mobile viewport support */

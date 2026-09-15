@@ -46,8 +46,6 @@ class EventTimeline(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     # Set to True by the ingestion pipeline when a new article is matched
     # to the parent event, signalling that the timeline should be refreshed
     # on the next "Analyze" click — regardless of TTL age.
-    needs_refresh: Mapped[bool] = mapped_column(
-        Boolean, nullable=False, default=False
-    )
+    needs_refresh: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
     event: Mapped["Event"] = relationship(back_populates="timeline")

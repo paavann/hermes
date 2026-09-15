@@ -53,6 +53,9 @@ test-output
 # python.
 **/.venv
 **/__pycache__
+**/.pytest_cache
+**/.ruff_cache
+**/.venv-test
 
 # environment files.
 .env
@@ -61,3 +64,4 @@ test-output
 
 # build outputs.
 *.tsbuildinfo
+/reports/*

@@ -1,19 +1,19 @@
-import { useState } from 'react'
-import { MapView, MapConfigProvider } from '@hermes/feature-map'
-import { QueryClient, QueryClientProvider, } from '@tanstack/react-query'
-import { BootSequence, LiveClock } from '@hermes/ui-components'
+import { useState } from 'react';
+import { MapView, MapConfigProvider } from '@hermes/feature-map';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { BootSequence, LiveClock } from '@hermes/ui-components';
 
-const queryClient = new QueryClient()
+const queryClient = new QueryClient();
 
 const MAP_CONFIG = {
-  baseUrl: import.meta.env.VITE_BASE_URL,
+  baseUrl: 'http://localhost:8001',
   apiVer: import.meta.env.VITE_API_VER,
   mapboxToken: import.meta.env.VITE_MAPBOX_TOKEN,
 };
 
 export function App() {
-  const [isBooted, setIsBooted] = useState(false)
-  console.log("mapbox config: ", MAP_CONFIG)
+  const [isBooted, setIsBooted] = useState(false);
+  console.log('mapbox config: ', MAP_CONFIG);
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -28,4 +28,4 @@ export function App() {
   );
 }
 
-export default App
+export default App;

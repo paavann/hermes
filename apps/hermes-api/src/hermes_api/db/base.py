@@ -17,7 +17,7 @@ class TimestampMixin:
         server_default=func.now(),
         onupdate=func.now(),
     )
-    
+
 
 class UUIDPrimaryKeyMixin:
     id: Mapped[uuid.UUID] = mapped_column(

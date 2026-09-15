@@ -11,11 +11,11 @@ export function BootSequence({ onComplete }: BootSequenceProps) {
   const [text, setText] = useState('');
   const [showCursor, setShowCursor] = useState(true);
   const containerRef = useRef<HTMLDivElement>(null);
-  
+
   useEffect(() => {
     // Blinking cursor effect
     const cursorInterval = setInterval(() => {
-      setShowCursor(prev => !prev);
+      setShowCursor((prev) => !prev);
     }, 400);
 
     const targetText = 'HERMES';
@@ -41,22 +41,22 @@ export function BootSequence({ onComplete }: BootSequenceProps) {
         if (iterations >= maxIterations * 3) {
           clearInterval(scrambleInterval);
           setText(targetText);
-          
+
           // Hold for 1 second, then snap away instantly (0s duration as requested)
           setTimeout(() => {
             if (containerRef.current) {
               gsap.to(containerRef.current, {
-                duration: 0, 
+                duration: 0,
                 display: 'none',
-                onComplete: onComplete
+                onComplete: onComplete,
               });
             } else {
-                onComplete();
+              onComplete();
             }
           }, 1000);
         }
       }, 40); // speed of scramble
-      
+
       return () => clearInterval(scrambleInterval);
     }, 1000);
 
@@ -67,7 +67,7 @@ export function BootSequence({ onComplete }: BootSequenceProps) {
   }, [onComplete]);
 
   return (
-    <div 
+    <div
       ref={containerRef}
       className="fixed inset-0 z-50 flex items-center justify-center bg-[#050505]"
     >

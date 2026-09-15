@@ -14,8 +14,6 @@ logger = logging.getLogger(__name__)
 NOMINATIM_SEARCH_URL = "https://nominatim.openstreetmap.org/search"
 
 
-
-
 @dataclass(frozen=True)
 class GeocodingResult:
     latitude: float
@@ -23,24 +21,20 @@ class GeocodingResult:
     display_name: str
 
 
-
-
-
 class GeocodingService:
     def __init__(self) -> None:
         self._lock: asyncio.Lock = asyncio.Lock()
-
 
     async def geocode(
         self, session: AsyncSession, location_name: str
     ) -> Optional[GeocodingResult]:
         norm_cache_key = location_name.strip().lower()
-        
+
         # 1. Check DB Cache
         stmt = select(GeocodeCache).where(GeocodeCache.location_name == norm_cache_key)
         result = await session.execute(stmt)
         cached = result.scalar_one_or_none()
-        
+
         if cached:
             logger.debug(f"geocoding db cache hit: {location_name}")
             # Support for negative caching (not found)
@@ -51,10 +45,10 @@ class GeocodingService:
                 longitude=cached.longitude,
                 display_name=cached.display_name or location_name,
             )
-            
+
         # 2. Call API on cache miss
         api_result = await self._call_nominatim(location_name)
-        
+
         # 3. Save to DB Cache
         new_cache = GeocodeCache(
             location_name=norm_cache_key,
@@ -64,9 +58,8 @@ class GeocodingService:
         )
         session.add(new_cache)
         await session.commit()
-        
-        return api_result
 
+        return api_result
 
     async def _call_nominatim(self, location_name: str) -> Optional[GeocodingResult]:
         async with self._lock:
@@ -79,7 +72,7 @@ class GeocodingService:
                             "format": "jsonv2",
                             "limit": 1,
                         },
-                        headers={ "User-Agent": settings.NOMINATIM_USER_AGENT },
+                        headers={"User-Agent": settings.NOMINATIM_USER_AGENT},
                         timeout=10.0,
                     )
                     res.raise_for_status()
@@ -94,15 +87,17 @@ class GeocodingService:
                         longitude=float(first["lon"]),
                         display_name=first.get("display_name", location_name),
                     )
-                    logger.info(f"geocoded '{location_name}' -> ({result.latitude}, {result.longitude})")
+                    logger.info(
+                        f"geocoded '{location_name}' -> ({result.latitude}, {result.longitude})"
+                    )
                     return result
             except httpx.HTTPError:
                 logger.exception(f"failed to geocode '{location_name}'")
                 return None
             except (KeyError, ValueError, IndexError):
-                logger.exception(f"failed to parse nominatim response for: {location_name}")
+                logger.exception(
+                    f"failed to parse nominatim response for: {location_name}"
+                )
                 return None
             finally:
                 await asyncio.sleep(1.0)
-
-

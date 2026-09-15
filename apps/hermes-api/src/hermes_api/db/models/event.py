@@ -15,8 +15,6 @@ if TYPE_CHECKING:
     from hermes_api.db.models.event_timeline import EventTimeline
 
 
-
-
 class Event(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     __tablename__ = "events"
 
@@ -28,22 +26,30 @@ class Event(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     status: Mapped[EventStatus] = mapped_column(default=EventStatus.ACTIVE)
     scope: Mapped[EventScope] = mapped_column(default=EventScope.COUNTRY)
 
-
-    location: Mapped[Optional[str]] = mapped_column(Geometry(
-        geometry_type="POINT",
-        srid=4326,
-        spatial_index=False,
-    ), nullable=True)
+    location: Mapped[Optional[str]] = mapped_column(
+        Geometry(
+            geometry_type="POINT",
+            srid=4326,
+            spatial_index=False,
+        ),
+        nullable=True,
+    )
     location_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     country_code: Mapped[Optional[str]] = mapped_column(String(2))
-    
+
     trending_score: Mapped[float] = mapped_column(Float, default=0.0)
     article_count: Mapped[int] = mapped_column(Integer, default=0)
 
-    first_reported_at: Mapped[datetime] = mapped_column(server_default="now()",)
-    last_updated_at: Mapped[datetime] = mapped_column(server_default="now()",)
+    first_reported_at: Mapped[datetime] = mapped_column(
+        server_default="now()",
+    )
+    last_updated_at: Mapped[datetime] = mapped_column(
+        server_default="now()",
+    )
 
-    articles: Mapped[list["Article"]] = relationship(back_populates="event", cascade="all, delete-orphan")
+    articles: Mapped[list["Article"]] = relationship(
+        back_populates="event", cascade="all, delete-orphan"
+    )
     timeline: Mapped[Optional["EventTimeline"]] = relationship(
         back_populates="event",
         uselist=False,
@@ -58,12 +64,26 @@ class Event(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     # Semantic Embedding for fast deduplication
     embedding: Mapped[Optional["Vector"]] = mapped_column(Vector(768))
 
-    #indexes.
+    # indexes.
     __table_args__ = (
         Index("idx_events_location", "location", postgresql_using="gist"),
-        Index("idx_events_embedding", "embedding", postgresql_using="hnsw", postgresql_with={"m": 16, "ef_construction": 64}, postgresql_ops={"embedding": "vector_cosine_ops"}),
-        Index("idx_events_active_score", "status", "trending_score", postgresql_where=text("status = 'ACTIVE'")),
+        Index(
+            "idx_events_embedding",
+            "embedding",
+            postgresql_using="hnsw",
+            postgresql_with={"m": 16, "ef_construction": 64},
+            postgresql_ops={"embedding": "vector_cosine_ops"},
+        ),
+        Index(
+            "idx_events_active_score",
+            "status",
+            "trending_score",
+            postgresql_where=text("status = 'ACTIVE'"),
+        ),
         Index("idx_events_scope", "scope", "status"),
-        Index("idx_events_country", "country_code", postgresql_where=text("country_code IS NOT NULL")),
+        Index(
+            "idx_events_country",
+            "country_code",
+            postgresql_where=text("country_code IS NOT NULL"),
+        ),
     )
-    

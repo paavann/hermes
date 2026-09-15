@@ -13,11 +13,11 @@ services:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
     ports:
-      - "${DB_PORT}:5432"
+      - '${DB_PORT}:5432'
     volumes:
       - hermes_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      test: ['CMD-SHELL', 'pg_isready -U ${DB_USER} -d ${DB_NAME}']
       interval: 5s
       timeout: 5s
       retries: 5
@@ -27,7 +27,7 @@ services:
       context: ./apps/hermes-api
       dockerfile: Dockerfile
     ports:
-      - "${API_PORT}:8000"
+      - '${API_PORT}:8000'
     volumes:
       - ./apps/hermes-api/src:/app/src
     environment:
@@ -47,7 +47,7 @@ services:
       context: .
       dockerfile: apps/hermes/Dockerfile
     ports:
-      - "${FRONTEND_PORT}:4200"
+      - '${FRONTEND_PORT}:4200'
     volumes:
       - ./apps/hermes/app:/app/apps/hermes/app
       - ./apps/hermes/styles.css:/app/apps/hermes/styles.css

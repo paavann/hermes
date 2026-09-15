@@ -14,6 +14,7 @@ class ArticleResponse(BaseModel):
     published_at: Optional[datetime]
     model_config = ConfigDict(from_attributes=True)
 
+
 class EventResponse(BaseModel):
     id: uuid.UUID
     ai_headline: str

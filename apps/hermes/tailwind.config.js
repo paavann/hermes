@@ -1,15 +1,15 @@
 /** @type {import('tailwindcss').Config} */
 export default {
   content: [
-    "./index.html",
-    "./app/**/*.{js,ts,jsx,tsx}",
-    "../../libs/**/*.{js,ts,jsx,tsx}"
+    './index.html',
+    './app/**/*.{js,ts,jsx,tsx}',
+    '../../libs/**/*.{js,ts,jsx,tsx}',
   ],
   theme: {
     extend: {
       fontFamily: {
         // Enforce monospace everywhere for the techy command center vibe
-        sans: ['"JetBrains Mono"', '"Fira Code"', 'monospace'], 
+        sans: ['"JetBrains Mono"', '"Fira Code"', 'monospace'],
         mono: ['"JetBrains Mono"', '"Fira Code"', 'monospace'],
       },
       colors: {
@@ -18,7 +18,7 @@ export default {
         'hud-glow': '#3b82f6', // Neon blue glow
         'neon-blue': '#00f0ff', // Cyberpunk bright blue
         'warning-yellow': '#fbbf24', // Yellow for highlights
-      }
+      },
     },
   },
   // Disable border radius globally to enforce the 0% rounded edges rule
@@ -26,4 +26,4 @@ export default {
     borderRadius: false,
   },
   plugins: [],
-}
+};

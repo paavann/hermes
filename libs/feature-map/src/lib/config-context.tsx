@@ -8,7 +8,13 @@ export interface MapConfig {
 
 const MapConfigContext = createContext<MapConfig | null>(null);
 
-export function MapConfigProvider({ config, children }: { config: MapConfig, children: ReactNode }) {
+export function MapConfigProvider({
+  config,
+  children,
+}: {
+  config: MapConfig;
+  children: ReactNode;
+}) {
   return (
     <MapConfigContext.Provider value={config}>
       {children}

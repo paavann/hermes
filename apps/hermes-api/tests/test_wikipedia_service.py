@@ -32,6 +32,7 @@ def _mock_httpx_response(json_data: dict, status_code: int = 200) -> MagicMock:
     response.raise_for_status = MagicMock()
     if status_code >= 400:
         import httpx
+
         response.raise_for_status.side_effect = httpx.HTTPStatusError(
             "error", request=MagicMock(), response=response
         )
@@ -195,9 +196,7 @@ class TestFetchPageExtracts:
         """Should return a dict with the page's extract for one title."""
         extract_text = "== January ==\n* 7 January – Israeli forces..."
         mock_resp = _mock_httpx_response(
-            _extracts_response(
-                [_page("Timeline of the Israel–Gaza war", extract_text)]
-            )
+            _extracts_response([_page("Timeline of the Israel–Gaza war", extract_text)])
         )
         with patch(
             "hermes_api.services.wikipedia_service.httpx.AsyncClient"
@@ -218,9 +217,7 @@ class TestFetchPageExtracts:
     def test_returns_none_for_missing_page(self) -> None:
         """A page marked missing in the API response should map to None."""
         mock_resp = _mock_httpx_response(
-            _extracts_response(
-                [_page("NonExistent Page", "", missing=True)]
-            )
+            _extracts_response([_page("NonExistent Page", "", missing=True)])
         )
         with patch(
             "hermes_api.services.wikipedia_service.httpx.AsyncClient"
@@ -323,9 +320,7 @@ class TestFetchPageExtracts:
             "hermes_api.services.wikipedia_service.httpx.AsyncClient"
         ) as mock_client_cls:
             mock_client = AsyncMock()
-            mock_client.get = AsyncMock(
-                side_effect=httpx.HTTPError("timeout")
-            )
+            mock_client.get = AsyncMock(side_effect=httpx.HTTPError("timeout"))
             mock_client_cls.return_value.__aenter__ = AsyncMock(
                 return_value=mock_client
             )
@@ -439,13 +434,16 @@ class TestEdgeCases:
         assert result["Good Page"] == "Has content"
         assert result["Bad Page"] is None
 
-    @pytest.mark.parametrize("n_titles,expected_batches", [
-        (1, 1),
-        (50, 1),
-        (51, 2),
-        (100, 2),
-        (101, 3),
-    ])
+    @pytest.mark.parametrize(
+        "n_titles,expected_batches",
+        [
+            (1, 1),
+            (50, 1),
+            (51, 2),
+            (100, 2),
+            (101, 3),
+        ],
+    )
     def test_batch_count(self, n_titles: int, expected_batches: int) -> None:
         """The number of HTTP calls must match the expected batch count."""
         call_count = 0
@@ -480,63 +478,85 @@ class TestEnumerateTimelinePages:
 
     @patch("hermes_api.services.wikipedia_service.fetch_page_extracts")
     @patch("hermes_api.services.wikipedia_service.search_timeline_titles")
-    def test_missing_main_page_returns_empty(self, mock_search: MagicMock, mock_fetch: MagicMock) -> None:
+    def test_missing_main_page_returns_empty(
+        self, mock_search: MagicMock, mock_fetch: MagicMock
+    ) -> None:
         mock_fetch.return_value = {"Main": None}
         from hermes_api.services.wikipedia_service import enumerate_timeline_pages
+
         result = asyncio.run(enumerate_timeline_pages("Main"))
         assert result == []
         mock_search.assert_not_called()
 
     @patch("hermes_api.services.wikipedia_service.fetch_page_extracts")
     @patch("hermes_api.services.wikipedia_service.search_timeline_titles")
-    def test_no_subpages_returns_main(self, mock_search: MagicMock, mock_fetch: MagicMock) -> None:
+    def test_no_subpages_returns_main(
+        self, mock_search: MagicMock, mock_fetch: MagicMock
+    ) -> None:
         mock_fetch.return_value = {"Main": "Some content."}
         mock_search.return_value = []
         from hermes_api.services.wikipedia_service import enumerate_timeline_pages
+
         result = asyncio.run(enumerate_timeline_pages("Main"))
         assert result == ["Main"]
 
     @patch("hermes_api.services.wikipedia_service.fetch_page_extracts")
     @patch("hermes_api.services.wikipedia_service.search_timeline_titles")
-    def test_empty_sections_index_returns_subpages(self, mock_search: MagicMock, mock_fetch: MagicMock) -> None:
+    def test_empty_sections_index_returns_subpages(
+        self, mock_search: MagicMock, mock_fetch: MagicMock
+    ) -> None:
         # Consecutive headers indicate an empty section index
         extract = "Intro\n== 2023 ==\n== 2024 ==\n"
         mock_fetch.return_value = {"Timeline of X": extract}
-        mock_search.return_value = ["Timeline of X (2023)", "Timeline of X (2024)", "Irrelevant"]
+        mock_search.return_value = [
+            "Timeline of X (2023)",
+            "Timeline of X (2024)",
+            "Irrelevant",
+        ]
         from hermes_api.services.wikipedia_service import enumerate_timeline_pages
+
         result = asyncio.run(enumerate_timeline_pages("Timeline of X"))
         # Should filter out "Irrelevant" and sort the sub-pages
         assert result == ["Timeline of X (2023)", "Timeline of X (2024)"]
 
     @patch("hermes_api.services.wikipedia_service.fetch_page_extracts")
     @patch("hermes_api.services.wikipedia_service.search_timeline_titles")
-    def test_see_also_index_returns_subpages(self, mock_search: MagicMock, mock_fetch: MagicMock) -> None:
+    def test_see_also_index_returns_subpages(
+        self, mock_search: MagicMock, mock_fetch: MagicMock
+    ) -> None:
         extract = "Intro\n== 2023 ==\nSee also: Timeline of X (2023)\n== 2024 ==\nMain article: Timeline of X (2024)\n"
         mock_fetch.return_value = {"Timeline of X": extract}
         mock_search.return_value = ["Timeline of X (2024)", "Timeline of X (2023)"]
         from hermes_api.services.wikipedia_service import enumerate_timeline_pages
+
         result = asyncio.run(enumerate_timeline_pages("Timeline of X"))
         # Should correctly identify as index and sort chronologically
         assert result == ["Timeline of X (2023)", "Timeline of X (2024)"]
 
     @patch("hermes_api.services.wikipedia_service.fetch_page_extracts")
     @patch("hermes_api.services.wikipedia_service.search_timeline_titles")
-    def test_non_index_with_subpages_returns_main(self, mock_search: MagicMock, mock_fetch: MagicMock) -> None:
+    def test_non_index_with_subpages_returns_main(
+        self, mock_search: MagicMock, mock_fetch: MagicMock
+    ) -> None:
         # Has sub-pages, but extract doesn't look like an index (has content, no empty sections)
         extract = "Intro\n== 2023 ==\nLots of text here.\n== 2024 ==\nMore text here.\n"
         mock_fetch.return_value = {"Timeline of X": extract}
         mock_search.return_value = ["Timeline of X (2023)"]
         from hermes_api.services.wikipedia_service import enumerate_timeline_pages
+
         result = asyncio.run(enumerate_timeline_pages("Timeline of X"))
         assert result == ["Timeline of X"]
 
     @patch("hermes_api.services.wikipedia_service.fetch_page_extracts")
     @patch("hermes_api.services.wikipedia_service.search_timeline_titles")
-    def test_dash_normalization(self, mock_search: MagicMock, mock_fetch: MagicMock) -> None:
+    def test_dash_normalization(
+        self, mock_search: MagicMock, mock_fetch: MagicMock
+    ) -> None:
         # En-dash in main title, hyphen in search result (or vice versa)
         mock_fetch.return_value = {"Timeline of A–B": "== 1 ==\n== 2 =="}
         mock_search.return_value = ["Timeline of A-B (2023)", "Timeline of A-B (2024)"]
         from hermes_api.services.wikipedia_service import enumerate_timeline_pages
+
         result = asyncio.run(enumerate_timeline_pages("Timeline of A–B"))
         assert result == ["Timeline of A-B (2023)", "Timeline of A-B (2024)"]
 
@@ -546,27 +566,30 @@ class TestSortTimelineTitles:
 
     def test_sorts_by_year(self) -> None:
         from hermes_api.services.wikipedia_service import _sort_timeline_titles
+
         titles = ["Timeline (2024)", "Timeline (2022)", "Timeline (2023)"]
         assert _sort_timeline_titles(titles) == [
-            "Timeline (2022)", "Timeline (2023)", "Timeline (2024)"
+            "Timeline (2022)",
+            "Timeline (2023)",
+            "Timeline (2024)",
         ]
 
     def test_sorts_by_month(self) -> None:
         from hermes_api.services.wikipedia_service import _sort_timeline_titles
+
         titles = [
-            "Timeline (February 2024)", 
-            "Timeline (January 2024)", 
-            "Timeline (March 2024)"
+            "Timeline (February 2024)",
+            "Timeline (January 2024)",
+            "Timeline (March 2024)",
         ]
         assert _sort_timeline_titles(titles) == [
             "Timeline (January 2024)",
             "Timeline (February 2024)",
-            "Timeline (March 2024)"
+            "Timeline (March 2024)",
         ]
 
     def test_sorts_by_phase(self) -> None:
         from hermes_api.services.wikipedia_service import _sort_timeline_titles
+
         titles = ["Phase 3", "Phase 1", "Phase 2"]
-        assert _sort_timeline_titles(titles) == [
-            "Phase 1", "Phase 2", "Phase 3"
-        ]
+        assert _sort_timeline_titles(titles) == ["Phase 1", "Phase 2", "Phase 3"]

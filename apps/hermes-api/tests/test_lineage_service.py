@@ -16,7 +16,7 @@ from hermes_api.services.geocoding_service import GeocodingResult
 def test_parse_timeline_date():
     mock_session = AsyncMock()
     service = LineageService(mock_session)
-    
+
     # Test Full YYYY-MM-DD
     d1 = service._parse_timeline_date("2023-10-07")
     assert d1.year == 2023
@@ -71,15 +71,17 @@ def test_persist_lineage_events(mock_geo_cls):
             date="2023-10-07",
             headline="Hamas attacks",
             summary="Attacks occur.",
-            location_name="Gaza City"
+            location_name="Gaza City",
         )
     ]
-    
-    result = asyncio.run(service.persist_lineage_events(
-        target_event_id=target_event_id,
-        events=events,
-        page_title="Timeline of Gaza war"
-    ))
+
+    result = asyncio.run(
+        service.persist_lineage_events(
+            target_event_id=target_event_id,
+            events=events,
+            page_title="Timeline of Gaza war",
+        )
+    )
 
     # 4. Assertions
     assert len(result) == 1
@@ -95,7 +97,7 @@ def test_persist_lineage_events(mock_geo_cls):
     # Ensure session.add was called for Event, Article, and EventEdge
     adds = mock_session.add.call_args_list
     assert len(adds) == 3  # 1 event, 1 article, 1 edge (source cached)
-    
+
     article: Article = adds[1][0][0]
     assert isinstance(article, Article)
     assert article.source_id == mock_source.id
@@ -105,6 +107,7 @@ def test_persist_lineage_events(mock_geo_cls):
     assert article.published_at.year == 2023
 
     from hermes_api.db.models.event_edge import EventEdge
+
     edge: EventEdge = adds[2][0][0]
     assert isinstance(edge, EventEdge)
     assert edge.event_a_id == event.id

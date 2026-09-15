@@ -42,7 +42,7 @@ class TestExtractTimelineEventsBatch:
             ArticleInput(title="Page 0", content="Content 0"),
             ArticleInput(title="Page 1", content="Content 1"),
         ]
-        
+
         mock_response = MagicMock()
         mock_response.parsed = BatchTimelineExtractionResponse(
             results=[
@@ -53,9 +53,9 @@ class TestExtractTimelineEventsBatch:
                             date="2023-10-07",
                             headline="Event 1",
                             summary="Summary 1",
-                            location_name="Location 1"
+                            location_name="Location 1",
                         )
-                    ]
+                    ],
                 ),
                 BatchTimelinePageResult(
                     page_index=0,
@@ -64,10 +64,10 @@ class TestExtractTimelineEventsBatch:
                             date="2023-10-06",
                             headline="Event 0",
                             summary="Summary 0",
-                            location_name="Location 0"
+                            location_name="Location 0",
                         )
-                    ]
-                )
+                    ],
+                ),
             ]
         )
         mock_genai_client.aio.models.generate_content.return_value = mock_response
@@ -80,7 +80,7 @@ class TestExtractTimelineEventsBatch:
         # Should be ordered by input (Page 0 then Page 1)
         assert len(result[0]) == 1
         assert result[0][0].headline == "Event 0"
-        
+
         assert len(result[1]) == 1
         assert result[1][0].headline == "Event 1"
 
@@ -95,9 +95,11 @@ class TestExtractTimelineEventsBatch:
         self, ai_service: AiService, mock_genai_client: MagicMock
     ) -> None:
         pages = [ArticleInput(title="Page 0", content="Content 0")]
-        mock_genai_client.aio.models.generate_content.side_effect = Exception("API error")
-        
+        mock_genai_client.aio.models.generate_content.side_effect = Exception(
+            "API error"
+        )
+
         result = asyncio.run(ai_service.extract_timeline_events_batch(pages))
-        
+
         # Should return a list of empty lists on failure
         assert result == [[]]

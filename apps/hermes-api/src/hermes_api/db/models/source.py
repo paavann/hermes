@@ -11,14 +11,12 @@ if TYPE_CHECKING:
     from hermes_api.db.models.article import Article
 
 
-
-
 class Source(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     __tablename__ = "sources"
 
     name: Mapped[str] = mapped_column(String(255))
     slug: Mapped[str] = mapped_column(String(128), unique=True)
-    
+
     url: Mapped[str] = mapped_column(Text)
     feed_url: Mapped[Optional[str]] = mapped_column(Text)
     source_type: Mapped[SourceType] = mapped_column(default=SourceType.RSS)
@@ -30,4 +28,4 @@ class Source(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     last_fetched_at: Mapped[Optional[datetime]] = mapped_column()
     fetch_interval_minutes: Mapped[int] = mapped_column(Integer, default=15)
 
-    articles: Mapped[list["Article"]] = relationship(back_populates="source")    
+    articles: Mapped[list["Article"]] = relationship(back_populates="source")

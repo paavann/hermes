@@ -13,9 +13,6 @@
   "compilerOptions": {
     "jsx": "react-jsx",
     "moduleResolution": "bundler",
-    "types": [
-      "@react-router/node",
-      "node"
-    ]
+    "types": ["@react-router/node", "node"]
   }
 }

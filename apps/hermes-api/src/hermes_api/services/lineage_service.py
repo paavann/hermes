@@ -29,6 +29,8 @@ class LineageService:
         if not source:
             source = Source(
                 name="Wikipedia",
+                slug="wikipedia",
+                url="https://en.wikipedia.org",
                 feed_url="https://en.wikipedia.org",
                 credibility=CredibilityTier.TIER_1,
                 is_active=False,  # Not used for RSS ingestion
@@ -81,11 +83,15 @@ class LineageService:
             # 1. Geocode
             geocoding = None
             if tl_event.location_name:
-                geocoding = await self._geocoding.geocode(self._session, tl_event.location_name)
+                geocoding = await self._geocoding.geocode(
+                    self._session, tl_event.location_name
+                )
 
             location_wkt = None
             if geocoding:
-                location_wkt = f"SRID=4326;POINT({geocoding.longitude} {geocoding.latitude})"
+                location_wkt = (
+                    f"SRID=4326;POINT({geocoding.longitude} {geocoding.latitude})"
+                )
 
             event_date = self._parse_timeline_date(tl_event.date)
             now = datetime.now(timezone.utc).replace(tzinfo=None)
@@ -125,7 +131,7 @@ class LineageService:
                 confidence=1.0,
             )
             self._session.add(edge)
-            
+
             persisted_events.append(event)
 
         await self._session.commit()
@@ -134,3 +140,52 @@ class LineageService:
             f"for target {target_event_id} from Wikipedia '{page_title}'."
         )
         return persisted_events
+
+    async def sync_allowlisted_stories(self) -> dict:
+        """Finds all allowlisted events that don't have lineage processed, and generates them."""
+        from sqlalchemy import text
+        from hermes_api.services.wikipedia_service import fetch_page_extracts
+        from hermes_api.services.ai_service import AiService, ArticleInput
+
+        stmt = text("""
+            SELECT sa.event_id, sa.wikipedia_page_title 
+            FROM story_allowlists sa
+            LEFT JOIN event_edges ee ON sa.event_id = ee.event_b_id OR sa.event_id = ee.event_a_id
+            WHERE ee.id IS NULL
+        """)
+        result = await self._session.execute(stmt)
+        rows = result.all()
+
+        if not rows:
+            return {"status": "no new stories to sync"}
+
+        ai = AiService()
+        stats = {"processed": 0, "nodes_created": 0, "errors": 0}
+
+        for row in rows:
+            event_id = row.event_id
+            page_title = row.wikipedia_page_title
+
+            logger.info(f"Syncing lineage for event {event_id} from {page_title}...")
+            try:
+                extracts = await fetch_page_extracts([page_title])
+                content = extracts.get(page_title, "")
+                if not content:
+                    logger.warning(f"No content for {page_title}")
+                    stats["errors"] += 1
+                    continue
+
+                # Limit to 5000 chars for processing speed/token limits during syncing
+                batch_nodes = await ai.extract_timeline_events_batch(
+                    [ArticleInput(title=page_title, content=content[:5000])]
+                )
+                nodes = batch_nodes[0] if batch_nodes else []
+
+                events = await self.persist_lineage_events(event_id, nodes, page_title)
+                stats["processed"] += 1
+                stats["nodes_created"] += len(events)
+            except Exception as e:
+                logger.error(f"Failed to sync lineage for {event_id}: {e}")
+                stats["errors"] += 1
+
+        return stats

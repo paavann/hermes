@@ -15,6 +15,7 @@ This workspace contains the following applications:
 ### Prerequisites
 
 Ensure you have the following installed:
+
 - Node.js (v18+)
 - npm, yarn, or pnpm
 - Python (v3.9+)
@@ -36,15 +37,19 @@ npm install
 You can run the applications locally using Nx CLI.
 
 **Start the Frontend:**
+
 ```bash
 npx nx serve hermes
 ```
+
 The frontend should be accessible at `http://localhost:4200` (or another port specified in the console).
 
 **Start the Backend API:**
+
 ```bash
 npx nx serve hermes-api
 ```
+
 The FastAPI application will be accessible locally. You can view the interactive API documentation at `http://localhost:8000/docs` (default FastAPI port unless configured otherwise).
 
 ## 🧪 Testing and Building
@@ -52,12 +57,14 @@ The FastAPI application will be accessible locally. You can view the interactive
 ### Running Tests
 
 To execute unit tests for a specific project:
+
 ```bash
 npx nx test hermes
 npx nx test hermes-api
 ```
 
 To run end-to-end tests for the frontend:
+
 ```bash
 npx nx e2e hermes-e2e
 ```
@@ -65,10 +72,12 @@ npx nx e2e hermes-e2e
 ### Building for Production
 
 To create a production bundle for your applications:
+
 ```bash
 npx nx build hermes
 npx nx build hermes-api
 ```
+
 The build artifacts will be stored in the `dist/` directory at the root of the workspace.
 
 ## 🛠 Useful Commands

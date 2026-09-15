@@ -23,14 +23,9 @@ CREDIBILITY_WEIGHTS = {
 logger = logging.getLogger(__name__)
 
 
-
-
-
 class EventService:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
-    
-
 
     # create.
     async def create_event_with_article(
@@ -46,13 +41,15 @@ class EventService:
     ) -> Event:
         location_wkt = None
         if geocoding:
-            location_wkt = f"SRID=4326;POINT({geocoding.longitude} {geocoding.latitude})"
+            location_wkt = (
+                f"SRID=4326;POINT({geocoding.longitude} {geocoding.latitude})"
+            )
 
         now = datetime.now(timezone.utc).replace(tzinfo=None)
-        
+
         # Initial score based on source credibility
         initial_score = CREDIBILITY_WEIGHTS.get(source_credibility, 1.0)
-        
+
         event = Event(
             ai_headline=extraction.headline,
             ai_summary=extraction.summary,
@@ -68,7 +65,7 @@ class EventService:
         )
         self._session.add(event)
         await self._session.flush()
-        
+
         article = Article(
             event_id=event.id,
             source_id=source_id,
@@ -81,8 +78,6 @@ class EventService:
 
         logger.info(f"created event '{event.ai_headline}' with 1 article.")
         return event
-    
-
 
     # update.
     async def add_article_to_event(
@@ -109,11 +104,11 @@ class EventService:
         self._session.add(article)
 
         event.article_count += 1
-        
+
         # Add credibility weight to existing trending score
         added_score = CREDIBILITY_WEIGHTS.get(source_credibility, 1.0)
         event.trending_score += added_score
-        
+
         event.last_updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
         if event.status == EventStatus.STALE:
             event.status = EventStatus.ACTIVE
@@ -127,7 +122,6 @@ class EventService:
 
         return event
 
-    
     # queries (used by the ai service and api layer).
     async def get_active_events_for_matching(self) -> list[dict[str, str]]:
         stmt = (
@@ -153,20 +147,18 @@ class EventService:
             }
             for row in rows
         ]
-    
-
 
     async def get_active_events_by_embeddings(
         self, embeddings: list[list[float]]
     ) -> list[dict[str, str]]:
         if not embeddings:
             return []
-            
+
         unique_events = {}
         for emb in embeddings:
             if not emb:
                 continue
-            
+
             # Use cosine distance (<=> operator in pgvector)
             stmt = (
                 select(
@@ -182,7 +174,7 @@ class EventService:
             )
             result = await self._session.execute(stmt)
             rows = result.all()
-            
+
             for row in rows:
                 row_id = str(row.id)
                 if row_id not in unique_events:
@@ -192,16 +184,13 @@ class EventService:
                         "location_name": row.location_name or "N/A",
                         "category": row.category,
                     }
-                    
-        return list(unique_events.values())
 
+        return list(unique_events.values())
 
     async def article_url_exists(self, url: str) -> bool:
         stmt = select(Article.id).where(Article.url == url).limit(1)
         result = await self._session.execute(stmt)
         return result.scalar_one_or_none() is not None
-    
-
 
     # lifecycle management.
     async def run_lifecycle_transitions(self) -> dict[str, int]:

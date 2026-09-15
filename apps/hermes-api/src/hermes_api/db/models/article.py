@@ -12,17 +12,20 @@ if TYPE_CHECKING:
     from hermes_api.db.models.source import Source
 
 
-
 class Article(Base, UUIDPrimaryKeyMixin):
     __tablename__ = "articles"
 
-    event_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("events.id", ondelete="CASCADE"))
-    source_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("sources.id", ondelete="CASCADE"))
+    event_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("events.id", ondelete="CASCADE")
+    )
+    source_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("sources.id", ondelete="CASCADE")
+    )
 
     title: Mapped[str] = mapped_column(Text)
     url: Mapped[str] = mapped_column(Text, unique=True)
     thumbnail_url: Mapped[Optional[str]] = mapped_column(Text)
-    
+
     published_at: Mapped[Optional[datetime]] = mapped_column()
     ingested_at: Mapped[datetime] = mapped_column(server_default="now()")
     created_at: Mapped[datetime] = mapped_column(server_default="now()")

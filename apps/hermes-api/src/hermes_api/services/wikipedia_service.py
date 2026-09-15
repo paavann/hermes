@@ -87,20 +87,14 @@ async def search_timeline_titles(
         data = response.json()
         results: list[dict] = data.get("query", {}).get("search", [])
         titles = [r["title"] for r in results if "title" in r]
-        logger.info(
-            f"wikipedia search '{query}' returned {len(titles)} title(s)."
-        )
+        logger.info(f"wikipedia search '{query}' returned {len(titles)} title(s).")
         return titles
 
     except httpx.HTTPError:
-        logger.exception(
-            f"http error while searching wikipedia for '{query}'."
-        )
+        logger.exception(f"http error while searching wikipedia for '{query}'.")
         return []
     except (KeyError, ValueError):
-        logger.exception(
-            f"failed to parse wikipedia search response for '{query}'."
-        )
+        logger.exception(f"failed to parse wikipedia search response for '{query}'.")
         return []
 
 
@@ -140,7 +134,7 @@ async def fetch_page_extracts(
 
     # Slice into batches of _MAX_TITLES_PER_REQUEST.
     batches = [
-        unique_titles[i: i + _MAX_TITLES_PER_REQUEST]
+        unique_titles[i : i + _MAX_TITLES_PER_REQUEST]
         for i in range(0, len(unique_titles), _MAX_TITLES_PER_REQUEST)
     ]
 
@@ -185,8 +179,7 @@ async def enumerate_timeline_pages(main_title: str) -> list[str]:
 
     norm_main = _norm(main_title)
     sub_pages = [
-        t for t in search_results
-        if t != main_title and _norm(t).startswith(norm_main)
+        t for t in search_results if t != main_title and _norm(t).startswith(norm_main)
     ]
 
     if not sub_pages:
@@ -200,10 +193,10 @@ async def enumerate_timeline_pages(main_title: str) -> list[str]:
         if lines[i].startswith("==") and lines[i].endswith("=="):
             next_line = lines[i + 1].lower()
             if (
-                (next_line.startswith("==") and next_line.endswith("==")) or
-                next_line.startswith("see also:") or
-                next_line.startswith("main article:") or
-                next_line.startswith("further information:")
+                (next_line.startswith("==") and next_line.endswith("=="))
+                or next_line.startswith("see also:")
+                or next_line.startswith("main article:")
+                or next_line.startswith("further information:")
             ):
                 is_index = True
                 break
@@ -216,15 +209,26 @@ async def enumerate_timeline_pages(main_title: str) -> list[str]:
 # ---------------------------------------------------------------------------
 
 _MONTHS = {
-    "january": 1, "february": 2, "march": 3, "april": 4, "may": 5, "june": 6,
-    "july": 7, "august": 8, "september": 9, "october": 10, "november": 11, "december": 12
+    "january": 1,
+    "february": 2,
+    "march": 3,
+    "april": 4,
+    "may": 5,
+    "june": 6,
+    "july": 7,
+    "august": 8,
+    "september": 9,
+    "october": 10,
+    "november": 11,
+    "december": 12,
 }
 
 
 def _sort_timeline_titles(titles: list[str]) -> list[str]:
     """Sort sub-page titles chronologically based on embedded years/months."""
+
     def sort_key(title: str) -> tuple:
-        year_match = re.search(r'\b(19|20)\d{2}\b', title)
+        year_match = re.search(r"\b(19|20)\d{2}\b", title)
         year = int(year_match.group(0)) if year_match else 0
 
         month = 0
@@ -233,7 +237,7 @@ def _sort_timeline_titles(titles: list[str]) -> list[str]:
                 month = m_val
                 break
 
-        phase_match = re.search(r'\bphase\s+(\d+)\b', title.lower())
+        phase_match = re.search(r"\bphase\s+(\d+)\b", title.lower())
         phase = int(phase_match.group(1)) if phase_match else 0
 
         return (year, month, phase, title)
@@ -280,9 +284,7 @@ async def _fetch_extracts_batch(
         # Build a normalisation map so we can match returned titles back to
         # whatever casing the caller used.  MediaWiki often returns titles
         # with different capitalisation than what was requested.
-        normalised: dict[str, str] = {
-            t.lower().replace("_", " "): t for t in titles
-        }
+        normalised: dict[str, str] = {t.lower().replace("_", " "): t for t in titles}
 
         for page in pages:
             # A page_id of -1 means "page does not exist".
@@ -304,9 +306,7 @@ async def _fetch_extracts_batch(
             out[caller_key] = extract
 
     except httpx.HTTPError:
-        logger.exception(
-            f"http error fetching extracts for batch: {titles[:3]}..."
-        )
+        logger.exception(f"http error fetching extracts for batch: {titles[:3]}...")
     except (KeyError, ValueError):
         logger.exception(
             f"failed to parse extracts response for batch: {titles[:3]}..."

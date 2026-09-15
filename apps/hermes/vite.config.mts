@@ -8,18 +8,18 @@ export default defineConfig(() => ({
   root: import.meta.dirname,
   cacheDir: '../../node_modules/.vite/apps/hermes',
   envDir: '../../',
-  server:{
+  server: {
     port: 4200,
     host: process.env.HOST || 'localhost',
   },
-  preview:{
+  preview: {
     port: 4300,
     host: process.env.HOST || 'localhost',
   },
   plugins: [
     tailwindcss(),
     tsconfigPaths(),
-    !process.env.VITEST && reactRouter()
+    !process.env.VITEST && reactRouter(),
   ],
   // Uncomment this if you are using workers.
   // worker: {
@@ -43,6 +43,6 @@ export default defineConfig(() => ({
     coverage: {
       reportsDirectory: './test-output/vitest/coverage',
       provider: 'v8' as const,
-    }
+    },
   },
 }));
