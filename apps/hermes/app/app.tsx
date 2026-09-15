@@ -6,8 +6,8 @@ import { BootSequence, LiveClock } from '@hermes/ui-components';
 const queryClient = new QueryClient();
 
 const MAP_CONFIG = {
-  baseUrl: 'http://localhost:8001',
-  apiVer: import.meta.env.VITE_API_VER,
+  baseUrl: import.meta.env.VITE_BASE_URL || 'http://localhost:8000',
+  apiVer: import.meta.env.VITE_API_VER || 'v1',
   mapboxToken: import.meta.env.VITE_MAPBOX_TOKEN,
 };
 

@@ -28,6 +28,7 @@ class IngestionService:
         self._ai = AiService()
         self._geocoding = GeocodingService()
         self._rate_limiter = TokenBucketRateLimiter(settings.GEMINI_RPM_LIMIT)
+        self._embed_rate_limiter = TokenBucketRateLimiter(settings.GEMINI_EMBED_RPM_LIMIT)
 
 
 
@@ -80,6 +81,7 @@ class IngestionService:
                 ]
 
                 batch_texts = [f"{a.title}\n{a.text_for_ai}" for a in batch]
+                await self._embed_rate_limiter.acquire()
                 embeddings = await self._ai.generate_embeddings(batch_texts)
 
                 async with AsyncSessionLocal() as session:
@@ -153,7 +155,7 @@ class IngestionService:
 
 
 
-    async def _get_active_sources(self, session: AsyncSession) -> list[dict]:
+    async def _get_active_sources(self, session: AsyncSession, force: bool = False) -> list[dict]:
         stmt = (
             select(
                 Source.id,
@@ -189,7 +191,7 @@ class IngestionService:
                 last = last.replace(tzinfo=timezone.utc)
 
             delta = timedelta(minutes=row.fetch_interval_minutes)
-            if now >= last + delta:
+            if force or now >= last + delta:
                 due_sources.append(
                     {
                         "id": row.id,
@@ -205,7 +207,7 @@ class IngestionService:
 
 
 
-    async def ingest_all_sources(self) -> dict[str, int]:
+    async def ingest_all_sources(self, force: bool = False) -> dict[str, int]:
         stats = {
             "sources_processed": 0,
             "articles_fetched": 0,
@@ -216,8 +218,9 @@ class IngestionService:
             "events_matched": 0,
         }
 
+
         async with AsyncSessionLocal() as session:
-            sources = await self._get_active_sources(session)
+            sources = await self._get_active_sources(session, force=force)
         if not sources:
             logger.warning("no active sources found in the database.")
             return stats
@@ -238,8 +241,8 @@ class IngestionService:
                         await db_session.commit()
                     return s_stats
                 except Exception:
-                    logger.exception(f"Unhandled error ingesting source {source['name']}")
-                    return {k: 0 for k in stats if k != "sources_processed"}
+                    logger.exception(f"unhandled error ingesting source {source['name']}.")
+                    return { k: 0 for k in stats if k != "sources_processed" }
 
 
         tasks = [_process_source(s) for s in sources]

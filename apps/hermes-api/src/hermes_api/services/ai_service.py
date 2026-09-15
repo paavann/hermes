@@ -1,16 +1,22 @@
 import logging
 from typing import Optional
-
 from google import genai
 from pydantic import BaseModel, Field
 
 from hermes_api.core.config import settings
 from hermes_api.core.constants import PREDEFINED_CATEGORIES
 
+
+
 logger = logging.getLogger(__name__)
 
 
-class ExtractionResult(BaseModel):
+
+
+
+
+
+class LlmResult(BaseModel):
     has_location: bool = Field(
         description=(
             "True if the article describes an event tied to a specific "
@@ -86,7 +92,7 @@ class ArticleInput(BaseModel):
     content: str
 
 
-class BatchArticleResult(ExtractionResult):
+class BatchArticleResult(LlmResult):
     """Extraction result for one article within a batch response."""
 
     article_index: int = Field(
@@ -198,25 +204,6 @@ def _build_timeline_batch_user_prompt(pages: list[ArticleInput]) -> str:
     return prompt
 
 
-def _build_user_prompt(
-    title: str, content: str, existing_events: list[dict[str, str]]
-) -> str:
-    prompt = f"# Article to analyse\n\nTitle: {title}\n\nContent:\n{content}\n"
-    if existing_events:
-        prompt += "\n# Existing active events (match if applicable)\n\n"
-        for event in existing_events:
-            prompt += (
-                f"ID: {event['id']}\n"
-                f"Headline: {event['headline']} | "
-                f"Location: {event.get('location_name', 'N/A')} | "
-                f"Category: {event['category']}\n"
-            )
-    else:
-        prompt += "\n# Existing active events\n\nNone currently.\n"
-
-    return prompt
-
-
 def _build_batch_user_prompt(
     articles: list[ArticleInput],
     existing_events: list[dict[str, str]],
@@ -255,7 +242,7 @@ def _build_batch_user_prompt(
     return prompt
 
 
-def _resolve_category_color(result: ExtractionResult) -> ExtractionResult:
+def _resolve_category_color(result: LlmResult) -> LlmResult:
     category_upper = result.category.upper()
     if category_upper in PREDEFINED_CATEGORIES:
         return result.model_copy(
@@ -275,45 +262,13 @@ class AiService:
         if not settings.GEMINI_API_KEY:
             raise ValueError("api key is missing.")
         self._client = genai.Client(api_key=settings.GEMINI_API_KEY)
-        self._model = "gemini-3.6-flash"
-
-    async def extract_metadata(
-        self, title: str, content: str, existing_events: list[dict[str, str]]
-    ) -> Optional[ExtractionResult]:
-        user_prompt = _build_user_prompt(
-            title=title,
-            content=content,
-            existing_events=existing_events or [],
-        )
-        try:
-            res = await self._client.aio.models.generate_content(
-                model=self._model,
-                contents=user_prompt,
-                config={
-                    "system_instruction": SYSTEM_PROMPT,
-                    "response_mime_type": "application/json",
-                    "response_schema": ExtractionResult,
-                },
-            )
-            result: ExtractionResult = res.parsed
-            result = _resolve_category_color(result)
-            logger.info(
-                f"extracted: '{result.headline}' | "
-                f"category={result.category} | "
-                f"location={result.location_name} | "
-                f"matched={result.matched_event_id}"
-            )
-
-            return result
-        except Exception:
-            logger.exception(f"failed to extract metadata for article: {title}")
-            return None
+        self._model = "gemini-3.1-flash-lite"
 
     async def get_metadata(
         self,
         articles: list[ArticleInput],
         existing_events: list[dict[str, str]],
-    ) -> list[Optional[ExtractionResult]]:
+    ) -> list[Optional[LlmResult]]:
         """Extract metadata for a batch of articles in a single LLM call.
 
         Sends all articles to Gemini at once with a batch-aware prompt.
@@ -325,7 +280,7 @@ class AiService:
 
         Returns:
             An ordered list matching the input articles. Each element
-            is an ExtractionResult on success or None on failure.
+            is an LlmResult on success or None on failure.
         """
         if not articles:
             return []
@@ -356,7 +311,7 @@ class AiService:
             batch_response: BatchExtractionResponse = res.parsed
 
             # Map results by article_index, resolve category colors.
-            results_by_index: dict[int, ExtractionResult] = {}
+            results_by_index: dict[int, LlmResult] = {}
             for batch_result in batch_response.results:
                 idx = batch_result.article_index
                 if idx in results_by_index:
@@ -367,13 +322,10 @@ class AiService:
                     continue
 
                 resolved = _resolve_category_color(batch_result)
-                extraction = ExtractionResult.model_validate(
-                    resolved.model_dump(exclude={"article_index"})
-                )
-                results_by_index[idx] = extraction
+                results_by_index[idx] = resolved
 
             # Build ordered result list matching input order.
-            ordered_results: list[Optional[ExtractionResult]] = []
+            ordered_results: list[Optional[LlmResult]] = []
             for i, article in enumerate(articles):
                 extraction = results_by_index.get(i)
                 if extraction:
@@ -395,22 +347,23 @@ class AiService:
             logger.exception(f"batch extraction failed for {len(articles)} articles.")
             return [None] * len(articles)
 
-    async def generate_embeddings(self, texts: list[str]) -> list[list[float]]:
-        """Generate vector embeddings for a batch of strings using text-embedding-004."""
+    async def generate_embeddings(self, texts: list[str]) -> list[Optional[list[float]]]:
+        """Generate vector embeddings for a batch of strings using gemini-embedding-001."""
         if not texts:
             return []
 
         try:
             response = await self._client.aio.models.embed_content(
-                model="text-embedding-004",
+                model="gemini-embedding-001",
                 contents=texts,
+                config={"output_dimensionality": 768},
             )
             return [embedding.values for embedding in response.embeddings]
 
         except Exception:
             logger.exception("failed to generate embeddings")
-            # Return empty lists or zeroes on failure so callers don't crash
-            return [[] for _ in texts]
+            # Return None on failure so callers don't crash pgvector with 0 dimensions
+            return [None for _ in texts]
 
     async def extract_timeline_events_batch(
         self,

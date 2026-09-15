@@ -13,14 +13,15 @@ logger = logging.getLogger(__name__)
 scheduler = AsyncIOScheduler()
 
 
-async def run_ingestion_job() -> None:
-    logger.info("starting ingestion job...")
+async def run_ingestion_job(force: bool = False, is_startup: bool = False) -> None:
+    job_name = "startup ingestion cycle" if is_startup else "ingestion job"
+    logger.info(f"starting {job_name}...")
     try:
         service = IngestionService()
-        stats = await service.ingest_all_sources()
-        logger.info(f"ingestion complete: {stats}.")
+        stats = await service.ingest_all_sources(force=force)
+        logger.info(f"{job_name} complete: {stats}.")
     except Exception:
-        logger.exception("ingestion job failed.")
+        logger.exception(f"{job_name} failed.")
 
 
 async def run_event_lifecycle_job() -> None:
@@ -46,6 +47,8 @@ async def run_lineage_sync_job() -> None:
     except Exception:
         logger.exception("scheduled lineage sync job failed.")
 
+
+_startup_task = None
 
 def setup_scheduler() -> None:
     logger.info("setting up background jobs...")
@@ -77,13 +80,8 @@ def setup_scheduler() -> None:
     )
 
     # this is to ensure the ingestion runs on app startup regardless of the cron job interval.
-    asyncio.ensure_future(_run_startup_ingestion())
-
-
-async def _run_startup_ingestion() -> None:
-    logger.info("running startup ingestion cycle...")
-    await run_ingestion_job()
-    logger.info("startup ingestion cycle complete.")
+    global _startup_task
+    _startup_task = asyncio.create_task(run_ingestion_job(force=True, is_startup=True))
 
 
 def shutdown_scheduler() -> None:

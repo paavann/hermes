@@ -10,7 +10,7 @@ from hermes_api.core.config import settings
 from hermes_api.db.enums import CredibilityTier, EventStatus
 from hermes_api.db.models.article import Article
 from hermes_api.db.models.event import Event
-from hermes_api.services.ai_service import ExtractionResult
+from hermes_api.services.ai_service import LlmResult
 from hermes_api.services.geocoding_service import GeocodingResult
 
 CREDIBILITY_WEIGHTS = {
@@ -30,7 +30,7 @@ class EventService:
     # create.
     async def create_event_with_article(
         self,
-        extraction: ExtractionResult,
+        extraction: LlmResult,
         geocoding: Optional[GeocodingResult],
         article_title: str,
         article_url: str,
