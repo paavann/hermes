@@ -16,6 +16,8 @@ class Settings(BaseSettings):
     DB_NAME: str = "hermes"
 
     GEMINI_API_KEY: str = ""
+    LLM_API_KEY: str = "dummy-key"
+    LLM_MODEL: str = "xai/grok-2-latest"
 
     NOMINATIM_USER_AGENT: str = "hermes-api"
 
