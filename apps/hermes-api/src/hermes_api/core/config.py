@@ -15,9 +15,10 @@ class Settings(BaseSettings):
     DB_PASSWORD: str = ""
     DB_NAME: str = "hermes"
 
-    GEMINI_API_KEY: str = ""
     LLM_API_KEY: str = ""
     LLM_MODEL: str = "gemini/gemini-3.6-flash"
+    EMBED_API_KEY: str = ""
+    EMBED_MODEL: str = "gemini/embedding-001"
 
     NOMINATIM_USER_AGENT: str = "hermes-api"
 

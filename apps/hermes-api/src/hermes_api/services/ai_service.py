@@ -259,13 +259,15 @@ def _reidx_results(raw_results: Sequence[T], count: int, get_idx: Callable[[T], 
 class AiService:
     def __init__(self) -> None:
         self._api_key = settings.LLM_API_KEY
-        if not self._api_key:
-            logger.error("LLM_API_KEY is missing.")
-            raise ValueError("LLM_API_KEY is missing.")
+        self._embed_api_key = settings.EMBED_API_KEY
+        if not self._api_key or not self._embed_api_key:
+            logger.error("LLM_API_KEY or EMBED_API_KEY is missing.")
+            raise ValueError("LLM_API_KEY or EMBED_API_KEY is missing.")
 
         self._model = settings.LLM_MODEL
+        self._embed_model = settings.EMBED_MODEL
 
-        logger.info(f"ai service initialized. Routing set to {self._model} via litellm.")
+        logger.info(f"ai service initialized. Routing set to {self._model} and {self._embed_model} via litellm.")
     
 
 
@@ -358,3 +360,20 @@ class AiService:
                 f"extracted {len(ordered_results[i])} timeline events from page {i}: '{page.title[:50]}...'."
             )
         return ordered_results
+
+
+
+    async def gen_embeddings(self, texts: list[str]) -> list[Optional[list[float]]]:
+        if not texts:
+            return []
+        
+        try:
+            res = await litellm.aembedding(
+                model=self._embed_model,
+                input=texts,
+                api_key=self._embed_api_key
+            )
+            return [item['embedding'] for item in res.data]
+        except Exception as e:
+            logger.error(f"failed to generate embeddings: {str(e)}")
+            return [None] * len(texts)
