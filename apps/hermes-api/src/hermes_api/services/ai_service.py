@@ -171,6 +171,48 @@ class EventTlExtractionResponse(BaseModel):
 
 
 
+def _build_user_prompt(articles: list[ArticleInput], existing_events: list[dict[str, str]]) -> str:
+    prompt = "# Articles to analyse\n\n"
+    for i, article in enumerate(articles):
+        prompt += (
+            f"## Article {i} (index {i})\n"
+            f"Title: {article.title}\n"
+            f"Content:\n{article.content}\n"
+        )
+
+    if existing_events:
+        prompt += "# Existing active events (match if applicable)\n\n"
+        for event in existing_events:
+            prompt += (
+                f"ID: {event['id']}\n"
+                f"Headline: {event['headline']} |"
+                f"Location: {event.get('location_name', 'N/A')} |"
+                f"Category: {event['category']}\n"
+            )
+    else:
+        prompt += "# Existing active events\n\nNone currently.\n"
+        
+    return prompt
+
+
+
+def _resolve_category_color(event: ExtractedEvent) -> ExtractedEvent:
+    category = event.category.upper()
+    if category in PREDEFINED_CATEGORIES:
+        return event.model_copy(
+            update={
+                "category": category,
+                "category_color": PREDEFINED_CATEGORIES[category]["color"]
+            }
+        )
+    elif not event.category_color:
+        return event.model_copy(update={ "category_color": "#6B7280" })
+    else:
+        return event
+
+
+
+
 
 class AiService:
     def __init__(self) -> None:
@@ -182,5 +224,59 @@ class AiService:
         self._model = settings.LLM_MODEL
 
         logger.info(f"ai service initialized. Routing set to {self._model} via litellm.")
-
     
+
+    async def get_metadata(self, articles: list[ArticleInput], existing_events: list[dict[str, str]]) -> list[Optional[ExtractedEvent]]:
+        if not articles:
+            return []
+        
+        user_prompt = _build_user_prompt(
+            articles=articles,
+            existing_events=existing_events or [],
+        )
+        try:
+            res = await litellm.acompletion(
+                model=self._model,
+                api_key=self._api_key,
+                messages=[
+                    { "role": "system", "content": SYSTEM_PROMPT },
+                    { "role": "user", "content": user_prompt }
+                ],
+                response_format={
+                    "type": "json_schema",
+                    "json_schema": {
+                        "name": "extraction_response",
+                        "schema": ExtractionResponse.model_json_schema()
+                    },
+                }
+            )
+
+            content = res.choices[0].message.content
+            if not content:
+                logger.error("llm returned empty content.")
+                return [None] * len(articles)
+            
+            batch_response = ExtractionResponse.model_validate_json(content)
+            results_by_idx: dict[int, ExtractedEvent] = {}
+            for event in batch_response.events:
+                idx = event.article_index
+                if idx in results_by_idx:
+                    logger.warning(f"duplicate article_index {idx} in response.")
+                    continue
+
+                results_by_idx[idx] = _resolve_category_color(event)
+                
+            ordered_results: list[Optional[ExtractedEvent]] = []
+            for i, article in enumerate(articles):
+                extraction = results_by_idx.get(i)
+                if extraction:
+                    logger.info(f"extracted: {article.title[:50]}... | category = {extraction.category}.")
+                else:
+                    logger.warning(f"no extraction for article {i}: '{article.title[:120]}...")
+                ordered_results.append(extraction)
+
+            return ordered_results
+        except Exception as e:
+            logger.error(f"failed to extract metadata: {e}.")
+            return [None] * len(articles)
+                
