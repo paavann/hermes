@@ -2,7 +2,6 @@ import logging
 import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Optional
-
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -10,8 +9,12 @@ from hermes_api.core.config import settings
 from hermes_api.db.enums import CredibilityTier, EventStatus
 from hermes_api.db.models.article import Article
 from hermes_api.db.models.event import Event
-from hermes_api.services.ai_service import LlmResult
+from hermes_api.services.ai_service import ExtractedEvent
 from hermes_api.services.geocoding_service import GeocodingResult
+
+
+
+logger = logging.getLogger(__name__)
 
 CREDIBILITY_WEIGHTS = {
     CredibilityTier.TIER_1: 3.0,
@@ -20,17 +23,23 @@ CREDIBILITY_WEIGHTS = {
     CredibilityTier.TIER_4: 0.5,
 }
 
-logger = logging.getLogger(__name__)
+
+
+
+
 
 
 class EventService:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
+
+
+
     # create.
     async def create_event_with_article(
         self,
-        extraction: LlmResult,
+        extraction: ExtractedEvent,
         geocoding: Optional[GeocodingResult],
         article_title: str,
         article_url: str,
@@ -46,8 +55,6 @@ class EventService:
             )
 
         now = datetime.now(timezone.utc).replace(tzinfo=None)
-
-        # Initial score based on source credibility
         initial_score = CREDIBILITY_WEIGHTS.get(source_credibility, 1.0)
 
         event = Event(
@@ -79,19 +86,20 @@ class EventService:
         logger.info(f"created event '{event.ai_headline}' with 1 article.")
         return event
 
+
+
+
     # update.
     async def add_article_to_event(
         self,
         event_id: uuid.UUID,
-        article_title: str,
-        article_url: str,
-        source_id: uuid.UUID,
-        source_credibility: CredibilityTier,
+        article_title: str, article_url: str,
+        source_id: uuid.UUID, source_credibility: CredibilityTier,
         published_at: Optional[datetime] = None,
     ) -> Optional[Event]:
         event = await self._session.get(Event, event_id)
         if not event:
-            logger.warning(f"event not found for matching: {event_id}.")
+            logger.warning(f"event not found for event id: {event_id}.")
             return None
 
         article = Article(
@@ -104,8 +112,6 @@ class EventService:
         self._session.add(article)
 
         event.article_count += 1
-
-        # Add credibility weight to existing trending score
         added_score = CREDIBILITY_WEIGHTS.get(source_credibility, 1.0)
         event.trending_score += added_score
 
@@ -116,14 +122,26 @@ class EventService:
 
         await self._session.commit()
         logger.info(
-            f"added article to event '{event.ai_headline}'."
-            f"(now {event.article_count} articles)."
+            f"added article to event '{event.ai_headline}' (now {event.article_count} articles)."
         )
 
         return event
 
+
+
+
+    @staticmethod
+    def _to_event_dict(row) -> dict[str, str]:
+        return {
+            "id": str(row.id),
+            "headline": row.ai_headline,
+            "location_name": row.location_name or "N/A",
+            "category": row.category,
+        }
+
+
     # queries (used by the ai service and api layer).
-    async def get_active_events_for_matching(self) -> list[dict[str, str]]:
+    async def get_active_events(self) -> list[dict[str, str]]:
         stmt = (
             select(
                 Event.id,
@@ -136,21 +154,12 @@ class EventService:
             .limit(100)
         )
         result = await self._session.execute(stmt)
-        rows = result.all()
+        return [self._to_event_dict(row) for row in result.all()]
 
-        return [
-            {
-                "id": str(row.id),
-                "headline": row.ai_headline,
-                "location_name": row.location_name or "N/A",
-                "category": row.category,
-            }
-            for row in rows
-        ]
 
-    async def get_active_events_by_embeddings(
-        self, embeddings: list[list[float]]
-    ) -> list[dict[str, str]]:
+
+
+    async def get_active_events_by_embeddings(self, embeddings: list[list[float]]) -> list[dict[str, str]]:
         if not embeddings:
             return []
 
@@ -159,7 +168,7 @@ class EventService:
             if not emb:
                 continue
 
-            # Use cosine distance (<=> operator in pgvector)
+            # cosine distance to get events.
             stmt = (
                 select(
                     Event.id,
@@ -173,32 +182,43 @@ class EventService:
                 .limit(5)
             )
             result = await self._session.execute(stmt)
-            rows = result.all()
-
-            for row in rows:
+            for row in result.all():
                 row_id = str(row.id)
                 if row_id not in unique_events:
-                    unique_events[row_id] = {
-                        "id": row_id,
-                        "headline": row.ai_headline,
-                        "location_name": row.location_name or "N/A",
-                        "category": row.category,
-                    }
+                    unique_events[row_id] = self._to_event_dict(row)
 
         return list(unique_events.values())
 
+
+
+
+    # check whether the article was already processed.
     async def article_url_exists(self, url: str) -> bool:
         stmt = select(Article.id).where(Article.url == url).limit(1)
         result = await self._session.execute(stmt)
         return result.scalar_one_or_none() is not None
 
-    # lifecycle management.
+
+
+
+    async def _transition_event_status(self, from_status: EventStatus, to_status: EventStatus, cutoff: datetime) -> int:
+        stmt = (
+            update(Event)
+            .where(Event.status == from_status)
+            .where(Event.last_updated_at < cutoff)
+            .values(status=to_status)
+        )
+        result = await self._session.execute(stmt)
+        return result.rowcount
+
+
+    # lifecycle management for events.
     async def run_lifecycle_transitions(self) -> dict[str, int]:
         now = datetime.now(timezone.utc).replace(tzinfo=None)
         stale_cutoff = now - timedelta(hours=settings.EVENT_STALE_HOURS)
         archive_cutoff = now - timedelta(hours=settings.EVENT_ARCHIVE_HOURS)
 
-        # Decay active event scores by 10% every time this runs (every 30 mins)
+        # decay active event scores by 10% every time this runs.
         decay_stmt = (
             update(Event)
             .where(Event.status == EventStatus.ACTIVE)
@@ -206,29 +226,15 @@ class EventService:
         )
         await self._session.execute(decay_stmt)
 
-        stale_stmt = (
-            update(Event)
-            .where(Event.status == EventStatus.ACTIVE)
-            .where(Event.last_updated_at < stale_cutoff)
-            .values(status=EventStatus.STALE)
+        staled_count = await self._transition_event_status(
+            EventStatus.ACTIVE, EventStatus.STALE, stale_cutoff
         )
-        stale_result = await self._session.execute(stale_stmt)
-        staled_count = stale_result.rowcount
-
-        archive_stmt = (
-            update(Event)
-            .where(Event.status == EventStatus.STALE)
-            .where(Event.last_updated_at < archive_cutoff)
-            .values(status=EventStatus.ARCHIVED)
+        archived_count = await self._transition_event_status(
+            EventStatus.STALE, EventStatus.ARCHIVED, archive_cutoff
         )
-        archive_result = await self._session.execute(archive_stmt)
-        archived_count = archive_result.rowcount
 
         await self._session.commit()
         if staled_count or archived_count:
-            logger.info(
-                f"lifecycle: {staled_count} events staled, "
-                f"{archived_count} events archived."
-            )
+            logger.info(f"lifecycle: {staled_count} events staled, {archived_count} events archived.")
 
-        return {"staled": staled_count, "archived": archived_count}
+        return { "staled": staled_count, "archived": archived_count }

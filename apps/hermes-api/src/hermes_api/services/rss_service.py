@@ -1,16 +1,22 @@
 import logging
-from datetime import datetime
-from typing import Optional
-
 import feedparser
 import httpx
+from datetime import datetime
+from typing import Optional
 from feedparser.datetimes import _parse_date
 from pydantic import BaseModel, computed_field
 
 from hermes_api.core.config import settings
 
+
+
 logger = logging.getLogger(__name__)
 MAX_CONTENT_WORDS: int = 500
+
+
+
+
+
 
 
 def _parse_date(entry: dict) -> Optional[datetime]:
@@ -43,6 +49,11 @@ def _extract_content(entry: dict) -> Optional[str]:
     return None
 
 
+
+
+
+
+
 class ParsedArticle(BaseModel):
     title: str
     url: str
@@ -59,6 +70,7 @@ class ParsedArticle(BaseModel):
             return self.description
 
 
+
 async def fetch_feed(feed_url: str) -> list[ParsedArticle]:
     try:
         async with httpx.AsyncClient() as client:
@@ -66,23 +78,22 @@ async def fetch_feed(feed_url: str) -> list[ParsedArticle]:
                 feed_url,
                 timeout=30.0,
                 follow_redirects=True,
-                headers={"User-Agent": settings.NOMINATIM_USER_AGENT},
+                headers={ "User-Agent": settings.NOMINATIM_USER_AGENT },
             )
             res.raise_for_status()
     except httpx.HTTPError:
-        logger.exception(f"failed to fetch RSS feed: {feed_url}")
+        logger.exception(f"failed to fetch RSS feed: {feed_url}.")
         return []
 
     feed = feedparser.parse(res.text)
     if feed.bozo and not feed.bozo_exception:
-        logger.warning(f"malformed feed with no entries: {feed_url}")
+        logger.warning(f"malformed feed with no entries: {feed_url}.")
         return []
 
     articles: list[ParsedArticle] = []
     for entry in feed.entries:
         title = entry.get("title", "").strip()
         url = entry.get("link", "").strip()
-
         if not title or not url:
             continue
         else:

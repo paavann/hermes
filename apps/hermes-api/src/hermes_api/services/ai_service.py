@@ -1,4 +1,3 @@
-from geoalchemy2.comparator import BaseComparator
 import logging
 from typing import Optional, TypeVar, Callable, Sequence
 from pydantic import BaseModel, Field
