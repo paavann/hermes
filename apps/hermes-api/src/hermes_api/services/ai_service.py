@@ -184,7 +184,7 @@ class TlEdgeExtraction(BaseModel):
     
     
 class TimelineExtractionResponse(BaseModel):
-    topic_summary: str = Field(
+    tl_summary: str = Field(
         description="""
             A 1-2 paragraph summary of the entire timeline.
         """
