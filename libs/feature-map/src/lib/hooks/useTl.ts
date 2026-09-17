@@ -50,7 +50,7 @@ export function useTl(eventId: string | null) {
     
     return {
         query,
-        regenerate: regenerateMutation,
+        regenerate: regenerateMutation.mutate,
         isRegenerating: regenerateMutation.isPending,
     }
 }
