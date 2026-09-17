@@ -1,14 +1,14 @@
-import logging
 import asyncio
-import httpx
+import logging
 from dataclasses import dataclass
 from typing import Optional
+
+import httpx
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from hermes_api.core.config import settings
 from hermes_api.db.models.geocode_cache import GeocodeCache
-
 
 logger = logging.getLogger(__name__)
 NOMINATIM_SEARCH_URL = "https://nominatim.openstreetmap.org/search"

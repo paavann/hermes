@@ -1,5 +1,6 @@
-import logging
 import asyncio
+import logging
+
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 
@@ -7,7 +8,6 @@ from hermes_api.core.config import settings
 from hermes_api.db.db import AsyncSessionLocal
 from hermes_api.services.event_service import EventService
 from hermes_api.services.ingestion_service import IngestionService
-
 
 logger = logging.getLogger(__name__)
 scheduler = AsyncIOScheduler()
@@ -35,17 +35,7 @@ async def run_event_lifecycle_job() -> None:
         logger.exception("event lifecycle job failed.")
 
 
-async def run_lineage_sync_job() -> None:
-    logger.info("starting lineage sync job...")
-    try:
-        from hermes_api.services.lineage_service import LineageService
 
-        async with AsyncSessionLocal() as session:
-            lineage_service = LineageService(session)
-            stats = await lineage_service.sync_allowlisted_stories()
-            logger.info(f"scheduled lineage sync complete: {stats}")
-    except Exception:
-        logger.exception("scheduled lineage sync job failed.")
 
 
 _startup_task = None
@@ -67,12 +57,7 @@ def setup_scheduler() -> None:
         replace_existing=True,
     )
 
-    scheduler.add_job(
-        run_lineage_sync_job,
-        trigger=IntervalTrigger(minutes=60),
-        id="lineage_sync_job",
-        replace_existing=True,
-    )
+
 
     scheduler.start()
     logger.info(

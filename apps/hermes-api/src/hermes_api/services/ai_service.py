@@ -1,12 +1,12 @@
 import logging
-from typing import Optional, TypeVar, Callable, Sequence
-from pydantic import BaseModel, Field
+from collections.abc import Sequence
+from typing import Callable, Optional, TypeVar
+
 import litellm
+from pydantic import BaseModel, Field
 
 from hermes_api.core.config import settings
 from hermes_api.core.constants import PREDEFINED_CATEGORIES
-
-
 
 logger = logging.getLogger(__name__)
 
@@ -37,19 +37,6 @@ SYSTEM_PROMPT = """You are a news analyst for Hermes, a
   a custom category if none fit.
   5. For event matching, only match if the articles are about
   the EXACT same incident.
-"""
-
-TL_SYSTEM_PROMPT = """You are a news historian for Hermes, a geospatial news aggregator.
-Your job is to extract a chronological list of structured historical events from Wikipedia timeline prose.
- 
-You will receive the text of one or more Wikipedia pages in a single request.
-Return exactly one result per input page, using the page_index field to map each result back to its corresponding input page (0-based).
- 
-Rules:
-1. Be factual and neutral. Do not editorialize.
-2. For location, identify WHERE the event is physically happening. "BBC reports an earthquake in Turkey" -> location is Turkey.
-3. Extract only the distinct, major events from the prose. Merge tightly related consecutive sentences into a single event.
-4. Format dates as YYYY-MM-DD when possible.
 """
 
 
@@ -134,57 +121,6 @@ class ExtractionResponse(BaseModel):
 
 
 
-class EventTl(BaseModel):
-    date: str = Field(
-        description="""
-            The date of the event in YYYY-MM-DD if possible.
-        """
-    )
-    
-    headline: str = Field(
-        description="""
-            A concise, neutral, factual headline. Max 100 chars.
-        """
-    )
-    
-    summary: str = Field(
-        description="""
-            A 2-3 sentence summary of the event.
-        """
-    )
-    
-    location_name: str = Field(
-        description="""
-            The most specific place name. Format 'City, Country'.
-        """
-    )
-
-
-
-class ExtractedEventTl(BaseModel):
-    page_index: int = Field(
-        description="""
-            The 0-based index of the page this result corresponds to.
-        """
-    )
-    
-    events: list[EventTl] = Field(
-        description="""
-            The chronological list of events.
-        """
-    )
-
-
-
-class EventTlExtractionResponse(BaseModel):
-    results: list[ExtractedEventTl] = Field(
-        description="""
-            One extraction result per input page.
-        """
-    )   
-
-
-
 
 
 
@@ -215,11 +151,6 @@ def _build_user_prompt(articles: list[ArticleInput], existing_events: list[dict[
         prompt += "# Existing active events\n\nNone currently.\n"
  
     return prompt
-
-
-def _build_tl_user_prompt(pages: list[ArticleInput]) -> str:
-    return _build_items_prompt(pages, header="# Wikipedia Timeline Pages to analyse", item_lbl="Page")
-
 
 
 def _resolve_category_color(event: ExtractedEvent) -> ExtractedEvent:
@@ -327,37 +258,6 @@ class AiService:
                 logger.info(f"extracted: {article.title[:50]}... | category = {extraction.category}.")
             else:
                 logger.warning(f"no extraction for article {i}: '{article.title[:120]}...")
-        return ordered_results
-
-
-
-    async def get_eventtl(self, pages: list[ArticleInput]) -> list[list[EventTl]]:
-        if not pages:
-            return []
-
-        user_prompt = _build_tl_user_prompt(pages)
-        res = await self._call_llm(
-            sys_prompt=TL_SYSTEM_PROMPT,
-            user_prompt=user_prompt,
-            res_model=EventTlExtractionResponse,
-            schema_name="timeline_extraction_response",
-        )
-        if not res:
-            return [[] for _ in pages]
-
-        raw_results = _reidx_results(
-            raw_results=res.results,  # type: ignore[union-attr]
-            count=len(pages),
-            get_idx=lambda r: r.page_index,
-            get_val=lambda r: r.events,
-            duplicate_lbl="page_index",
-        )
-
-        ordered_results: list[list[EventTl]] = [events or [] for events in raw_results]
-        for i, page in enumerate(pages):
-            logger.info(
-                f"extracted {len(ordered_results[i])} timeline events from page {i}: '{page.title[:50]}...'."
-            )
         return ordered_results
 
 

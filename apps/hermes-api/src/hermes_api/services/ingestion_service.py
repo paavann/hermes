@@ -1,7 +1,8 @@
-import logging
 import asyncio
+import logging
 import uuid
 from datetime import datetime, timedelta, timezone
+
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -9,11 +10,10 @@ from hermes_api.core.config import settings
 from hermes_api.core.rate_limiter import TokenBucketRateLimiter
 from hermes_api.db.db import AsyncSessionLocal
 from hermes_api.db.models.source import Source
-from hermes_api.services.ai_service import AiService, ArticleInput, ARTICLE_BATCH_SIZE
+from hermes_api.services.ai_service import ARTICLE_BATCH_SIZE, AiService, ArticleInput
 from hermes_api.services.event_service import EventService
 from hermes_api.services.geocoding_service import GeocodingService
 from hermes_api.services.rss_service import ParsedArticle, fetch_feed
-
 
 logger = logging.getLogger(__name__)
 

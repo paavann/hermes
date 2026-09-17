@@ -1,16 +1,16 @@
 import logging
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
-from collections.abc import AsyncGenerator
 
 from hermes_api.api.v1.router import api_router
 from hermes_api.core.logger import setup_logging
 from hermes_api.db.db import AsyncSessionLocal, engine
 from hermes_api.scheduler.jobs import setup_scheduler, shutdown_scheduler
 from hermes_api.services.source_service import sync_sources_from_config
-
 
 setup_logging()
 logger = logging.getLogger(__name__)

@@ -1,14 +1,13 @@
 import logging
-import feedparser
-import httpx
 from datetime import datetime
 from typing import Optional
+
+import feedparser
+import httpx
 from feedparser.datetimes import _parse_date
 from pydantic import BaseModel, computed_field
 
 from hermes_api.core.config import settings
-
-
 
 logger = logging.getLogger(__name__)
 MAX_CONTENT_WORDS: int = 500

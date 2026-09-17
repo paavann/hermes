@@ -9,10 +9,9 @@ Create Date: 2026-09-12 16:36:00.000000
 from collections.abc import Sequence
 from typing import Union
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 from pgvector.sqlalchemy import Vector
-
 
 # revision identifiers, used by Alembic.
 revision: str = "d2e3f4a5b6c7"

@@ -1,10 +1,9 @@
-import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING, Optional
 
 from geoalchemy2 import Geometry
 from pgvector.sqlalchemy import Vector
-from sqlalchemy import Float, ForeignKey, Index, Integer, String, Text, text
+from sqlalchemy import Float, Index, Integer, String, Text, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from hermes_api.db.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
@@ -12,7 +11,6 @@ from hermes_api.db.enums import EventScope, EventStatus
 
 if TYPE_CHECKING:
     from hermes_api.db.models.article import Article
-    from hermes_api.db.models.event_timeline import EventTimeline
 
 
 class Event(Base, UUIDPrimaryKeyMixin, TimestampMixin):
@@ -49,16 +47,6 @@ class Event(Base, UUIDPrimaryKeyMixin, TimestampMixin):
 
     articles: Mapped[list["Article"]] = relationship(
         back_populates="event", cascade="all, delete-orphan"
-    )
-    timeline: Mapped[Optional["EventTimeline"]] = relationship(
-        back_populates="event",
-        uselist=False,
-        cascade="all, delete-orphan",
-    )
-
-    # For lineage events: the root story event this historical event belongs to.
-    lineage_target_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        ForeignKey("events.id", ondelete="CASCADE"), nullable=True
     )
 
     # Semantic Embedding for fast deduplication

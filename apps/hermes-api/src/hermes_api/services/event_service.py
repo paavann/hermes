@@ -2,6 +2,7 @@ import logging
 import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Optional
+
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -11,8 +12,6 @@ from hermes_api.db.models.article import Article
 from hermes_api.db.models.event import Event
 from hermes_api.services.ai_service import ExtractedEvent
 from hermes_api.services.geocoding_service import GeocodingResult
-
-
 
 logger = logging.getLogger(__name__)
 
