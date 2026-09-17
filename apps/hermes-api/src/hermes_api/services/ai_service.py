@@ -10,6 +10,8 @@ from hermes_api.core.constants import PREDEFINED_CATEGORIES
 
 logger = logging.getLogger(__name__)
 
+ARTICLE_BATCH_SIZE: int = 10
+
 T = TypeVar("T")
 V = TypeVar("V")
 

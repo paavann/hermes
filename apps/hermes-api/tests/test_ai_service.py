@@ -95,7 +95,7 @@ class TestExtractTl:
         self, mock_acompletion: AsyncMock, ai_service: AiService
     ) -> None:
         response_json = TimelineExtractionResponse(
-            topic_summary="Overarching historical arc.",
+            tl_summary="Overarching historical arc.",
             nodes=[
                 tlNodeExtraction(
                     date="2023-10-06",
@@ -124,7 +124,7 @@ class TestExtractTl:
         result = asyncio.run(ai_service.extract_tl("Timeline of X", "Prose text"))
 
         assert result is not None
-        assert result.topic_summary == "Overarching historical arc."
+        assert result.tl_summary == "Overarching historical arc."
         assert len(result.nodes) == 2
         assert len(result.edges) == 1
         assert result.edges[0].relationship == "triggered"
