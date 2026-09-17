@@ -1,10 +1,11 @@
 import uuid
 from datetime import datetime
 from typing import Optional
-
 from pydantic import BaseModel, ConfigDict
 
 from hermes_api.db.enums import EventStatus
+
+
 
 
 class ArticleResponse(BaseModel):
@@ -45,3 +46,26 @@ class MapEventResponse(BaseModel):
     trending_score: float
     article_count: int
     model_config = ConfigDict(from_attributes=True)
+
+
+class TlNodeResponse(BaseModel):
+    id: str
+    date: str
+    headline: str
+    summary: str
+    location_name: Optional[str]
+    latitude: Optional[float]
+    longitude: Optional[float]
+
+class TlEdgeResponse(BaseModel):
+    source_node_id: str
+    target_node_id: str
+    relationship: str
+
+class TlResponse(BaseModel):
+    satus: str
+    message: Optional[str] = None
+    nodes: list[TlNodeResponse] = []
+    edges: list[TlEdgeResponse] = []
+    tl_summary: str = ""
+    generated_at: Optional[datetime] = None
