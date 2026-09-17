@@ -130,7 +130,7 @@ class TlService:
         existing_tl = result.scalar_one_or_none()
         if existing_tl:
             if existing_tl.status == "READY" and not force_refresh:
-                return self._build_response(existing_tl)
+                return self._build_response_from_existingtl(existing_tl)
             elif existing_tl.status == "GENERATING":
                 return TlResponse(
                     status="generating",

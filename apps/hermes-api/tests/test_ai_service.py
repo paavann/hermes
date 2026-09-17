@@ -10,7 +10,7 @@ from hermes_api.services.ai_service import (
     ArticleInput,
     ExtractedEvent,
     ExtractionResponse,
-    TimelineExtractionResponse,
+    TlExtractionResponse,
     TlEdgeExtraction,
     tlNodeExtraction,
 )
@@ -94,18 +94,20 @@ class TestExtractTl:
     def test_successful_tl_extraction(
         self, mock_acompletion: AsyncMock, ai_service: AiService
     ) -> None:
-        response_json = TimelineExtractionResponse(
+        response_json = TlExtractionResponse(
             tl_summary="Overarching historical arc.",
             nodes=[
                 tlNodeExtraction(
                     date="2023-10-06",
                     headline="Event 0",
                     location_name="Location 0",
+                    summary="Summary 0",
                 ),
                 tlNodeExtraction(
                     date="2023-10-07",
                     headline="Event 1",
                     location_name="Location 1",
+                    summary="Summary 1",
                 ),
             ],
             edges=[
