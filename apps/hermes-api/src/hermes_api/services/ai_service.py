@@ -13,8 +13,6 @@ logger = logging.getLogger(__name__)
 T = TypeVar("T")
 V = TypeVar("V")
 
-
-
 SYSTEM_PROMPT = """You are a news analyst for Hermes, a    
   geospatial news aggregator.
   Your job is to extract structured metadata from news       
@@ -37,6 +35,27 @@ SYSTEM_PROMPT = """You are a news analyst for Hermes, a
   a custom category if none fit.
   5. For event matching, only match if the articles are about
   the EXACT same incident.
+"""
+
+TL_SYSTEM_PROMPT = """You are a geopolitical historian for 
+  Hermes, a geospatial news aggregator.
+    Your job is to extract a chronological timeline of sub-    
+  events from Wikipedia prose, and identify key causal         
+  relationships between them.
+
+    Rules:
+    1. Extract the major sub-events. Merge tightly related     
+  consecutive sentences into a single event.
+    2. For 'date', use YYYY-MM-DD if possible.
+    3. For 'location_name', identify where the event physically
+  happened. If purely political/conceptual without a place,    
+  omit it.
+    4. Provide a 'topic_summary' (1-2 paragraphs) summarizing  
+  the overarching historical arc of the timeline.
+    5. In 'edges', identify causal/thematic relationships      
+  between the extracted events (e.g. event 0 triggered event 2).
+       Use the 0-based array index of the events you just      
+  extracted for source_index and target_index.
 """
 
 
@@ -121,6 +140,71 @@ class ExtractionResponse(BaseModel):
 
 
 
+class tlNodeExtraction(BaseModel):
+    date: str = Field(
+        description="""
+            the date of the eventin YYYY-MM-DD if possible.
+        """
+    )
+
+    headline: str = Field(
+        description="""
+            A concise, neutral, factual headline. Max 100 chars.
+        """
+    )
+
+    location_name: Optional[str] = Field(
+        None,
+        description="""
+            The specific place name (City, Country).
+        """
+    )
+
+
+
+class TlEdgeExtraction(BaseModel):
+    source_index: int = Field(
+        description="""
+            The 0-based index of the cause event in the nodes array.
+        """
+    )
+
+    target_index: int = Field(
+        description="""
+            The 0-based index of the effect event in the nodes array.
+        """
+    )
+
+    relationship: str = Field(
+        description="""
+            A 1-2 word description of the relationship (e.g., 'triggered', 'retaliated').
+        """
+    )
+
+    
+    
+class TimelineExtractionResponse(BaseModel):
+    topic_summary: str = Field(
+        description="""
+            A 1-2 paragraph summary of the entire timeline.
+        """
+    )
+    
+    nodes: list[tlNodeExtraction] = Field(
+        description="""
+            The chronological list of events.
+        """
+    )
+    
+    edges: list[TlEdgeExtraction] = Field(
+        description="""
+            Causal relationships between the extracted nodes.
+        """
+    )
+
+
+
+
 
 
 
@@ -166,7 +250,6 @@ def _resolve_category_color(event: ExtractedEvent) -> ExtractedEvent:
         return event.model_copy(update={ "category_color": "#6B7280" })
     else:
         return event
-
 
 
 def _reidx_results(raw_results: Sequence[T], count: int, get_idx: Callable[[T], int], get_val: Callable[[T], V], duplicate_lbl: str) -> list[Optional[V]]:
@@ -276,3 +359,24 @@ class AiService:
         except Exception as e:
             logger.error(f"failed to generate embeddings: {str(e)}")
             return [None] * len(texts)
+
+
+
+    async def extract_tl(self, pg_title: str, prose: str) -> Optional[TimelineExtractionResponse]:
+        if not prose.strip():
+            return None
+
+        user_prompt = f"# Wikipedia page: {pg_title}\n\n{prose}"
+        res = await self._call_llm(
+            sys_prompt=TL_SYSTEM_PROMPT,
+            user_prompt=user_prompt,
+            res_model=TimelineExtractionResponse,
+            schema_name="timeline_extraction"
+        )
+        
+        if not res:
+            logger.warning(f"failed to extract timeline for {pg_title}.")
+            return None
+        else:
+            logger.info(f"timeline extracted successfully for {pg_title}.")
+            return res

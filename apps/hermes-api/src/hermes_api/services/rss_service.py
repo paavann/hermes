@@ -4,7 +4,6 @@ from typing import Optional
 
 import feedparser
 import httpx
-from feedparser.datetimes import _parse_date
 from pydantic import BaseModel, computed_field
 
 from hermes_api.core.config import settings

@@ -1,15 +1,12 @@
-from email.policy import default
-from sqlalchemy.orm import mapped_column
 import uuid
 from datetime import datetime
 from typing import Optional
-from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, UniqueConstraint, Index
-from sqlalchemy.orm import Mapped, mapped_column
+
+from sqlalchemy import DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.orm import Mapped, mapped_column
 
 from hermes_api.db.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
-
-
 
 
 class EventTl(Base, UUIDPrimaryKeyMixin, TimestampMixin):

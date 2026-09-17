@@ -1,11 +1,10 @@
 import uuid
 from datetime import datetime
 from typing import Optional
+
 from pydantic import BaseModel, ConfigDict
 
 from hermes_api.db.enums import EventStatus
-
-
 
 
 class ArticleResponse(BaseModel):

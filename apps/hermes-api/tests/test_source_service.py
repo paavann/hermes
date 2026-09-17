@@ -58,7 +58,6 @@ def _mock_session(
 
     async def mock_execute(stmt):
         result = MagicMock()
-        idx = call_counter["n"]
         call_counter["n"] += 1
 
         # The sync function calls execute() N times for slug lookups
@@ -108,18 +107,22 @@ def test_load_sources_config_not_a_list():
     """Should raise ValueError if the JSON is not an array."""
     import pytest
 
-    with patch.object(Path, "read_text", return_value='{"slug": "bbc"}'):
-        with pytest.raises(ValueError, match="JSON array"):
-            asyncio.run(_load_sources_config())
+    with (
+        patch.object(Path, "read_text", return_value='{"slug": "bbc"}'),
+        pytest.raises(ValueError, match="JSON array"),
+    ):
+        asyncio.run(_load_sources_config())
 
 
 def test_load_sources_config_file_not_found():
     """Should raise FileNotFoundError if the file is missing."""
     import pytest
 
-    with patch.object(Path, "read_text", side_effect=FileNotFoundError):
-        with pytest.raises(FileNotFoundError):
-            asyncio.run(_load_sources_config())
+    with (
+        patch.object(Path, "read_text", side_effect=FileNotFoundError),
+        pytest.raises(FileNotFoundError),
+    ):
+        asyncio.run(_load_sources_config())
 
 
 # --- Tests for sync_sources_from_config ---
