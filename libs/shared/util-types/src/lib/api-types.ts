@@ -37,26 +37,28 @@ export interface EventDetailResponse extends EventResponse {
   articles: ArticleResponse[];
 }
 
-export interface LineageEdgeResponse {
-  source_id: string;
-  target_id: string;
-  relationship_type: string;
-}
 
-export interface LineageNodeResponse {
+
+export interface TlNodeResponse {
   id: string;
-  ai_headline: string;
-  category: string;
-  category_color: string;
+  date: string;
+  headline: string;
+  summary: string;
   location_name: string | null;
   latitude: number | null;
   longitude: number | null;
-  trending_score: number;
-  article_count: number;
-  first_reported_at: string;
 }
 
-export interface LineageGraphResponse {
-  nodes: LineageNodeResponse[];
-  edges: LineageEdgeResponse[];
+export interface TlEdgeResponse {
+  source_id: string;
+  target_id: string;
+  relationship: string;
+}
+
+export interface TlResponse {
+  status: 'READY' | 'GENERATING' | 'no_content';           
+  nodes: TlNodeResponse[];
+  edges: TlEdgeResponse[];
+  tl_summary: string | null;
+  generated_at: string | null;
 }
