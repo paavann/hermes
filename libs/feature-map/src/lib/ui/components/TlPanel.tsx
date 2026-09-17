@@ -30,8 +30,8 @@ export function TlPanel({ map }: { map: mapboxgl.Map | null }) {
 
         const edgesFeatures: Feature<LineString>[] = [];
         tlData.edges.forEach((edge) => {
-            const sourceNode = tlData.nodes.find((n) => n.id === edge.source_id);
-            const targetNode = tlData.nodes.find((n) => n.id === edge.target_id);
+            const sourceNode = tlData.nodes.find((n) => n.id === edge.source_node_id);
+            const targetNode = tlData.nodes.find((n) => n.id === edge.target_node_id);
             if(sourceNode?.longitude && sourceNode?.latitude && targetNode?.longitude && targetNode?.latitude) {
                 edgesFeatures.push({
                     type: 'Feature',

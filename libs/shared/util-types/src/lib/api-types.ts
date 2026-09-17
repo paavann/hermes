@@ -50,8 +50,8 @@ export interface TlNodeResponse {
 }
 
 export interface TlEdgeResponse {
-  source_id: string;
-  target_id: string;
+  source_node_id: string;
+  target_node_id: string;
   relationship: string;
 }
 

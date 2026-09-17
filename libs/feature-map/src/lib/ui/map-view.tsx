@@ -4,7 +4,7 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 import { useMapStore } from '../store/store';
 import { useMapDataSync } from '../hooks/datasync';
 import { EventPopup } from './components/EventPopup';
-import { LineagePanel } from './components/LineagePanel';
+import { TlPanel } from './components/TlPanel';
 import type { FeatureCollection } from 'geojson';
 import type { MapEventResponse } from '@hermes/util-types';
 import { useMapConfig } from '../config-context';
@@ -54,7 +54,7 @@ export function MapView() {
   const { data: events, isFetching } = useMapDataSync();
   const setSelectedId = useMapStore((s) => s.setSelectedEventId);
 
-  const isLineageMode = useMapStore((s) => s.isLineageMode);
+  const isTimelineMode = useMapStore((s) => s.isTlMode);
 
   useEffect(() => {
     if (!mapContainer.current || map.current) return;
@@ -224,7 +224,7 @@ export function MapView() {
   // Toggle base layer visibility based on mode
   useEffect(() => {
     if (!map.current || !map.current.isStyleLoaded()) return;
-    const opacity = isLineageMode ? 0.1 : 1.0;
+    const opacity = isTimelineMode ? 0.1 : 1.0;
 
     [
       'hermes-clusters',
@@ -240,15 +240,15 @@ export function MapView() {
         }
       }
     });
-  }, [isLineageMode]);
+  }, [isTimelineMode]);
 
   return (
     <>
       <div ref={mapContainer} className="fixed inset-0 w-screen h-screen z-0" />
-      {isMapReady && !isLineageMode && <EventPopup map={map.current} />}
-      {isMapReady && isLineageMode && <LineagePanel map={map.current} />}
+      {isMapReady && !isTimelineMode && <EventPopup map={map.current} />}
+      {isMapReady && isTimelineMode && <TlPanel map={map.current} />}
 
-      {isFetching && !isLineageMode && (
+      {isFetching && !isTimelineMode && (
         <div className="fixed top-4 right-4 bg-hud-bg border border-hud-border text-neon-blue px-4 py-1.5 text-xs font-mono tracking-[0.15em] z-10 backdrop-blur-md uppercase shadow-[0_0_15px_rgba(59,130,246,0.3)] animate-pulse">
           SCANNING...
         </div>

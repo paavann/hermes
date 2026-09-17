@@ -211,6 +211,16 @@ class TlExtractionResponse(BaseModel):
     )
 
 
+class TimelineSearchQuery(BaseModel):
+    is_timeline_worthy: bool = Field(
+        description="True if this event is part of a major, long-running geopolitical arc (e.g. wars, major diplomatic relations) that would have dedicated Wikipedia coverage. False if it is a localized, minor, or isolated incident."
+    )
+    wikipedia_search_query: Optional[str] = Field(
+        default=None,
+        description="If timeline_worthy is true, provide the most relevant, broad Wikipedia search query to find the overarching historical context (e.g. 'Iran-Saudi Arabia relations')."
+    )
+
+
 
 
 
@@ -388,3 +398,18 @@ class AiService:
         else:
             logger.info(f"timeline extracted successfully for {pg_title}.")
             return res
+
+    async def analyze_timeline_context(self, headline: str) -> Optional[TimelineSearchQuery]:
+        sys_prompt = """You are a geopolitical researcher. Given a news headline, determine if it belongs to a major, long-running historical arc that would have dedicated Wikipedia coverage. If it does, provide the best, broad Wikipedia search query to find that overarching context."""
+        
+        user_prompt = f"Headline: {headline}"
+        
+        res = await self._call_llm(
+            sys_prompt=sys_prompt,
+            user_prompt=user_prompt,
+            res_model=TimelineSearchQuery,
+            schema_name="timeline_search_query"
+        )
+        if isinstance(res, TimelineSearchQuery):
+            return res
+        return None

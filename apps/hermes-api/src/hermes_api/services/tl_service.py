@@ -13,7 +13,7 @@ from hermes_api.services.geocoding_service import GeocodingService
 from hermes_api.services.wikipedia_service import (
     enumerate_timeline_pages,
     fetch_page_extracts,
-    search_timeline_titles,
+    search_wikipedia,
 )
 
 logger = logging.getLogger(__name__)
@@ -33,7 +33,13 @@ class TlService:
 
 
     async def _exec_gen(self, event: Event, existing_tl: EventTl) -> TlResponse:
-        titles = await search_timeline_titles(event.ai_headline)
+        search_context = await self._ai.analyze_timeline_context(event.ai_headline)
+        if not search_context or not search_context.is_timeline_worthy or not search_context.wikipedia_search_query:
+            await self._session.delete(existing_tl)
+            await self._session.commit()
+            return TlResponse(status="no_content", message="Event is not part of a major historical timeline.")
+
+        titles = await search_wikipedia(search_context.wikipedia_search_query)
         if not titles:
             await self._session.delete(existing_tl)
             await self._session.commit()

@@ -157,17 +157,15 @@ export function EventPopup({ map }: { map: mapboxgl.Map | null }) {
               </div>
 
               {/* Lineage Analyze Button */}
-              {event.has_lineage && (
-                <button
-                  onClick={() => {
-                    useMapStore.getState().setLineageMode(true, event.id);
-                    setSelectedEventId(null);
-                  }}
-                  className="w-full py-2 bg-neon-blue/20 hover:bg-neon-blue/40 border border-neon-blue text-neon-blue text-xs font-bold tracking-widest uppercase transition-colors"
-                >
-                  [ ANALYZE TIMELINE ]
-                </button>
-              )}
+              <button
+                onClick={() => {
+                  useMapStore.getState().setTlMode(true, event.id);
+                  setSelectedEventId(null);
+                }}
+                className="w-full py-2 bg-neon-blue/20 hover:bg-neon-blue/40 border border-neon-blue text-neon-blue text-xs font-bold tracking-widest uppercase transition-colors"
+              >
+                [ ANALYZE TIMELINE ]
+              </button>
 
               {/* Verified Sources */}
               <div>

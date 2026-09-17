@@ -16,7 +16,7 @@ export function useTl(eventId: string | null) {
             if(!eventId) {
                 return null
             } else {
-                const url = `${config.baseUrl}/api/${config.apiVer}/events/${eventId}/tl`
+                const url = `${config.baseUrl}/api/${config.apiVer}/events/tl/${eventId}/tl`
                 const res = await axios.post<TlResponse>(url)
                 return res.data
             }
@@ -37,7 +37,7 @@ export function useTl(eventId: string | null) {
             if(!eventId) {
                 return null
             } else {
-                const url = `${config.baseUrl}/api/${config.apiVer}/events/${eventId}/tl?force_refresh=true`
+                const url = `${config.baseUrl}/api/${config.apiVer}/events/tl/${eventId}/tl?force_refresh=true`
                 const res = await axios.post<TlResponse>(url)
                 return res.data
             }

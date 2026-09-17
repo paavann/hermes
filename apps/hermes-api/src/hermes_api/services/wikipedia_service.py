@@ -97,6 +97,46 @@ async def search_timeline_titles(
         logger.exception(f"failed to parse wikipedia search response for '{query}'.")
         return []
 
+async def search_wikipedia(
+    query: str,
+    *,
+    limit: int = 5,
+) -> list[str]:
+    """Search Wikipedia full text for the best matching pages.
+    """
+    params = {
+        "action": "query",
+        "list": "search",
+        "srsearch": query,
+        "srlimit": min(limit, _MAX_TITLES_PER_REQUEST),
+        "srnamespace": "0",  
+        "format": "json",
+        "formatversion": "2",
+    }
+
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                MEDIAWIKI_API_URL,
+                params=params,
+                headers={"User-Agent": _USER_AGENT},
+                timeout=_REQUEST_TIMEOUT,
+            )
+            response.raise_for_status()
+
+        data = response.json()
+        results: list[dict] = data.get("query", {}).get("search", [])
+        titles = [r["title"] for r in results if "title" in r]
+        logger.info(f"wikipedia general search '{query}' returned {len(titles)} title(s).")
+        return titles
+
+    except httpx.HTTPError:
+        logger.exception(f"http error while searching wikipedia for '{query}'.")
+        return []
+    except (KeyError, ValueError):
+        logger.exception(f"failed to parse wikipedia search response for '{query}'.")
+        return []
+
 
 async def fetch_page_extracts(
     titles: list[str],
