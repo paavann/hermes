@@ -70,11 +70,10 @@ class TlService:
                             id=node_id,
                             date=r_node.date,
                             headline=r_node.headline,
-                            summary=r_node.tl_summary,
-                            location=r_node.location_name,
+                            summary=r_node.summary,
+                            location_name=r_node.location_name,
                             latitude=lat,
-                            longitude=lng,
-                            wikipedia_url=r_node.wikipedia_url
+                            longitude=lng
                         )
                     )
             
@@ -91,17 +90,22 @@ class TlService:
                             )
                         )
             
-            all_nodes.sort(key=lambda n: n.date)
-            existing_tl.nodes = [n.model_dump() for n in all_nodes]
-            existing_tl.edges = [e.model_dump() for e in all_edges]
-            existing_tl.topic_summary = "\n\n".join(tl_summaries)
-            existing_tl.wikipedia_title = main_title          
-            existing_tl.page_count = len(page_extracts)       
-            existing_tl.node_count = len(all_nodes)    
-            existing_tl.status = "READY"
-            existing_tl.updated_at = datetime.now(timezone.utc)
-            await self._session.commit()
-            return self._build_response_from_existingtl(existing_tl)
+            if not all_nodes:
+                existing_tl.status = "FAILED"
+                await self._session.commit()
+                return TlResponse(status="failed", message="AI extraction failed or yielded no results.")
+            else:
+                all_nodes.sort(key=lambda n: n.date)
+                existing_tl.nodes = [n.model_dump() for n in all_nodes]
+                existing_tl.edges = [e.model_dump() for e in all_edges]
+                existing_tl.tl_summary = "\n\n".join(tl_summaries)
+                existing_tl.wikipedia_title = main_title          
+                existing_tl.page_count = len(page_extracts)       
+                existing_tl.node_count = len(all_nodes)    
+                existing_tl.status = "READY"
+                existing_tl.generated_at = datetime.now(timezone.utc)
+                await self._session.commit()
+                return self._build_response_from_existingtl(existing_tl)
             
 
 
@@ -110,7 +114,7 @@ class TlService:
             status=tl.status,
             nodes=[TlNodeResponse(**n) for n in tl.nodes],
             edges=[TlEdgeResponse(**e) for e in tl.edges],
-            tl_summary=tl.topic_summary,
+            tl_summary=tl.tl_summary,
             generated_at=tl.generated_at
         )
 
@@ -141,10 +145,10 @@ class TlService:
         await self._session.commit()
         
         try:
-            return await self._excute_generation(event, existing_tl)
+            return await self._exec_gen(event, existing_tl)
         except Exception as e:
             logger.error(f"Failed to generate timeline for event {event_id}: {e}")
             existing_tl.status = "FAILED"
             await self._session.commit()
-            return TlResponse(satus="failed", message=f"Error in generating timeline: {str(e)}")
+            return TlResponse(status="FAILED", message=f"Error in generating timeline: {str(e)}")
         

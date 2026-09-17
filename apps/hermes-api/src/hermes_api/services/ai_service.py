@@ -162,6 +162,12 @@ class tlNodeExtraction(BaseModel):
         """
     )
 
+    summary: str = Field(
+        description="""
+            A 2-3 sentence summary of the event.
+        """
+    )
+
 
 
 class TlEdgeExtraction(BaseModel):
@@ -185,7 +191,7 @@ class TlEdgeExtraction(BaseModel):
 
     
     
-class TimelineExtractionResponse(BaseModel):
+class TlExtractionResponse(BaseModel):
     tl_summary: str = Field(
         description="""
             A 1-2 paragraph summary of the entire timeline.
@@ -364,7 +370,7 @@ class AiService:
 
 
 
-    async def extract_tl(self, pg_title: str, prose: str) -> Optional[TimelineExtractionResponse]:
+    async def extract_tl(self, pg_title: str, prose: str) -> Optional[TlExtractionResponse]:
         if not prose.strip():
             return None
 
@@ -372,7 +378,7 @@ class AiService:
         res = await self._call_llm(
             sys_prompt=TL_SYSTEM_PROMPT,
             user_prompt=user_prompt,
-            res_model=TimelineExtractionResponse,
+            res_model=TlExtractionResponse,
             schema_name="timeline_extraction"
         )
         

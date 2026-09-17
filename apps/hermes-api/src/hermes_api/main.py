@@ -32,8 +32,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     except Exception:
         logger.exception("failed to sync sources from config.")
 
-    setup_scheduler()
+    #setup_scheduler()
 
+    logger.info("hermes API running on http://localhost:8000.")
     yield
 
     logger.info("shutting down server...")

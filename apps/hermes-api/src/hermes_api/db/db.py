@@ -4,7 +4,7 @@ from hermes_api.core.config import settings
 
 engine = create_async_engine(
     settings.db_url,
-    echo=settings.is_dev,
+    echo=False,
     pool_size=5,
     max_overflow=10,
     pool_pre_ping=True,

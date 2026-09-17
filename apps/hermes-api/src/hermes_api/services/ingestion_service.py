@@ -82,7 +82,7 @@ class IngestionService:
 
                 batch_texts = [f"{a.title}\n{a.text_for_ai}" for a in batch]
                 await self._embed_rate_limiter.acquire()
-                embeddings = await self._ai.generate_embeddings(batch_texts)
+                embeddings = await self._ai.gen_embeddings(batch_texts)
 
                 async with AsyncSessionLocal() as session:
                     event_service = EventService(session)

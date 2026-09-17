@@ -14,4 +14,4 @@ RUN uv sync --locked
 
 EXPOSE 8000
 
-CMD ["uv", "run", "fastapi", "run", "src/hermes_api/main.py", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uv", "run", "uvicorn", "hermes_api.main:app", "--host", "[IP_ADDRESS]", "--port", "8000", "--log-level", "warning"]

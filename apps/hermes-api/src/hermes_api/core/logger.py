@@ -10,3 +10,5 @@ def setup_logging():
             logging.StreamHandler(sys.stdout),
         ],
     )
+    logging.getLogger("sqlalchemy.engine").setLevel(logging.WARNING)
+    logging.getLogger("httpx").setLevel(logging.WARNING)

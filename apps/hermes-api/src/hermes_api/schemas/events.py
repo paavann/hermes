@@ -62,7 +62,7 @@ class TlEdgeResponse(BaseModel):
     relationship: str
 
 class TlResponse(BaseModel):
-    satus: str
+    status: str
     message: Optional[str] = None
     nodes: list[TlNodeResponse] = []
     edges: list[TlEdgeResponse] = []
