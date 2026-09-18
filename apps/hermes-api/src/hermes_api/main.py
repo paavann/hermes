@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 
 from hermes_api.api.v1.router import api_router
+from hermes_api.core.errors import register_err_handlers
 from hermes_api.core.logger import setup_logging
 from hermes_api.db.db import AsyncSessionLocal, engine
 from hermes_api.scheduler.jobs import setup_scheduler, shutdown_scheduler
@@ -43,6 +44,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
 
 app = FastAPI(title="hermes api", lifespan=lifespan, root_path="/api/v1")
+register_err_handlers(app)
 
 app.add_middleware(
     CORSMiddleware,

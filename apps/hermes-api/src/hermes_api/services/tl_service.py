@@ -1,3 +1,5 @@
+from hermes_api.core.exceptions import TlGenErr
+from hermes_api.core.exceptions import EventNotFoundException
 import logging
 import uuid
 from datetime import datetime, timezone
@@ -7,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from hermes_api.db.models.event import Event
 from hermes_api.db.models.event_tl import EventTl
+from hermes_api.db.enums import EventTlStatus
 from hermes_api.schemas.events import TlEdgeResponse, TlNodeResponse, TlResponse
 from hermes_api.services.ai_service import AiService
 from hermes_api.services.geocoding_service import GeocodingService
@@ -129,32 +132,31 @@ class TlService:
     async def gen_tl(self, event_id: uuid.UUID, force_refresh: bool = False) -> TlResponse:
         event = await self._session.get(Event, event_id)
         if not event:
-            raise ValueError("event not found.")
+            raise EventNotFoundException(event_id)
 
         stmt = select(EventTl).where(EventTl.event_id == event_id)
         result = await self._session.execute(stmt)
         existing_tl = result.scalar_one_or_none()
         if existing_tl:
-            if existing_tl.status == "READY" and not force_refresh:
+            if existing_tl.status == EventTlStatus.READY and not force_refresh:
                 return self._build_response_from_existingtl(existing_tl)
-            elif existing_tl.status == "GENERATING":
+            elif existing_tl.status == EventTlStatus.GENERATING:
                 return TlResponse(
-                    status="generating",
+                    status=EventTlStatus.GENERATING,
                     message="Timeline is currently being generated. Please wait..."
                 )
-            
-            existing_tl.status = "GENERATING"
+            else:
+                existing_tl.status = EventTlStatus.GENERATING
         else:
-            existing_tl = EventTl(event_id=event_id, status="GENERATING")
+            existing_tl = EventTl(event_id=event_id, status=EventTlStatus.GENERATING)
             self._session.add(existing_tl)
 
         await self._session.commit()
-        
         try:
             return await self._exec_gen(event, existing_tl)
         except Exception as e:
-            logger.error(f"Failed to generate timeline for event {event_id}: {e}")
-            existing_tl.status = "FAILED"
+            logger.exception("failed to generate timeline for event %s.", event_id)
+            existing_tl.status = EventTlStatus.FAILED
             await self._session.commit()
-            return TlResponse(status="FAILED", message=f"Error in generating timeline: {str(e)}")
+            raise TlGenErr(event_id) from e
         

@@ -4,7 +4,7 @@ from typing import Optional
 
 from pydantic import BaseModel, ConfigDict
 
-from hermes_api.db.enums import EventStatus
+from hermes_api.db.enums import EventStatus, EventTlStatus
 
 
 class ArticleResponse(BaseModel):
@@ -62,7 +62,7 @@ class TlEdgeResponse(BaseModel):
     relationship: str
 
 class TlResponse(BaseModel):
-    status: str
+    status: EventTlStatus
     message: Optional[str] = None
     nodes: list[TlNodeResponse] = []
     edges: list[TlEdgeResponse] = []

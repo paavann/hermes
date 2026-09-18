@@ -399,6 +399,8 @@ class AiService:
             logger.info(f"timeline extracted successfully for {pg_title}.")
             return res
 
+
+
     async def analyze_timeline_context(self, headline: str) -> Optional[TimelineSearchQuery]:
         sys_prompt = """You are a geopolitical researcher. Given a news headline, determine if it belongs to a major, long-running historical arc that would have dedicated Wikipedia coverage. If it does, provide the best, broad Wikipedia search query to find that overarching context."""
         

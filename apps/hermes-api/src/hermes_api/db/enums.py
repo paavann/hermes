@@ -26,3 +26,9 @@ class CredibilityTier(str, enum.Enum):
     TIER_2 = "TIER_2"
     TIER_3 = "TIER_3"
     TIER_4 = "TIER_4"
+
+
+class EventTlStatus(str, enum.Enum):
+    READY = "READY"
+    GENERATING = "GENERATING"
+    FAILED = "FAILED"

@@ -7,13 +7,13 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from hermes_api.db.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
-
+from hermes_api.db.enums import EventTlStatus
 
 class EventTl(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     __tablename__ = "event_timelines"
 
     event_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("events.id", ondelete="CASCADE"), unique=True, index=True)
-    status: Mapped[str] = mapped_column(String(20), default="GENERATING", server_default="GENERATING")
+    status: Mapped[EventTlStatus] = mapped_column(default=EventTlStatus.GENERATING, server_default="GENERATING")
     nodes: Mapped[list[dict]] = mapped_column(JSONB, default=list, server_default="[]")
     edges: Mapped[list[dict]] = mapped_column(JSONB, default=list, server_default="[]")
     tl_summary: Mapped[str] = mapped_column(Text, default="", server_default="")
