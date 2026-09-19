@@ -10,8 +10,8 @@ from hermes_api.services.ai_service import (
     ArticleInput,
     ExtractedEvent,
     ExtractionResponse,
-    TlExtractionResponse,
     TlEdgeExtraction,
+    TlExtractionResponse,
     tlNodeExtraction,
 )
 

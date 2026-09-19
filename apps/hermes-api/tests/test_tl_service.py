@@ -1,12 +1,12 @@
-import pytest
-import uuid
 import asyncio
+import uuid
 from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
+
 from hermes_api.db.models.event import Event
 from hermes_api.db.models.event_tl import EventTl
-from hermes_api.schemas.events import TlResponse
 from hermes_api.services.tl_service import TlService
 
 

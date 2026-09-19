@@ -15,13 +15,13 @@ scheduler = AsyncIOScheduler()
 
 async def run_ingestion_job(force: bool = False, is_startup: bool = False) -> None:
     job_name = "startup ingestion cycle" if is_startup else "ingestion job"
-    logger.info(f"starting {job_name}...")
+    logger.info("starting %s...", job_name)
     try:
         service = IngestionService()
         stats = await service.ingest_all_sources(force=force)
-        logger.info(f"{job_name} complete: {stats}.")
+        logger.info("%s complete: %s.", job_name, stats)
     except Exception:
-        logger.exception(f"{job_name} failed.")
+        logger.exception("%s failed.", job_name)
 
 
 async def run_event_lifecycle_job() -> None:
@@ -30,7 +30,7 @@ async def run_event_lifecycle_job() -> None:
         async with AsyncSessionLocal() as session:
             event_service = EventService(session)
             stats = await event_service.run_lifecycle_transitions()
-            logger.info(f"event lifecycle complete: {stats}.")
+            logger.info("event lifecycle complete: %s.", stats)
     except Exception:
         logger.exception("event lifecycle job failed.")
 
@@ -61,7 +61,8 @@ def setup_scheduler() -> None:
 
     scheduler.start()
     logger.info(
-        f"scheduler started. the ingestion will now run at every {settings.INGESTION_HEARTBEAT_MINUTES} minutes."
+        "scheduler started. ingestion will run every %s minutes.",
+        settings.INGESTION_HEARTBEAT_MINUTES,
     )
 
     # this is to ensure the ingestion runs on app startup regardless of the cron job interval.

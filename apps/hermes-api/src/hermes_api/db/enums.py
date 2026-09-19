@@ -32,3 +32,4 @@ class EventTlStatus(str, enum.Enum):
     READY = "READY"
     GENERATING = "GENERATING"
     FAILED = "FAILED"
+    NO_CONTENT = "NO_CONTENT"

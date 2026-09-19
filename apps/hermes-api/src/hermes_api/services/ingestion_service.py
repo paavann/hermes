@@ -46,11 +46,11 @@ class IngestionService:
         source_id = source["id"]
         source_name = source["name"]
 
-        logger.info(f"ingesting source: {source_name} - {feed_url}.")
+        logger.info("ingesting source: %s - %s.", source_name, feed_url)
         articles = await fetch_feed(feed_url)
         stats["articles_fetched"] = len(articles)
         if not articles:
-            logger.info(f"no articles found in {source_name}.")
+            logger.info("no articles found in %s.", source_name)
             return stats
         else:
             articles_to_process: list[ParsedArticle] = []
@@ -64,7 +64,9 @@ class IngestionService:
 
         if not articles_to_process:
             logger.info(
-                f"source '{source_name}': all {len(articles)} articles already processed."
+                "source '%s': all %s articles already processed.",
+                source_name,
+                len(articles),
             )
             return stats
         else:
@@ -141,14 +143,15 @@ class IngestionService:
 
                             stats["articles_processed"] += 1
                     except Exception:
-                        logger.exception(f"failed to process article: {article.title}.")
+                        logger.exception("failed to process article: %s.", article.title)
                         stats["articles_failed"] += 1
 
         logger.info(
-            f"finished source '{source_name}': "
-            f"{stats['articles_processed']} processed, "
-            f"{stats['articles_skipped']} skipped (duplicates), "
-            f"{stats['articles_failed']} failed"
+            "finished source '%s': %s processed, %s skipped (duplicates), %s failed.",
+            source_name,
+            stats["articles_processed"],
+            stats["articles_skipped"],
+            stats["articles_failed"],
         )
         return stats
 
@@ -226,7 +229,7 @@ class IngestionService:
             return stats
 
 
-        logger.info(f"starting ingestion for {len(sources)} sources.")
+        logger.info("starting ingestion for %s sources.", len(sources))
         semaphore = asyncio.Semaphore(5)
         async def _process_source(source: dict) -> dict[str, int]:
             async with semaphore:
@@ -241,7 +244,7 @@ class IngestionService:
                         await db_session.commit()
                     return s_stats
                 except Exception:
-                    logger.exception(f"unhandled error ingesting source {source['name']}.")
+                    logger.exception("unhandled error ingesting source %s.", source["name"])
                     return { k: 0 for k in stats if k != "sources_processed" }
 
 
@@ -255,9 +258,10 @@ class IngestionService:
 
 
         logger.info(
-            f"ingestion complete: {stats['sources_processed']} sources, "
-            f"{stats['articles_processed']} articles processed, "
-            f"{stats['events_created']} new events, "
-            f"{stats['events_matched']} matched to existing"
+            "ingestion complete: %s sources, %s articles processed, %s new events, %s matched to existing.",
+            stats["sources_processed"],
+            stats["articles_processed"],
+            stats["events_created"],
+            stats["events_matched"],
         )
         return stats

@@ -1,10 +1,10 @@
-from hermes_api.core.exceptions import WikiSearchException
-import re
 import logging
-import httpx
+import re
 from typing import Optional
 
+import httpx
 
+from hermes_api.core.exceptions import WikiSearchException
 
 logger = logging.getLogger(__name__)
 
@@ -16,33 +16,55 @@ _USER_AGENT = (
 _MAX_TITLES_PER_REQUEST = 50
 _REQUEST_TIMEOUT = 15.0
 
+_MONTHS = {
+    "january": 1,
+    "february": 2,
+    "march": 3,
+    "april": 4,
+    "may": 5,
+    "june": 6,
+    "july": 7,
+    "august": 8,
+    "september": 9,
+    "october": 10,
+    "november": 11,
+    "december": 12,
+}
 
 
+
+
+
+
+
+def _sort_timeline_titles(titles: list[str]) -> list[str]:
+    def sort_key(title: str) -> tuple:
+        year_match = re.search(r"\b(19|20)\d{2}\b", title)
+        year = int(year_match.group(0)) if year_match else 0
+
+        month = 0
+        for m_name, m_val in _MONTHS.items():
+            if m_name in title.lower():
+                month = m_val
+                break
+
+        phase_match = re.search(r"\bphase\s+(\d+)\b", title.lower())
+        phase = int(phase_match.group(1)) if phase_match else 0
+
+        return (year, month, phase, title)
+
+    return sorted(titles, key=sort_key)
 
 
 
 
 async def search_timeline_titles(query: str, *, limit: int = 50) -> list[str]:
-    """Search Wikipedia for pages whose title contains *query*.
-
-    Uses the ``list=search`` action with ``srsearch=intitle:"..."`` to find
-    pages whose title matches the supplied term.  Useful for discovering all
-    date-range sub-articles that exist for a long-running story's timeline
-    (e.g. "Timeline of the Israel–Gaza conflict").
-
-    Args:
-        query: The search string to match against page titles.
-        limit: Maximum number of results to return (1–50, capped by API).
-
-    Returns:
-        An ordered list of page title strings, or an empty list on failure.
-    """
     params = {
         "action": "query",
         "list": "search",
         "srsearch": f'intitle:"{query}"',
         "srlimit": min(limit, _MAX_TITLES_PER_REQUEST),
-        "srnamespace": "0",  # main (article) namespace only
+        "srnamespace": "0",
         "format": "json",
         "formatversion": "2",
     }
@@ -60,16 +82,14 @@ async def search_timeline_titles(query: str, *, limit: int = 50) -> list[str]:
         data = response.json()
         results: list[dict] = data.get("query", {}).get("search", [])
         titles = [r["title"] for r in results if "title" in r]
-        logger.info(f"wikipedia search '{query}' returned {len(titles)} title(s).")
+        logger.info("wikipedia search '%s' returned %s title(s).", query, len(titles))
         return titles
-
     except httpx.HTTPError:
-        logger.exception(f"http error while searching wikipedia for '{query}'.")
+        logger.exception("http error while searching wikipedia for '%s'.", query)
         return []
     except (KeyError, ValueError):
-        logger.exception(f"failed to parse wikipedia search response for '{query}'.")
+        logger.exception("failed to parse wikipedia search response for '%s'.", query)
         return []
-
 
 
 
@@ -98,14 +118,15 @@ async def search_wikipedia(query: str, *, limit: int = 5) -> list[str]:
         data = response.json()
         results: list[dict] = data.get("query", {}).get("search", [])
         titles = [r["title"] for r in results if "title" in r]
-        logger.info(f"wikipedia general search '{query}' returned {len(titles)} title(s).")
+        logger.info("wikipedia general search '%s' returned %s title(s).", query, len(titles))
         return titles
     except httpx.HTTPError as e:
-        logger.exception(f"http error while searching wikipedia for '{query}'.")
+        logger.exception("http error while searching wikipedia for '%s'.", query)
         raise WikiSearchException(query=query) from e
     except (KeyError, ValueError) as e:
-        logger.exception(f"failed to parse wikipedia search response for '{query}'.")
+        logger.exception("failed to parse wikipedia search response for '%s'.", query)
         raise WikiSearchException(query=query) from e
+
 
 
 
@@ -140,17 +161,18 @@ async def _fetch_extracts_batch(titles: list[str]) -> dict[str, Optional[str]]:
             returned_title: str = page.get("title", "")
             extract: str = page.get("extract", "").strip()
             if not extract:
-                logger.debug(f"wikipedia page '{returned_title}' returned an empty extract.")
+                logger.debug("wikipedia page '%s' returned an empty extract.", returned_title)
                 continue
             lookup = returned_title.lower().replace("_", " ")
             caller_key = normalised.get(lookup, returned_title)
             out[caller_key] = extract
     except httpx.HTTPError:
-        logger.exception(f"http error fetching extracts for batch: {titles[:3]}...")
+        logger.exception("http error fetching extracts for batch: %s...", titles[:3])
     except (KeyError, ValueError):
-        logger.exception(f"failed to parse extracts response for batch: {titles[:3]}...")
+        logger.exception("failed to parse extracts response for batch: %s...", titles[:3])
 
     return out
+
 
 
 
@@ -176,8 +198,9 @@ async def fetch_page_extracts(titles: list[str]) -> dict[str, Optional[str]]:
         results.update(batch_result)
 
     non_null = sum(1 for v in results.values() if v is not None)
-    logger.info(f"fetched extracts for {non_null}/{len(unique_titles)} wikipedia page(s).")
+    logger.info("fetched extracts for %s/%s wikipedia page(s).", non_null, len(unique_titles))
     return results
+
 
 
 
@@ -218,44 +241,3 @@ async def enumerate_tl_pages(main_title: str) -> list[str]:
                 break
 
     return _sort_timeline_titles(sub_pages) if is_index else [main_title]
-
-
-# ---------------------------------------------------------------------------
-# Internal helpers
-# ---------------------------------------------------------------------------
-
-_MONTHS = {
-    "january": 1,
-    "february": 2,
-    "march": 3,
-    "april": 4,
-    "may": 5,
-    "june": 6,
-    "july": 7,
-    "august": 8,
-    "september": 9,
-    "october": 10,
-    "november": 11,
-    "december": 12,
-}
-
-
-def _sort_timeline_titles(titles: list[str]) -> list[str]:
-    """Sort sub-page titles chronologically based on embedded years/months."""
-
-    def sort_key(title: str) -> tuple:
-        year_match = re.search(r"\b(19|20)\d{2}\b", title)
-        year = int(year_match.group(0)) if year_match else 0
-
-        month = 0
-        for m_name, m_val in _MONTHS.items():
-            if m_name in title.lower():
-                month = m_val
-                break
-
-        phase_match = re.search(r"\bphase\s+(\d+)\b", title.lower())
-        phase = int(phase_match.group(1)) if phase_match else 0
-
-        return (year, month, phase, title)
-
-    return sorted(titles, key=sort_key)

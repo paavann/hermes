@@ -67,12 +67,12 @@ async def sync_sources_from_config(session: AsyncSession) -> dict[str, int]:
         config_sources = await _load_sources_config()
     except FileNotFoundError:
         logger.error(
-            f"sources config file not found at {SOURCES_CONFIG_PATH}. "
-            "skipping source sync."
+            "sources config file not found at %s. skipping source sync.",
+            SOURCES_CONFIG_PATH,
         )
         return stats
     except (json.JSONDecodeError, ValueError) as exc:
-        logger.error(f"failed to parse sources config: {exc}. skipping source sync.")
+        logger.error("failed to parse sources config: %s. skipping source sync.", exc)
         return stats
 
     config_slugs: set[str] = set()
@@ -80,7 +80,7 @@ async def sync_sources_from_config(session: AsyncSession) -> dict[str, int]:
     for entry in config_sources:
         slug = entry.get("slug")
         if not slug:
-            logger.warning(f"skipping source entry with missing slug: {entry}")
+            logger.warning("skipping source entry with missing slug: %s.", entry)
             continue
 
         config_slugs.add(slug)
@@ -103,7 +103,7 @@ async def sync_sources_from_config(session: AsyncSession) -> dict[str, int]:
 
             if changed:
                 stats["updated"] += 1
-                logger.info(f"updated source: {slug}")
+                logger.info("updated source: %s.", slug)
         else:
             source = Source(
                 name=entry["name"],
@@ -115,7 +115,7 @@ async def sync_sources_from_config(session: AsyncSession) -> dict[str, int]:
             )
             session.add(source)
             stats["inserted"] += 1
-            logger.info(f"inserted new source: {slug}")
+            logger.info("inserted new source: %s.", slug)
 
     # Soft-disable sources removed from the config.
     all_sources_stmt = select(Source)
@@ -126,13 +126,13 @@ async def sync_sources_from_config(session: AsyncSession) -> dict[str, int]:
         if source.slug not in config_slugs and source.is_active:
             source.is_active = False
             stats["disabled"] += 1
-            logger.info(f"disabled source not in config: {source.slug}")
+            logger.info("disabled source not in config: %s.", source.slug)
 
     await session.commit()
     logger.info(
-        f"source sync complete: "
-        f"{stats['inserted']} inserted, "
-        f"{stats['updated']} updated, "
-        f"{stats['disabled']} disabled."
+        "source sync complete: %s inserted, %s updated, %s disabled.",
+        stats["inserted"],
+        stats["updated"],
+        stats["disabled"],
     )
     return stats

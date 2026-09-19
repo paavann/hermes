@@ -80,12 +80,12 @@ async def fetch_feed(feed_url: str) -> list[ParsedArticle]:
             )
             res.raise_for_status()
     except httpx.HTTPError:
-        logger.exception(f"failed to fetch RSS feed: {feed_url}.")
+        logger.exception("failed to fetch RSS feed: %s.", feed_url)
         return []
 
     feed = feedparser.parse(res.text)
     if feed.bozo and not feed.bozo_exception:
-        logger.warning(f"malformed feed with no entries: {feed_url}.")
+        logger.warning("malformed feed with no entries: %s.", feed_url)
         return []
 
     articles: list[ParsedArticle] = []
@@ -108,5 +108,5 @@ async def fetch_feed(feed_url: str) -> list[ParsedArticle]:
                 )
             )
 
-    logger.info(f"parsed {len(articles)} articles from {feed_url}")
+    logger.info("parsed %s articles from %s.", len(articles), feed_url)
     return articles

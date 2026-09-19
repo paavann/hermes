@@ -1,8 +1,9 @@
 import logging
+
 from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError, StarletteHTTPException
 from fastapi.responses import JSONResponse
-from fastapi.exceptions import RequestValidationError
-from fastapi.exceptions import StarletteHTTPException
+
 from hermes_api.core.exceptions import AppException
 
 logger = logging.getLogger(__name__)

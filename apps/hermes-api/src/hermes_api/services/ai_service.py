@@ -296,7 +296,7 @@ def _reidx_results(raw_results: Sequence[T], count: int, get_idx: Callable[[T], 
     for r in raw_results:
         idx = get_idx(r)
         if idx in by_idx:
-            logger.warning(f"duplicate {duplicate_lbl} {idx} in response.")
+            logger.warning("duplicate %s %s in response.", duplicate_lbl, idx)
             continue
         by_idx[idx] = get_val(r)
 
@@ -313,13 +313,13 @@ class AiService:
         self._api_key = settings.LLM_API_KEY
         self._embed_api_key = settings.EMBED_API_KEY
         if not self._api_key or not self._embed_api_key:
-            logger.error("LLM_API_KEY or EMBED_API_KEY is missing.")
+            logger.error("llm_api_key or embed_api_key is missing.")
             raise ValueError("LLM_API_KEY or EMBED_API_KEY is missing.")
 
         self._model = settings.LLM_MODEL
         self._embed_model = settings.EMBED_MODEL
 
-        logger.info(f"ai service initialized. Routing set to {self._model} and {self._embed_model} via litellm.")
+        logger.info("ai service initialized. routing set to %s and %s via litellm.", self._model, self._embed_model)
     
 
 
@@ -343,12 +343,12 @@ class AiService:
 
             content = res.choices[0].message.content
             if not content:
-                logger.warning(f"llm returned empty content for {schema_name}.")
+                logger.warning("llm returned empty content for %s.", schema_name)
                 return None
             parsed = res_model.model_validate_json(content)
             return parsed
         except Exception as e:
-            logger.error(f"llm call failed for {schema_name} {str(e)}")
+            logger.error("llm call failed for %s: %s.", schema_name, e)
             return None
 
 
@@ -377,9 +377,9 @@ class AiService:
         for i, article in enumerate(articles):
             extraction = ordered_results[i]
             if extraction:
-                logger.info(f"extracted: {article.title[:50]}... | category = {extraction.category}.")
+                logger.info("extracted: %s... | category = %s.", article.title[:50], extraction.category)
             else:
-                logger.warning(f"no extraction for article {i}: '{article.title[:120]}...")
+                logger.warning("no extraction for article %s: '%s...'.", i, article.title[:120])
         return ordered_results
 
 
@@ -396,7 +396,7 @@ class AiService:
             )
             return [item['embedding'] for item in res.data]
         except Exception as e:
-            logger.error(f"failed to generate embeddings: {str(e)}")
+            logger.error("failed to generate embeddings: %s.", e)
             return [None] * len(texts)
 
 
@@ -412,12 +412,11 @@ class AiService:
             res_model=TlExtractionResponse,
             schema_name="timeline_extraction"
         )
-        
         if not res:
-            logger.warning(f"failed to extract timeline for {pg_title}.")
+            logger.warning("failed to extract timeline for %s.", pg_title)
             return None
         else:
-            logger.info(f"timeline extracted successfully for {pg_title}.")
+            logger.info("timeline extracted successfully for %s.", pg_title)
             return res
 
 

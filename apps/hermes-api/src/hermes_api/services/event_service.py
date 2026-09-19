@@ -82,7 +82,7 @@ class EventService:
         self._session.add(article)
         await self._session.commit()
 
-        logger.info(f"created event '{event.ai_headline}' with 1 article.")
+        logger.info("created event '%s' with 1 article.", event.ai_headline)
         return event
 
 
@@ -98,7 +98,7 @@ class EventService:
     ) -> Optional[Event]:
         event = await self._session.get(Event, event_id)
         if not event:
-            logger.warning(f"event not found for event id: {event_id}.")
+            logger.warning("event not found for event id: %s.", event_id)
             return None
 
         article = Article(
@@ -117,11 +117,13 @@ class EventService:
         event.last_updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
         if event.status == EventStatus.STALE:
             event.status = EventStatus.ACTIVE
-            logger.info(f"reactivated stale event: '{event.ai_headline}'.")
+            logger.info("reactivated stale event: '%s'.", event.ai_headline)
 
         await self._session.commit()
         logger.info(
-            f"added article to event '{event.ai_headline}' (now {event.article_count} articles)."
+            "added article to event '%s' (now %s articles).",
+            event.ai_headline,
+            event.article_count,
         )
 
         return event
@@ -234,6 +236,6 @@ class EventService:
 
         await self._session.commit()
         if staled_count or archived_count:
-            logger.info(f"lifecycle: {staled_count} events staled, {archived_count} events archived.")
+            logger.info("lifecycle: %s events staled, %s events archived.", staled_count, archived_count)
 
         return { "staled": staled_count, "archived": archived_count }

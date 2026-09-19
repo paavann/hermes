@@ -2,12 +2,13 @@ import uuid
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import DateTime, ForeignKey, Integer, Text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from hermes_api.db.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
 from hermes_api.db.enums import EventTlStatus
+
 
 class EventTl(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     __tablename__ = "event_timelines"

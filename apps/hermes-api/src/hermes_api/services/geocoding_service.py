@@ -81,7 +81,7 @@ class GeocodingService:
 
                 results = res.json()
                 if not results:
-                    logger.warning(f"no geocoding results for: {location_name}.")
+                    logger.warning("no geocoding results for: %s.", location_name)
                     return None
                 else:
                     first = results[0]
@@ -90,13 +90,13 @@ class GeocodingService:
                         longitude = float(first["lon"]),
                         display_name = first.get("display_name", location_name),
                     )
-                    logger.info(f"geocoded '{location_name}' -> ({result.latitude}, {result.longitude}).")
+                    logger.info("geocoded '%s' -> (%s, %s).", location_name, result.latitude, result.longitude)
                     return result
             except httpx.HTTPError:
-                logger.exception(f"failed to geocode '{location_name}'.")
+                logger.exception("failed to geocode '%s'.", location_name)
                 return None
             except (KeyError, ValueError, IndexError):
-                logger.exception(f"failed to parse nominatim response for: {location_name}.")
+                logger.exception("failed to parse nominatim response for: %s.", location_name)
                 return None
             finally:
                 await asyncio.sleep(1.0)

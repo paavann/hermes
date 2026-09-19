@@ -1,8 +1,6 @@
 from typing import Optional, Union
+
 from fastapi import status
-
-
-
 
 
 class AppException(Exception):
