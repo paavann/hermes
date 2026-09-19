@@ -1,3 +1,4 @@
+from hermes_api.core.exceptions import WikiSearchException
 from hermes_api.core.exceptions import TlGenErr
 from hermes_api.core.exceptions import EventNotFoundException
 import logging
@@ -14,10 +15,11 @@ from hermes_api.schemas.events import TlEdgeResponse, TlNodeResponse, TlResponse
 from hermes_api.services.ai_service import AiService
 from hermes_api.services.geocoding_service import GeocodingService
 from hermes_api.services.wikipedia_service import (
-    enumerate_timeline_pages,
+    enumerate_tl_pages,
     fetch_page_extracts,
     search_wikipedia,
 )
+from hermes_api.utils.db import delete_and_commit
 
 logger = logging.getLogger(__name__)
 
@@ -33,23 +35,25 @@ class TlService:
         self._ai = AiService()
         self._geocoding = GeocodingService()
 
-
+    async def _abort_tl_gen(self, existing_tl: EventTl, status: str, message: str) -> TlResponse:
+        await delete_and_commit(self._session, existing_tl)
+        return TlResponse(status=status, message=message)
 
     async def _exec_gen(self, event: Event, existing_tl: EventTl) -> TlResponse:
-        search_context = await self._ai.analyze_timeline_context(event.ai_headline)
-        if not search_context or not search_context.is_timeline_worthy or not search_context.wikipedia_search_query:
-            await self._session.delete(existing_tl)
-            await self._session.commit()
-            return TlResponse(status="no_content", message="Event is not part of a major historical timeline.")
+        search_context = await self._ai.analyze_tl_context(event.ai_headline)
+        if not search_context or not search_context.is_tl_worthy or not search_context.wiki_search_query:
+            return await self._abort_tl_gen(existing_tl, "no_content", "Event is not part of a major historical timeline.")
 
-        titles = await search_wikipedia(search_context.wikipedia_search_query)
+        try:
+            titles = await search_wikipedia(search_context.wiki_search_query)
+        except WikiSearchException:
+            return await self._abort_tl_gen(existing_tl, "error", f"Wikipedia search failed. Timeline generation aborted for '{event.ai_headline}'.")
+        
         if not titles:
-            await self._session.delete(existing_tl)
-            await self._session.commit()
-            return TlResponse(status="no_content", message=f"No Wikipedia timeline found for '{event.ai_headline}'")
+            return await self._abort_tl_gen(existing_tl, "no_content", f"No Wikipedia timeline found for '{event.ai_headline}'.")
         else:
             main_title = titles[0]
-            pages_to_process = await enumerate_timeline_pages(main_title)
+            pages_to_process = await enumerate_tl_pages(main_title)
             page_extracts = await fetch_page_extracts(pages_to_process)
             all_nodes: list[TlNodeResponse] = []
             all_edges: list[TlEdgeResponse] = []

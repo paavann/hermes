@@ -15,7 +15,7 @@ router = APIRouter()
 async def analyze_event_tl(
     event_id: uuid.UUID,
     force_refresh: Annotated[
-        bool, Query(description="Bypass cache and force regeneration")
+        bool, Query(description="Bypass cache and force regeneration.")
     ] = False,
     db: AsyncSession = Depends(get_db)
 ) -> TlResponse:

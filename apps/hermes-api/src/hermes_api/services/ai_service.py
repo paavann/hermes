@@ -60,6 +60,21 @@ TL_SYSTEM_PROMPT = """You are a geopolitical historian for
   extracted for source_index and target_index.
 """
 
+TIMELINE_TRIAGE_SYS_PROMPT = """
+You are a geopolitical researcher. 
+Given a news headline, determine if there is a highly specific, dedicated Wikipedia article that perfectly contextualizes the primary subject of the event.
+
+CRITICAL RULES:
+1. BIOGRAPHIES & ENTITIES (ALLOWED): If the headline is about a specific notable person (e.g., dying, resigning), organization, or treaty, return true and use their exact name as the search query.
+2. MAJOR CRISES (ALLOWED): If the headline is part of a named, major crisis or war, return true and query the crisis (e.g., "2022 Russian invasion of Ukraine").
+3. NO BROAD FALLBACKS (REJECT): If the headline is a routine daily event (e.g., a generic military drill, a minor skirmish, or a political quote), DO NOT fall back to massive, decades-long articles like "North Korea-US relations" or "History of the Middle East". If the specific event or immediate crisis doesn't warrant its own page, set `is_tl_worthy` to false.
+
+If true, provide the exact Wikipedia search query to find the article most specifically tied to the headline's primary subject.
+"""
+
+
+
+
 
 
 
@@ -212,12 +227,18 @@ class TlExtractionResponse(BaseModel):
 
 
 class TimelineSearchQuery(BaseModel):
-    is_timeline_worthy: bool = Field(
-        description="True if this event is part of a major, long-running geopolitical arc (e.g. wars, major diplomatic relations) that would have dedicated Wikipedia coverage. False if it is a localized, minor, or isolated incident."
+    is_tl_worthy: bool = Field(
+        description="""
+            True if this event is part of a major, long-running geopolitical arc (e.g. wars, major diplomatic relations) that would have dedicated Wikipedia coverage.
+            False if it is a localized, minor, or isolated incident.
+        """
     )
-    wikipedia_search_query: Optional[str] = Field(
+
+    wiki_search_query: Optional[str] = Field(
         default=None,
-        description="If timeline_worthy is true, provide the most relevant, broad Wikipedia search query to find the overarching historical context (e.g. 'Iran-Saudi Arabia relations')."
+        description="""
+            If timeline_worthy is true, provide the most relevant Wikipedia search query to find the overarching historical context.
+        """
     )
 
 
@@ -401,17 +422,16 @@ class AiService:
 
 
 
-    async def analyze_timeline_context(self, headline: str) -> Optional[TimelineSearchQuery]:
-        sys_prompt = """You are a geopolitical researcher. Given a news headline, determine if it belongs to a major, long-running historical arc that would have dedicated Wikipedia coverage. If it does, provide the best, broad Wikipedia search query to find that overarching context."""
-        
+    async def analyze_tl_context(self, headline: str) -> Optional[TimelineSearchQuery]:
         user_prompt = f"Headline: {headline}"
-        
         res = await self._call_llm(
-            sys_prompt=sys_prompt,
+            sys_prompt=TIMELINE_TRIAGE_SYS_PROMPT,
             user_prompt=user_prompt,
             res_model=TimelineSearchQuery,
             schema_name="timeline_search_query"
         )
+
         if isinstance(res, TimelineSearchQuery):
             return res
-        return None
+        else:
+            return None
