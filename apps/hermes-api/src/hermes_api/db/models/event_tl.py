@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import DateTime, ForeignKey, Integer, Text
+from sqlalchemy import DateTime, Enum, ForeignKey, Integer, Text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -14,7 +14,11 @@ class EventTl(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     __tablename__ = "event_timelines"
 
     event_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("events.id", ondelete="CASCADE"), unique=True, index=True)
-    status: Mapped[EventTlStatus] = mapped_column(default=EventTlStatus.GENERATING, server_default="GENERATING")
+    status: Mapped[EventTlStatus] = mapped_column(
+        Enum(EventTlStatus, native_enum=False, values_callable=lambda x: [e.value for e in x]),
+        default=EventTlStatus.GENERATING,
+        server_default="GENERATING",
+    )
     nodes: Mapped[list[dict]] = mapped_column(JSONB, default=list, server_default="[]")
     edges: Mapped[list[dict]] = mapped_column(JSONB, default=list, server_default="[]")
     tl_summary: Mapped[str] = mapped_column(Text, default="", server_default="")

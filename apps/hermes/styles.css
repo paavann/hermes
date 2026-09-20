@@ -1,30 +1,29 @@
-/* Required for Mapbox to render correctly */
-@import 'mapbox-gl/dist/mapbox-gl.css';
-
 @import 'tailwindcss';
 @source "../../libs";
 @config "./tailwind.config.js";
+
+/* required for mapbox to render correctly. */
+@import 'mapbox-gl/dist/mapbox-gl.css';
 
 @layer base {
   html,
   body {
     margin: 0;
     padding: 0;
-    /* Use 100dvh for modern mobile viewport support */
     width: 100dvw;
     height: 100dvh;
     overflow: hidden;
-    background-color: #050505; /* Deep space black */
+    background-color: #050505;
     color: #e2e8f0;
   }
 }
 
-/* Hide Mapbox logo for the clean UI */
+/* hides default mapbox logo. */
 .mapboxgl-ctrl-logo {
   display: none !important;
 }
 
-/* Custom Scrollbar for pop-up */
+/* custom scrollbar for pop-up window. */
 .custom-scrollbar::-webkit-scrollbar {
   width: 4px;
 }

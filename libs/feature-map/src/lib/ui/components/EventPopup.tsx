@@ -107,9 +107,9 @@ export function EventPopup({ map }: { map: mapboxgl.Map | null }) {
           </div>
           <button
             onClick={() => setSelectedEventId(null)}
-            className="text-red-500 hover:text-red-400 cursor-pointer text-sm font-bold tracking-widest mt-0.5"
+            className="text-red-500 hover:text-red-400 cursor-pointer text-[10px] font-bold tracking-widest mt-0.5 border border-red-500/50 px-1 py-0.5 hover:bg-red-500/20"
           >
-            [X]
+            CLOSE
           </button>
         </div>
 
@@ -139,9 +139,6 @@ export function EventPopup({ map }: { map: mapboxgl.Map | null }) {
                 >
                   {event.category}
                 </span>
-                <span className="px-2 py-1 text-[10px] font-bold tracking-[0.1em] bg-red-900/40 text-red-400 border border-red-500 uppercase">
-                  {event.status}
-                </span>
               </div>
 
               {/* Headline */}
@@ -162,9 +159,9 @@ export function EventPopup({ map }: { map: mapboxgl.Map | null }) {
                   useMapStore.getState().setTlMode(true, event.id);
                   setSelectedEventId(null);
                 }}
-                className="w-full py-2 bg-neon-blue/20 hover:bg-neon-blue/40 border border-neon-blue text-neon-blue text-xs font-bold tracking-widest uppercase transition-colors"
+                className="w-full py-2 bg-neon-blue/20 hover:bg-neon-blue/40 border border-neon-blue text-neon-blue cursor-pointer text-xs font-bold tracking-widest uppercase transition-colors"
               >
-                [ ANALYZE TIMELINE ]
+                ANALYZE
               </button>
 
               {/* Verified Sources */}

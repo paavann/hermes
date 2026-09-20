@@ -29,3 +29,4 @@ export const useMapStore = create<MapState>((set) => ({
   setViewport: (viewport) => set({ viewport }),
   setTlMode: (active, targetId = null) => set({ isTlMode: active, tlTargetId: targetId }),
 }));
+if (typeof window !== 'undefined') (window as any).useMapStore = useMapStore;

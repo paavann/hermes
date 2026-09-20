@@ -221,10 +221,14 @@ export function MapView() {
     }
   }, [events]);
 
-  // Toggle base layer visibility based on mode
+  // Toggle base layer visibility based on mode.
+  // NOTE: We intentionally do NOT use map.isStyleLoaded() here. That returns false
+  // whenever tiles are in flight (e.g. after panning), even though the style and
+  // layers are fully registered. Since TlPanel only mounts after map.on('load'),
+  // we know layers exist — guard with getLayer() in the loop instead.
   useEffect(() => {
-    if (!map.current || !map.current.isStyleLoaded()) return;
-    const opacity = isTimelineMode ? 0.1 : 1.0;
+    if (!map.current) return;
+    const visibility = isTimelineMode ? 'none' : 'visible';
 
     [
       'hermes-clusters',
@@ -232,12 +236,7 @@ export function MapView() {
       'hermes-unclustered-point',
     ].forEach((layer) => {
       if (map.current?.getLayer(layer)) {
-        if (layer === 'hermes-cluster-count') {
-          map.current.setPaintProperty(layer, 'text-opacity', opacity);
-        } else {
-          map.current.setPaintProperty(layer, 'circle-opacity', opacity);
-          map.current.setPaintProperty(layer, 'circle-stroke-opacity', opacity);
-        }
+        map.current.setLayoutProperty(layer, 'visibility', visibility);
       }
     });
   }, [isTimelineMode]);
