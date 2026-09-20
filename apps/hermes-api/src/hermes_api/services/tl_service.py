@@ -2,6 +2,7 @@ import logging
 import uuid
 from datetime import datetime, timezone
 
+from geoalchemy2.functions import ST_X, ST_Y
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -126,6 +127,42 @@ class TlService:
                 return TlResponse(status=EventTlStatus.FAILED, message="AI extraction failed or yielded no results.")
             else:
                 all_nodes.sort(key=lambda n: n.date)
+
+                # ── Append the current event as the terminal "today" node ──────────
+                # Fetch the event's coordinates via ST_X/ST_Y (consistent with events.py)
+                lat_lng_row = None
+                if event.location is not None:
+                    lat_lng_stmt = select(
+                        ST_Y(Event.location).label("latitude"),
+                        ST_X(Event.location).label("longitude"),
+                    ).where(Event.id == event.id)
+                    lat_lng_result = await self._session.execute(lat_lng_stmt)
+                    lat_lng_row = lat_lng_result.one_or_none()
+
+                current_node_id = "current-event"
+                current_node = TlNodeResponse(
+                    id=current_node_id,
+                    date=event.last_updated_at.strftime("%Y-%m-%d"),
+                    headline=event.ai_headline,
+                    summary=event.ai_summary or "",
+                    location_name=event.location_name,
+                    latitude=lat_lng_row.latitude if lat_lng_row else None,
+                    longitude=lat_lng_row.longitude if lat_lng_row else None,
+                    category_color=event.category_color,
+                )
+
+                # Connect the previous last node → current event node
+                if all_nodes:
+                    all_edges.append(
+                        TlEdgeResponse(
+                            source_node_id=all_nodes[-1].id,
+                            target_node_id=current_node_id,
+                            relationship="led to",
+                        )
+                    )
+                all_nodes.append(current_node)
+                # ──────────────────────────────────────────────────────────────────
+
                 existing_tl.nodes = [n.model_dump() for n in all_nodes]
                 existing_tl.edges = [e.model_dump() for e in all_edges]
                 existing_tl.tl_summary = "\n\n".join(tl_summaries)

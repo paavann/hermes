@@ -55,6 +55,8 @@ class TlNodeResponse(BaseModel):
     location_name: Optional[str]
     latitude: Optional[float]
     longitude: Optional[float]
+    # Only set for the terminal "current event" node; None for historical Wikipedia nodes.
+    category_color: Optional[str] = None
 
 class TlEdgeResponse(BaseModel):
     source_node_id: str

@@ -71,8 +71,21 @@ function addLayersToMap(map: mapboxgl.Map) {
             type: 'circle',
             source: NODES_SOURCE,
             paint: {
-                'circle-radius': 6,
-                'circle-color': '#00f0ff',
+                // Use the node's own category_color (set only on the current-event terminal
+                // node). Fall back to the timeline cyan for all historical Wikipedia nodes.
+                'circle-color': [
+                    'case',
+                    ['!=', ['get', 'category_color'], null],
+                    ['get', 'category_color'],
+                    '#00f0ff',
+                ],
+                // The current-event node is slightly larger to mark it as the present terminus.
+                'circle-radius': [
+                    'case',
+                    ['!=', ['get', 'category_color'], null],
+                    10,
+                    6,
+                ],
                 'circle-stroke-width': 2,
                 'circle-stroke-color': '#000000',
             },
@@ -167,11 +180,20 @@ export function TlPanel({ map }: { map: mapboxgl.Map | null }) {
         if (!map) return;
         if (!map.getLayer(NODES_LAYER)) return;
 
+        // When a node is active (clicked): use the active tint.
+        // When no node is active: use category_color for the current-event node, cyan for the rest.
+        // When a different node is active: dim all non-active nodes via opacity instead of color.
         map.setPaintProperty(NODES_LAYER, 'circle-color', [
-            'case', ['==', ['get', 'id'], activeNodeId ?? ''], '#00c0cc', '#00f0ff',
+            'case',
+            ['==', ['get', 'id'], activeNodeId ?? ''], '#00c0cc',
+            ['!=', ['get', 'category_color'], null], ['get', 'category_color'],
+            '#00f0ff',
         ]);
         map.setPaintProperty(NODES_LAYER, 'circle-radius', [
-            'case', ['==', ['get', 'id'], activeNodeId ?? ''], 10, 6,
+            'case',
+            ['==', ['get', 'id'], activeNodeId ?? ''], 12,
+            ['!=', ['get', 'category_color'], null], 10,
+            6,
         ]);
         map.setPaintProperty(NODES_LAYER, 'circle-opacity', [
             'case', ['==', ['get', 'id'], activeNodeId ?? ''], 1, activeNodeId ? 0.3 : 1,

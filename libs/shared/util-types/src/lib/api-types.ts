@@ -47,6 +47,8 @@ export interface TlNodeResponse {
   location_name: string | null;
   latitude: number | null;
   longitude: number | null;
+  /** Only populated on the terminal "current event" node; null for historical Wikipedia nodes. */
+  category_color: string | null;
 }
 
 export interface TlEdgeResponse {
