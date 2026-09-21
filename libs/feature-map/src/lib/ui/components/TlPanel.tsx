@@ -62,6 +62,7 @@ function addLayersToMap(map: mapboxgl.Map) {
                 'line-width': 2,
                 'line-opacity': 0.6,
                 'line-dasharray': [2, 2],
+                'line-emissive-strength': 1,
             },
         });
     }
@@ -79,6 +80,7 @@ function addLayersToMap(map: mapboxgl.Map) {
                 'circle-radius': ['case', ['to-boolean', ['get', 'category_color']], 10, 6],
                 'circle-stroke-width': 2,
                 'circle-stroke-color': '#000000',
+                'circle-emissive-strength': 1,
             },
         });
     }

@@ -1,29 +1,24 @@
-import { useEffect, useRef, useState } from 'react';
-import mapboxgl from 'mapbox-gl';
-import 'mapbox-gl/dist/mapbox-gl.css';
-import { useMapStore } from '../store/store';
-import { useMapDataSync } from '../hooks/datasync';
-import { EventPopup } from './components/EventPopup';
-import { TlPanel } from './components/TlPanel';
-import type { FeatureCollection } from 'geojson';
-import type { MapEventResponse } from '@hermes/util-types';
-import { useMapConfig } from '../config-context';
+import { useEffect, useRef, useState } from 'react'
+import mapboxgl from 'mapbox-gl'
+import 'mapbox-gl/dist/mapbox-gl.css'
+import { useMapStore } from '../store/store'
+import { useMapDataSync } from '../hooks/datasync'
+import { EventPopup } from './components/EventPopup'
+import { TlPanel } from './components/TlPanel'
+import type { FeatureCollection } from 'geojson'
+import type { MapEventResponse } from '@hermes/util-types'
+import { useMapConfig } from '../config-context'
+
+
+
 
 const createGeoJson = (events: MapEventResponse[]): FeatureCollection => {
-  const uniqueEvents = new Map<string, MapEventResponse>();
-
-  // Deduplicate by location to prevent concentric circles for the same event
+  const uniqueEvents = new Map<string, MapEventResponse>()
   events.forEach((event) => {
-    // Use 4 decimal places (~11m precision) to group virtually identical locations
     const key = `${event.latitude.toFixed(4)},${event.longitude.toFixed(4)}`;
-    if (!uniqueEvents.has(key)) {
+    const existing = uniqueEvents.get(key);
+    if (!existing || event.trending_score > existing.trending_score) {
       uniqueEvents.set(key, event);
-    } else {
-      // If they overlap, keep the one with the higher trending score
-      const existing = uniqueEvents.get(key)!;
-      if (event.trending_score > existing.trending_score) {
-        uniqueEvents.set(key, event);
-      }
     }
   });
 
@@ -43,21 +38,27 @@ const createGeoJson = (events: MapEventResponse[]): FeatureCollection => {
   };
 };
 
+
+
+
+
 export function MapView() {
-  const config = useMapConfig();
-  mapboxgl.accessToken = config.mapboxToken;
+  const config = useMapConfig()
+  mapboxgl.accessToken = config.mapboxToken
 
-  const mapContainer = useRef<HTMLDivElement>(null);
-  const map = useRef<mapboxgl.Map | null>(null);
-  const [isMapReady, setIsMapReady] = useState(false);
-  const setViewport = useMapStore((state) => state.setViewport);
-  const { data: events, isFetching } = useMapDataSync();
-  const setSelectedId = useMapStore((s) => s.setSelectedEventId);
+  const mapContainer = useRef<HTMLDivElement>(null)
+  const map = useRef<mapboxgl.Map | null>(null)
+  const [isMapReady, setIsMapReady] = useState(false)
+  const setViewport = useMapStore((state) => state.setViewport)
+  const { data: events, isFetching } = useMapDataSync()
+  const setSelectedId = useMapStore((s) => s.setSelectedEventId)
 
-  const isTimelineMode = useMapStore((s) => s.isTlMode);
+  const isTimelineMode = useMapStore((s) => s.isTlMode)
+
+
 
   useEffect(() => {
-    if (!mapContainer.current || map.current) return;
+    if (!mapContainer.current || map.current) return
 
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
@@ -125,7 +126,7 @@ export function MapView() {
         ) as mapboxgl.GeoJSONSource;
 
         source.getClusterExpansionZoom(clusterId, (err, zoom) => {
-          if (err || !map.current) return;
+          if (err || !map.current || zoom == null) return;
 
           const geometry = features[0].geometry;
           if (geometry.type === 'Point') {
