@@ -71,21 +71,12 @@ function addLayersToMap(map: mapboxgl.Map) {
             type: 'circle',
             source: NODES_SOURCE,
             paint: {
-                // Use the node's own category_color (set only on the current-event terminal
-                // node). Fall back to the timeline cyan for all historical Wikipedia nodes.
-                'circle-color': [
-                    'case',
-                    ['!=', ['get', 'category_color'], null],
-                    ['get', 'category_color'],
-                    '#00f0ff',
-                ],
-                // The current-event node is slightly larger to mark it as the present terminus.
-                'circle-radius': [
-                    'case',
-                    ['!=', ['get', 'category_color'], null],
-                    10,
-                    6,
-                ],
+                // 'coalesce' returns the first non-null value — the correct Mapbox idiom for
+                // "use this property if set, else fall back". The ['!=', ..., null] pattern
+                // does NOT work for JSON null properties in Mapbox GL JS.
+                'circle-color': ['coalesce', ['get', 'category_color'], '#00f0ff'],
+                // 'to-boolean' converts null → false, any non-empty string → true.
+                'circle-radius': ['case', ['to-boolean', ['get', 'category_color']], 10, 6],
                 'circle-stroke-width': 2,
                 'circle-stroke-color': '#000000',
             },
@@ -180,19 +171,20 @@ export function TlPanel({ map }: { map: mapboxgl.Map | null }) {
         if (!map) return;
         if (!map.getLayer(NODES_LAYER)) return;
 
-        // When a node is active (clicked): use the active tint.
-        // When no node is active: use category_color for the current-event node, cyan for the rest.
-        // When a different node is active: dim all non-active nodes via opacity instead of color.
+        // Active node  → #0c828a (selected teal)
+        // Current-event node (has category_color) → its own category color
+        // Historical Wikipedia nodes → #00f0ff (timeline cyan)
+        // Non-active nodes when something IS selected → dimmed via opacity
         map.setPaintProperty(NODES_LAYER, 'circle-color', [
             'case',
-            ['==', ['get', 'id'], activeNodeId ?? ''], '#00c0cc',
-            ['!=', ['get', 'category_color'], null], ['get', 'category_color'],
+            ['==', ['get', 'id'], activeNodeId ?? ''], '#0c828a',
+            ['to-boolean', ['get', 'category_color']], ['get', 'category_color'],
             '#00f0ff',
         ]);
         map.setPaintProperty(NODES_LAYER, 'circle-radius', [
             'case',
             ['==', ['get', 'id'], activeNodeId ?? ''], 12,
-            ['!=', ['get', 'category_color'], null], 10,
+            ['to-boolean', ['get', 'category_color']], 10,
             6,
         ]);
         map.setPaintProperty(NODES_LAYER, 'circle-opacity', [

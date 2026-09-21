@@ -1,35 +1,23 @@
-import {
-  Links,
-  Meta,
-  Outlet,
-  Scripts,
-  ScrollRestoration,
-  type MetaFunction,
-  type LinksFunction,
-} from 'react-router';
+import { Links, Meta, Outlet, Scripts, ScrollRestoration, type MetaFunction, type LinksFunction } from 'react-router'
+import stylesheetUrl from '../styles.css?url'
 
-import stylesheetUrl from '../styles.css?url';
+
+
+
 
 export const meta: MetaFunction = () => [
-  {
-    title: 'hermes',
-  },
-];
+  { title: 'hermes' },
+]
 
 export const links: LinksFunction = () => [
   { rel: 'icon', href: 'data:,' },
   { rel: 'stylesheet', href: stylesheetUrl },
   { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
-  {
-    rel: 'preconnect',
-    href: 'https://fonts.gstatic.com',
-    crossOrigin: 'anonymous',
-  },
-  {
-    rel: 'stylesheet',
-    href: 'https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400..800;1,400..800&display=swap',
-  },
-];
+  { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossOrigin: 'anonymous' },
+  { rel: 'stylesheet', href: 'https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400..800;1,400..800&display=swap' },
+]
+
+
 
 export function Layout({ children }: { children: React.ReactNode }) {
   return (
@@ -46,9 +34,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Scripts />
       </body>
     </html>
-  );
+  )
 }
 
 export default function App() {
-  return <Outlet />;
+  return <Outlet />
 }
