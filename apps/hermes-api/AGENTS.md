@@ -6,63 +6,76 @@ This document provides backend-specific architectural context for the `hermes-ap
 
 ## 1. Application Role
 
-This is the **backend API and data ingestion engine** of Project Hermes. It is a Python application built with FastAPI, using `uv` for dependency management and `@nxlv/python` for Nx integration. Its responsibilities are:
+This is the **backend API and autonomous data ingestion engine** of Project Hermes. It is a Python application built with **FastAPI**, **SQLAlchemy 2.0 (Async)**, **PostGIS**, **pgvector**, and **LiteLLM**, using `uv` for dependency management and `@nxlv/python` for Nx integration. Its responsibilities are:
 
 1. **Ingest** raw news concurrently from RSS feeds on dynamic, per-source schedules.
-2. **Deduplicate** articles using `pgvector` semantic similarity and Gemini embeddings to avoid redundant LLM processing.
-3. **Extract** geospatial data and metadata from article text using Google GenAI (batched).
-4. **Geocode** location names to exact coordinates using Nominatim, backed by a persistent PostGIS cache.
-5. **Store** structured event data, embeddings, and geometries in a PostGIS-enabled PostgreSQL database.
-6. **Serve** processed events to the frontend via a RESTful API and real-time streams.
+2. **Deduplicate** articles using `pgvector` half-precision semantic embeddings (`halfvec(2048)`) to avoid redundant LLM extraction.
+3. **Extract** structured geospatial metadata using LiteLLM (Mistral primary with NVIDIA NIM fallback) enforcing strict Pydantic v2 JSON schemas.
+4. **Geocode** location names into verified coordinates using OpenStreetMap Nominatim, shielded by an async rate limiter and persistent PostGIS cache.
+5. **Score & Decay** events via a Smart Editor algorithm weighting source credibility tiers and hourly 10% time decay.
+6. **Synthesize** on-demand historical causality graphs (`event_timelines`) from Wikipedia extracts to provide deep context.
+7. **Serve** processed events and bounding-box queries to the frontend via a high-performance REST API.
 
 ---
 
-## 2. Data Ingestion Pipeline
+## 2. Data Ingestion & Timeline Pipelines
 
-**Crucial Note on Flexibility**: This pipeline is the _current_ iteration. It is highly prone to change as newer and better approaches are discovered. You must remain flexible and actively seek better performant approaches rather than blindly sticking to this specific pipeline.
-
-### Pipeline Flow
+### Ingestion Pipeline Flow
 
 ```text
 ┌─────────────┐   ┌────────────┐   ┌────────────────┐   ┌──────────────┐   ┌─────────────┐   ┌───────────┐
-│ APScheduler │──▶│ feedparser │──▶│ Gemini Embeds  │──▶│ pgvector     │──▶│ Gemini LLM  │──▶│ Nominatim │──▶ PostGIS
-│ (5m tick)   │   │ (Parallel) │   │ (Vector Array) │   │ (Similarity) │   │ (Batch Ext) │   │ (Geocode) │
+│ APScheduler │──▶│ feedparser │──▶│ LiteLLM Embed  │──▶│ pgvector     │──▶│ LiteLLM Ext │──▶│ Nominatim │──▶ PostGIS
+│ (Heartbeat) │   │ (Parallel) │   │ (nemotron 2048)│   │ (HNSW < 0.25)│   │ (Mistral/NIM│   │ (Geocode) │
 └─────────────┘   └────────────┘   └────────────────┘   └──────────────┘   └─────────────┘   └───────────┘
 ```
 
 ### Stage Details
 
-1. **Scheduling (`apscheduler`)**: Runs a high-frequency "tick-and-check" heartbeat (e.g., every 5 minutes). It dynamically queries the database for active sources where `last_fetched_at + fetch_interval_minutes <= NOW`, ensuring each source is polled on its own independent, optimal schedule.
-2. **Fetching (`feedparser`)**: Uses `asyncio.gather` and semaphores to concurrently fetch and parse multiple RSS feeds in parallel. Basic URL-based deduplication is performed instantly against the database to drop already-known articles.
-3. **Semantic Filtering (`google-genai` + `pgvector`)**: Instead of naive text hashing, incoming articles are batched and sent to Gemini (`text-embedding-004`) to generate 768-dimensional vector embeddings. We then query PostGIS using the `<=>` cosine distance operator to retrieve only active events that are conceptually identical.
-4. **AI Batch Extraction (`google-genai`)**:
-   - Send the raw article text and the list of semantically similar candidate events to the Gemini LLM in **batches of 10** (`ARTICLE_BATCH_SIZE`).
-   - The prompt instructs the model to either **merge** the article into an existing candidate event or **create a new event**.
-   - **Data Extracted**: Headline, summary (translated to English), category, severity, and **location name** (e.g., "Paris, France").
-   - **Hallucination Handling**: If the model fails or returns invalid schemas, log the error and continue. Do not crash the batch.
-5. **Geocoding (`geopy` + PostGIS Cache)**:
-   - The extracted location string is passed to Nominatim to get exact lat/long coordinates (replacing pure LLM coordinate hallucination).
-   - Because Nominatim strictly rate-limits (1 req/sec), we use an `asyncio.Lock()`.
-   - **Caching**: All geocoding results are permanently stored in a `geocode_cache` PostGIS table to avoid re-querying identical location strings, drastically saving time and preventing IP bans.
-6. **Storage (`geoalchemy2` + PostGIS)**:
-   - Save the structured event, embedding array, and geocoded coordinates to the database.
+1. **Scheduling (`apscheduler`)**: Runs an interval heartbeat (`INGESTION_HEARTBEAT_MIN`, default 360m). It queries the database for active sources where `last_fetched_at + fetch_interval_minutes <= NOW()`. On application boot, an immediate background task is launched with `force=True` to guarantee initial data population.
+2. **Fetching (`feedparser` + `httpx`)**: Uses `asyncio.Semaphore(5)` to concurrently fetch and parse RSS feeds in parallel. Content is sanitized and truncated to 500 words (`MAX_CONTENT_WORDS`). URL deduplication against the `articles` table immediately drops previously ingested stories.
+3. **Semantic Filtering (`litellm` + `pgvector`)**: Batched article texts are converted into 2048-dimensional vector embeddings (`nvidia_nim/nvidia/nemotron-3-embed-1b`) guarded by `EMBED_RPM_LIMIT`. PostGIS is queried using cosine distance against active events (`Event.embedding.cosine_distance(emb) < 0.25`, limit 5 per article) to retrieve candidate duplicates.
+4. **AI Batch Extraction (`litellm.Router`)**:
+   - Sends article inputs and candidate events to the LLM router in **batches of 10** (`ARTICLE_BATCH_SIZE`) guarded by `RPM_LIMIT`.
+   - **Primary Model**: `mistral/ministral-8b-latest`.
+   - **Fallback Model**: `nvidia_nim/mistralai/mistral-nemotron`.
+   - The model determines whether to merge the article into an existing candidate event or create a new event.
+   - Extracted attributes: headline, summary, category, category color (from `PREDEFINED_CATEGORIES`), and location name (e.g., `"Geneva, Switzerland"`).
+5. **Geocoding Shield (`geocoding_service.py` + PostGIS Cache)**:
+   - Extracted location strings are checked against `geocode_cache` by normalized key (`location_name.strip().lower()`).
+   - Cache misses call Nominatim under an `asyncio.Lock()` with a mandatory 1.0-second delay to comply with OpenStreetMap rate limits.
+   - Results (including negative `NULL` results) are permanently cached to prevent redundant lookups.
+6. **Persistence & Consensus Scoring (`event_service.py`)**:
+   - **Matched Event**: Adds `Article`, increments `article_count`, adds source credibility weight to `trending_score`, updates `last_updated_at`, and reactivates event if `STALE`.
+   - **New Event**: Inserts `Event` with SRID 4326 `POINT` geometry (`location`), initial credibility score, and embedding vector.
 
-### Prompt Management
+---
 
-- All GenAI prompts must be **version-controlled** in the codebase (e.g., `src/hermes_api/prompts/`).
-- Never hardcode prompts as inline strings in service functions.
+### Historical Timeline Engine (`tl_service.py`)
+
+Synthesizes on-demand geopolitical lineage for major events:
+1. **Triage**: An LLM prompt (`TIMELINE_TRIAGE_SYS_PROMPT`) determines if an event warrants historical Wikipedia context and generates an exact MediaWiki search query.
+2. **MediaWiki Extraction**: Searches Wikipedia, detects whether a page is a multi-year timeline index via `enumerate_tl_pages()`, and fetches extracts in batches of 50.
+3. **Graph Extraction**: Extracts chronological nodes and causal edges (`"led to"`, `"triggered"`) using `TL_SYSTEM_PROMPT`.
+4. **Geocoding & Terminal Stitching**: Resolves coordinates for historical nodes and stitches today's active event as the terminal `"current-event"` node.
+5. **Storage**: Persists to `event_timelines` as JSONB `nodes` and `edges`.
 
 ---
 
 ## 3. Smart Editor Algorithm
 
-The backend implements a sophisticated ranking algorithm so the frontend's initial load surfaces only the most critical events. The algorithm calculates a `trending_score` based on:
+The backend implements an algorithmic ranking model that surfaces critical global events while filtering low-signal noise:
 
-- **Source Credibility Weighting**: Events reported by multiple sources gain score. However, not all sources are equal. A `Source` has a `CredibilityTier` (1 through 4) which dictates its weight. For example, a Tier 1 source (e.g., Reuters) adds +3.0 to an event's score, whereas a Tier 4 tabloid adds +0.5.
-- **Semantic Consensus**: If 10 different feeds mention the same event (detected via semantic vector proximity and matched by the LLM), the score compounds rapidly based on those credibility tiers.
-- **Time Decay**: To prevent old news from dominating the map, a lifecycle cron job runs every 30 minutes and executes a strict **-10% decay** on the `trending_score` of all `ACTIVE` events. Over 24 hours, an old event will organically drop down the rankings unless continuously refreshed by new articles.
-
-The API exposes this ranking (e.g., `ORDER BY trending_score DESC LIMIT 100`) so the frontend can request top-ranked events.
+- **Source Credibility Weighting**:
+  - `TIER_1` (Reuters, BBC, NYT, WSJ, DW): `+3.0` points
+  - `TIER_2` (CNN, Al Jazeera, Euronews): `+2.0` points
+  - `TIER_3` (Standard publishers): `+1.0` point
+  - `TIER_4` (Aggregators / Tabloids): `+0.5` points
+- **Semantic Consensus**: Multiple independent outlets reporting the same incident compound the event's `trending_score`.
+- **Hourly Time Decay**: Every 60 minutes, `run_event_lifecycle_job()` executes an automated decay statement across all `ACTIVE` events:
+  $$\text{trending\_score}_{t+1} = \text{trending\_score}_t \times 0.90$$
+- **Lifecycle Transitions**:
+  - `ACTIVE` &rarr; `STALE` after 24 hours without new articles.
+  - `STALE` &rarr; `ARCHIVED` after 48 hours without new articles.
 
 ---
 
@@ -70,67 +83,51 @@ The API exposes this ranking (e.g., `ORDER BY trending_score DESC LIMIT 100`) so
 
 ### Spatial & Vector Indexing
 
-- **pgvector**: The PostgreSQL Docker image is injected with `postgresql-$PG_MAJOR-pgvector` at runtime via `dockerfile_inline`.
-- **Embeddings**: The `events` table contains an `embedding` column of type `Vector(768)` with an **HNSW index** to enable ultra-fast cosine similarity lookups.
-- **GIST indexes**: Required on all geometry columns (`location`, `target_location`). Use `ST_Intersects` with bounding box queries for viewport filtering.
+- **pgvector**: Uses `halfvec(2048)` with an HNSW index to enable ultra-fast cosine similarity lookups:
+  ```sql
+  CREATE INDEX idx_events_embedding ON events 
+  USING hnsw (embedding halfvec_cosine_ops) 
+  WITH (m = 16, ef_construction = 64);
+  ```
+- **GIST Spatial Indexes**: Applied to `location` (`Geometry(POINT, 4326)`). Viewport queries use `ST_Within` with bounding box envelopes (`ST_MakeEnvelope`).
+- **Composite B-Tree Indexes**: `idx_events_active_score` on `(status, trending_score)` where `status = 'ACTIVE'`.
 
-### Caching Tables
+### Caching & Graph Tables
 
-- **`geocode_cache`**: Explicitly stores historical location strings and their solved coordinates to bypass external API rate limits (Nominatim).
-
-### Time-Series & Historical Data
-
-- The system retains all historical events. Consider time-based table partitioning as data grows.
-- A lifecycle cron job periodically marks events as `STALE` and eventually `ARCHIVED` based on `last_updated_at`, naturally filtering them out of the live map queries.
-
-### Multi-Location Events (Arcs)
-
-- Events involving relationships between two locations (e.g., "Country A sanctions Country B") must store both a `source_location` (Point) and a `target_location` (Point).
-- The API must return both coordinates so the frontend can render directional arcs.
-- Events with only a single location have `target_location` as `NULL`.
-
-### Scale Target
-
-- The database and API must be architected to comfortably handle **10,000+ active events** simultaneously, with fast spatial and temporal queries.
+- **`geocode_cache`**: Permanently stores normalized location names, latitude, longitude, and display names to eliminate Nominatim rate-limit bottlenecks.
+- **`event_timelines`**: Stores JSONB graph nodes and edges linked 1-to-1 with parent events.
 
 ---
 
 ## 5. API Design & Security
 
-### Public vs. Protected Routes
+### Endpoints (`/api/v1`)
 
-- **Public routes** (map data, event queries): Accessible without authentication but **heavily rate-limited** to prevent scraping. Use IP-based and/or token-bucket rate limiting.
-- **Admin/protected routes** (trigger ingestion, manage feeds, configuration): Strictly authenticated. No public access under any circumstances.
+- `GET /events/`: Returns ranked active events (`status`, `scope`, `limit`).
+- `GET /events/bbox`: Spatial query for map viewports (`north`, `south`, `east`, `west`).
+- `GET /events/{event_id}`: Eager loads full event summary and associated source articles.
+- `POST /events/tl/{event_id}`: Generates or retrieves historical causality timeline (`force_refresh`).
 
-### Real-Time Delivery
+### Structured Error Handling
 
-- Implement a **WebSocket or SSE endpoint** that the frontend subscribes to for live event updates.
-- When the ingestion pipeline saves a new event to the database, it must notify connected clients immediately (via an internal pub/sub mechanism or database LISTEN/NOTIFY).
-- The real-time stream should support viewport filtering so clients only receive events relevant to their current map view.
-
-### Response Format
-
-- All geospatial API responses must return data in **GeoJSON format** (`FeatureCollection` with `Feature` objects) so the frontend can feed it directly into Mapbox sources without transformation.
-- Include event metadata (category, severity, summary, sources, timestamps) as GeoJSON feature `properties`.
+Managed globally via `register_err_handlers()`:
+- `AppException` &rarr; Returns `{ err_code, err_msg, details }`
+- `RequestValidationError` &rarr; Returns 422 with validation errors
+- `StarletteHTTPException` &rarr; Standardized HTTP errors
+- Unhandled exceptions &rarr; 500 with structured internal error schema
 
 ---
 
 ## 6. Project Structure
 
-The backend follows a modular architecture:
-
 ```text
 src/hermes_api/
-├── main.py              # FastAPI app factory — thin, imports routers
-├── api/                 # Route handlers (APIRouter modules)
-├── core/                # Configuration, settings, shared utilities
-├── db/                  # Database engine, session management, models
-├── schemas/             # Pydantic models for API payloads & GenAI
-├── services/            # Business logic layer (ingestion, extraction, ranking)
-└── scheduler/           # APScheduler job definitions
+├── main.py              # FastAPI app factory, lifespan, CORS, error handler registration
+├── api/v1/              # APIRouter modules (router.py, events.py, tl.py)
+├── core/                # Settings, constants, rate limiter, custom exceptions, sources.json
+├── db/                  # Async engine, session, enums, declarative models (Event, Article, Source, GeocodeCache, EventTl)
+├── schemas/             # Pydantic v2 DTOs (events.py, errors.py)
+├── services/            # Business logic (ingestion, ai, event, geocoding, rss, source, tl, wikipedia)
+├── scheduler/           # APScheduler background workers (jobs.py)
+└── utils/               # Database transaction helpers (db.py)
 ```
-
-- **`main.py`** must remain thin — only app instantiation, middleware, and router mounting.
-- **`api/`** contains modular routers split by domain (events, feeds, admin).
-- **`services/`** contains all business logic. Route handlers must delegate to services, never contain business logic themselves.
-- **`schemas/`** contains all Pydantic models. Raw dictionaries are forbidden for structured data.

@@ -6,38 +6,42 @@ This document provides frontend-specific architectural context for the `hermes` 
 
 ## 1. Application Role
 
-This is the **frontend shell** of Project Hermes. It is a React application built with React Router 8, Vite, and Tailwind CSS. Its primary job is to render an interactive geospatial map (via Mapbox GL JS) and provide UI overlays (sidebars, filters, panels) for users to explore global news events visually.
+This is the **frontend shell** of Project Hermes. It is a React application built with **React 19**, **React Router 8** (SPA mode via Vite), **Tailwind CSS 4**, **Zustand 5**, **TanStack React Query v5**, and **Mapbox GL JS v3**. Its primary job is to render an interactive geospatial map and tactical "Mission Control" UI overlays for users to observe global news events.
 
-As a thin `apps/` shell in the Nx monorepo, this application should contain **only** route definitions, layout components, and application-level configuration. All reusable UI components, business logic hooks, and API utilities must live in shared `libs/` libraries.
+As a thin `apps/` shell in the Nx monorepo:
+- `apps/hermes` contains **only** route definitions, layout providers, and application configuration.
+- Reusable UI widgets live in `libs/shared/ui-components` (`BootSequence`, `LiveClock`).
+- Map engine, layers, custom projection hooks, and map state live in `libs/feature-map` (`MapView`, `EventPopup`, `TlPanel`, `useMapStore`).
+- Shared TypeScript API interfaces live in `libs/shared/util-types` (`MapEventResponse`, `EventDetailResponse`, `TlResponse`).
 
 ---
 
 ## 2. UI/UX Design Language
 
-### Theme & Visual Identity
+### Theme & Visual Identity ("Mission Control")
 
-- **Theme**: "Mission Control" — a tech-forward, data-dense aesthetic inspired by military command centers and Bloomberg terminals.
-- **Dark Mode**: The application is strictly dark-themed. All backgrounds, cards, and overlays use dark tones.
-- **Glassmorphism**: Panels and sidebars that float over the map must use translucent backgrounds with `backdrop-blur` to create depth without fully obscuring the map beneath.
-- **Sharp Edges**: All components, cards, buttons, and widgets must have **zero border-radius** (completely squared, sharp-edged). Rounded corners are forbidden in this design language.
-- **Typography**: Use clean, monospaced or semi-monospaced fonts for data-dense displays (event metadata, coordinates). Sans-serif for headings and body text.
+- **Theme**: "Mission Control" — a tech-forward, high-density aesthetic inspired by military tactical command centers and financial terminals.
+- **Dark Mode**: Strictly dark-themed (`#050505` background, slate text).
+- **Glassmorphism**: Floating panels use translucent backgrounds with `backdrop-blur-md` (`bg-hud-bg/95`) and glowing tactical borders (`border border-hud-border`).
+- **Sharp Edges (Zero Border Radius)**: All cards, modals, buttons, badges, and popups must have **zero border-radius** (completely squared, sharp-edged). This is strictly enforced in `tailwind.config.js` via `corePlugins: { borderRadius: false }`. Rounded corners are strictly forbidden.
+- **Typography**: Strictly monospaced (`"JetBrains Mono"`, `"Fira Code"`, monospace) to maintain columnar alignment and telemetry precision.
+- **Single Page Application**: Configured with `ssr: false` in `react-router.config.ts` because Mapbox GL relies entirely on client-side WebGL canvas and `window`.
 
-### Color System
+### Color System & Tactical Tokens
 
-- **Severity Indicators**: Use a high-contrast color scale to communicate urgency:
-  - 🔴 **Red/Crimson** — Critical/Breaking events (active conflicts, disasters)
-  - 🟠 **Amber/Orange** — High severity (escalating tensions, economic crises)
-  - 🟡 **Yellow** — Moderate (political developments, policy changes)
-  - 🔵 **Blue** — Informational (diplomatic meetings, trade agreements)
-  - 🟢 **Green** — Positive developments (ceasefires, peace agreements)
-- **Category Colors**: In addition to severity, events are color-coded by category (e.g., economic, military, environmental). These must be distinguishable from the severity scale and consistent across the UI.
-- **Map Contrast**: All overlay colors must be chosen to remain legible against both the dark Mapbox basemap and the lighter ocean areas.
+Defined in `tailwind.config.js`:
+- `hud-bg`: `rgba(10, 15, 25, 0.85)` (deep semi-transparent tactical navy)
+- `hud-border`: `#1e3a8a` (dark military blue border)
+- `hud-glow`: `#3b82f6` (neon electric blue glow)
+- `neon-blue`: `#00f0ff` (cyberpunk bright cyan)
+- `warning-yellow`: `#fbbf24` (alert highlight yellow)
 
-### Error & Loading UX
+### Core Presentation Components
 
-- **No Blocking Errors**: Never throw a full-screen error overlay when the real-time connection drops or an API call fails. Instead, use **non-intrusive toast notifications** or a subtle **offline indicator** in the corner.
-- **Cached Interaction**: When offline or disconnected, the user must be able to continue interacting with cached map data (panning, zooming, clicking already-loaded events).
-- **Loading Skeletons**: Use skeleton/shimmer loading states for sidebars and panels instead of spinners. The map itself should render immediately and populate data progressively.
+- **`BootSequence`** (`libs/shared/ui-components`): Terminal startup sequence displaying ASCII logo, simulated satellite handshake, and system integrity checks before revealing the map.
+- **`LiveClock`** (`libs/shared/ui-components`): Real-time dual UTC and Local digital clock with a blinking heartbeat monitor in the top-right corner.
+- **`EventPopup`** (`libs/feature-map`): Floating HUD window that tracks geographic coordinates via `requestAnimationFrame` projection calculations (`map.project()`). Features an automatic text-scrambler decode effect on AI summaries and links to original sources.
+- **`TlPanel`** (`libs/feature-map`): Slide-out intelligence dossier rendering historical causal events, Wikipedia context, and interactive map camera hops to historical sub-event coordinates.
 
 ---
 
@@ -45,62 +49,57 @@ As a thin `apps/` shell in the Nx monorepo, this application should contain **on
 
 ### Zustand as Single Source of Truth
 
-- **Zustand** is the global state manager. All loaded events, active filters, selected event IDs, viewport bounds, and UI state (sidebar open/closed) live in the Zustand store.
-- Both the Mapbox map instance and the React UI (sidebars, panels, lists) **react to** and **update** the same Zustand store. This ensures they are always in sync.
-- Never let the Mapbox map maintain its own shadow state that the React UI doesn't know about. If an event is selected by clicking a marker on the map, that selection must be written to the Zustand store, not held in a local `useState`.
+- **Zustand** (`useMapStore` in `libs/feature-map/src/lib/store/store.ts`) is the global map store.
+- **State Properties**:
+  - `selectedEventId`: UUID string of the actively selected event (or `null`).
+  - `selectedEventLngLat`: `[longitude, latitude]` of the active event.
+  - `viewport`: Current geographic bounding box (`north`, `south`, `east`, `west`).
+  - `isTlMode`: Boolean flag indicating if historical timeline mode is active.
+  - `tlTargetId`: Event ID whose timeline is currently being inspected.
+- Both the Mapbox GL instance and React HUD overlays react to and update the same Zustand store. Never allow the Mapbox map instance to maintain shadow state that React cannot observe.
 
 ### Data Flow Pattern
 
-1. **User pans/zooms the map** → viewport bounds update in Zustand.
-2. **A React hook or data loader** observes the viewport change → fires a debounced API request with the bounding box.
-3. **API returns GeoJSON events** → events are merged into the Zustand store.
-4. **Mapbox GeoJSON source** observes the store change → map re-renders the data natively.
-5. **Real-time updates** (via WebSocket/SSE) push new events directly into the Zustand store → both map and UI update.
+1. **User pans/zooms the map** &rarr; Mapbox `moveend` updates `viewport` in Zustand.
+2. **`useMapDataSync` (TanStack Query)** observes `viewport` &rarr; fires a debounced API request to `/api/v1/events/bbox?north=..&south=..&east=..&west=..`.
+3. **Client GeoJSON Transformation**: Since the backend returns `MapEventResponse[]`, `createGeoJson()` deduplicates coordinates and constructs a GeoJSON `FeatureCollection` with ranked properties (`rank: 1, 2, 3...`).
+4. **Mapbox GeoJSON Source** updates `events-source` &rarr; WebGL pipeline updates markers natively.
+5. **Marker Selection**: Clicking an unclustered marker writes `selectedEventId` and coordinates to Zustand, centers the camera smoothly with `easeTo`, and displays `EventPopup`.
 
 ---
 
-## 4. Map Rendering & Performance
+## 4. Map Rendering & WebGL Performance
 
-### Mapbox Native Layers (Critical)
+### Mapbox Native Layers (Critical Rule)
 
-- All event data must be rendered using **Mapbox GL native layers** fed by GeoJSON sources. This means using `map.addSource()` and `map.addLayer()` — not React DOM nodes.
-- **Why**: Rendering 10,000+ events as individual React DOM elements (HTML markers) will destroy performance. Mapbox's WebGL pipeline can handle this volume natively.
-- Use Mapbox's built-in **clustering** to group dense markers at high zoom levels. Clusters must display a count and visually indicate the dominant event category within them.
+All event pins, clusters, and relationship lines must be rendered using **Mapbox GL native layers** fed by GeoJSON sources (`map.addSource` and `map.addLayer`). **HTML DOM markers (`new mapboxgl.Marker()`) are strictly forbidden** for event pins because rendering thousands of DOM elements destroys browser performance.
 
 ### Visualization Layers
 
-The map must support rendering these distinct layer types:
+1. **`events-source`**: Native GeoJSON source with clustering enabled (`clusterMaxZoom: 14`, `clusterRadius: 50`).
+2. **`hermes-clusters`**: Circle layer for dense marker clusters. Uses step expressions to become transparent at zoom &ge; 8 with hollow borders.
+3. **`hermes-cluster-count`**: Symbol layer rendering `point_count_abbreviated` in JetBrains Mono.
+4. **`hermes-unclustered-point`**: Circle layer for individual breaking news pins. Data-driven styled by `category_color` and rank-based radius (`[1, 18, 2, 14, 3, 10, 6]`).
+5. **`tl-edges-layer`**: Dashed cyan line layer (`#00f0ff`, `line-width: 2`, `line-dasharray: [2, 2]`) connecting causal historical timeline nodes.
+6. **`tl-nodes-layer`**: Circle layer for historical timeline nodes with category colors and halo outlines.
 
-- **Point Markers**: Color-coded event pins. Use circle or symbol layers with data-driven styling based on event properties (category, severity).
-- **Relationship Arcs**: Curved, directional lines connecting source and target locations for events involving multiple countries (e.g., sanctions, trade agreements). Use line layers with curved geometry or consider Deck.gl's ArcLayer if Mapbox native lines are insufficient.
-- **Territorial Shading**: Semi-transparent fill layers over country/region polygons to depict ongoing states (e.g., active conflict zones, disputed territories). Use fill layers with data-driven opacity.
-- **Cluster Layers**: At higher zoom levels, dense markers must automatically cluster. Clusters should display count badges and use color to reflect the dominant category.
+### Camera Interactions
 
-### Dual-Mode Interface
-
-- The application supports two map viewing modes:
-  - **2D Regional Map**: Standard flat Mapbox view for zoomed-in, hyper-local exploration.
-  - **3D Geopolitical Globe**: A pitched, globe-projection view for macro-level observation of global events and relationship arcs.
-- The transition between modes must be seamless (animated camera transition).
+- **Robotic Cluster Zoom**: Clicking a cluster calculates the expansion zoom and executes a pure linear easing transition (`easing: (t) => t`) for a responsive tactical feel.
+- **Event Pin Selection**: Clicking a pin pans the camera smoothly to center the popup (`easeTo` with quadratic ease-out).
 
 ---
 
-## 5. Real-Time Updates (Frontend Consumption)
+## 5. Server State & Timeline Polling
 
-- The frontend must establish a **WebSocket or SSE connection** to the backend to receive newly extracted events in real time.
-- When a new event arrives via the stream:
-  1. Merge it into the Zustand event store.
-  2. The Mapbox GeoJSON source will automatically re-render.
-  3. Optionally show a subtle "New events" toast or pulse animation on the relevant map area.
-- Implement **automatic reconnection** with exponential backoff if the stream disconnects. Do not throw errors to the user; show a small "Reconnecting..." indicator instead.
+- **TanStack Query v5**: Handles all HTTP fetching and caching:
+  - `useMapDataSync`: 5-second `staleTime` for viewport data.
+  - `useEventDetails`: 60-second `staleTime` for event summaries and source articles.
+  - `useTl`: Initiates historical timeline generation. If `query.state.data?.status === 'GENERATING'`, automatically sets `refetchInterval: 3000` to poll until graph synthesis completes.
 
 ---
 
 ## 6. Accessibility (a11y)
 
-- **Pragmatic Accessibility**: All UI elements **outside the map** (sidebars, event lists, filter panels, modals, search inputs) must be fully accessible:
-  - Proper ARIA labels and roles on all interactive elements.
-  - Full keyboard navigation (Tab, Enter, Escape for modals).
-  - Focus management when panels open/close.
-  - Sufficient color contrast ratios for text overlays.
-- **Map Canvas**: The WebGL map canvas is accepted as a visually-dependent element. Do not attempt to make individual map markers keyboard-navigable or screen-reader accessible — that is not feasible with WebGL rendering. Instead, provide an accessible **event list sidebar** as an alternative way to browse the same data.
+- **Pragmatic Accessibility**: All UI elements **outside the map** (sidebars, timeline panels, popups, buttons) must support keyboard navigation (`Tab`, `Enter`, `Escape`), proper ARIA labels, and high contrast against dark backgrounds.
+- **Map Canvas**: The WebGL canvas is recognized as visually dependent. Individual WebGL markers are not exposed to screen readers; the drawer panels provide accessible textual alternatives.
