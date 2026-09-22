@@ -1,1 +1,280 @@
-<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="0" skipped="0" tests="53" time="29.688" timestamp="2026-09-18T00:47:15.820218+05:30" hostname="pavanDebian"><testcase classname="tests.test_ai_service.TestGetMetadata" name="test_returns_empty_for_no_articles" time="0.013" /><testcase classname="tests.test_ai_service.TestGetMetadata" name="test_successful_batch_extraction" time="0.034" /><testcase classname="tests.test_ai_service.TestGetMetadata" name="test_handles_api_failure" time="0.037" /><testcase classname="tests.test_ai_service.TestExtractTl" name="test_returns_none_for_empty_prose" time="0.004" /><testcase classname="tests.test_ai_service.TestExtractTl" name="test_successful_tl_extraction" time="0.018" /><testcase classname="tests.test_rate_limiter" name="test_rate_limiter_allows_burst_up_to_limit" time="0.007" /><testcase classname="tests.test_rate_limiter" name="test_rate_limiter_throttles_after_burst" time="1.008" /><testcase classname="tests.test_rate_limiter" name="test_rate_limiter_refills_over_time" time="2.006" /><testcase classname="tests.test_rate_limiter" name="test_rate_limiter_property" time="0.002" /><testcase classname="tests.test_source_service" name="test_load_sources_config_valid" time="0.004" /><testcase classname="tests.test_source_service" name="test_load_sources_config_not_a_list" time="0.005" /><testcase classname="tests.test_source_service" name="test_load_sources_config_file_not_found" time="0.004" /><testcase classname="tests.test_source_service" name="test_sync_inserts_new_sources" time="0.071" /><testcase classname="tests.test_source_service" name="test_sync_skips_entries_without_slug" time="0.028" /><testcase classname="tests.test_source_service" name="test_sync_disables_removed_sources" time="0.037" /><testcase classname="tests.test_source_service" name="test_sync_handles_missing_config_file" time="0.012" /><testcase classname="tests.test_source_service" name="test_sync_handles_invalid_json" time="0.014" /><testcase classname="tests.test_source_service" name="test_sync_is_idempotent" time="0.051" /><testcase classname="tests.test_tl_service" name="test_first_generation" time="0.152" /><testcase classname="tests.test_tl_service" name="test_second_click_returns_cache" time="0.035" /><testcase classname="tests.test_tl_service" name="test_concurrent_generation_returns_generating" time="0.043" /><testcase classname="tests.test_tl_service" name="test_no_wikipedia_match" time="0.111" /><testcase classname="tests.test_tl_service" name="test_force_refresh_regenerates" time="0.182" /><testcase classname="tests.test_wikipedia_service.TestSearchTimelineTitles" name="test_returns_titles_on_success" time="0.098" /><testcase classname="tests.test_wikipedia_service.TestSearchTimelineTitles" name="test_returns_empty_list_on_no_results" time="0.071" /><testcase classname="tests.test_wikipedia_service.TestSearchTimelineTitles" name="test_returns_empty_list_on_http_error" time="0.035" /><testcase classname="tests.test_wikipedia_service.TestSearchTimelineTitles" name="test_respects_limit_cap" time="0.055" /><testcase classname="tests.test_wikipedia_service.TestSearchTimelineTitles" name="test_user_agent_is_set" time="0.026" /><testcase classname="tests.test_wikipedia_service.TestFetchPageExtracts" name="test_returns_extract_for_single_title" time="0.045" /><testcase classname="tests.test_wikipedia_service.TestFetchPageExtracts" name="test_returns_none_for_missing_page" time="0.028" /><testcase classname="tests.test_wikipedia_service.TestFetchPageExtracts" name="test_returns_none_for_empty_extract" time="0.030" /><testcase classname="tests.test_wikipedia_service.TestFetchPageExtracts" name="test_batches_more_than_50_titles" time="0.023" /><testcase classname="tests.test_wikipedia_service.TestFetchPageExtracts" name="test_deduplicates_titles" time="0.028" /><testcase classname="tests.test_wikipedia_service.TestFetchPageExtracts" name="test_returns_empty_dict_for_empty_input" time="0.006" /><testcase classname="tests.test_wikipedia_service.TestFetchPageExtracts" name="test_returns_none_values_on_http_error" time="0.035" /><testcase classname="tests.test_wikipedia_service.TestFetchPageExtracts" name="test_user_agent_is_set_on_extract_request" time="0.029" /><testcase classname="tests.test_wikipedia_service.TestFetchPageExtracts" name="test_resolves_title_normalisation" time="0.031" /><testcase classname="tests.test_wikipedia_service.TestEdgeCases" name="test_multiple_titles_all_resolved" time="0.022" /><testcase classname="tests.test_wikipedia_service.TestEdgeCases" name="test_mixed_valid_and_missing_pages" time="0.025" /><testcase classname="tests.test_wikipedia_service.TestEdgeCases" name="test_batch_count[1-1]" time="0.032" /><testcase classname="tests.test_wikipedia_service.TestEdgeCases" name="test_batch_count[50-1]" time="0.030" /><testcase classname="tests.test_wikipedia_service.TestEdgeCases" name="test_batch_count[51-2]" time="0.035" /><testcase classname="tests.test_wikipedia_service.TestEdgeCases" name="test_batch_count[100-2]" time="0.038" /><testcase classname="tests.test_wikipedia_service.TestEdgeCases" name="test_batch_count[101-3]" time="0.027" /><testcase classname="tests.test_wikipedia_service.TestEnumerateTimelinePages" name="test_missing_main_page_returns_empty" time="0.010" /><testcase classname="tests.test_wikipedia_service.TestEnumerateTimelinePages" name="test_no_subpages_returns_main" time="0.013" /><testcase classname="tests.test_wikipedia_service.TestEnumerateTimelinePages" name="test_empty_sections_index_returns_subpages" time="0.019" /><testcase classname="tests.test_wikipedia_service.TestEnumerateTimelinePages" name="test_see_also_index_returns_subpages" time="0.023" /><testcase classname="tests.test_wikipedia_service.TestEnumerateTimelinePages" name="test_non_index_with_subpages_returns_main" time="0.014" /><testcase classname="tests.test_wikipedia_service.TestEnumerateTimelinePages" name="test_dash_normalization" time="0.012" /><testcase classname="tests.test_wikipedia_service.TestSortTimelineTitles" name="test_sorts_by_year" time="0.003" /><testcase classname="tests.test_wikipedia_service.TestSortTimelineTitles" name="test_sorts_by_month" time="0.002" /><testcase classname="tests.test_wikipedia_service.TestSortTimelineTitles" name="test_sorts_by_phase" time="0.003" /></testsuite></testsuites>
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="10" skipped="0" tests="53" time="56.910" timestamp="2026-09-22T18:24:25.763178+05:30" hostname="pavanDebian"><testcase classname="tests.test_ai_service.TestGetMetadata" name="test_returns_empty_for_no_articles" time="0.013" /><testcase classname="tests.test_ai_service.TestGetMetadata" name="test_successful_batch_extraction" time="0.038" /><testcase classname="tests.test_ai_service.TestGetMetadata" name="test_handles_api_failure" time="0.030" /><testcase classname="tests.test_ai_service.TestExtractTl" name="test_returns_none_for_empty_prose" time="0.008" /><testcase classname="tests.test_ai_service.TestExtractTl" name="test_successful_tl_extraction" time="0.032" /><testcase classname="tests.test_rate_limiter" name="test_rate_limiter_allows_burst_up_to_limit" time="0.008" /><testcase classname="tests.test_rate_limiter" name="test_rate_limiter_throttles_after_burst" time="1.008" /><testcase classname="tests.test_rate_limiter" name="test_rate_limiter_refills_over_time" time="2.008" /><testcase classname="tests.test_rate_limiter" name="test_rate_limiter_property" time="0.003" /><testcase classname="tests.test_source_service" name="test_load_sources_config_valid" time="0.005" /><testcase classname="tests.test_source_service" name="test_load_sources_config_not_a_list" time="0.007" /><testcase classname="tests.test_source_service" name="test_load_sources_config_file_not_found" time="0.006" /><testcase classname="tests.test_source_service" name="test_sync_inserts_new_sources" time="0.143" /><testcase classname="tests.test_source_service" name="test_sync_skips_entries_without_slug" time="0.036" /><testcase classname="tests.test_source_service" name="test_sync_disables_removed_sources" time="0.063" /><testcase classname="tests.test_source_service" name="test_sync_handles_missing_config_file" time="0.023" /><testcase classname="tests.test_source_service" name="test_sync_handles_invalid_json" time="0.023" /><testcase classname="tests.test_source_service" name="test_sync_is_idempotent" time="0.072" /><testcase classname="tests.test_tl_service" name="test_first_generation" time="0.186"><failure message="AttributeError: &lt;module 'hermes_api.services.tl_service' from '/home/pavan/proj/hermes/apps/hermes-api/src/hermes_api/services/tl_service.py'&gt; does not have the attribute 'enumerate_timeline_pages'">args = ()
+keywargs = {'dummy_event': &lt;hermes_api.db.models.event.Event object at 0x7feea17ad3a0&gt;, 'mock_ai_extraction': &lt;MagicMock id='140662888125056'&gt;, 'mock_session': &lt;AsyncMock id='140662888396640'&gt;}
+
+    #x1B[0m#x1B[37m@wraps#x1B[39;49;00m(func)#x1B[90m#x1B[39;49;00m
+    #x1B[94mdef#x1B[39;49;00m#x1B[90m #x1B[39;49;00m#x1B[92mpatched#x1B[39;49;00m(*args, **keywargs):#x1B[90m#x1B[39;49;00m
+&gt;       #x1B[94mwith#x1B[39;49;00m #x1B[96mself#x1B[39;49;00m.decoration_helper(patched,#x1B[90m#x1B[39;49;00m
+                                    args,#x1B[90m#x1B[39;49;00m
+                                    keywargs) #x1B[94mas#x1B[39;49;00m (newargs, newkeywargs):#x1B[90m#x1B[39;49;00m
+
+#x1B[1m#x1B[31m/home/pavan/.local/share/uv/python/cpython-3.9.5-linux-x86_64-gnu/lib/python3.9/unittest/mock.py#x1B[0m:1334: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+#x1B[1m#x1B[31m/home/pavan/.local/share/uv/python/cpython-3.9.5-linux-x86_64-gnu/lib/python3.9/contextlib.py#x1B[0m:117: in __enter__
+    #x1B[0m#x1B[94mreturn#x1B[39;49;00m #x1B[96mnext#x1B[39;49;00m(#x1B[96mself#x1B[39;49;00m.gen)#x1B[90m#x1B[39;49;00m
+#x1B[1m#x1B[31m/home/pavan/.local/share/uv/python/cpython-3.9.5-linux-x86_64-gnu/lib/python3.9/unittest/mock.py#x1B[0m:1316: in decoration_helper
+    #x1B[0marg = exit_stack.enter_context(patching)#x1B[90m#x1B[39;49;00m
+#x1B[1m#x1B[31m/home/pavan/.local/share/uv/python/cpython-3.9.5-linux-x86_64-gnu/lib/python3.9/contextlib.py#x1B[0m:429: in enter_context
+    #x1B[0mresult = _cm_type.#x1B[92m__enter__#x1B[39;49;00m(cm)#x1B[90m#x1B[39;49;00m
+#x1B[1m#x1B[31m/home/pavan/.local/share/uv/python/cpython-3.9.5-linux-x86_64-gnu/lib/python3.9/unittest/mock.py#x1B[0m:1405: in __enter__
+    #x1B[0moriginal, local = #x1B[96mself#x1B[39;49;00m.get_original()#x1B[90m#x1B[39;49;00m
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;unittest.mock._patch object at 0x7feea1967310&gt;
+
+    #x1B[0m#x1B[94mdef#x1B[39;49;00m#x1B[90m #x1B[39;49;00m#x1B[92mget_original#x1B[39;49;00m(#x1B[96mself#x1B[39;49;00m):#x1B[90m#x1B[39;49;00m
+        target = #x1B[96mself#x1B[39;49;00m.getter()#x1B[90m#x1B[39;49;00m
+        name = #x1B[96mself#x1B[39;49;00m.attribute#x1B[90m#x1B[39;49;00m
+    #x1B[90m#x1B[39;49;00m
+        original = DEFAULT#x1B[90m#x1B[39;49;00m
+        local = #x1B[94mFalse#x1B[39;49;00m#x1B[90m#x1B[39;49;00m
+    #x1B[90m#x1B[39;49;00m
+        #x1B[94mtry#x1B[39;49;00m:#x1B[90m#x1B[39;49;00m
+            original = target.#x1B[91m__dict__#x1B[39;49;00m[name]#x1B[90m#x1B[39;49;00m
+        #x1B[94mexcept#x1B[39;49;00m (#x1B[96mAttributeError#x1B[39;49;00m, #x1B[96mKeyError#x1B[39;49;00m):#x1B[90m#x1B[39;49;00m
+            original = #x1B[96mgetattr#x1B[39;49;00m(target, name, DEFAULT)#x1B[90m#x1B[39;49;00m
+        #x1B[94melse#x1B[39;49;00m:#x1B[90m#x1B[39;49;00m
+            local = #x1B[94mTrue#x1B[39;49;00m#x1B[90m#x1B[39;49;00m
+    #x1B[90m#x1B[39;49;00m
+        #x1B[94mif#x1B[39;49;00m name #x1B[95min#x1B[39;49;00m _builtins #x1B[95mand#x1B[39;49;00m #x1B[96misinstance#x1B[39;49;00m(target, ModuleType):#x1B[90m#x1B[39;49;00m
+            #x1B[96mself#x1B[39;49;00m.create = #x1B[94mTrue#x1B[39;49;00m#x1B[90m#x1B[39;49;00m
+    #x1B[90m#x1B[39;49;00m
+        #x1B[94mif#x1B[39;49;00m #x1B[95mnot#x1B[39;49;00m #x1B[96mself#x1B[39;49;00m.create #x1B[95mand#x1B[39;49;00m original #x1B[95mis#x1B[39;49;00m DEFAULT:#x1B[90m#x1B[39;49;00m
+&gt;           #x1B[94mraise#x1B[39;49;00m #x1B[96mAttributeError#x1B[39;49;00m(#x1B[90m#x1B[39;49;00m
+                #x1B[33m"#x1B[39;49;00m#x1B[33m%s#x1B[39;49;00m#x1B[33m does not have the attribute #x1B[39;49;00m#x1B[33m%r#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m % (target, name)#x1B[90m#x1B[39;49;00m
+            )#x1B[90m#x1B[39;49;00m
+#x1B[1m#x1B[31mE           AttributeError: &lt;module 'hermes_api.services.tl_service' from '/home/pavan/proj/hermes/apps/hermes-api/src/hermes_api/services/tl_service.py'&gt; does not have the attribute 'enumerate_timeline_pages'#x1B[0m
+
+#x1B[1m#x1B[31m/home/pavan/.local/share/uv/python/cpython-3.9.5-linux-x86_64-gnu/lib/python3.9/unittest/mock.py#x1B[0m:1378: AttributeError</failure></testcase><testcase classname="tests.test_tl_service" name="test_second_click_returns_cache" time="0.058" /><testcase classname="tests.test_tl_service" name="test_concurrent_generation_returns_generating" time="0.113"><failure message="AssertionError: assert &lt;EventTlStatu... 'GENERATING'&gt; == 'generating'&#10;  &#10;  #x1B[0m#x1B[91m- generating#x1B[39;49;00m#x1B[90m#x1B[39;49;00m&#10;  #x1B[92m+ GENERATING#x1B[39;49;00m#x1B[90m#x1B[39;49;00m">mock_session = &lt;AsyncMock id='140662888930704'&gt;
+dummy_event = &lt;hermes_api.db.models.event.Event object at 0x7feea17259a0&gt;
+
+    #x1B[0m#x1B[94mdef#x1B[39;49;00m#x1B[90m #x1B[39;49;00m#x1B[92mtest_concurrent_generation_returns_generating#x1B[39;49;00m(mock_session, dummy_event):#x1B[90m#x1B[39;49;00m
+        #x1B[94masync#x1B[39;49;00m #x1B[94mdef#x1B[39;49;00m#x1B[90m #x1B[39;49;00m#x1B[92mrun_test#x1B[39;49;00m():#x1B[90m#x1B[39;49;00m
+            existing_tl = EventTl(#x1B[90m#x1B[39;49;00m
+                event_id=dummy_event.id,#x1B[90m#x1B[39;49;00m
+                status=#x1B[33m"#x1B[39;49;00m#x1B[33mGENERATING#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m,#x1B[90m#x1B[39;49;00m
+            )#x1B[90m#x1B[39;49;00m
+            result_mock = MagicMock()#x1B[90m#x1B[39;49;00m
+            result_mock.scalar_one_or_none.return_value = existing_tl#x1B[90m#x1B[39;49;00m
+            mock_session.execute.return_value = result_mock#x1B[90m#x1B[39;49;00m
+            mock_session.get.return_value = dummy_event#x1B[90m#x1B[39;49;00m
+    #x1B[90m#x1B[39;49;00m
+            service = TlService(mock_session)#x1B[90m#x1B[39;49;00m
+            response = #x1B[94mawait#x1B[39;49;00m service.gen_tl(dummy_event.id)#x1B[90m#x1B[39;49;00m
+    #x1B[90m#x1B[39;49;00m
+            #x1B[94massert#x1B[39;49;00m response.status == #x1B[33m"#x1B[39;49;00m#x1B[33mgenerating#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m#x1B[90m#x1B[39;49;00m
+            mock_session.commit.assert_not_called()#x1B[90m#x1B[39;49;00m
+&gt;       asyncio.run(run_test())#x1B[90m#x1B[39;49;00m
+
+#x1B[1m#x1B[31mtests/test_tl_service.py#x1B[0m:138: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+#x1B[1m#x1B[31m/home/pavan/.local/share/uv/python/cpython-3.9.5-linux-x86_64-gnu/lib/python3.9/asyncio/runners.py#x1B[0m:44: in run
+    #x1B[0m#x1B[94mreturn#x1B[39;49;00m loop.run_until_complete(main)#x1B[90m#x1B[39;49;00m
+#x1B[1m#x1B[31m/home/pavan/.local/share/uv/python/cpython-3.9.5-linux-x86_64-gnu/lib/python3.9/asyncio/base_events.py#x1B[0m:642: in run_until_complete
+    #x1B[0m#x1B[94mreturn#x1B[39;49;00m future.result()#x1B[90m#x1B[39;49;00m
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    #x1B[0m#x1B[94masync#x1B[39;49;00m #x1B[94mdef#x1B[39;49;00m#x1B[90m #x1B[39;49;00m#x1B[92mrun_test#x1B[39;49;00m():#x1B[90m#x1B[39;49;00m
+        existing_tl = EventTl(#x1B[90m#x1B[39;49;00m
+            event_id=dummy_event.id,#x1B[90m#x1B[39;49;00m
+            status=#x1B[33m"#x1B[39;49;00m#x1B[33mGENERATING#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m,#x1B[90m#x1B[39;49;00m
+        )#x1B[90m#x1B[39;49;00m
+        result_mock = MagicMock()#x1B[90m#x1B[39;49;00m
+        result_mock.scalar_one_or_none.return_value = existing_tl#x1B[90m#x1B[39;49;00m
+        mock_session.execute.return_value = result_mock#x1B[90m#x1B[39;49;00m
+        mock_session.get.return_value = dummy_event#x1B[90m#x1B[39;49;00m
+    #x1B[90m#x1B[39;49;00m
+        service = TlService(mock_session)#x1B[90m#x1B[39;49;00m
+        response = #x1B[94mawait#x1B[39;49;00m service.gen_tl(dummy_event.id)#x1B[90m#x1B[39;49;00m
+    #x1B[90m#x1B[39;49;00m
+&gt;       #x1B[94massert#x1B[39;49;00m response.status == #x1B[33m"#x1B[39;49;00m#x1B[33mgenerating#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m#x1B[90m#x1B[39;49;00m
+#x1B[1m#x1B[31mE       AssertionError: assert &lt;EventTlStatu... 'GENERATING'&gt; == 'generating'#x1B[0m
+#x1B[1m#x1B[31mE         #x1B[0m
+#x1B[1m#x1B[31mE         #x1B[0m#x1B[91m- generating#x1B[39;49;00m#x1B[90m#x1B[39;49;00m#x1B[0m
+#x1B[1m#x1B[31mE         #x1B[92m+ GENERATING#x1B[39;49;00m#x1B[90m#x1B[39;49;00m#x1B[0m
+
+#x1B[1m#x1B[31mtests/test_tl_service.py#x1B[0m:136: AssertionError</failure></testcase><testcase classname="tests.test_tl_service" name="test_no_wikipedia_match" time="0.023"><failure message="AttributeError: &lt;module 'hermes_api.services.tl_service' from '/home/pavan/proj/hermes/apps/hermes-api/src/hermes_api/services/tl_service.py'&gt; does not have the attribute 'search_timeline_titles'">args = ()
+keywargs = {'dummy_event': &lt;hermes_api.db.models.event.Event object at 0x7feea1878250&gt;, 'mock_session': &lt;AsyncMock id='140662887708560'&gt;}
+
+    #x1B[0m#x1B[37m@wraps#x1B[39;49;00m(func)#x1B[90m#x1B[39;49;00m
+    #x1B[94mdef#x1B[39;49;00m#x1B[90m #x1B[39;49;00m#x1B[92mpatched#x1B[39;49;00m(*args, **keywargs):#x1B[90m#x1B[39;49;00m
+&gt;       #x1B[94mwith#x1B[39;49;00m #x1B[96mself#x1B[39;49;00m.decoration_helper(patched,#x1B[90m#x1B[39;49;00m
+                                    args,#x1B[90m#x1B[39;49;00m
+                                    keywargs) #x1B[94mas#x1B[39;49;00m (newargs, newkeywargs):#x1B[90m#x1B[39;49;00m
+
+#x1B[1m#x1B[31m/home/pavan/.local/share/uv/python/cpython-3.9.5-linux-x86_64-gnu/lib/python3.9/unittest/mock.py#x1B[0m:1334: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+#x1B[1m#x1B[31m/home/pavan/.local/share/uv/python/cpython-3.9.5-linux-x86_64-gnu/lib/python3.9/contextlib.py#x1B[0m:117: in __enter__
+    #x1B[0m#x1B[94mreturn#x1B[39;49;00m #x1B[96mnext#x1B[39;49;00m(#x1B[96mself#x1B[39;49;00m.gen)#x1B[90m#x1B[39;49;00m
+#x1B[1m#x1B[31m/home/pavan/.local/share/uv/python/cpython-3.9.5-linux-x86_64-gnu/lib/python3.9/unittest/mock.py#x1B[0m:1316: in decoration_helper
+    #x1B[0marg = exit_stack.enter_context(patching)#x1B[90m#x1B[39;49;00m
+#x1B[1m#x1B[31m/home/pavan/.local/share/uv/python/cpython-3.9.5-linux-x86_64-gnu/lib/python3.9/contextlib.py#x1B[0m:429: in enter_context
+    #x1B[0mresult = _cm_type.#x1B[92m__enter__#x1B[39;49;00m(cm)#x1B[90m#x1B[39;49;00m
+#x1B[1m#x1B[31m/home/pavan/.local/share/uv/python/cpython-3.9.5-linux-x86_64-gnu/lib/python3.9/unittest/mock.py#x1B[0m:1405: in __enter__
+    #x1B[0moriginal, local = #x1B[96mself#x1B[39;49;00m.get_original()#x1B[90m#x1B[39;49;00m
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;unittest.mock._patch object at 0x7feea1967400&gt;
+
+    #x1B[0m#x1B[94mdef#x1B[39;49;00m#x1B[90m #x1B[39;49;00m#x1B[92mget_original#x1B[39;49;00m(#x1B[96mself#x1B[39;49;00m):#x1B[90m#x1B[39;49;00m
+        target = #x1B[96mself#x1B[39;49;00m.getter()#x1B[90m#x1B[39;49;00m
+        name = #x1B[96mself#x1B[39;49;00m.attribute#x1B[90m#x1B[39;49;00m
+    #x1B[90m#x1B[39;49;00m
+        original = DEFAULT#x1B[90m#x1B[39;49;00m
+        local = #x1B[94mFalse#x1B[39;49;00m#x1B[90m#x1B[39;49;00m
+    #x1B[90m#x1B[39;49;00m
+        #x1B[94mtry#x1B[39;49;00m:#x1B[90m#x1B[39;49;00m
+            original = target.#x1B[91m__dict__#x1B[39;49;00m[name]#x1B[90m#x1B[39;49;00m
+        #x1B[94mexcept#x1B[39;49;00m (#x1B[96mAttributeError#x1B[39;49;00m, #x1B[96mKeyError#x1B[39;49;00m):#x1B[90m#x1B[39;49;00m
+            original = #x1B[96mgetattr#x1B[39;49;00m(target, name, DEFAULT)#x1B[90m#x1B[39;49;00m
+        #x1B[94melse#x1B[39;49;00m:#x1B[90m#x1B[39;49;00m
+            local = #x1B[94mTrue#x1B[39;49;00m#x1B[90m#x1B[39;49;00m
+    #x1B[90m#x1B[39;49;00m
+        #x1B[94mif#x1B[39;49;00m name #x1B[95min#x1B[39;49;00m _builtins #x1B[95mand#x1B[39;49;00m #x1B[96misinstance#x1B[39;49;00m(target, ModuleType):#x1B[90m#x1B[39;49;00m
+            #x1B[96mself#x1B[39;49;00m.create = #x1B[94mTrue#x1B[39;49;00m#x1B[90m#x1B[39;49;00m
+    #x1B[90m#x1B[39;49;00m
+        #x1B[94mif#x1B[39;49;00m #x1B[95mnot#x1B[39;49;00m #x1B[96mself#x1B[39;49;00m.create #x1B[95mand#x1B[39;49;00m original #x1B[95mis#x1B[39;49;00m DEFAULT:#x1B[90m#x1B[39;49;00m
+&gt;           #x1B[94mraise#x1B[39;49;00m #x1B[96mAttributeError#x1B[39;49;00m(#x1B[90m#x1B[39;49;00m
+                #x1B[33m"#x1B[39;49;00m#x1B[33m%s#x1B[39;49;00m#x1B[33m does not have the attribute #x1B[39;49;00m#x1B[33m%r#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m % (target, name)#x1B[90m#x1B[39;49;00m
+            )#x1B[90m#x1B[39;49;00m
+#x1B[1m#x1B[31mE           AttributeError: &lt;module 'hermes_api.services.tl_service' from '/home/pavan/proj/hermes/apps/hermes-api/src/hermes_api/services/tl_service.py'&gt; does not have the attribute 'search_timeline_titles'#x1B[0m
+
+#x1B[1m#x1B[31m/home/pavan/.local/share/uv/python/cpython-3.9.5-linux-x86_64-gnu/lib/python3.9/unittest/mock.py#x1B[0m:1378: AttributeError</failure></testcase><testcase classname="tests.test_tl_service" name="test_force_refresh_regenerates" time="0.155"><failure message="AttributeError: &lt;module 'hermes_api.services.tl_service' from '/home/pavan/proj/hermes/apps/hermes-api/src/hermes_api/services/tl_service.py'&gt; does not have the attribute 'enumerate_timeline_pages'">args = ()
+keywargs = {'dummy_event': &lt;hermes_api.db.models.event.Event object at 0x7feea1747b50&gt;, 'mock_ai_extraction': &lt;MagicMock id='140662887500912'&gt;, 'mock_session': &lt;AsyncMock id='140662884359664'&gt;}
+
+    #x1B[0m#x1B[37m@wraps#x1B[39;49;00m(func)#x1B[90m#x1B[39;49;00m
+    #x1B[94mdef#x1B[39;49;00m#x1B[90m #x1B[39;49;00m#x1B[92mpatched#x1B[39;49;00m(*args, **keywargs):#x1B[90m#x1B[39;49;00m
+&gt;       #x1B[94mwith#x1B[39;49;00m #x1B[96mself#x1B[39;49;00m.decoration_helper(patched,#x1B[90m#x1B[39;49;00m
+                                    args,#x1B[90m#x1B[39;49;00m
+                                    keywargs) #x1B[94mas#x1B[39;49;00m (newargs, newkeywargs):#x1B[90m#x1B[39;49;00m
+
+#x1B[1m#x1B[31m/home/pavan/.local/share/uv/python/cpython-3.9.5-linux-x86_64-gnu/lib/python3.9/unittest/mock.py#x1B[0m:1334: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+#x1B[1m#x1B[31m/home/pavan/.local/share/uv/python/cpython-3.9.5-linux-x86_64-gnu/lib/python3.9/contextlib.py#x1B[0m:117: in __enter__
+    #x1B[0m#x1B[94mreturn#x1B[39;49;00m #x1B[96mnext#x1B[39;49;00m(#x1B[96mself#x1B[39;49;00m.gen)#x1B[90m#x1B[39;49;00m
+#x1B[1m#x1B[31m/home/pavan/.local/share/uv/python/cpython-3.9.5-linux-x86_64-gnu/lib/python3.9/unittest/mock.py#x1B[0m:1316: in decoration_helper
+    #x1B[0marg = exit_stack.enter_context(patching)#x1B[90m#x1B[39;49;00m
+#x1B[1m#x1B[31m/home/pavan/.local/share/uv/python/cpython-3.9.5-linux-x86_64-gnu/lib/python3.9/contextlib.py#x1B[0m:429: in enter_context
+    #x1B[0mresult = _cm_type.#x1B[92m__enter__#x1B[39;49;00m(cm)#x1B[90m#x1B[39;49;00m
+#x1B[1m#x1B[31m/home/pavan/.local/share/uv/python/cpython-3.9.5-linux-x86_64-gnu/lib/python3.9/unittest/mock.py#x1B[0m:1405: in __enter__
+    #x1B[0moriginal, local = #x1B[96mself#x1B[39;49;00m.get_original()#x1B[90m#x1B[39;49;00m
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;unittest.mock._patch object at 0x7feea19674c0&gt;
+
+    #x1B[0m#x1B[94mdef#x1B[39;49;00m#x1B[90m #x1B[39;49;00m#x1B[92mget_original#x1B[39;49;00m(#x1B[96mself#x1B[39;49;00m):#x1B[90m#x1B[39;49;00m
+        target = #x1B[96mself#x1B[39;49;00m.getter()#x1B[90m#x1B[39;49;00m
+        name = #x1B[96mself#x1B[39;49;00m.attribute#x1B[90m#x1B[39;49;00m
+    #x1B[90m#x1B[39;49;00m
+        original = DEFAULT#x1B[90m#x1B[39;49;00m
+        local = #x1B[94mFalse#x1B[39;49;00m#x1B[90m#x1B[39;49;00m
+    #x1B[90m#x1B[39;49;00m
+        #x1B[94mtry#x1B[39;49;00m:#x1B[90m#x1B[39;49;00m
+            original = target.#x1B[91m__dict__#x1B[39;49;00m[name]#x1B[90m#x1B[39;49;00m
+        #x1B[94mexcept#x1B[39;49;00m (#x1B[96mAttributeError#x1B[39;49;00m, #x1B[96mKeyError#x1B[39;49;00m):#x1B[90m#x1B[39;49;00m
+            original = #x1B[96mgetattr#x1B[39;49;00m(target, name, DEFAULT)#x1B[90m#x1B[39;49;00m
+        #x1B[94melse#x1B[39;49;00m:#x1B[90m#x1B[39;49;00m
+            local = #x1B[94mTrue#x1B[39;49;00m#x1B[90m#x1B[39;49;00m
+    #x1B[90m#x1B[39;49;00m
+        #x1B[94mif#x1B[39;49;00m name #x1B[95min#x1B[39;49;00m _builtins #x1B[95mand#x1B[39;49;00m #x1B[96misinstance#x1B[39;49;00m(target, ModuleType):#x1B[90m#x1B[39;49;00m
+            #x1B[96mself#x1B[39;49;00m.create = #x1B[94mTrue#x1B[39;49;00m#x1B[90m#x1B[39;49;00m
+    #x1B[90m#x1B[39;49;00m
+        #x1B[94mif#x1B[39;49;00m #x1B[95mnot#x1B[39;49;00m #x1B[96mself#x1B[39;49;00m.create #x1B[95mand#x1B[39;49;00m original #x1B[95mis#x1B[39;49;00m DEFAULT:#x1B[90m#x1B[39;49;00m
+&gt;           #x1B[94mraise#x1B[39;49;00m #x1B[96mAttributeError#x1B[39;49;00m(#x1B[90m#x1B[39;49;00m
+                #x1B[33m"#x1B[39;49;00m#x1B[33m%s#x1B[39;49;00m#x1B[33m does not have the attribute #x1B[39;49;00m#x1B[33m%r#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m % (target, name)#x1B[90m#x1B[39;49;00m
+            )#x1B[90m#x1B[39;49;00m
+#x1B[1m#x1B[31mE           AttributeError: &lt;module 'hermes_api.services.tl_service' from '/home/pavan/proj/hermes/apps/hermes-api/src/hermes_api/services/tl_service.py'&gt; does not have the attribute 'enumerate_timeline_pages'#x1B[0m
+
+#x1B[1m#x1B[31m/home/pavan/.local/share/uv/python/cpython-3.9.5-linux-x86_64-gnu/lib/python3.9/unittest/mock.py#x1B[0m:1378: AttributeError</failure></testcase><testcase classname="tests.test_wikipedia_service.TestSearchTimelineTitles" name="test_returns_titles_on_success" time="0.034" /><testcase classname="tests.test_wikipedia_service.TestSearchTimelineTitles" name="test_returns_empty_list_on_no_results" time="0.038" /><testcase classname="tests.test_wikipedia_service.TestSearchTimelineTitles" name="test_returns_empty_list_on_http_error" time="0.027" /><testcase classname="tests.test_wikipedia_service.TestSearchTimelineTitles" name="test_respects_limit_cap" time="0.039" /><testcase classname="tests.test_wikipedia_service.TestSearchTimelineTitles" name="test_user_agent_is_set" time="0.026" /><testcase classname="tests.test_wikipedia_service.TestFetchPageExtracts" name="test_returns_extract_for_single_title" time="0.030" /><testcase classname="tests.test_wikipedia_service.TestFetchPageExtracts" name="test_returns_none_for_missing_page" time="0.035" /><testcase classname="tests.test_wikipedia_service.TestFetchPageExtracts" name="test_returns_none_for_empty_extract" time="0.036" /><testcase classname="tests.test_wikipedia_service.TestFetchPageExtracts" name="test_batches_more_than_50_titles" time="0.056" /><testcase classname="tests.test_wikipedia_service.TestFetchPageExtracts" name="test_deduplicates_titles" time="0.032" /><testcase classname="tests.test_wikipedia_service.TestFetchPageExtracts" name="test_returns_empty_dict_for_empty_input" time="0.007" /><testcase classname="tests.test_wikipedia_service.TestFetchPageExtracts" name="test_returns_none_values_on_http_error" time="0.030" /><testcase classname="tests.test_wikipedia_service.TestFetchPageExtracts" name="test_user_agent_is_set_on_extract_request" time="0.040" /><testcase classname="tests.test_wikipedia_service.TestFetchPageExtracts" name="test_resolves_title_normalisation" time="0.040" /><testcase classname="tests.test_wikipedia_service.TestEdgeCases" name="test_multiple_titles_all_resolved" time="0.035" /><testcase classname="tests.test_wikipedia_service.TestEdgeCases" name="test_mixed_valid_and_missing_pages" time="0.037" /><testcase classname="tests.test_wikipedia_service.TestEdgeCases" name="test_batch_count[1-1]" time="0.033" /><testcase classname="tests.test_wikipedia_service.TestEdgeCases" name="test_batch_count[50-1]" time="0.054" /><testcase classname="tests.test_wikipedia_service.TestEdgeCases" name="test_batch_count[51-2]" time="0.045" /><testcase classname="tests.test_wikipedia_service.TestEdgeCases" name="test_batch_count[100-2]" time="0.046" /><testcase classname="tests.test_wikipedia_service.TestEdgeCases" name="test_batch_count[101-3]" time="0.088" /><testcase classname="tests.test_wikipedia_service.TestEnumerateTimelinePages" name="test_missing_main_page_returns_empty" time="0.015"><failure message="ImportError: cannot import name 'enumerate_timeline_pages' from 'hermes_api.services.wikipedia_service' (/home/pavan/proj/hermes/apps/hermes-api/src/hermes_api/services/wikipedia_service.py)">self = &lt;tests.test_wikipedia_service.TestEnumerateTimelinePages object at 0x7feea19e8e80&gt;
+mock_search = &lt;AsyncMock name='search_timeline_titles' id='140662884306080'&gt;
+mock_fetch = &lt;AsyncMock name='fetch_page_extracts' id='140662889800944'&gt;
+
+    #x1B[0m#x1B[37m@patch#x1B[39;49;00m(#x1B[33m"#x1B[39;49;00m#x1B[33mhermes_api.services.wikipedia_service.fetch_page_extracts#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m)#x1B[90m#x1B[39;49;00m
+    #x1B[37m@patch#x1B[39;49;00m(#x1B[33m"#x1B[39;49;00m#x1B[33mhermes_api.services.wikipedia_service.search_timeline_titles#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m)#x1B[90m#x1B[39;49;00m
+    #x1B[94mdef#x1B[39;49;00m#x1B[90m #x1B[39;49;00m#x1B[92mtest_missing_main_page_returns_empty#x1B[39;49;00m(#x1B[90m#x1B[39;49;00m
+        #x1B[96mself#x1B[39;49;00m, mock_search: MagicMock, mock_fetch: MagicMock#x1B[90m#x1B[39;49;00m
+    ) -&gt; #x1B[94mNone#x1B[39;49;00m:#x1B[90m#x1B[39;49;00m
+        mock_fetch.return_value = {#x1B[33m"#x1B[39;49;00m#x1B[33mMain#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m: #x1B[94mNone#x1B[39;49;00m}#x1B[90m#x1B[39;49;00m
+&gt;       #x1B[94mfrom#x1B[39;49;00m#x1B[90m #x1B[39;49;00m#x1B[04m#x1B[96mhermes_api#x1B[39;49;00m#x1B[04m#x1B[96m.#x1B[39;49;00m#x1B[04m#x1B[96mservices#x1B[39;49;00m#x1B[04m#x1B[96m.#x1B[39;49;00m#x1B[04m#x1B[96mwikipedia_service#x1B[39;49;00m#x1B[90m #x1B[39;49;00m#x1B[94mimport#x1B[39;49;00m enumerate_timeline_pages#x1B[90m#x1B[39;49;00m
+#x1B[1m#x1B[31mE       ImportError: cannot import name 'enumerate_timeline_pages' from 'hermes_api.services.wikipedia_service' (/home/pavan/proj/hermes/apps/hermes-api/src/hermes_api/services/wikipedia_service.py)#x1B[0m
+
+#x1B[1m#x1B[31mtests/test_wikipedia_service.py#x1B[0m:485: ImportError</failure></testcase><testcase classname="tests.test_wikipedia_service.TestEnumerateTimelinePages" name="test_no_subpages_returns_main" time="0.013"><failure message="ImportError: cannot import name 'enumerate_timeline_pages' from 'hermes_api.services.wikipedia_service' (/home/pavan/proj/hermes/apps/hermes-api/src/hermes_api/services/wikipedia_service.py)">self = &lt;tests.test_wikipedia_service.TestEnumerateTimelinePages object at 0x7feea19e8d00&gt;
+mock_search = &lt;AsyncMock name='search_timeline_titles' id='140662884281360'&gt;
+mock_fetch = &lt;AsyncMock name='fetch_page_extracts' id='140662888143168'&gt;
+
+    #x1B[0m#x1B[37m@patch#x1B[39;49;00m(#x1B[33m"#x1B[39;49;00m#x1B[33mhermes_api.services.wikipedia_service.fetch_page_extracts#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m)#x1B[90m#x1B[39;49;00m
+    #x1B[37m@patch#x1B[39;49;00m(#x1B[33m"#x1B[39;49;00m#x1B[33mhermes_api.services.wikipedia_service.search_timeline_titles#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m)#x1B[90m#x1B[39;49;00m
+    #x1B[94mdef#x1B[39;49;00m#x1B[90m #x1B[39;49;00m#x1B[92mtest_no_subpages_returns_main#x1B[39;49;00m(#x1B[90m#x1B[39;49;00m
+        #x1B[96mself#x1B[39;49;00m, mock_search: MagicMock, mock_fetch: MagicMock#x1B[90m#x1B[39;49;00m
+    ) -&gt; #x1B[94mNone#x1B[39;49;00m:#x1B[90m#x1B[39;49;00m
+        mock_fetch.return_value = {#x1B[33m"#x1B[39;49;00m#x1B[33mMain#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m: #x1B[33m"#x1B[39;49;00m#x1B[33mSome content.#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m}#x1B[90m#x1B[39;49;00m
+        mock_search.return_value = []#x1B[90m#x1B[39;49;00m
+&gt;       #x1B[94mfrom#x1B[39;49;00m#x1B[90m #x1B[39;49;00m#x1B[04m#x1B[96mhermes_api#x1B[39;49;00m#x1B[04m#x1B[96m.#x1B[39;49;00m#x1B[04m#x1B[96mservices#x1B[39;49;00m#x1B[04m#x1B[96m.#x1B[39;49;00m#x1B[04m#x1B[96mwikipedia_service#x1B[39;49;00m#x1B[90m #x1B[39;49;00m#x1B[94mimport#x1B[39;49;00m enumerate_timeline_pages#x1B[90m#x1B[39;49;00m
+#x1B[1m#x1B[31mE       ImportError: cannot import name 'enumerate_timeline_pages' from 'hermes_api.services.wikipedia_service' (/home/pavan/proj/hermes/apps/hermes-api/src/hermes_api/services/wikipedia_service.py)#x1B[0m
+
+#x1B[1m#x1B[31mtests/test_wikipedia_service.py#x1B[0m:498: ImportError</failure></testcase><testcase classname="tests.test_wikipedia_service.TestEnumerateTimelinePages" name="test_empty_sections_index_returns_subpages" time="0.026"><failure message="ImportError: cannot import name 'enumerate_timeline_pages' from 'hermes_api.services.wikipedia_service' (/home/pavan/proj/hermes/apps/hermes-api/src/hermes_api/services/wikipedia_service.py)">self = &lt;tests.test_wikipedia_service.TestEnumerateTimelinePages object at 0x7feea19e8430&gt;
+mock_search = &lt;AsyncMock name='search_timeline_titles' id='140662887855152'&gt;
+mock_fetch = &lt;AsyncMock name='fetch_page_extracts' id='140662888957408'&gt;
+
+    #x1B[0m#x1B[37m@patch#x1B[39;49;00m(#x1B[33m"#x1B[39;49;00m#x1B[33mhermes_api.services.wikipedia_service.fetch_page_extracts#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m)#x1B[90m#x1B[39;49;00m
+    #x1B[37m@patch#x1B[39;49;00m(#x1B[33m"#x1B[39;49;00m#x1B[33mhermes_api.services.wikipedia_service.search_timeline_titles#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m)#x1B[90m#x1B[39;49;00m
+    #x1B[94mdef#x1B[39;49;00m#x1B[90m #x1B[39;49;00m#x1B[92mtest_empty_sections_index_returns_subpages#x1B[39;49;00m(#x1B[90m#x1B[39;49;00m
+        #x1B[96mself#x1B[39;49;00m, mock_search: MagicMock, mock_fetch: MagicMock#x1B[90m#x1B[39;49;00m
+    ) -&gt; #x1B[94mNone#x1B[39;49;00m:#x1B[90m#x1B[39;49;00m
+        #x1B[90m# Consecutive headers indicate an empty section index#x1B[39;49;00m#x1B[90m#x1B[39;49;00m
+        extract = #x1B[33m"#x1B[39;49;00m#x1B[33mIntro#x1B[39;49;00m#x1B[33m\n#x1B[39;49;00m#x1B[33m== 2023 ==#x1B[39;49;00m#x1B[33m\n#x1B[39;49;00m#x1B[33m== 2024 ==#x1B[39;49;00m#x1B[33m\n#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m#x1B[90m#x1B[39;49;00m
+        mock_fetch.return_value = {#x1B[33m"#x1B[39;49;00m#x1B[33mTimeline of X#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m: extract}#x1B[90m#x1B[39;49;00m
+        mock_search.return_value = [#x1B[90m#x1B[39;49;00m
+            #x1B[33m"#x1B[39;49;00m#x1B[33mTimeline of X (2023)#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m,#x1B[90m#x1B[39;49;00m
+            #x1B[33m"#x1B[39;49;00m#x1B[33mTimeline of X (2024)#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m,#x1B[90m#x1B[39;49;00m
+            #x1B[33m"#x1B[39;49;00m#x1B[33mIrrelevant#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m,#x1B[90m#x1B[39;49;00m
+        ]#x1B[90m#x1B[39;49;00m
+&gt;       #x1B[94mfrom#x1B[39;49;00m#x1B[90m #x1B[39;49;00m#x1B[04m#x1B[96mhermes_api#x1B[39;49;00m#x1B[04m#x1B[96m.#x1B[39;49;00m#x1B[04m#x1B[96mservices#x1B[39;49;00m#x1B[04m#x1B[96m.#x1B[39;49;00m#x1B[04m#x1B[96mwikipedia_service#x1B[39;49;00m#x1B[90m #x1B[39;49;00m#x1B[94mimport#x1B[39;49;00m enumerate_timeline_pages#x1B[90m#x1B[39;49;00m
+#x1B[1m#x1B[31mE       ImportError: cannot import name 'enumerate_timeline_pages' from 'hermes_api.services.wikipedia_service' (/home/pavan/proj/hermes/apps/hermes-api/src/hermes_api/services/wikipedia_service.py)#x1B[0m
+
+#x1B[1m#x1B[31mtests/test_wikipedia_service.py#x1B[0m:516: ImportError</failure></testcase><testcase classname="tests.test_wikipedia_service.TestEnumerateTimelinePages" name="test_see_also_index_returns_subpages" time="0.023"><failure message="ImportError: cannot import name 'enumerate_timeline_pages' from 'hermes_api.services.wikipedia_service' (/home/pavan/proj/hermes/apps/hermes-api/src/hermes_api/services/wikipedia_service.py)">self = &lt;tests.test_wikipedia_service.TestEnumerateTimelinePages object at 0x7feea19e8bb0&gt;
+mock_search = &lt;AsyncMock name='search_timeline_titles' id='140662889449648'&gt;
+mock_fetch = &lt;AsyncMock name='fetch_page_extracts' id='140662888241232'&gt;
+
+    #x1B[0m#x1B[37m@patch#x1B[39;49;00m(#x1B[33m"#x1B[39;49;00m#x1B[33mhermes_api.services.wikipedia_service.fetch_page_extracts#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m)#x1B[90m#x1B[39;49;00m
+    #x1B[37m@patch#x1B[39;49;00m(#x1B[33m"#x1B[39;49;00m#x1B[33mhermes_api.services.wikipedia_service.search_timeline_titles#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m)#x1B[90m#x1B[39;49;00m
+    #x1B[94mdef#x1B[39;49;00m#x1B[90m #x1B[39;49;00m#x1B[92mtest_see_also_index_returns_subpages#x1B[39;49;00m(#x1B[90m#x1B[39;49;00m
+        #x1B[96mself#x1B[39;49;00m, mock_search: MagicMock, mock_fetch: MagicMock#x1B[90m#x1B[39;49;00m
+    ) -&gt; #x1B[94mNone#x1B[39;49;00m:#x1B[90m#x1B[39;49;00m
+        extract = #x1B[33m"#x1B[39;49;00m#x1B[33mIntro#x1B[39;49;00m#x1B[33m\n#x1B[39;49;00m#x1B[33m== 2023 ==#x1B[39;49;00m#x1B[33m\n#x1B[39;49;00m#x1B[33mSee also: Timeline of X (2023)#x1B[39;49;00m#x1B[33m\n#x1B[39;49;00m#x1B[33m== 2024 ==#x1B[39;49;00m#x1B[33m\n#x1B[39;49;00m#x1B[33mMain article: Timeline of X (2024)#x1B[39;49;00m#x1B[33m\n#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m#x1B[90m#x1B[39;49;00m
+        mock_fetch.return_value = {#x1B[33m"#x1B[39;49;00m#x1B[33mTimeline of X#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m: extract}#x1B[90m#x1B[39;49;00m
+        mock_search.return_value = [#x1B[33m"#x1B[39;49;00m#x1B[33mTimeline of X (2024)#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m, #x1B[33m"#x1B[39;49;00m#x1B[33mTimeline of X (2023)#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m]#x1B[90m#x1B[39;49;00m
+&gt;       #x1B[94mfrom#x1B[39;49;00m#x1B[90m #x1B[39;49;00m#x1B[04m#x1B[96mhermes_api#x1B[39;49;00m#x1B[04m#x1B[96m.#x1B[39;49;00m#x1B[04m#x1B[96mservices#x1B[39;49;00m#x1B[04m#x1B[96m.#x1B[39;49;00m#x1B[04m#x1B[96mwikipedia_service#x1B[39;49;00m#x1B[90m #x1B[39;49;00m#x1B[94mimport#x1B[39;49;00m enumerate_timeline_pages#x1B[90m#x1B[39;49;00m
+#x1B[1m#x1B[31mE       ImportError: cannot import name 'enumerate_timeline_pages' from 'hermes_api.services.wikipedia_service' (/home/pavan/proj/hermes/apps/hermes-api/src/hermes_api/services/wikipedia_service.py)#x1B[0m
+
+#x1B[1m#x1B[31mtests/test_wikipedia_service.py#x1B[0m:530: ImportError</failure></testcase><testcase classname="tests.test_wikipedia_service.TestEnumerateTimelinePages" name="test_non_index_with_subpages_returns_main" time="0.016"><failure message="ImportError: cannot import name 'enumerate_timeline_pages' from 'hermes_api.services.wikipedia_service' (/home/pavan/proj/hermes/apps/hermes-api/src/hermes_api/services/wikipedia_service.py)">self = &lt;tests.test_wikipedia_service.TestEnumerateTimelinePages object at 0x7feea1971f10&gt;
+mock_search = &lt;AsyncMock name='search_timeline_titles' id='140662887585488'&gt;
+mock_fetch = &lt;AsyncMock name='fetch_page_extracts' id='140662887853072'&gt;
+
+    #x1B[0m#x1B[37m@patch#x1B[39;49;00m(#x1B[33m"#x1B[39;49;00m#x1B[33mhermes_api.services.wikipedia_service.fetch_page_extracts#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m)#x1B[90m#x1B[39;49;00m
+    #x1B[37m@patch#x1B[39;49;00m(#x1B[33m"#x1B[39;49;00m#x1B[33mhermes_api.services.wikipedia_service.search_timeline_titles#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m)#x1B[90m#x1B[39;49;00m
+    #x1B[94mdef#x1B[39;49;00m#x1B[90m #x1B[39;49;00m#x1B[92mtest_non_index_with_subpages_returns_main#x1B[39;49;00m(#x1B[90m#x1B[39;49;00m
+        #x1B[96mself#x1B[39;49;00m, mock_search: MagicMock, mock_fetch: MagicMock#x1B[90m#x1B[39;49;00m
+    ) -&gt; #x1B[94mNone#x1B[39;49;00m:#x1B[90m#x1B[39;49;00m
+        #x1B[90m# Has sub-pages, but extract doesn't look like an index (has content, no empty sections)#x1B[39;49;00m#x1B[90m#x1B[39;49;00m
+        extract = #x1B[33m"#x1B[39;49;00m#x1B[33mIntro#x1B[39;49;00m#x1B[33m\n#x1B[39;49;00m#x1B[33m== 2023 ==#x1B[39;49;00m#x1B[33m\n#x1B[39;49;00m#x1B[33mLots of text here.#x1B[39;49;00m#x1B[33m\n#x1B[39;49;00m#x1B[33m== 2024 ==#x1B[39;49;00m#x1B[33m\n#x1B[39;49;00m#x1B[33mMore text here.#x1B[39;49;00m#x1B[33m\n#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m#x1B[90m#x1B[39;49;00m
+        mock_fetch.return_value = {#x1B[33m"#x1B[39;49;00m#x1B[33mTimeline of X#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m: extract}#x1B[90m#x1B[39;49;00m
+        mock_search.return_value = [#x1B[33m"#x1B[39;49;00m#x1B[33mTimeline of X (2023)#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m]#x1B[90m#x1B[39;49;00m
+&gt;       #x1B[94mfrom#x1B[39;49;00m#x1B[90m #x1B[39;49;00m#x1B[04m#x1B[96mhermes_api#x1B[39;49;00m#x1B[04m#x1B[96m.#x1B[39;49;00m#x1B[04m#x1B[96mservices#x1B[39;49;00m#x1B[04m#x1B[96m.#x1B[39;49;00m#x1B[04m#x1B[96mwikipedia_service#x1B[39;49;00m#x1B[90m #x1B[39;49;00m#x1B[94mimport#x1B[39;49;00m enumerate_timeline_pages#x1B[90m#x1B[39;49;00m
+#x1B[1m#x1B[31mE       ImportError: cannot import name 'enumerate_timeline_pages' from 'hermes_api.services.wikipedia_service' (/home/pavan/proj/hermes/apps/hermes-api/src/hermes_api/services/wikipedia_service.py)#x1B[0m
+
+#x1B[1m#x1B[31mtests/test_wikipedia_service.py#x1B[0m:545: ImportError</failure></testcase><testcase classname="tests.test_wikipedia_service.TestEnumerateTimelinePages" name="test_dash_normalization" time="0.012"><failure message="ImportError: cannot import name 'enumerate_timeline_pages' from 'hermes_api.services.wikipedia_service' (/home/pavan/proj/hermes/apps/hermes-api/src/hermes_api/services/wikipedia_service.py)">self = &lt;tests.test_wikipedia_service.TestEnumerateTimelinePages object at 0x7feea19e8b80&gt;
+mock_search = &lt;AsyncMock name='search_timeline_titles' id='140662887456432'&gt;
+mock_fetch = &lt;AsyncMock name='fetch_page_extracts' id='140662888617824'&gt;
+
+    #x1B[0m#x1B[37m@patch#x1B[39;49;00m(#x1B[33m"#x1B[39;49;00m#x1B[33mhermes_api.services.wikipedia_service.fetch_page_extracts#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m)#x1B[90m#x1B[39;49;00m
+    #x1B[37m@patch#x1B[39;49;00m(#x1B[33m"#x1B[39;49;00m#x1B[33mhermes_api.services.wikipedia_service.search_timeline_titles#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m)#x1B[90m#x1B[39;49;00m
+    #x1B[94mdef#x1B[39;49;00m#x1B[90m #x1B[39;49;00m#x1B[92mtest_dash_normalization#x1B[39;49;00m(#x1B[90m#x1B[39;49;00m
+        #x1B[96mself#x1B[39;49;00m, mock_search: MagicMock, mock_fetch: MagicMock#x1B[90m#x1B[39;49;00m
+    ) -&gt; #x1B[94mNone#x1B[39;49;00m:#x1B[90m#x1B[39;49;00m
+        #x1B[90m# En-dash in main title, hyphen in search result (or vice versa)#x1B[39;49;00m#x1B[90m#x1B[39;49;00m
+        mock_fetch.return_value = {#x1B[33m"#x1B[39;49;00m#x1B[33mTimeline of A–B#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m: #x1B[33m"#x1B[39;49;00m#x1B[33m== 1 ==#x1B[39;49;00m#x1B[33m\n#x1B[39;49;00m#x1B[33m== 2 ==#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m}#x1B[90m#x1B[39;49;00m
+        mock_search.return_value = [#x1B[33m"#x1B[39;49;00m#x1B[33mTimeline of A-B (2023)#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m, #x1B[33m"#x1B[39;49;00m#x1B[33mTimeline of A-B (2024)#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m]#x1B[90m#x1B[39;49;00m
+&gt;       #x1B[94mfrom#x1B[39;49;00m#x1B[90m #x1B[39;49;00m#x1B[04m#x1B[96mhermes_api#x1B[39;49;00m#x1B[04m#x1B[96m.#x1B[39;49;00m#x1B[04m#x1B[96mservices#x1B[39;49;00m#x1B[04m#x1B[96m.#x1B[39;49;00m#x1B[04m#x1B[96mwikipedia_service#x1B[39;49;00m#x1B[90m #x1B[39;49;00m#x1B[94mimport#x1B[39;49;00m enumerate_timeline_pages#x1B[90m#x1B[39;49;00m
+#x1B[1m#x1B[31mE       ImportError: cannot import name 'enumerate_timeline_pages' from 'hermes_api.services.wikipedia_service' (/home/pavan/proj/hermes/apps/hermes-api/src/hermes_api/services/wikipedia_service.py)#x1B[0m
+
+#x1B[1m#x1B[31mtests/test_wikipedia_service.py#x1B[0m:558: ImportError</failure></testcase><testcase classname="tests.test_wikipedia_service.TestSortTimelineTitles" name="test_sorts_by_year" time="0.004" /><testcase classname="tests.test_wikipedia_service.TestSortTimelineTitles" name="test_sorts_by_month" time="0.003" /><testcase classname="tests.test_wikipedia_service.TestSortTimelineTitles" name="test_sorts_by_phase" time="0.003" /></testsuite></testsuites>

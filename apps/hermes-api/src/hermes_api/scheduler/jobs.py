@@ -45,7 +45,7 @@ def setup_scheduler() -> None:
 
     scheduler.add_job(
         run_ingestion_job,
-        trigger=IntervalTrigger(minutes=settings.INGESTION_HEARTBEAT_MINUTES),
+        trigger=IntervalTrigger(minutes=settings.INGESTION_HEARTBEAT_MIN),
         id="ingestion_job",
         replace_existing=True,
     )
@@ -62,7 +62,7 @@ def setup_scheduler() -> None:
     scheduler.start()
     logger.info(
         "scheduler started. ingestion will run every %s minutes.",
-        settings.INGESTION_HEARTBEAT_MINUTES,
+        settings.INGESTION_HEARTBEAT_MIN,
     )
 
     # this is to ensure the ingestion runs on app startup regardless of the cron job interval.

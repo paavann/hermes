@@ -40,6 +40,8 @@ services:
       EMBED_API_KEY: ${EMBED_API_KEY}
       LLM_MODEL: ${LLM_MODEL}
       EMBED_MODEL: ${EMBED_MODEL}
+      RSS_FETCH_INTERVAL_MIN: ${RSS_FETCH_INTERVAL_MIN}
+      INGESTION_HEARTBEAT_MIN: ${INGESTION_HEARTBEAT_MIN}
     depends_on:
       hermes-db:
         condition: service_healthy

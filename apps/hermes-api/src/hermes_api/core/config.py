@@ -7,7 +7,6 @@ from sqlalchemy import URL
 class Settings(BaseSettings):
     APP: str = "hermes"
     ENV: str = "dev"
-    FRONTEND_URL: str = "http://localhost:4200"
 
     DB_HOST: str = "localhost"
     DB_PORT: int = 5432
@@ -22,11 +21,11 @@ class Settings(BaseSettings):
 
     NOMINATIM_USER_AGENT: str = "hermes-api"
 
-    RSS_FETCH_INTERVAL_MINUTES: int = 15
+    RSS_FETCH_INTERVAL_MIN: int
+    INGESTION_HEARTBEAT_MIN: int
 
-    INGESTION_HEARTBEAT_MINUTES: int = 5
-    GEMINI_RPM_LIMIT: int = 5
-    GEMINI_EMBED_RPM_LIMIT: int = 100
+    RPM_LIMIT: int = 26
+    EMBED_RPM_LIMIT: int = 90
 
     EVENT_STALE_HOURS: int = 24
     EVENT_ARCHIVE_HOURS: int = 48

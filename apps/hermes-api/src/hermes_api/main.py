@@ -10,6 +10,7 @@ from hermes_api.api.v1.router import api_router
 from hermes_api.core.errors import register_err_handlers
 from hermes_api.core.logger import setup_logging
 from hermes_api.db.db import AsyncSessionLocal, engine
+from hermes_api.scheduler.jobs import setup_scheduler
 from hermes_api.scheduler.jobs import shutdown_scheduler
 from hermes_api.services.source_service import sync_sources_from_config
 
@@ -33,7 +34,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     except Exception:
         logger.exception("failed to sync sources from config.")
 
-    #setup_scheduler()
+    setup_scheduler()
 
     logger.info("hermes API running on http://localhost:8000.")
     yield

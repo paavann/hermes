@@ -27,8 +27,8 @@ class IngestionService:
     def __init__(self) -> None:
         self._ai = AiService()
         self._geocoding = GeocodingService()
-        self._rate_limiter = TokenBucketRateLimiter(settings.GEMINI_RPM_LIMIT)
-        self._embed_rate_limiter = TokenBucketRateLimiter(settings.GEMINI_EMBED_RPM_LIMIT)
+        self._rate_limiter = TokenBucketRateLimiter(settings.RPM_LIMIT)
+        self._embed_rate_limiter = TokenBucketRateLimiter(settings.EMBED_RPM_LIMIT)
 
 
 
