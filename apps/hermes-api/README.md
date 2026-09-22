@@ -130,7 +130,9 @@ Hermes algorithmically ranks events so the primary map view highlights critical 
    When multiple outlets report the same breaking incident, their respective credibility scores are summed directly into `event.trending_score`.
 3. **Decay Formulation**:
    Every 60 minutes, `run_event_lifecycle_job()` executes an automated decay statement across all `ACTIVE` events:
-   $$\text{trending\_score}_{t+1} = \text{trending\_score}_t \times 0.90$$
+   ```text
+   trending_score(t + 1) = trending_score(t) * 0.90
+   ```
 4. **Lifecycle State Transitions**:
    - **`ACTIVE` &rarr; `STALE`**: Triggered when `NOW() - last_updated_at > EVENT_STALE_HOURS` (default: 24h).
    - **`STALE` &rarr; `ARCHIVED`**: Triggered when `NOW() - last_updated_at > EVENT_ARCHIVE_HOURS` (default: 48h).

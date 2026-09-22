@@ -47,7 +47,7 @@ flowchart TD
     Root["root.tsx (HTML Shell, Font Preconnects, Global CSS)"] --> App["app.tsx (Application Root)"]
     App --> QueryProvider["QueryClientProvider (TanStack Query v5)"]
     QueryProvider --> ConfigProvider["MapConfigProvider (Base URL, API Version, Mapbox Token)"]
-    ConfigProvider --> Main["<main className='bg-black overflow-hidden'>"]
+    ConfigProvider --> Main["Main Layout Container (bg-black)"]
     
     Main --> BootSeq["BootSequence\n(Tactical Terminal Boot Animation)"]
     Main --> MapView["MapView\n(Mapbox GL JS WebGL Engine)"]

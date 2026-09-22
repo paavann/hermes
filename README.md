@@ -77,7 +77,7 @@ flowchart TD
     EventService --> PostGIS
     TLService --> PostGIS
     PostGIS <--> Backend
-    Backend <-->|REST API (/api/v1)| ReactQuery
+    Backend <-->|"REST API /api/v1"| ReactQuery
     Store <--> ReactQuery
     Store <--> MapboxEngine
     MapboxEngine --> HUD
@@ -138,7 +138,9 @@ Events are algorithmically ranked using source credibility tiers:
 
 **Consensus Compounding**: Independent coverage of the same event by multiple outlets rapidly elevates its `trending_score`.  
 **Organic Decay**: An hourly background task decays all active events by 10%:
-$$\text{trending\_score}_{t+1} = \text{trending\_score}_t \times 0.90$$
+```text
+trending_score(t + 1) = trending_score(t) * 0.90
+```
 Events naturally transition: `ACTIVE` &rarr; `STALE` (24h) &rarr; `ARCHIVED` (48h).
 
 ### 3. Zero-Hallucination Geocoding Shield
