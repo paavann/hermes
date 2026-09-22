@@ -14,7 +14,7 @@ config = context.config
 
 config.set_main_option(
     "sqlalchemy.url",
-    settings.db_url.render_as_string(hide_password=False).replace("%", "%%"),
+    settings.direct_db_url.render_as_string(hide_password=False).replace("%", "%%"),
 )
 
 if config.config_file_name is not None:
@@ -67,6 +67,10 @@ async def run_async_migrations() -> None:
         config.get_section(config.config_ini_section, {}),
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
+        connect_args={
+            "statement_cache_size": 0,
+            "server_settings": {"lock_timeout": "30000"},
+        },
     )
     async with connectable.connect() as connection:
         await connection.run_sync(do_run_migrations)

@@ -92,6 +92,27 @@ class Settings(BaseSettings):
         )
 
     @property
+    def direct_db_url(self) -> URL:
+        """Direct (unpooled) PostgreSQL URL for schema migrations and administrative DDL.
+        Neon and PgBouncer pooled hosts contain '-pooler' in the hostname.
+        Alembic migrations require direct session connections for PostgreSQL advisory locks and DDL.
+        """
+        query = {}
+        if self.DB_HOST not in ("localhost", "hermes-db", "127.0.0.1"):
+            query["ssl"] = "require"
+
+        direct_host = self.DB_HOST.replace("-pooler", "")
+        return URL.create(
+            drivername="postgresql+asyncpg",
+            username=self.DB_USER,
+            password=self.DB_PASSWORD,
+            host=direct_host,
+            port=self.DB_PORT,
+            database=self.DB_NAME,
+            query=query,
+        )
+
+    @property
     def is_dev(self) -> bool:
         return self.ENV == "dev"
 
