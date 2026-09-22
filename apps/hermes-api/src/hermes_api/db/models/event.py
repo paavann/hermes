@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Optional
 
 from geoalchemy2 import Geometry
-from pgvector.sqlalchemy import Vector
+from pgvector.sqlalchemy import HALFVEC
 from sqlalchemy import Float, Index, Integer, String, Text, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -50,7 +50,7 @@ class Event(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     )
 
     # Semantic Embedding for fast deduplication
-    embedding: Mapped[Optional["Vector"]] = mapped_column(Vector(768))
+    embedding: Mapped[Optional["HALFVEC"]] = mapped_column(HALFVEC(2048))
 
     # indexes.
     __table_args__ = (
@@ -60,7 +60,7 @@ class Event(Base, UUIDPrimaryKeyMixin, TimestampMixin):
             "embedding",
             postgresql_using="hnsw",
             postgresql_with={"m": 16, "ef_construction": 64},
-            postgresql_ops={"embedding": "vector_cosine_ops"},
+            postgresql_ops={"embedding": "halfvec_cosine_ops"},
         ),
         Index(
             "idx_events_active_score",

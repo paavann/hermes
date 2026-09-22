@@ -1,4 +1,5 @@
 from functools import lru_cache
+from typing import Optional
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy import URL
@@ -14,15 +15,59 @@ class Settings(BaseSettings):
     DB_PASSWORD: str = ""
     DB_NAME: str = "hermes"
 
-    LLM_API_KEY: str = ""
-    LLM_MODEL: str = "gemini/gemini-3.6-flash"
-    EMBED_API_KEY: str = ""
-    EMBED_MODEL: str = "gemini/embedding-001"
+    # Primary LLM (Index 0)
+    LLM_API: str = ""
+    LLM_MODEL: str = "mistral/ministral-8b-latest"
+
+    # Secondary / Fallback LLM (Index 1)
+    LLM_API_1: Optional[str] = None
+    LLM_MODEL_1: Optional[str] = "nvidia_nim/mistralai/mistral-nemotron"
+
+    # Primary Embeddings (Index 0)
+    EMBED_API: str = ""
+    EMBED_MODEL: str = "nvidia_nim/nvidia/nemotron-3-embed-1b"
+
+    # Secondary / Fallback Embeddings (Index 1, optional)
+    EMBED_API_1: Optional[str] = None
+    EMBED_MODEL_1: Optional[str] = None
+
+    # Backward compatibility aliases
+    LLM_API_KEY: Optional[str] = None
+    LLM_API_KEY_1: Optional[str] = None
+    LLM_MODEL_2: Optional[str] = None
+    LLM_API_KEY_2: Optional[str] = None
+    EMBED_API_KEY: Optional[str] = None
+
+    @property
+    def primary_llm_model(self) -> str:
+        return self.LLM_MODEL
+
+    @property
+    def primary_llm_api(self) -> str:
+        return self.LLM_API or self.LLM_API_KEY or self.LLM_API_KEY_1 or ""
+
+    @property
+    def fallback_llm_model(self) -> str:
+        return self.LLM_MODEL_1 or self.LLM_MODEL_2 or "nvidia_nim/mistralai/mistral-nemotron"
+
+    @property
+    def fallback_llm_api(self) -> str:
+        return self.LLM_API_1 or self.LLM_API_KEY_2 or self.primary_embed_api
+
+    @property
+    def primary_embed_api(self) -> str:
+        return self.EMBED_API or self.EMBED_API_KEY or ""
+
+    @property
+    def normalized_embed_model(self) -> str:
+        if self.EMBED_MODEL.startswith("nvidia/") and not self.EMBED_MODEL.startswith("nvidia_nim/"):
+            return f"nvidia_nim/{self.EMBED_MODEL}"
+        return self.EMBED_MODEL
 
     NOMINATIM_USER_AGENT: str = "hermes-api"
 
-    RSS_FETCH_INTERVAL_MIN: int
-    INGESTION_HEARTBEAT_MIN: int
+    RSS_FETCH_INTERVAL_MIN: int = 15
+    INGESTION_HEARTBEAT_MIN: int = 360
 
     RPM_LIMIT: int = 26
     EMBED_RPM_LIMIT: int = 90

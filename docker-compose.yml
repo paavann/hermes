@@ -36,12 +36,12 @@ services:
       DB_USER: ${DB_USER}
       DB_PASSWORD: ${DB_PASSWORD}
       DB_NAME: ${DB_NAME}
-      LLM_API_KEY: ${LLM_API_KEY}
-      EMBED_API_KEY: ${EMBED_API_KEY}
+      LLM_API: ${LLM_API}
       LLM_MODEL: ${LLM_MODEL}
+      LLM_API_1: ${LLM_API_1}
+      LLM_MODEL_1: ${LLM_MODEL_1}
+      EMBED_API: ${EMBED_API}
       EMBED_MODEL: ${EMBED_MODEL}
-      RSS_FETCH_INTERVAL_MIN: ${RSS_FETCH_INTERVAL_MIN}
-      INGESTION_HEARTBEAT_MIN: ${INGESTION_HEARTBEAT_MIN}
     depends_on:
       hermes-db:
         condition: service_healthy

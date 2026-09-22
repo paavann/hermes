@@ -18,10 +18,12 @@ from hermes_api.services.ai_service import (
 
 @pytest.fixture
 def ai_service(monkeypatch):
-    monkeypatch.setenv("LLM_API_KEY", "fake-llm-key")
-    monkeypatch.setenv("EMBED_API_KEY", "fake-embed-key")
-    monkeypatch.setenv("LLM_MODEL", "gemini/gemini-2.5-flash")
-    monkeypatch.setenv("EMBED_MODEL", "gemini/text-embedding-004")
+    monkeypatch.setenv("LLM_API", "fake-llm-key")
+    monkeypatch.setenv("LLM_MODEL", "mistral/ministral-8b-latest")
+    monkeypatch.setenv("LLM_API_1", "fake-fallback-key")
+    monkeypatch.setenv("LLM_MODEL_1", "nvidia_nim/mistralai/mistral-nemotron")
+    monkeypatch.setenv("EMBED_API", "fake-embed-key")
+    monkeypatch.setenv("EMBED_MODEL", "nvidia_nim/nvidia/nemotron-3-embed-1b")
     return AiService()
 
 
@@ -30,7 +32,7 @@ class TestGetMetadata:
         result = asyncio.run(ai_service.get_metadata([], []))
         assert result == []
 
-    @patch("litellm.acompletion")
+    @patch("litellm.Router.acompletion")
     def test_successful_batch_extraction(
         self, mock_acompletion: AsyncMock, ai_service: AiService
     ) -> None:
@@ -74,7 +76,7 @@ class TestGetMetadata:
         assert results[1] is not None
         assert results[1].headline == "Headline 1"
 
-    @patch("litellm.acompletion")
+    @patch("litellm.Router.acompletion")
     def test_handles_api_failure(
         self, mock_acompletion: AsyncMock, ai_service: AiService
     ) -> None:
@@ -90,7 +92,7 @@ class TestExtractTl:
         result = asyncio.run(ai_service.extract_tl("Title", "   "))
         assert result is None
 
-    @patch("litellm.acompletion")
+    @patch("litellm.Router.acompletion")
     def test_successful_tl_extraction(
         self, mock_acompletion: AsyncMock, ai_service: AiService
     ) -> None:
@@ -130,3 +132,32 @@ class TestExtractTl:
         assert len(result.nodes) == 2
         assert len(result.edges) == 1
         assert result.edges[0].relationship == "triggered"
+
+
+class TestRouterFallback:
+    def test_router_configuration(self, ai_service: AiService) -> None:
+        assert len(ai_service.router.model_list) == 2
+        assert ai_service.router.model_list[0]["model_name"] == "primary-extractor"
+        assert ai_service.router.model_list[1]["model_name"] == "fallback-extractor"
+        assert ai_service.router.fallbacks == [{"primary-extractor": ["fallback-extractor"]}]
+
+
+class TestGenEmbeddings:
+    def test_empty_input(self, ai_service: AiService) -> None:
+        result = asyncio.run(ai_service.gen_embeddings([]))
+        assert result == []
+
+    @patch("litellm.aembedding")
+    def test_nvidia_nim_embedding_calls_with_float_encoding(
+        self, mock_aembedding: AsyncMock, ai_service: AiService
+    ) -> None:
+        mock_aembedding.return_value = MagicMock(data=[{"embedding": [0.05] * 2048}])
+        result = asyncio.run(ai_service.gen_embeddings(["sample event text"]))
+
+        assert len(result) == 1
+        assert len(result[0]) == 2048
+        mock_aembedding.assert_called_once()
+        _, kwargs = mock_aembedding.call_args
+        assert kwargs.get("encoding_format") == "float"
+        assert kwargs.get("model") == "nvidia_nim/nvidia/nemotron-3-embed-1b"
+

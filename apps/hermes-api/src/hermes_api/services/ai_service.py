@@ -310,24 +310,65 @@ def _reidx_results(raw_results: Sequence[T], count: int, get_idx: Callable[[T], 
 
 class AiService:
     def __init__(self) -> None:
-        self._api_key = settings.LLM_API_KEY
-        self._embed_api_key = settings.EMBED_API_KEY
-        if not self._api_key or not self._embed_api_key:
-            logger.error("llm_api_key or embed_api_key is missing.")
-            raise ValueError("LLM_API_KEY or EMBED_API_KEY is missing.")
+        self._primary_model = settings.primary_llm_model
+        self._primary_api_key = settings.primary_llm_api
+        self._fallback_model = settings.fallback_llm_model
+        self._fallback_api_key = settings.fallback_llm_api
 
-        self._model = settings.LLM_MODEL
-        self._embed_model = settings.EMBED_MODEL
+        if not self._primary_api_key:
+            logger.error("primary llm api key is missing.")
+            raise ValueError("LLM_API is missing.")
 
-        logger.info("ai service initialized. routing set to %s and %s via litellm.", self._model, self._embed_model)
-    
+        self._embed_api_key = settings.primary_embed_api
+        if not self._embed_api_key:
+            logger.error("embed api key is missing.")
+            raise ValueError("EMBED_API is missing.")
 
+        self._embed_model = settings.normalized_embed_model
+
+        model_list = [
+            {
+                "model_name": "primary-extractor",
+                "litellm_params": {
+                    "model": self._primary_model,
+                    "api_key": self._primary_api_key,
+                },
+            }
+        ]
+
+        fallbacks = []
+        if self._fallback_model and self._fallback_api_key:
+            model_list.append(
+                {
+                    "model_name": "fallback-extractor",
+                    "litellm_params": {
+                        "model": self._fallback_model,
+                        "api_key": self._fallback_api_key,
+                    },
+                }
+            )
+            fallbacks = [{"primary-extractor": ["fallback-extractor"]}]
+
+        self._router = litellm.Router(
+            model_list=model_list,
+            fallbacks=fallbacks,
+            num_retries=2,
+            cooldown_time=180,
+            retry_after=True,
+        )
+        self.router = self._router
+
+        logger.info(
+            "ai service initialized. primary=%s, fallback=%s, embed=%s via litellm router.",
+            self._primary_model,
+            self._fallback_model if fallbacks else "none",
+            self._embed_model,
+        )
 
     async def _call_llm(self, sys_prompt: str, user_prompt: str, res_model: type[BaseModel], schema_name: str) -> Optional[BaseModel]:
         try:
-            res = await litellm.acompletion(
-                model=self._model,
-                api_key=self._api_key,
+            res = await self._router.acompletion(
+                model="primary-extractor",
                 messages=[
                     {"role": "system", "content": sys_prompt},
                     {"role": "user", "content": user_prompt},
@@ -389,11 +430,15 @@ class AiService:
             return []
         
         try:
-            res = await litellm.aembedding(
-                model=self._embed_model,
-                input=texts,
-                api_key=self._embed_api_key
-            )
+            kwargs = {
+                "model": self._embed_model,
+                "input": texts,
+                "api_key": self._embed_api_key,
+            }
+            if self._embed_model.startswith("nvidia_nim/"):
+                kwargs["encoding_format"] = "float"
+
+            res = await litellm.aembedding(**kwargs)
             return [item['embedding'] for item in res.data]
         except Exception as e:
             logger.error("failed to generate embeddings: %s.", e)
