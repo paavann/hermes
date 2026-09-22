@@ -19,8 +19,8 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # 1. Drop existing HNSW index
-    op.drop_index("idx_events_embedding", table_name="events")
+    # 1. Drop existing HNSW index if present
+    op.execute("DROP INDEX IF EXISTS idx_events_embedding;")
 
     # 2. Reset existing 768-dim embeddings since they cannot be cast directly to 2048-dim
     op.execute("UPDATE events SET embedding = NULL WHERE embedding IS NOT NULL;")
