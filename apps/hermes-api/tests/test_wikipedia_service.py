@@ -469,11 +469,11 @@ class TestEdgeCases:
 
 
 # ---------------------------------------------------------------------------
-# enumerate_timeline_pages
+# enumerate_tl_pages
 # ---------------------------------------------------------------------------
 
 
-class TestEnumerateTimelinePages:
+class TestEnumerateTlPages:
     """Tests for discovering and enumerating timeline pages."""
 
     @patch("hermes_api.services.wikipedia_service.fetch_page_extracts")
@@ -482,9 +482,9 @@ class TestEnumerateTimelinePages:
         self, mock_search: MagicMock, mock_fetch: MagicMock
     ) -> None:
         mock_fetch.return_value = {"Main": None}
-        from hermes_api.services.wikipedia_service import enumerate_timeline_pages
+        from hermes_api.services.wikipedia_service import enumerate_tl_pages
 
-        result = asyncio.run(enumerate_timeline_pages("Main"))
+        result = asyncio.run(enumerate_tl_pages("Main"))
         assert result == []
         mock_search.assert_not_called()
 
@@ -495,9 +495,9 @@ class TestEnumerateTimelinePages:
     ) -> None:
         mock_fetch.return_value = {"Main": "Some content."}
         mock_search.return_value = []
-        from hermes_api.services.wikipedia_service import enumerate_timeline_pages
+        from hermes_api.services.wikipedia_service import enumerate_tl_pages
 
-        result = asyncio.run(enumerate_timeline_pages("Main"))
+        result = asyncio.run(enumerate_tl_pages("Main"))
         assert result == ["Main"]
 
     @patch("hermes_api.services.wikipedia_service.fetch_page_extracts")
@@ -513,9 +513,9 @@ class TestEnumerateTimelinePages:
             "Timeline of X (2024)",
             "Irrelevant",
         ]
-        from hermes_api.services.wikipedia_service import enumerate_timeline_pages
+        from hermes_api.services.wikipedia_service import enumerate_tl_pages
 
-        result = asyncio.run(enumerate_timeline_pages("Timeline of X"))
+        result = asyncio.run(enumerate_tl_pages("Timeline of X"))
         # Should filter out "Irrelevant" and sort the sub-pages
         assert result == ["Timeline of X (2023)", "Timeline of X (2024)"]
 
@@ -527,9 +527,9 @@ class TestEnumerateTimelinePages:
         extract = "Intro\n== 2023 ==\nSee also: Timeline of X (2023)\n== 2024 ==\nMain article: Timeline of X (2024)\n"
         mock_fetch.return_value = {"Timeline of X": extract}
         mock_search.return_value = ["Timeline of X (2024)", "Timeline of X (2023)"]
-        from hermes_api.services.wikipedia_service import enumerate_timeline_pages
+        from hermes_api.services.wikipedia_service import enumerate_tl_pages
 
-        result = asyncio.run(enumerate_timeline_pages("Timeline of X"))
+        result = asyncio.run(enumerate_tl_pages("Timeline of X"))
         # Should correctly identify as index and sort chronologically
         assert result == ["Timeline of X (2023)", "Timeline of X (2024)"]
 
@@ -542,9 +542,9 @@ class TestEnumerateTimelinePages:
         extract = "Intro\n== 2023 ==\nLots of text here.\n== 2024 ==\nMore text here.\n"
         mock_fetch.return_value = {"Timeline of X": extract}
         mock_search.return_value = ["Timeline of X (2023)"]
-        from hermes_api.services.wikipedia_service import enumerate_timeline_pages
+        from hermes_api.services.wikipedia_service import enumerate_tl_pages
 
-        result = asyncio.run(enumerate_timeline_pages("Timeline of X"))
+        result = asyncio.run(enumerate_tl_pages("Timeline of X"))
         assert result == ["Timeline of X"]
 
     @patch("hermes_api.services.wikipedia_service.fetch_page_extracts")
@@ -555,9 +555,9 @@ class TestEnumerateTimelinePages:
         # En-dash in main title, hyphen in search result (or vice versa)
         mock_fetch.return_value = {"Timeline of A–B": "== 1 ==\n== 2 =="}
         mock_search.return_value = ["Timeline of A-B (2023)", "Timeline of A-B (2024)"]
-        from hermes_api.services.wikipedia_service import enumerate_timeline_pages
+        from hermes_api.services.wikipedia_service import enumerate_tl_pages
 
-        result = asyncio.run(enumerate_timeline_pages("Timeline of A–B"))
+        result = asyncio.run(enumerate_tl_pages("Timeline of A–B"))
         assert result == ["Timeline of A-B (2023)", "Timeline of A-B (2024)"]
 
 

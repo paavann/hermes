@@ -13,6 +13,7 @@ from hermes_api.services.tl_service import TlService
 @pytest.fixture
 def mock_session():
     session = AsyncMock()
+    session.add = MagicMock()
     result_mock = MagicMock()
     result_mock.scalar_one_or_none.return_value = None
     session.execute.return_value = result_mock
@@ -24,7 +25,8 @@ def dummy_event():
     return Event(
         id=uuid.uuid4(),
         ai_headline="Test Event",
-        category="POLITICS"
+        category="POLITICS",
+        last_updated_at=datetime.now(timezone.utc),
     )
 
 
@@ -52,8 +54,8 @@ def mock_ai_extraction():
     return mock_extraction
 
 
-@patch("hermes_api.services.tl_service.search_timeline_titles", new_callable=AsyncMock)
-@patch("hermes_api.services.tl_service.enumerate_timeline_pages", new_callable=AsyncMock)
+@patch("hermes_api.services.tl_service.search_wikipedia", new_callable=AsyncMock)
+@patch("hermes_api.services.tl_service.enumerate_tl_pages", new_callable=AsyncMock)
 @patch("hermes_api.services.tl_service.fetch_page_extracts", new_callable=AsyncMock)
 @patch("hermes_api.services.tl_service.AiService", autospec=True)
 @patch("hermes_api.services.tl_service.GeocodingService", autospec=True)
@@ -73,7 +75,10 @@ def test_first_generation(
         mock_fetch.return_value = {"Timeline of Test": "Some prose."}
         
         mock_ai = mock_ai_cls.return_value
-        mock_ai.extract_tl.return_value = mock_ai_extraction
+        mock_ai.analyze_tl_context = AsyncMock(
+            return_value=MagicMock(is_tl_worthy=True, wiki_search_query="Test Query")
+        )
+        mock_ai.extract_tl = AsyncMock(return_value=mock_ai_extraction)
         
         mock_geo = mock_geo_cls.return_value
         mock_geo.geocode = AsyncMock(return_value=MagicMock(latitude=10.0, longitude=20.0))
@@ -87,10 +92,12 @@ def test_first_generation(
         response = await service.gen_tl(dummy_event.id)
         
         assert response.status == "READY"
-        assert len(response.nodes) == 2
-        assert len(response.edges) == 1
+        assert len(response.nodes) == 3
+        assert len(response.edges) == 2
         assert response.nodes[0].latitude == 10.0
         assert response.nodes[0].longitude == 20.0
+        assert response.nodes[-1].id == "current-event"
+        assert response.nodes[-1].headline == dummy_event.ai_headline
     asyncio.run(run_test())
 
 
@@ -133,27 +140,32 @@ def test_concurrent_generation_returns_generating(mock_session, dummy_event):
         service = TlService(mock_session)
         response = await service.gen_tl(dummy_event.id)
         
-        assert response.status == "generating"
+        assert response.status == "GENERATING"
         mock_session.commit.assert_not_called()
     asyncio.run(run_test())
 
 
-@patch("hermes_api.services.tl_service.search_timeline_titles", new_callable=AsyncMock)
-def test_no_wikipedia_match(mock_search, mock_session, dummy_event):
+@patch("hermes_api.services.tl_service.search_wikipedia", new_callable=AsyncMock)
+@patch("hermes_api.services.tl_service.AiService", autospec=True)
+def test_no_wikipedia_match(mock_ai_cls, mock_search, mock_session, dummy_event):
     async def run_test():
+        mock_ai = mock_ai_cls.return_value
+        mock_ai.analyze_tl_context = AsyncMock(
+            return_value=MagicMock(is_tl_worthy=True, wiki_search_query="Test Query")
+        )
         mock_search.return_value = []
         mock_session.get.return_value = dummy_event
         
         service = TlService(mock_session)
         response = await service.gen_tl(dummy_event.id)
         
-        assert response.status == "no_content"
+        assert response.status == "NO_CONTENT"
         mock_session.delete.assert_called_once()
     asyncio.run(run_test())
 
 
-@patch("hermes_api.services.tl_service.search_timeline_titles", new_callable=AsyncMock)
-@patch("hermes_api.services.tl_service.enumerate_timeline_pages", new_callable=AsyncMock)
+@patch("hermes_api.services.tl_service.search_wikipedia", new_callable=AsyncMock)
+@patch("hermes_api.services.tl_service.enumerate_tl_pages", new_callable=AsyncMock)
 @patch("hermes_api.services.tl_service.fetch_page_extracts", new_callable=AsyncMock)
 @patch("hermes_api.services.tl_service.AiService", autospec=True)
 @patch("hermes_api.services.tl_service.GeocodingService", autospec=True)
@@ -173,7 +185,10 @@ def test_force_refresh_regenerates(
         mock_fetch.return_value = {"Timeline of Test": "Regenerated prose."}
         
         mock_ai = mock_ai_cls.return_value
-        mock_ai.extract_tl.return_value = mock_ai_extraction
+        mock_ai.analyze_tl_context = AsyncMock(
+            return_value=MagicMock(is_tl_worthy=True, wiki_search_query="Test Query")
+        )
+        mock_ai.extract_tl = AsyncMock(return_value=mock_ai_extraction)
         
         mock_geo = mock_geo_cls.return_value
         mock_geo.geocode = AsyncMock(return_value=None) 
@@ -195,7 +210,8 @@ def test_force_refresh_regenerates(
         response = await service.gen_tl(dummy_event.id, force_refresh=True)
         
         assert response.status == "READY"
-        assert len(response.nodes) == 2
+        assert len(response.nodes) == 3
         assert response.nodes[0].latitude is None
         assert response.nodes[0].longitude is None
+        assert response.nodes[-1].id == "current-event"
     asyncio.run(run_test())
