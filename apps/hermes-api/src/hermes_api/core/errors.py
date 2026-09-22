@@ -10,6 +10,18 @@ logger = logging.getLogger(__name__)
 
 
 
+def _cors_headers(request: Request) -> dict[str, str]:
+    origin = request.headers.get("origin")
+    if origin:
+        return {
+            "Access-Control-Allow-Origin": origin,
+            "Access-Control-Allow-Credentials": "true",
+            "Access-Control-Allow-Methods": "*",
+            "Access-Control-Allow-Headers": "*",
+        }
+    return {}
+
+
 def register_err_handlers(app: FastAPI):
     @app.exception_handler(AppException)
     async def app_exception_handler(request: Request, exc: AppException):
@@ -19,7 +31,8 @@ def register_err_handlers(app: FastAPI):
                 "err_code": exc.err_code,
                 "err_msg": exc.message,
                 "details": exc.details,
-            }
+            },
+            headers=_cors_headers(request),
         )
 
     @app.exception_handler(RequestValidationError)
@@ -30,7 +43,8 @@ def register_err_handlers(app: FastAPI):
                 "err_code": "VALIDATION_ERROR",
                 "err_msg": "Invalid input data.",
                 "details": { "errors": exc.errors() },
-            }
+            },
+            headers=_cors_headers(request),
         )
     
     @app.exception_handler(StarletteHTTPException)
@@ -41,7 +55,8 @@ def register_err_handlers(app: FastAPI):
                 "err_code": "HTTP_ERROR",
                 "err_msg": exc.detail,
                 "details": {}
-            }
+            },
+            headers=_cors_headers(request),
         )
     
     @app.exception_handler(Exception)
@@ -53,5 +68,6 @@ def register_err_handlers(app: FastAPI):
                 "err_code": "UNEXPECTED_SERVER_ERROR",
                 "err_msg": "Something went wrong internally.",
                 "details": {}
-            }
+            },
+            headers=_cors_headers(request),
         )
