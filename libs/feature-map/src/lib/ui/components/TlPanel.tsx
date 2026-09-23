@@ -205,7 +205,8 @@ export function TlPanel({ map }: { map: mapboxgl.Map | null }) {
     }, [activeNodeId]);
 
     const isGenerating = isLoading || isRegenerating || tlData?.status === 'GENERATING';
-    const noContent    = tlData?.status === 'no_content';
+    const noContent    = (tlData?.status === 'no_content' || tlData?.status === 'NO_CONTENT') && !isGenerating;
+    const isFailed     = (isError || tlData?.status === 'FAILED') && !isGenerating;
 
     return (
         <div className="absolute top-0 right-0 h-screen w-96 bg-hud-bg/95 backdrop-blur-md border-l border-hud-border flex flex-col font-mono z-20 shadow-[0_0_30px_rgba(0,0,0,0.8)]">
@@ -237,19 +238,19 @@ export function TlPanel({ map }: { map: mapboxgl.Map | null }) {
           </div>
 
           <div className="flex-1 overflow-y-auto custom-scrollbar p-4 flex flex-col gap-4">
-            {isError && (
-              <div className="text-red-500 text-xs tracking-widest border border-red-500/30 p-4 bg-red-500/5 text-center mt-4">
-                ERROR RECONSTRUCTING TIMELINE
+            {isFailed && (
+              <div className="text-red-500 text-xs tracking-widest border border-red-500/30 p-4 bg-red-500/5 text-center mt-4 leading-relaxed">
+                ERROR GENERATING TIMELINE.
               </div>
             )}
 
-            {isGenerating && !isError && (
+            {isGenerating && !isFailed && (
               <div className="text-neon-blue text-xs tracking-widest animate-pulse border border-neon-blue/30 p-4 bg-neon-blue/5 text-center mt-4 shadow-[0_0_15px_rgba(0,240,255,0.2)]">
                 GENERATING TIMELINE...
               </div>
             )}
 
-            {noContent && !isGenerating && !isError && (
+            {noContent && !isGenerating && !isFailed && (
               <div className="text-gray-400 text-xs tracking-widest border border-hud-border p-4 bg-black/30 text-center mt-4 leading-relaxed">
                 NO HISTORICAL CONTEXT FOUND.
                 <br />
@@ -257,7 +258,7 @@ export function TlPanel({ map }: { map: mapboxgl.Map | null }) {
               </div>
             )}
 
-            {tlData?.status === 'READY' && !isGenerating && !isError && (
+            {tlData?.status === 'READY' && !isGenerating && !isFailed && (
               <>
                 {tlData.tl_summary && (
                   <div className="text-gray-300 text-xs italic mb-4 leading-relaxed border-b border-hud-border/50 pb-4">

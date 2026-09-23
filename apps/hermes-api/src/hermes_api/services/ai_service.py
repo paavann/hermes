@@ -1,9 +1,9 @@
 import logging
 from collections.abc import Sequence
-from typing import Callable, Optional, TypeVar
+from typing import Any, Callable, Optional, TypeVar
 
 import litellm
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from hermes_api.core.config import settings
 from hermes_api.core.constants import PREDEFINED_CATEGORIES
@@ -52,8 +52,9 @@ TL_SYSTEM_PROMPT = """You are a geopolitical historian for
     3. For 'location_name', identify where the event physically
   happened. If purely political/conceptual without a place,    
   omit it.
-    4. Provide a 'topic_summary' (1-2 paragraphs) summarizing  
-  the overarching historical arc of the timeline.
+    4. Provide a 'tl_summary' (1-2 paragraphs as a plain string,
+  never an object or dictionary) summarizing the overarching   
+  historical arc of the timeline.
     5. In 'edges', identify causal/thematic relationships      
   between the extracted events (e.g. event 0 triggered event 2).
        Use the 0-based array index of the events you just      
@@ -157,10 +158,28 @@ class ExtractionResponse(BaseModel):
 
 
 
+def _coerce_to_str(v: Any) -> str:
+    """Coerce various LLM output formats (e.g. localized dicts {'en': '...'}) to plain string."""
+    if isinstance(v, dict):
+        return (
+            v.get("en")
+            or v.get("text")
+            or v.get("summary")
+            or v.get("headline")
+            or next((str(val) for val in v.values() if isinstance(val, str) and val.strip()), "")
+            or str(v)
+        )
+    if isinstance(v, (list, tuple)):
+        return " ".join(str(item) for item in v if item is not None)
+    if v is None:
+        return ""
+    return str(v)
+
+
 class tlNodeExtraction(BaseModel):
     date: str = Field(
         description="""
-            the date of the eventin YYYY-MM-DD if possible.
+            the date of the event in YYYY-MM-DD if possible.
         """
     )
 
@@ -183,6 +202,19 @@ class tlNodeExtraction(BaseModel):
         """
     )
 
+    @field_validator("date", "headline", "summary", mode="before")
+    @classmethod
+    def coerce_text_fields(cls, v: Any) -> str:
+        return _coerce_to_str(v)
+
+    @field_validator("location_name", mode="before")
+    @classmethod
+    def coerce_location_name(cls, v: Any) -> Optional[str]:
+        if v is None:
+            return None
+        res = _coerce_to_str(v).strip()
+        return res if res else None
+
 
 
 class TlEdgeExtraction(BaseModel):
@@ -204,6 +236,11 @@ class TlEdgeExtraction(BaseModel):
         """
     )
 
+    @field_validator("relationship", mode="before")
+    @classmethod
+    def coerce_relationship(cls, v: Any) -> str:
+        return _coerce_to_str(v)
+
     
     
 class TlExtractionResponse(BaseModel):
@@ -220,10 +257,16 @@ class TlExtractionResponse(BaseModel):
     )
     
     edges: list[TlEdgeExtraction] = Field(
+        default_factory=list,
         description="""
             Causal relationships between the extracted nodes.
         """
     )
+
+    @field_validator("tl_summary", mode="before")
+    @classmethod
+    def coerce_tl_summary(cls, v: Any) -> str:
+        return _coerce_to_str(v)
 
 
 class TimelineSearchQuery(BaseModel):

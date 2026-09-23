@@ -64,7 +64,7 @@ class Settings(BaseSettings):
             return f"nvidia_nim/{self.EMBED_MODEL}"
         return self.EMBED_MODEL
 
-    NOMINATIM_USER_AGENT: str = "hermes-api"
+    NOMINATIM_USER_AGENT: str = "HermesGeospatialNews/1.0 (https://github.com/paavann/hermes)"
 
     RSS_FETCH_INTERVAL_MIN: int = 15
     INGESTION_HEARTBEAT_MIN: int = 360

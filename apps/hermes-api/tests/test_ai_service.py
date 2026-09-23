@@ -133,6 +133,29 @@ class TestExtractTl:
         assert len(result.edges) == 1
         assert result.edges[0].relationship == "triggered"
 
+    @patch("litellm.Router.acompletion")
+    def test_extract_tl_handles_localized_dict_summary(
+        self, mock_acompletion: AsyncMock, ai_service: AiService
+    ) -> None:
+        raw_json = (
+            '{"tl_summary": {"en": "The assassination shaping its trajectory."}, '
+            '"nodes": [{"date": "2021-07-07", "headline": {"en": "President assassinated"}, '
+            '"location_name": {"en": "Port-au-Prince, Haiti"}, "summary": {"en": "Moise was killed."}}], '
+            '"edges": []}'
+        )
+        mock_res = MagicMock()
+        mock_res.choices = [MagicMock(message=MagicMock(content=raw_json))]
+        mock_acompletion.return_value = mock_res
+
+        result = asyncio.run(ai_service.extract_tl("Assassination of Jovenel Moïse", "Prose text"))
+
+        assert result is not None
+        assert result.tl_summary == "The assassination shaping its trajectory."
+        assert len(result.nodes) == 1
+        assert result.nodes[0].headline == "President assassinated"
+        assert result.nodes[0].location_name == "Port-au-Prince, Haiti"
+        assert result.nodes[0].summary == "Moise was killed."
+
 
 class TestRouterFallback:
     def test_router_configuration(self, ai_service: AiService) -> None:
