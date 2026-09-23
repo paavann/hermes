@@ -79,8 +79,11 @@ async def fetch_feed(feed_url: str) -> list[ParsedArticle]:
                 headers={ "User-Agent": settings.NOMINATIM_USER_AGENT },
             )
             res.raise_for_status()
-    except httpx.HTTPError:
-        logger.exception("failed to fetch RSS feed: %s.", feed_url)
+    except httpx.TimeoutException:
+        logger.warning("timeout fetching RSS feed %s (> 30s). Skipping source.", feed_url)
+        return []
+    except httpx.HTTPError as exc:
+        logger.warning("failed to fetch RSS feed %s: %s.", feed_url, exc)
         return []
 
     feed = feedparser.parse(res.text)

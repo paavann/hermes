@@ -1,6 +1,7 @@
 import logging
 import uuid
 from datetime import datetime, timezone
+from typing import Any
 
 from geoalchemy2.functions import ST_X, ST_Y
 from sqlalchemy import select
@@ -77,6 +78,7 @@ class TlService:
             all_edges: list[TlEdgeResponse] = []
             tl_summaries: list[str] = []
 
+            geo_cache: dict[str, Any] = {}
             for page_title, prose in page_extracts.items():
                 if not prose.strip():
                     continue
@@ -92,7 +94,13 @@ class TlService:
                     node_id_map[idx] = node_id
                     lat, lng = None, None
                     if r_node.location_name:
-                        geo_res = await self._geocoding.geocode(self._session, r_node.location_name)
+                        loc_key = r_node.location_name.strip().lower()
+                        if loc_key in geo_cache:
+                            geo_res = geo_cache[loc_key]
+                        else:
+                            geo_res = await self._geocoding.geocode(self._session, r_node.location_name)
+                            geo_cache[loc_key] = geo_res
+
                         if geo_res:
                             lat, lng = geo_res.latitude, geo_res.longitude
                     

@@ -1,15 +1,18 @@
 """Tests for GeocodingService rate limiting, caching, and 429 backoff."""
 
 import asyncio
+import time
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from hermes_api.db.models.geocode_cache import GeocodeCache
+from hermes_api.services import geocoding_service
 from hermes_api.services.geocoding_service import (
     _NOT_FOUND,
     GeocodingResult,
     GeocodingService,
+    clean_location_name,
 )
 
 
@@ -138,5 +141,44 @@ class TestGeocodingService:
                 assert res.longitude == 153.0251
                 assert mock_client.get.call_count == 2
                 assert mock_sleep.await_count >= 1
+
+        asyncio.run(run())
+
+    def test_clean_location_name_sanitizes_complex_strings(self):
+        assert clean_location_name("Multiple cities (e.g., Sanaa, Taiz)") == "Sanaa"
+        assert clean_location_name("Sanaa (mosque)") == "Sanaa"
+        assert clean_location_name("Yemen (nationwide)") == "Yemen"
+        assert clean_location_name("Southern Yemen (e.g., Aden)") == "Aden"
+        assert clean_location_name("Aden") == "Aden"
+        assert clean_location_name("Various locations") is None
+        assert clean_location_name("Nationwide") is None
+        assert clean_location_name("") is None
+
+    @patch("asyncio.sleep", new_callable=AsyncMock)
+    def test_circuit_breaker_trips_on_persistent_429(self, mock_sleep):
+        async def run():
+            service = GeocodingService()
+            mock_resp_429 = MagicMock()
+            mock_resp_429.status_code = 429
+            mock_resp_429.headers = {"Retry-After": "0"}
+
+            mock_client = AsyncMock()
+            mock_client.get = AsyncMock(return_value=mock_resp_429)
+
+            with patch("httpx.AsyncClient") as mock_client_cls:
+                mock_client_cls.return_value.__aenter__.return_value = mock_client
+                res = await service._call_nominatim("Blocked Location", max_retries=2)
+                assert res is None
+                # Verify circuit breaker is now active
+                assert geocoding_service._circuit_open_until > time.monotonic()
+
+                # Subsequent call should immediately return None without calling httpx
+                mock_client.get.reset_mock()
+                fast_res = await service._call_nominatim("Another Location")
+                assert fast_res is None
+                mock_client.get.assert_not_called()
+
+            # Reset circuit breaker for subsequent tests
+            geocoding_service._circuit_open_until = 0.0
 
         asyncio.run(run())

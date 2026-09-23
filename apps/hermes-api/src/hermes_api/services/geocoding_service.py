@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import re
 import time
 from dataclasses import dataclass
 from typing import Optional, Union
@@ -18,6 +19,8 @@ NOMINATIM_SEARCH_URL = "https://nominatim.openstreetmap.org/search"
 _nominatim_lock = asyncio.Lock()
 _last_request_time: float = 0.0
 _MIN_REQUEST_INTERVAL: float = 1.5  # seconds (OSM permits max 1 req/s; 1.5s absorbs latency jitter)
+_circuit_open_until: float = 0.0
+_CIRCUIT_COOLDOWN_SECONDS: float = 120.0  # 2 minute cooldown when 429 rate limit is active
 
 
 @dataclass(frozen=True)
@@ -35,12 +38,43 @@ class _NotFoundSentinel:
 _NOT_FOUND = _NotFoundSentinel()
 
 
+def clean_location_name(loc: str) -> Optional[str]:
+    """Sanitize location names extracted from news or Wikipedia.
+    Extracts concrete place names from messy inputs like 'Multiple cities (e.g., Sanaa, Taiz)'
+    or 'Sanaa (mosque)' or 'Yemen (nationwide)'.
+    """
+    if not loc or not loc.strip():
+        return None
+    loc = loc.strip()
+
+    # If there is an explicit '(e.g., Place)' in parentheses, extract that concrete city
+    eg_match = re.search(r'\((?:e\.g\.,?\s*|including\s*)([^\),]+)', loc, re.IGNORECASE)
+    loc = eg_match.group(1).strip() if eg_match else re.sub(r'\(.*?\)', '', loc).strip()
+
+    loc = loc.strip(" ,.-")
+    if len(loc) < 2 or loc.lower() in [
+        "multiple cities",
+        "various",
+        "various locations",
+        "nationwide",
+        "unknown",
+        "several locations",
+        "global",
+    ]:
+        return None
+    return loc
+
+
 class GeocodingService:
     def __init__(self) -> None:
         self._lock = _nominatim_lock
 
     async def geocode(self, session: AsyncSession, location_name: str) -> Optional[GeocodingResult]:
-        norm_cache_key = location_name.strip().lower()
+        cleaned = clean_location_name(location_name)
+        if not cleaned:
+            return None
+
+        norm_cache_key = cleaned.strip().lower()
 
         stmt = select(GeocodeCache).where(GeocodeCache.location_name == norm_cache_key)
         result = await session.execute(stmt)
@@ -51,10 +85,10 @@ class GeocodingService:
             return GeocodingResult(
                 latitude=cached.latitude,
                 longitude=cached.longitude,
-                display_name=cached.display_name or location_name,
+                display_name=cached.display_name or cleaned,
             )
 
-        res = await self._call_nominatim(location_name)
+        res = await self._call_nominatim(cleaned)
         if isinstance(res, GeocodingResult):
             new_cache = GeocodeCache(
                 location_name=norm_cache_key,
@@ -83,9 +117,22 @@ class GeocodingService:
     async def _call_nominatim(
         self, location_name: str, max_retries: int = 3
     ) -> Union[GeocodingResult, _NotFoundSentinel, None]:
-        global _last_request_time
+        global _last_request_time, _circuit_open_until
 
         async with _nominatim_lock:
+            # If circuit breaker is active, skip outbound call immediately
+            now = time.monotonic()
+            if now < _circuit_open_until:
+                remaining = _circuit_open_until - now
+                logger.warning(
+                    "Nominatim circuit breaker active (%.0fs remaining). Skipping geocoding for '%s'.",
+                    remaining,
+                    location_name,
+                )
+                return None
+
+            last_was_429 = False
+
             for attempt in range(max_retries):
                 # Enforce OSM rate limit: minimum 1.5s interval between requests
                 now = time.monotonic()
@@ -108,12 +155,15 @@ class GeocodingService:
                         _last_request_time = time.monotonic()
 
                         if res.status_code == 429:
+                            last_was_429 = True
                             retry_after_str = res.headers.get("Retry-After")
-                            backoff = (
+                            raw_retry = (
                                 float(retry_after_str)
                                 if retry_after_str and retry_after_str.isdigit()
-                                else (5.0 * (2 ** attempt))
+                                else 0.0
                             )
+                            # Ensure backoff is at least 5s * (2^attempt) so it never sleeps for 0.0s
+                            backoff = max(raw_retry, 5.0 * (2 ** attempt))
                             logger.warning(
                                 "Nominatim 429 Too Many Requests for '%s'. Backing off for %.1fs (attempt %d/%d).",
                                 location_name,
@@ -168,5 +218,15 @@ class GeocodingService:
                     logger.exception("Failed to parse Nominatim response for '%s'.", location_name)
                     return None
 
-            logger.error("Failed to geocode '%s' after %d attempts.", location_name, max_retries)
+            if last_was_429:
+                _circuit_open_until = time.monotonic() + _CIRCUIT_COOLDOWN_SECONDS
+                logger.error(
+                    "Nominatim 429 persistent for '%s' after %d attempts. Tripping circuit breaker for %ds.",
+                    location_name,
+                    max_retries,
+                    int(_CIRCUIT_COOLDOWN_SECONDS),
+                )
+            else:
+                logger.error("Failed to geocode '%s' after %d attempts.", location_name, max_retries)
+
             return None
