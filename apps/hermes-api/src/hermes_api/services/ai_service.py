@@ -353,21 +353,20 @@ def _reidx_results(raw_results: Sequence[T], count: int, get_idx: Callable[[T], 
 
 class AiService:
     def __init__(self) -> None:
-        self._primary_model = settings.primary_llm_model
-        self._primary_api_key = settings.primary_llm_api
-        self._fallback_model = settings.fallback_llm_model
-        self._fallback_api_key = settings.fallback_llm_api
+        self._primary_model = settings.LLM_MODEL
+        self._primary_api_key = settings.LLM_API
+        self._fallback_model = settings.LLM_MODEL_1
+        self._fallback_api_key = settings.LLM_API_1
+        if not self._primary_api_key or not self._primary_model:
+            logger.error("primary llm api key or model is missing.")
+            raise ValueError("LLM_API or LLM_MODEL is missing.")
 
-        if not self._primary_api_key:
-            logger.error("primary llm api key is missing.")
-            raise ValueError("LLM_API is missing.")
+        self._embed_api_key = settings.EMBED_API
+        self._embed_model = settings.EMBED_MODEL
+        if not self._embed_api_key or not self._embed_model:
+            logger.error("embed api key or model is missing.")
+            raise ValueError("EMBED_API or EMBED_MODEL is missing.")
 
-        self._embed_api_key = settings.primary_embed_api
-        if not self._embed_api_key:
-            logger.error("embed api key is missing.")
-            raise ValueError("EMBED_API is missing.")
-
-        self._embed_model = settings.normalized_embed_model
 
         model_list = [
             {
@@ -378,7 +377,6 @@ class AiService:
                 },
             }
         ]
-
         fallbacks = []
         if self._fallback_model and self._fallback_api_key:
             model_list.append(
@@ -390,7 +388,8 @@ class AiService:
                     },
                 }
             )
-            fallbacks = [{"primary-extractor": ["fallback-extractor"]}]
+            fallbacks = [{ "primary-extractor": ["fallback-extractor"] }]
+
 
         self._router = litellm.Router(
             model_list=model_list,
@@ -407,6 +406,9 @@ class AiService:
             self._fallback_model if fallbacks else "none",
             self._embed_model,
         )
+
+
+
 
     async def _call_llm(self, sys_prompt: str, user_prompt: str, res_model: type[BaseModel], schema_name: str) -> Optional[BaseModel]:
         try:

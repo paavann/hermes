@@ -1,0 +1,29 @@
+services:
+  hermes-api:
+    build:
+      context: ./apps/hermes-api
+      dockerfile: Dockerfile
+    ports:
+      - '${API_PORT:-8000}:8000'
+    env_file:
+      - .env.production
+      - path: ./apps/hermes-api/.env.production
+        required: false
+    environment:
+      ENV: production
+    restart: always
+
+  hermes:
+    build:
+      context: .
+      dockerfile: apps/hermes/Dockerfile
+    ports:
+      - '${FRONTEND_PORT:-4200}:4200'
+    env_file:
+      - .env.production
+      - path: ./apps/hermes/.env.production
+        required: false
+    environment:
+      HOST: 0.0.0.0
+      NODE_ENV: production
+    restart: always

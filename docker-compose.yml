@@ -8,10 +8,8 @@ services:
             && apt-get install -y --no-install-recommends postgresql-$$PG_MAJOR-pgvector \
             && rm -rf /var/lib/apt/lists/*
     restart: always
-    environment:
-      POSTGRES_DB: ${DB_NAME}
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    env_file:
+      - .env.development
     ports:
       - '${DB_PORT}:5432'
     volumes:
@@ -30,18 +28,10 @@ services:
       - '${API_PORT}:8000'
     volumes:
       - ./apps/hermes-api/src:/app/src
-    environment:
-      DB_HOST: hermes-db
-      DB_PORT: 5432
-      DB_USER: ${DB_USER}
-      DB_PASSWORD: ${DB_PASSWORD}
-      DB_NAME: ${DB_NAME}
-      LLM_API: ${LLM_API}
-      LLM_MODEL: ${LLM_MODEL}
-      LLM_API_1: ${LLM_API_1}
-      LLM_MODEL_1: ${LLM_MODEL_1}
-      EMBED_API: ${EMBED_API}
-      EMBED_MODEL: ${EMBED_MODEL}
+    env_file:
+      - .env.development
+      - ./apps/hermes-api/.env.development
+      - ./apps/hermes-api/.env.local
     depends_on:
       hermes-db:
         condition: service_healthy
@@ -58,11 +48,12 @@ services:
       - ./apps/hermes/styles.css:/app/apps/hermes/styles.css
       - ./apps/hermes/public:/app/apps/hermes/public
       - ./libs:/app/libs
+    env_file:
+      - .env.development
+      - ./apps/hermes/.env.development
+      - ./apps/hermes/.env.local
     environment:
       HOST: 0.0.0.0
-      VITE_MAPBOX_TOKEN: ${VITE_MAPBOX_TOKEN}
-      VITE_BASE_URL: ${VITE_BASE_URL}
-      VITE_API_VER: ${VITE_API_VER}
     restart: unless-stopped
 
 volumes:

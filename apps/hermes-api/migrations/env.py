@@ -14,7 +14,7 @@ config = context.config
 
 config.set_main_option(
     "sqlalchemy.url",
-    settings.direct_db_url.render_as_string(hide_password=False).replace("%", "%%"),
+    settings.db_url.render_as_string(hide_password=False).replace("%", "%%"),
 )
 
 if config.config_file_name is not None:
