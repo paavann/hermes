@@ -3,14 +3,12 @@ import logging
 import re
 import time
 from dataclasses import dataclass
-from typing import Optional, Union
-
 import httpx
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-
 from hermes_api.core.config import settings
 from hermes_api.db.models.geocode_cache import GeocodeCache
+
 
 logger = logging.getLogger(__name__)
 NOMINATIM_SEARCH_URL = "https://nominatim.openstreetmap.org/search"
@@ -18,9 +16,13 @@ NOMINATIM_SEARCH_URL = "https://nominatim.openstreetmap.org/search"
 # Shared across all GeocodingService instances to enforce strict global rate limits
 _nominatim_lock = asyncio.Lock()
 _last_request_time: float = 0.0
-_MIN_REQUEST_INTERVAL: float = 1.5  # seconds (OSM permits max 1 req/s; 1.5s absorbs latency jitter)
+_MIN_REQUEST_INTERVAL: float = (
+    1.5  # seconds (OSM permits max 1 req/s; 1.5s absorbs latency jitter)
+)
 _circuit_open_until: float = 0.0
-_CIRCUIT_COOLDOWN_SECONDS: float = 120.0  # 2 minute cooldown when 429 rate limit is active
+_CIRCUIT_COOLDOWN_SECONDS: float = (
+    120.0  # 2 minute cooldown when 429 rate limit is active
+)
 
 
 @dataclass(frozen=True)
@@ -32,13 +34,14 @@ class GeocodingResult:
 
 class _NotFoundSentinel:
     """Sentinel indicating Nominatim returned a valid 200 OK with 0 results."""
+
     pass
 
 
 _NOT_FOUND = _NotFoundSentinel()
 
 
-def clean_location_name(loc: str) -> Optional[str]:
+def clean_location_name(loc: str) -> str | None:
     """Sanitize location names extracted from news or Wikipedia.
     Extracts concrete place names from messy inputs like 'Multiple cities (e.g., Sanaa, Taiz)'
     or 'Sanaa (mosque)' or 'Yemen (nationwide)'.
@@ -48,8 +51,8 @@ def clean_location_name(loc: str) -> Optional[str]:
     loc = loc.strip()
 
     # If there is an explicit '(e.g., Place)' in parentheses, extract that concrete city
-    eg_match = re.search(r'\((?:e\.g\.,?\s*|including\s*)([^\),]+)', loc, re.IGNORECASE)
-    loc = eg_match.group(1).strip() if eg_match else re.sub(r'\(.*?\)', '', loc).strip()
+    eg_match = re.search(r"\((?:e\.g\.,?\s*|including\s*)([^\),]+)", loc, re.IGNORECASE)
+    loc = eg_match.group(1).strip() if eg_match else re.sub(r"\(.*?\)", "", loc).strip()
 
     loc = loc.strip(" ,.-")
     if len(loc) < 2 or loc.lower() in [
@@ -69,7 +72,9 @@ class GeocodingService:
     def __init__(self) -> None:
         self._lock = _nominatim_lock
 
-    async def geocode(self, session: AsyncSession, location_name: str) -> Optional[GeocodingResult]:
+    async def geocode(
+        self, session: AsyncSession, location_name: str
+    ) -> GeocodingResult | None:
         cleaned = clean_location_name(location_name)
         if not cleaned:
             return None
@@ -116,7 +121,7 @@ class GeocodingService:
 
     async def _call_nominatim(
         self, location_name: str, max_retries: int = 3
-    ) -> Union[GeocodingResult, _NotFoundSentinel, None]:
+    ) -> GeocodingResult | _NotFoundSentinel | None:
         global _last_request_time, _circuit_open_until
 
         async with _nominatim_lock:
@@ -163,7 +168,7 @@ class GeocodingService:
                                 else 0.0
                             )
                             # Ensure backoff is at least 5s * (2^attempt) so it never sleeps for 0.0s
-                            backoff = max(raw_retry, 5.0 * (2 ** attempt))
+                            backoff = max(raw_retry, 5.0 * (2**attempt))
                             logger.warning(
                                 "Nominatim 429 Too Many Requests for '%s'. Backing off for %.1fs (attempt %d/%d).",
                                 location_name,
@@ -178,7 +183,9 @@ class GeocodingService:
 
                     results = res.json()
                     if not results:
-                        logger.warning("No geocoding results found for: '%s'.", location_name)
+                        logger.warning(
+                            "No geocoding results found for: '%s'.", location_name
+                        )
                         return _NOT_FOUND
 
                     first = results[0]
@@ -187,7 +194,12 @@ class GeocodingService:
                         longitude=float(first["lon"]),
                         display_name=first.get("display_name", location_name),
                     )
-                    logger.info("Geocoded '%s' -> (%s, %s).", location_name, result.latitude, result.longitude)
+                    logger.info(
+                        "Geocoded '%s' -> (%s, %s).",
+                        location_name,
+                        result.latitude,
+                        result.longitude,
+                    )
                     return result
 
                 except httpx.HTTPStatusError as exc:
@@ -214,8 +226,10 @@ class GeocodingService:
                         await asyncio.sleep(2.0 * (attempt + 1))
                     else:
                         return None
-                except (KeyError, ValueError, IndexError):
-                    logger.exception("Failed to parse Nominatim response for '%s'.", location_name)
+                except KeyError, ValueError, IndexError:
+                    logger.exception(
+                        "Failed to parse Nominatim response for '%s'.", location_name
+                    )
                     return None
 
             if last_was_429:
@@ -227,6 +241,10 @@ class GeocodingService:
                     int(_CIRCUIT_COOLDOWN_SECONDS),
                 )
             else:
-                logger.error("Failed to geocode '%s' after %d attempts.", location_name, max_retries)
+                logger.error(
+                    "Failed to geocode '%s' after %d attempts.",
+                    location_name,
+                    max_retries,
+                )
 
             return None

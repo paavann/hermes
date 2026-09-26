@@ -1,9 +1,6 @@
 import uuid
 from datetime import datetime
-from typing import Optional
-
 from pydantic import BaseModel, ConfigDict
-
 from hermes_api.db.enums import EventStatus, EventTlStatus
 
 
@@ -11,7 +8,7 @@ class ArticleResponse(BaseModel):
     id: uuid.UUID
     title: str
     url: str
-    published_at: Optional[datetime]
+    published_at: datetime | None
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -20,7 +17,7 @@ class EventResponse(BaseModel):
     ai_headline: str
     category: str
     category_color: str
-    location_name: Optional[str]
+    location_name: str | None
     trending_score: float
     article_count: int
     status: EventStatus
@@ -39,7 +36,7 @@ class MapEventResponse(BaseModel):
     ai_headline: str
     category: str
     category_color: str
-    location_name: Optional[str]
+    location_name: str | None
     latitude: float
     longitude: float
     trending_score: float
@@ -52,21 +49,23 @@ class TlNodeResponse(BaseModel):
     date: str
     headline: str
     summary: str
-    location_name: Optional[str]
-    latitude: Optional[float]
-    longitude: Optional[float]
+    location_name: str | None
+    latitude: float | None
+    longitude: float | None
     # Only set for the terminal "current event" node; None for historical Wikipedia nodes.
-    category_color: Optional[str] = None
+    category_color: str | None = None
+
 
 class TlEdgeResponse(BaseModel):
     source_node_id: str
     target_node_id: str
     relationship: str
 
+
 class TlResponse(BaseModel):
     status: EventTlStatus
-    message: Optional[str] = None
+    message: str | None = None
     nodes: list[TlNodeResponse] = []
     edges: list[TlEdgeResponse] = []
     tl_summary: str = ""
-    generated_at: Optional[datetime] = None
+    generated_at: datetime | None = None

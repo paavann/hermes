@@ -2,9 +2,7 @@
 
 import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
-
 import pytest
-
 from hermes_api.services.ai_service import (
     AiService,
     ArticleInput,
@@ -147,7 +145,9 @@ class TestExtractTl:
         mock_res.choices = [MagicMock(message=MagicMock(content=raw_json))]
         mock_acompletion.return_value = mock_res
 
-        result = asyncio.run(ai_service.extract_tl("Assassination of Jovenel Moïse", "Prose text"))
+        result = asyncio.run(
+            ai_service.extract_tl("Assassination of Jovenel Moïse", "Prose text")
+        )
 
         assert result is not None
         assert result.tl_summary == "The assassination shaping its trajectory."
@@ -162,7 +162,9 @@ class TestRouterFallback:
         assert len(ai_service.router.model_list) == 2
         assert ai_service.router.model_list[0]["model_name"] == "primary-extractor"
         assert ai_service.router.model_list[1]["model_name"] == "fallback-extractor"
-        assert ai_service.router.fallbacks == [{"primary-extractor": ["fallback-extractor"]}]
+        assert ai_service.router.fallbacks == [
+            {"primary-extractor": ["fallback-extractor"]}
+        ]
 
 
 class TestGenEmbeddings:
@@ -183,4 +185,3 @@ class TestGenEmbeddings:
         _, kwargs = mock_aembedding.call_args
         assert kwargs.get("encoding_format") == "float"
         assert kwargs.get("model") == "nvidia_nim/nvidia/nemotron-3-embed-1b"
-

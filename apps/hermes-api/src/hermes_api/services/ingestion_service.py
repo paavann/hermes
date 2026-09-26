@@ -1,11 +1,9 @@
 import asyncio
 import logging
 import uuid
-from datetime import datetime, timedelta, timezone
-
+from datetime import UTC, datetime, timedelta
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
-
 from hermes_api.core.config import settings
 from hermes_api.core.rate_limiter import TokenBucketRateLimiter
 from hermes_api.db.db import AsyncSessionLocal
@@ -15,12 +13,8 @@ from hermes_api.services.event_service import EventService
 from hermes_api.services.geocoding_service import GeocodingService
 from hermes_api.services.rss_service import ParsedArticle, fetch_feed
 
+
 logger = logging.getLogger(__name__)
-
-
-
-
-
 
 
 class IngestionService:
@@ -29,9 +23,6 @@ class IngestionService:
         self._geocoding = GeocodingService()
         self._rate_limiter = TokenBucketRateLimiter(settings.RPM_LIMIT)
         self._embed_rate_limiter = TokenBucketRateLimiter(settings.EMBED_RPM_LIMIT)
-
-
-
 
     async def _ingest_source(self, source: dict) -> dict[str, int]:
         stats = {
@@ -143,7 +134,9 @@ class IngestionService:
 
                             stats["articles_processed"] += 1
                     except Exception:
-                        logger.exception("failed to process article: %s.", article.title)
+                        logger.exception(
+                            "failed to process article: %s.", article.title
+                        )
                         stats["articles_failed"] += 1
 
         logger.info(
@@ -155,10 +148,9 @@ class IngestionService:
         )
         return stats
 
-
-
-
-    async def _get_active_sources(self, session: AsyncSession, force: bool = False) -> list[dict]:
+    async def _get_active_sources(
+        self, session: AsyncSession, force: bool = False
+    ) -> list[dict]:
         stmt = (
             select(
                 Source.id,
@@ -174,8 +166,7 @@ class IngestionService:
         result = await session.execute(stmt)
         rows = result.all()
         due_sources = []
-        now = datetime.now(timezone.utc)
-
+        now = datetime.now(UTC)
 
         for row in rows:
             if not row.last_fetched_at:
@@ -191,7 +182,7 @@ class IngestionService:
 
             last = row.last_fetched_at
             if last.tzinfo is None:
-                last = last.replace(tzinfo=timezone.utc)
+                last = last.replace(tzinfo=UTC)
 
             delta = timedelta(minutes=row.fetch_interval_minutes)
             if force or now >= last + delta:
@@ -204,11 +195,7 @@ class IngestionService:
                     }
                 )
 
-
         return due_sources
-
-
-
 
     async def ingest_all_sources(self, force: bool = False) -> dict[str, int]:
         stats = {
@@ -221,16 +208,15 @@ class IngestionService:
             "events_matched": 0,
         }
 
-
         async with AsyncSessionLocal() as session:
             sources = await self._get_active_sources(session, force=force)
         if not sources:
             logger.warning("no active sources found in the database.")
             return stats
 
-
         logger.info("starting ingestion for %s sources.", len(sources))
         semaphore = asyncio.Semaphore(5)
+
         async def _process_source(source: dict) -> dict[str, int]:
             async with semaphore:
                 try:
@@ -244,9 +230,10 @@ class IngestionService:
                         await db_session.commit()
                     return s_stats
                 except Exception:
-                    logger.exception("unhandled error ingesting source %s.", source["name"])
-                    return { k: 0 for k in stats if k != "sources_processed" }
-
+                    logger.exception(
+                        "unhandled error ingesting source %s.", source["name"]
+                    )
+                    return {k: 0 for k in stats if k != "sources_processed"}
 
         tasks = [_process_source(s) for s in sources]
         results = await asyncio.gather(*tasks)
@@ -255,7 +242,6 @@ class IngestionService:
                 if key in stats:
                     stats[key] += source_stats[key]
             stats["sources_processed"] += 1
-
 
         logger.info(
             "ingestion complete: %s sources, %s articles processed, %s new events, %s matched to existing.",

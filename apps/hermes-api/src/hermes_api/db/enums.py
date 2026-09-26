@@ -1,13 +1,13 @@
 import enum
 
 
-class EventStatus(str, enum.Enum):
+class EventStatus(enum.StrEnum):
     ACTIVE = "ACTIVE"
     STALE = "STALE"
     ARCHIVED = "ARCHIVED"
 
 
-class EventScope(str, enum.Enum):
+class EventScope(enum.StrEnum):
     GLOBAL = "GLOBAL"
     COUNTRY = "COUNTRY"
     STATE = "STATE"
@@ -15,20 +15,20 @@ class EventScope(str, enum.Enum):
     LOCAL = "LOCAL"
 
 
-class SourceType(str, enum.Enum):
+class SourceType(enum.StrEnum):
     RSS = "RSS"
     API = "API"
     SCRAPE = "SCRAPE"
 
 
-class CredibilityTier(str, enum.Enum):
+class CredibilityTier(enum.StrEnum):
     TIER_1 = "TIER_1"
     TIER_2 = "TIER_2"
     TIER_3 = "TIER_3"
     TIER_4 = "TIER_4"
 
 
-class EventTlStatus(str, enum.Enum):
+class EventTlStatus(enum.StrEnum):
     READY = "READY"
     GENERATING = "GENERATING"
     FAILED = "FAILED"

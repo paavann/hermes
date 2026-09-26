@@ -1,13 +1,12 @@
 import asyncio
 import logging
-
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
-
 from hermes_api.core.config import settings
 from hermes_api.db.db import AsyncSessionLocal
 from hermes_api.services.event_service import EventService
 from hermes_api.services.ingestion_service import IngestionService
+
 
 logger = logging.getLogger(__name__)
 scheduler = AsyncIOScheduler()
@@ -35,10 +34,8 @@ async def run_event_lifecycle_job() -> None:
         logger.exception("event lifecycle job failed.")
 
 
-
-
-
 _startup_task = None
+
 
 def setup_scheduler() -> None:
     logger.info("setting up background jobs...")
@@ -56,8 +53,6 @@ def setup_scheduler() -> None:
         id="event_lifecycle_job",
         replace_existing=True,
     )
-
-
 
     scheduler.start()
     logger.info(

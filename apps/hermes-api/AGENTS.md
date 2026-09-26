@@ -53,6 +53,7 @@ This is the **backend API and autonomous data ingestion engine** of Project Herm
 ### Historical Timeline Engine (`tl_service.py`)
 
 Synthesizes on-demand geopolitical lineage for major events:
+
 1. **Triage**: An LLM prompt (`TIMELINE_TRIAGE_SYS_PROMPT`) determines if an event warrants historical Wikipedia context and generates an exact MediaWiki search query.
 2. **MediaWiki Extraction**: Searches Wikipedia, detects whether a page is a multi-year timeline index via `enumerate_tl_pages()`, and fetches extracts in batches of 50.
 3. **Graph Extraction**: Extracts chronological nodes and causal edges (`"led to"`, `"triggered"`) using `TL_SYSTEM_PROMPT`.
@@ -85,8 +86,8 @@ The backend implements an algorithmic ranking model that surfaces critical globa
 
 - **pgvector**: Uses `halfvec(2048)` with an HNSW index to enable ultra-fast cosine similarity lookups:
   ```sql
-  CREATE INDEX idx_events_embedding ON events 
-  USING hnsw (embedding halfvec_cosine_ops) 
+  CREATE INDEX idx_events_embedding ON events
+  USING hnsw (embedding halfvec_cosine_ops)
   WITH (m = 16, ef_construction = 64);
   ```
 - **GIST Spatial Indexes**: Applied to `location` (`Geometry(POINT, 4326)`). Viewport queries use `ST_Within` with bounding box envelopes (`ST_MakeEnvelope`).
@@ -111,6 +112,7 @@ The backend implements an algorithmic ranking model that surfaces critical globa
 ### Structured Error Handling
 
 Managed globally via `register_err_handlers()`:
+
 - `AppException` &rarr; Returns `{ err_code, err_msg, details }`
 - `RequestValidationError` &rarr; Returns 422 with validation errors
 - `StarletteHTTPException` &rarr; Standardized HTTP errors

@@ -1,12 +1,10 @@
 import logging
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
-
 from geoalchemy2.functions import ST_X, ST_Y
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-
 from hermes_api.core.exceptions import (
     EventNotFoundException,
     TlGenErr,
@@ -25,12 +23,8 @@ from hermes_api.services.wikipedia_service import (
 )
 from hermes_api.utils.db import delete_and_commit
 
+
 logger = logging.getLogger(__name__)
-
-
-
-
-
 
 
 class TlService:
@@ -39,13 +33,11 @@ class TlService:
         self._ai = AiService()
         self._geocoding = GeocodingService()
 
-
-
-    async def _abort_tl_gen(self, existing_tl: EventTl, status: EventTlStatus, message: str) -> TlResponse:
+    async def _abort_tl_gen(
+        self, existing_tl: EventTl, status: EventTlStatus, message: str
+    ) -> TlResponse:
         await delete_and_commit(self._session, existing_tl)
         return TlResponse(status=status, message=message)
-
-
 
     def _build_response_from_existingtl(self, tl: EventTl) -> TlResponse:
         return TlResponse(
@@ -53,23 +45,37 @@ class TlService:
             nodes=[TlNodeResponse(**n) for n in tl.nodes],
             edges=[TlEdgeResponse(**e) for e in tl.edges],
             tl_summary=tl.tl_summary,
-            generated_at=tl.generated_at
+            generated_at=tl.generated_at,
         )
-
-
 
     async def _exec_gen(self, event: Event, existing_tl: EventTl) -> TlResponse:
         search_context = await self._ai.analyze_tl_context(event.ai_headline)
-        if not search_context or not search_context.is_tl_worthy or not search_context.wiki_search_query:
-            return await self._abort_tl_gen(existing_tl, EventTlStatus.NO_CONTENT, "Event is not part of a major historical timeline.")
+        if (
+            not search_context
+            or not search_context.is_tl_worthy
+            or not search_context.wiki_search_query
+        ):
+            return await self._abort_tl_gen(
+                existing_tl,
+                EventTlStatus.NO_CONTENT,
+                "Event is not part of a major historical timeline.",
+            )
 
         try:
             titles = await search_wikipedia(search_context.wiki_search_query)
         except WikiSearchException:
-            return await self._abort_tl_gen(existing_tl, EventTlStatus.FAILED, f"Wikipedia search failed. Timeline generation aborted for '{event.ai_headline}'.")
-        
+            return await self._abort_tl_gen(
+                existing_tl,
+                EventTlStatus.FAILED,
+                f"Wikipedia search failed. Timeline generation aborted for '{event.ai_headline}'.",
+            )
+
         if not titles:
-            return await self._abort_tl_gen(existing_tl, EventTlStatus.NO_CONTENT, f"No Wikipedia timeline found for '{event.ai_headline}'.")
+            return await self._abort_tl_gen(
+                existing_tl,
+                EventTlStatus.NO_CONTENT,
+                f"No Wikipedia timeline found for '{event.ai_headline}'.",
+            )
         else:
             main_title = titles[0]
             pages_to_process = await enumerate_tl_pages(main_title)
@@ -98,12 +104,14 @@ class TlService:
                         if loc_key in geo_cache:
                             geo_res = geo_cache[loc_key]
                         else:
-                            geo_res = await self._geocoding.geocode(self._session, r_node.location_name)
+                            geo_res = await self._geocoding.geocode(
+                                self._session, r_node.location_name
+                            )
                             geo_cache[loc_key] = geo_res
 
                         if geo_res:
                             lat, lng = geo_res.latitude, geo_res.longitude
-                    
+
                     all_nodes.append(
                         TlNodeResponse(
                             id=node_id,
@@ -112,11 +120,10 @@ class TlService:
                             summary=r_node.summary,
                             location_name=r_node.location_name,
                             latitude=lat,
-                            longitude=lng
+                            longitude=lng,
                         )
                     )
-            
-            
+
                 for r_edge in extraction.edges:
                     source_id = node_id_map.get(r_edge.source_index)
                     target_id = node_id_map.get(r_edge.target_index)
@@ -125,14 +132,17 @@ class TlService:
                             TlEdgeResponse(
                                 source_node_id=source_id,
                                 target_node_id=target_id,
-                                relationship=r_edge.relationship
+                                relationship=r_edge.relationship,
                             )
                         )
-            
+
             if not all_nodes:
                 existing_tl.status = EventTlStatus.FAILED
                 await self._session.commit()
-                return TlResponse(status=EventTlStatus.FAILED, message="AI extraction failed or yielded no results.")
+                return TlResponse(
+                    status=EventTlStatus.FAILED,
+                    message="AI extraction failed or yielded no results.",
+                )
             else:
                 all_nodes.sort(key=lambda n: n.date)
 
@@ -174,17 +184,17 @@ class TlService:
                 existing_tl.nodes = [n.model_dump() for n in all_nodes]
                 existing_tl.edges = [e.model_dump() for e in all_edges]
                 existing_tl.tl_summary = "\n\n".join(tl_summaries)
-                existing_tl.wikipedia_title = main_title          
-                existing_tl.page_count = len(page_extracts)       
-                existing_tl.node_count = len(all_nodes)    
+                existing_tl.wikipedia_title = main_title
+                existing_tl.page_count = len(page_extracts)
+                existing_tl.node_count = len(all_nodes)
                 existing_tl.status = EventTlStatus.READY
-                existing_tl.generated_at = datetime.now(timezone.utc)
+                existing_tl.generated_at = datetime.now(UTC)
                 await self._session.commit()
                 return self._build_response_from_existingtl(existing_tl)
 
-    
-
-    async def gen_tl(self, event_id: uuid.UUID, force_refresh: bool = False) -> TlResponse:
+    async def gen_tl(
+        self, event_id: uuid.UUID, force_refresh: bool = False
+    ) -> TlResponse:
         event = await self._session.get(Event, event_id)
         if not event:
             raise EventNotFoundException(event_id)
@@ -198,7 +208,7 @@ class TlService:
             elif existing_tl.status == EventTlStatus.GENERATING:
                 return TlResponse(
                     status=EventTlStatus.GENERATING,
-                    message="Timeline is currently being generated. Please wait..."
+                    message="Timeline is currently being generated. Please wait...",
                 )
             else:
                 existing_tl.status = EventTlStatus.GENERATING
@@ -214,4 +224,3 @@ class TlService:
             existing_tl.status = EventTlStatus.FAILED
             await self._session.commit()
             raise TlGenErr(event_id) from e
-        

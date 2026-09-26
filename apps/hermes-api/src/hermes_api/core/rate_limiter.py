@@ -7,7 +7,7 @@ maximum number of requests per minute using the token-bucket algorithm.
 import asyncio
 import logging
 import time
-from typing import Optional
+
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +29,7 @@ class TokenBucketRateLimiter:
         self._tokens = float(requests_per_minute)
         self._refill_rate = requests_per_minute / 60.0
         self._last_refill = time.monotonic()
-        self._lock: Optional[asyncio.Lock] = None
+        self._lock: asyncio.Lock | None = None
 
     def _get_lock(self) -> asyncio.Lock:
         """Lazily create the asyncio.Lock inside a running event loop."""

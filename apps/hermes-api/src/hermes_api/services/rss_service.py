@@ -1,28 +1,21 @@
 import logging
 from datetime import datetime
-from typing import Optional
-
 import feedparser
 import httpx
 from pydantic import BaseModel, computed_field
-
 from hermes_api.core.config import settings
+
 
 logger = logging.getLogger(__name__)
 MAX_CONTENT_WORDS: int = 500
 
 
-
-
-
-
-
-def _parse_date(entry: dict) -> Optional[datetime]:
+def _parse_date(entry: dict) -> datetime | None:
     parsed_time = entry.get("published_parsed")
     if parsed_time:
         try:
             return datetime(*parsed_time[:6])
-        except (ValueError, TypeError):
+        except ValueError, TypeError:
             return None
     return None
 
@@ -35,7 +28,7 @@ def _truncate_to_words(text: str, max_words: int) -> str:
         return " ".join(words[:max_words]) + "..."
 
 
-def _extract_content(entry: dict) -> Optional[str]:
+def _extract_content(entry: dict) -> str | None:
     content_list = entry.get("content", [])
     if content_list:
         return content_list[0].get("value", "").strip() or None
@@ -47,17 +40,12 @@ def _extract_content(entry: dict) -> Optional[str]:
     return None
 
 
-
-
-
-
-
 class ParsedArticle(BaseModel):
     title: str
     url: str
     description: str
-    content: Optional[str] = None
-    published_at: Optional[datetime] = None
+    content: str | None = None
+    published_at: datetime | None = None
 
     @computed_field
     @property
@@ -68,7 +56,6 @@ class ParsedArticle(BaseModel):
             return self.description
 
 
-
 async def fetch_feed(feed_url: str) -> list[ParsedArticle]:
     try:
         async with httpx.AsyncClient() as client:
@@ -76,11 +63,13 @@ async def fetch_feed(feed_url: str) -> list[ParsedArticle]:
                 feed_url,
                 timeout=30.0,
                 follow_redirects=True,
-                headers={ "User-Agent": settings.NOMINATIM_USER_AGENT },
+                headers={"User-Agent": settings.NOMINATIM_USER_AGENT},
             )
             res.raise_for_status()
     except httpx.TimeoutException:
-        logger.warning("timeout fetching RSS feed %s (> 30s). Skipping source.", feed_url)
+        logger.warning(
+            "timeout fetching RSS feed %s (> 30s). Skipping source.", feed_url
+        )
         return []
     except httpx.HTTPError as exc:
         logger.warning("failed to fetch RSS feed %s: %s.", feed_url, exc)

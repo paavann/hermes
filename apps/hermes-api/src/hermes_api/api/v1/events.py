@@ -1,13 +1,10 @@
 import uuid
 from collections.abc import AsyncGenerator
-from typing import Optional
-
 from fastapi import APIRouter, Depends, HTTPException, Query
 from geoalchemy2.functions import ST_X, ST_Y, ST_MakeEnvelope, ST_Within
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
-
 from hermes_api.db.db import AsyncSessionLocal
 from hermes_api.db.enums import EventStatus
 from hermes_api.db.models.event import Event
@@ -17,20 +14,21 @@ from hermes_api.schemas.events import (
     MapEventResponse,
 )
 
+
 router = APIRouter()
 
 
-async def get_db() -> AsyncGenerator[AsyncSession, None]:
+async def get_db() -> AsyncGenerator[AsyncSession]:
     async with AsyncSessionLocal() as session:
         yield session
 
 
 @router.get("/", response_model=list[EventResponse])
 async def get_events(
-    status: Optional[EventStatus] = Query(
+    status: EventStatus | None = Query(
         EventStatus.ACTIVE, description="filter events by status."
     ),
-    scope: Optional[EventStatus] = Query(None, description="filter by event scope."),
+    scope: EventStatus | None = Query(None, description="filter by event scope."),
     limit: int = Query(
         50, ge=1, le=200, description="maximum number of events to return."
     ),
@@ -97,9 +95,7 @@ async def get_event(
     event_id: uuid.UUID, db: AsyncSession = Depends(get_db)
 ) -> EventDetailResponse:
     stmt = (
-        select(Event)
-        .options(selectinload(Event.articles))
-        .where(Event.id == event_id)
+        select(Event).options(selectinload(Event.articles)).where(Event.id == event_id)
     )
     result = await db.execute(stmt)
     event = result.scalar_one_or_none()

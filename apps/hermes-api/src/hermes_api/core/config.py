@@ -1,12 +1,6 @@
-from typing import Optional
 from functools import lru_cache
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy import URL
-
-
-
-
-
 
 
 class Settings(BaseSettings):
@@ -16,13 +10,12 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-
-
     # server metadata.
     APP: str = "hermes"
     ENV: str = "dev"
-
-
+    API_PORT: int
+    VERSION: str = ""
+    API_BASE_PATH: str = "/api/v1"
 
     # db credentials.
     DB_HOST: str = "localhost"
@@ -31,42 +24,36 @@ class Settings(BaseSettings):
     DB_PASSWORD: str = ""
     DB_NAME: str = "hermes"
 
-
-
     # primary llm credentials.
     LLM_API: str = ""
     LLM_MODEL: str = ""
 
     # fallback llm credentials (secondary).
-    LLM_API_1: Optional[str] = None
-    LLM_MODEL_1: Optional[str] = None
+    LLM_API_1: str | None = None
+    LLM_MODEL_1: str | None = None
 
     # primary embedding llm credentials.
     EMBED_API: str = ""
     EMBED_MODEL: str = ""
 
     # fallback embeddings llm credentials (secondary).
-    EMBED_API_1: Optional[str] = None
-    EMBED_MODEL_1: Optional[str] = None
+    EMBED_API_1: str | None = None
+    EMBED_MODEL_1: str | None = None
 
     # rate limit configuration.
     RPM_LIMIT: int = 26
     EMBED_RPM_LIMIT: int = 90
 
-
-
     # nominatim geocoding service.
-    NOMINATIM_USER_AGENT: str = "HermesGeospatialNews/1.0 (https://github.com/paavann/hermes)"
-
-
+    NOMINATIM_USER_AGENT: str = (
+        "HermesGeospatialNews/1.0 (https://github.com/paavann/hermes)"
+    )
 
     # ingestion configuration.
     RSS_FETCH_INTERVAL_MIN: int = 15
     INGESTION_HEARTBEAT_MIN: int = 360
     EVENT_STALE_HOURS: int = 24
     EVENT_ARCHIVE_HOURS: int = 48
-
-
 
     # database connection url.
     @property
@@ -86,11 +73,9 @@ class Settings(BaseSettings):
         )
 
 
-
-
-
 @lru_cache
 def get_settings() -> Settings:
     return Settings()
+
 
 settings = get_settings()

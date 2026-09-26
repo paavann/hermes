@@ -9,12 +9,11 @@ by changing a single function.
 import json
 import logging
 from pathlib import Path
-from typing import Any, Optional
-
+from typing import Any
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-
 from hermes_api.db.models.source import Source
+
 
 logger = logging.getLogger(__name__)
 
@@ -87,7 +86,7 @@ async def sync_sources_from_config(session: AsyncSession) -> dict[str, int]:
 
         stmt = select(Source).where(Source.slug == slug)
         result = await session.execute(stmt)
-        existing: Optional[Source] = result.scalar_one_or_none()
+        existing: Source | None = result.scalar_one_or_none()
 
         if existing:
             changed = False

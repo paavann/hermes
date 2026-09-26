@@ -1,13 +1,12 @@
 from datetime import datetime
-from typing import TYPE_CHECKING, Optional
-
+from typing import TYPE_CHECKING
 from geoalchemy2 import Geometry
 from pgvector.sqlalchemy import HALFVEC
 from sqlalchemy import Float, Index, Integer, String, Text, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-
 from hermes_api.db.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
 from hermes_api.db.enums import EventScope, EventStatus
+
 
 if TYPE_CHECKING:
     from hermes_api.db.models.article import Article
@@ -17,14 +16,14 @@ class Event(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     __tablename__ = "events"
 
     ai_headline: Mapped[str] = mapped_column(String(500))
-    ai_summary: Mapped[Optional[str]] = mapped_column(Text)
+    ai_summary: Mapped[str | None] = mapped_column(Text)
 
     category: Mapped[str] = mapped_column(String(100))
     category_color: Mapped[str] = mapped_column(String(7))
     status: Mapped[EventStatus] = mapped_column(default=EventStatus.ACTIVE)
     scope: Mapped[EventScope] = mapped_column(default=EventScope.COUNTRY)
 
-    location: Mapped[Optional[str]] = mapped_column(
+    location: Mapped[str | None] = mapped_column(
         Geometry(
             geometry_type="POINT",
             srid=4326,
@@ -32,8 +31,8 @@ class Event(Base, UUIDPrimaryKeyMixin, TimestampMixin):
         ),
         nullable=True,
     )
-    location_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
-    country_code: Mapped[Optional[str]] = mapped_column(String(2))
+    location_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    country_code: Mapped[str | None] = mapped_column(String(2))
 
     trending_score: Mapped[float] = mapped_column(Float, default=0.0)
     article_count: Mapped[int] = mapped_column(Integer, default=0)
@@ -45,12 +44,12 @@ class Event(Base, UUIDPrimaryKeyMixin, TimestampMixin):
         server_default="now()",
     )
 
-    articles: Mapped[list["Article"]] = relationship(
+    articles: Mapped[list[Article]] = relationship(
         back_populates="event", cascade="all, delete-orphan"
     )
 
     # Semantic Embedding for fast deduplication
-    embedding: Mapped[Optional["HALFVEC"]] = mapped_column(HALFVEC(2048))
+    embedding: Mapped[HALFVEC | None] = mapped_column(HALFVEC(2048))
 
     # indexes.
     __table_args__ = (

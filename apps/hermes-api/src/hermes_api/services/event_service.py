@@ -1,17 +1,15 @@
 import logging
 import uuid
-from datetime import datetime, timedelta, timezone
-from typing import Optional
-
+from datetime import UTC, datetime, timedelta
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
-
 from hermes_api.core.config import settings
 from hermes_api.db.enums import CredibilityTier, EventStatus
 from hermes_api.db.models.article import Article
 from hermes_api.db.models.event import Event
 from hermes_api.services.ai_service import ExtractedEvent
 from hermes_api.services.geocoding_service import GeocodingResult
+
 
 logger = logging.getLogger(__name__)
 
@@ -23,29 +21,21 @@ CREDIBILITY_WEIGHTS = {
 }
 
 
-
-
-
-
-
 class EventService:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
-
-
-
 
     # create.
     async def create_event_with_article(
         self,
         extraction: ExtractedEvent,
-        geocoding: Optional[GeocodingResult],
+        geocoding: GeocodingResult | None,
         article_title: str,
         article_url: str,
         source_id: uuid.UUID,
         source_credibility: CredibilityTier,
-        published_at: Optional[datetime] = None,
-        embedding: Optional[list[float]] = None,
+        published_at: datetime | None = None,
+        embedding: list[float] | None = None,
     ) -> Event:
         location_wkt = None
         if geocoding:
@@ -53,7 +43,7 @@ class EventService:
                 f"SRID=4326;POINT({geocoding.longitude} {geocoding.latitude})"
             )
 
-        now = datetime.now(timezone.utc).replace(tzinfo=None)
+        now = datetime.now(UTC).replace(tzinfo=None)
         initial_score = CREDIBILITY_WEIGHTS.get(source_credibility, 1.0)
 
         event = Event(
@@ -85,17 +75,16 @@ class EventService:
         logger.info("created event '%s' with 1 article.", event.ai_headline)
         return event
 
-
-
-
     # update.
     async def add_article_to_event(
         self,
         event_id: uuid.UUID,
-        article_title: str, article_url: str,
-        source_id: uuid.UUID, source_credibility: CredibilityTier,
-        published_at: Optional[datetime] = None,
-    ) -> Optional[Event]:
+        article_title: str,
+        article_url: str,
+        source_id: uuid.UUID,
+        source_credibility: CredibilityTier,
+        published_at: datetime | None = None,
+    ) -> Event | None:
         event = await self._session.get(Event, event_id)
         if not event:
             logger.warning("event not found for event id: %s.", event_id)
@@ -114,7 +103,7 @@ class EventService:
         added_score = CREDIBILITY_WEIGHTS.get(source_credibility, 1.0)
         event.trending_score += added_score
 
-        event.last_updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
+        event.last_updated_at = datetime.now(UTC).replace(tzinfo=None)
         if event.status == EventStatus.STALE:
             event.status = EventStatus.ACTIVE
             logger.info("reactivated stale event: '%s'.", event.ai_headline)
@@ -128,9 +117,6 @@ class EventService:
 
         return event
 
-
-
-
     @staticmethod
     def _to_event_dict(row) -> dict[str, str]:
         return {
@@ -139,7 +125,6 @@ class EventService:
             "location_name": row.location_name or "N/A",
             "category": row.category,
         }
-
 
     # queries (used by the ai service and api layer).
     async def get_active_events(self) -> list[dict[str, str]]:
@@ -157,10 +142,9 @@ class EventService:
         result = await self._session.execute(stmt)
         return [self._to_event_dict(row) for row in result.all()]
 
-
-
-
-    async def get_active_events_by_embeddings(self, embeddings: list[list[float]]) -> list[dict[str, str]]:
+    async def get_active_events_by_embeddings(
+        self, embeddings: list[list[float]]
+    ) -> list[dict[str, str]]:
         if not embeddings:
             return []
 
@@ -190,19 +174,15 @@ class EventService:
 
         return list(unique_events.values())
 
-
-
-
     # check whether the article was already processed.
     async def article_url_exists(self, url: str) -> bool:
         stmt = select(Article.id).where(Article.url == url).limit(1)
         result = await self._session.execute(stmt)
         return result.scalar_one_or_none() is not None
 
-
-
-
-    async def _transition_event_status(self, from_status: EventStatus, to_status: EventStatus, cutoff: datetime) -> int:
+    async def _transition_event_status(
+        self, from_status: EventStatus, to_status: EventStatus, cutoff: datetime
+    ) -> int:
         stmt = (
             update(Event)
             .where(Event.status == from_status)
@@ -212,10 +192,9 @@ class EventService:
         result = await self._session.execute(stmt)
         return result.rowcount
 
-
     # lifecycle management for events.
     async def run_lifecycle_transitions(self) -> dict[str, int]:
-        now = datetime.now(timezone.utc).replace(tzinfo=None)
+        now = datetime.now(UTC).replace(tzinfo=None)
         stale_cutoff = now - timedelta(hours=settings.EVENT_STALE_HOURS)
         archive_cutoff = now - timedelta(hours=settings.EVENT_ARCHIVE_HOURS)
 
@@ -236,6 +215,10 @@ class EventService:
 
         await self._session.commit()
         if staled_count or archived_count:
-            logger.info("lifecycle: %s events staled, %s events archived.", staled_count, archived_count)
+            logger.info(
+                "lifecycle: %s events staled, %s events archived.",
+                staled_count,
+                archived_count,
+            )
 
-        return { "staled": staled_count, "archived": archived_count }
+        return {"staled": staled_count, "archived": archived_count}

@@ -109,8 +109,8 @@ flowchart LR
 - **Half-Precision Storage**: Stored as `HALFVEC(2048)` in PostgreSQL using `pgvector`. This cuts memory usage by 50% compared to standard single-precision `vector(2048)` while retaining high indexing precision.
 - **Index Specification**:
   ```sql
-  CREATE INDEX idx_events_embedding ON events 
-  USING hnsw (embedding halfvec_cosine_ops) 
+  CREATE INDEX idx_events_embedding ON events
+  USING hnsw (embedding halfvec_cosine_ops)
   WITH (m = 16, ef_construction = 64);
   ```
 - **Similarity Threshold**: Articles with cosine distance `< 0.25` are retrieved as candidates and passed to the LLM context for matching.
@@ -153,6 +153,7 @@ LLMs frequently hallucinate precise latitude and longitude coordinates. Hermes e
 ### Resilient Multi-Model LLM Routing
 
 AI operations run through `litellm.Router`:
+
 - **Primary Model**: Mistral Ministral 8B (`mistral/ministral-8b-latest`)
 - **Fallback Model**: NVIDIA NIM Mistral Nemotron (`nvidia_nim/mistralai/mistral-nemotron`)
 - **Fault Tolerance**: Automatic failover after 2 retries, a 180-second cooldown on rate-limited endpoints, and explicit exponential backoff (`retry_after=True`).
@@ -231,7 +232,7 @@ erDiagram
     SOURCES ||--o{ ARTICLES : "publishes"
     EVENTS ||--o{ ARTICLES : "aggregates"
     EVENTS ||--o| EVENT_TIMELINES : "has historical"
-    
+
     EVENTS {
         uuid id PK
         varchar_500 ai_headline
@@ -306,6 +307,7 @@ Base URL prefix: `/api/v1`
 ### Healthcheck
 
 #### `GET /`
+
 - **Description**: Lightweight health and liveness probe.
 - **Response `200 OK`**:
   ```json
@@ -319,11 +321,12 @@ Base URL prefix: `/api/v1`
 ### Events API
 
 #### `GET /api/v1/events/`
+
 - **Description**: Returns top active events ordered by `trending_score` descending.
 - **Query Parameters**:
-  - `status` (*string*, optional, default: `"ACTIVE"`): `"ACTIVE"`, `"STALE"`, or `"ARCHIVED"`.
-  - `scope` (*string*, optional): `"GLOBAL"`, `"COUNTRY"`, `"STATE"`, `"CITY"`, or `"LOCAL"`.
-  - `limit` (*integer*, optional, default: `50`, min: `1`, max: `200`): Maximum results to return.
+  - `status` (_string_, optional, default: `"ACTIVE"`): `"ACTIVE"`, `"STALE"`, or `"ARCHIVED"`.
+  - `scope` (_string_, optional): `"GLOBAL"`, `"COUNTRY"`, `"STATE"`, `"CITY"`, or `"LOCAL"`.
+  - `limit` (_integer_, optional, default: `50`, min: `1`, max: `200`): Maximum results to return.
 - **Response `200 OK`**:
   ```json
   [
@@ -343,12 +346,13 @@ Base URL prefix: `/api/v1`
   ```
 
 #### `GET /api/v1/events/bbox`
+
 - **Description**: Spatial bounding box query for map viewports. Returns lightweight pin data within the specified coordinates using PostGIS `ST_Within(location, ST_MakeEnvelope(...))`.
 - **Query Parameters**:
-  - `north` (*float*, required, range: `-90` to `90`): Northern latitude.
-  - `south` (*float*, required, range: `-90` to `90`): Southern latitude.
-  - `east` (*float*, required, range: `-180` to `180`): Eastern longitude.
-  - `west` (*float*, required, range: `-180` to `180`): Western longitude.
+  - `north` (_float_, required, range: `-90` to `90`): Northern latitude.
+  - `south` (_float_, required, range: `-90` to `90`): Southern latitude.
+  - `east` (_float_, required, range: `-180` to `180`): Eastern longitude.
+  - `west` (_float_, required, range: `-180` to `180`): Western longitude.
 - **Response `200 OK`**:
   ```json
   [
@@ -367,9 +371,10 @@ Base URL prefix: `/api/v1`
   ```
 
 #### `GET /api/v1/events/{event_id}`
+
 - **Description**: Returns detailed event data, including full AI summary and associated source articles.
 - **Path Parameters**:
-  - `event_id` (*UUID*, required): The event unique identifier.
+  - `event_id` (_UUID_, required): The event unique identifier.
 - **Response `200 OK`**:
   ```json
   {
@@ -400,11 +405,12 @@ Base URL prefix: `/api/v1`
 ### Timeline API
 
 #### `POST /api/v1/events/tl/{event_id}`
+
 - **Description**: Initiates or retrieves an on-demand historical timeline contextualizing the target event.
 - **Path Parameters**:
-  - `event_id` (*UUID*, required): The event unique identifier.
+  - `event_id` (_UUID_, required): The event unique identifier.
 - **Query Parameters**:
-  - `force_refresh` (*boolean*, optional, default: `false`): Bypasses cached results and regenerates from Wikipedia.
+  - `force_refresh` (_boolean_, optional, default: `false`): Bypasses cached results and regenerates from Wikipedia.
 - **Response `200 OK`**:
   ```json
   {
@@ -461,6 +467,7 @@ The API standardizes error handling via [`register_err_handlers`](file:///home/p
 ```
 
 Common error codes:
+
 - `EVENT_NOT_FOUND` (404)
 - `VALIDATION_ERROR` (422)
 - `WIKIPEDIA_SEARCH_ERROR` (502)
@@ -473,26 +480,26 @@ Common error codes:
 
 Settings are managed via `pydantic-settings` in [`config.py`](file:///home/pavan/proj/hermes/apps/hermes-api/src/hermes_api/core/config.py) and can be set in the workspace `.env` or `apps/hermes-api/.env.local`.
 
-| Variable | Type | Default | Description |
-| :--- | :--- | :--- | :--- |
-| `DB_HOST` | `str` | `"localhost"` | PostgreSQL database host |
-| `DB_PORT` | `int` | `5432` | PostgreSQL database port |
-| `DB_USER` | `str` | `"postgres"` | Database username |
-| `DB_PASSWORD` | `str` | `""` | Database password |
-| `DB_NAME` | `str` | `"hermes"` | Database name |
-| `LLM_API` | `str` | `""` | Primary LLM API key |
-| `LLM_MODEL` | `str` | `"mistral/ministral-8b-latest"` | Primary extraction model identifier |
-| `LLM_API_1` | `str` | `None` | Secondary/Fallback LLM API key |
-| `LLM_MODEL_1` | `str` | `"nvidia_nim/mistralai/mistral-nemotron"` | Fallback extraction model identifier |
-| `EMBED_API` | `str` | `""` | Embedding API key |
-| `EMBED_MODEL` | `str` | `"nvidia_nim/nvidia/nemotron-3-embed-1b"` | 2048-dimensional embedding model |
-| `RPM_LIMIT` | `int` | `26` | Token-bucket rate limit for generation calls |
-| `EMBED_RPM_LIMIT` | `int` | `90` | Token-bucket rate limit for embedding calls |
-| `NOMINATIM_USER_AGENT` | `str` | `"hermes-api"` | User-Agent sent to OpenStreetMap Nominatim |
-| `RSS_FETCH_INTERVAL_MIN`| `int` | `15` | Default fallback RSS polling interval |
-| `INGESTION_HEARTBEAT_MIN`| `int` | `360` | Scheduler heartbeat cadence in minutes |
-| `EVENT_STALE_HOURS` | `int` | `24` | Inactivity threshold before an event becomes `STALE` |
-| `EVENT_ARCHIVE_HOURS` | `int` | `48` | Inactivity threshold before an event is `ARCHIVED` |
+| Variable                  | Type  | Default                                   | Description                                          |
+| :------------------------ | :---- | :---------------------------------------- | :--------------------------------------------------- |
+| `DB_HOST`                 | `str` | `"localhost"`                             | PostgreSQL database host                             |
+| `DB_PORT`                 | `int` | `5432`                                    | PostgreSQL database port                             |
+| `DB_USER`                 | `str` | `"postgres"`                              | Database username                                    |
+| `DB_PASSWORD`             | `str` | `""`                                      | Database password                                    |
+| `DB_NAME`                 | `str` | `"hermes"`                                | Database name                                        |
+| `LLM_API`                 | `str` | `""`                                      | Primary LLM API key                                  |
+| `LLM_MODEL`               | `str` | `"mistral/ministral-8b-latest"`           | Primary extraction model identifier                  |
+| `LLM_API_1`               | `str` | `None`                                    | Secondary/Fallback LLM API key                       |
+| `LLM_MODEL_1`             | `str` | `"nvidia_nim/mistralai/mistral-nemotron"` | Fallback extraction model identifier                 |
+| `EMBED_API`               | `str` | `""`                                      | Embedding API key                                    |
+| `EMBED_MODEL`             | `str` | `"nvidia_nim/nvidia/nemotron-3-embed-1b"` | 2048-dimensional embedding model                     |
+| `RPM_LIMIT`               | `int` | `26`                                      | Token-bucket rate limit for generation calls         |
+| `EMBED_RPM_LIMIT`         | `int` | `90`                                      | Token-bucket rate limit for embedding calls          |
+| `NOMINATIM_USER_AGENT`    | `str` | `"hermes-api"`                            | User-Agent sent to OpenStreetMap Nominatim           |
+| `RSS_FETCH_INTERVAL_MIN`  | `int` | `15`                                      | Default fallback RSS polling interval                |
+| `INGESTION_HEARTBEAT_MIN` | `int` | `360`                                     | Scheduler heartbeat cadence in minutes               |
+| `EVENT_STALE_HOURS`       | `int` | `24`                                      | Inactivity threshold before an event becomes `STALE` |
+| `EVENT_ARCHIVE_HOURS`     | `int` | `48`                                      | Inactivity threshold before an event is `ARCHIVED`   |
 
 ---
 

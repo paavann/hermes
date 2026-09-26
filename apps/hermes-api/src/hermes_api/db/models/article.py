@@ -1,11 +1,10 @@
 import uuid
 from datetime import datetime
-from typing import TYPE_CHECKING, Optional
-
+from typing import TYPE_CHECKING
 from sqlalchemy import ForeignKey, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-
 from hermes_api.db.base import Base, UUIDPrimaryKeyMixin
+
 
 if TYPE_CHECKING:
     from hermes_api.db.models.event import Event
@@ -24,11 +23,11 @@ class Article(Base, UUIDPrimaryKeyMixin):
 
     title: Mapped[str] = mapped_column(Text)
     url: Mapped[str] = mapped_column(Text, unique=True)
-    thumbnail_url: Mapped[Optional[str]] = mapped_column(Text)
+    thumbnail_url: Mapped[str | None] = mapped_column(Text)
 
-    published_at: Mapped[Optional[datetime]] = mapped_column()
+    published_at: Mapped[datetime | None] = mapped_column()
     ingested_at: Mapped[datetime] = mapped_column(server_default="now()")
     created_at: Mapped[datetime] = mapped_column(server_default="now()")
 
-    event: Mapped["Event"] = relationship(back_populates="articles")
-    source: Mapped["Source"] = relationship(back_populates="articles")
+    event: Mapped[Event] = relationship(back_populates="articles")
+    source: Mapped[Source] = relationship(back_populates="articles")

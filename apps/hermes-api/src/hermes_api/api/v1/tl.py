@@ -1,16 +1,13 @@
 import uuid
 from typing import Annotated
-
 from fastapi import APIRouter, Depends, Path, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-
 from hermes_api.db.db import get_db
 from hermes_api.schemas.events import TlResponse
 from hermes_api.services.tl_service import TlService
 
+
 router = APIRouter()
-
-
 
 
 @router.post("/{event_id}", response_model=TlResponse)

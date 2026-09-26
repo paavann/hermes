@@ -1,10 +1,8 @@
 import logging
 import re
-from typing import Optional
-
 import httpx
-
 from hermes_api.core.exceptions import WikiSearchException
+
 
 logger = logging.getLogger(__name__)
 
@@ -32,11 +30,6 @@ _MONTHS = {
 }
 
 
-
-
-
-
-
 def _sort_timeline_titles(titles: list[str]) -> list[str]:
     def sort_key(title: str) -> tuple:
         year_match = re.search(r"\b(19|20)\d{2}\b", title)
@@ -54,8 +47,6 @@ def _sort_timeline_titles(titles: list[str]) -> list[str]:
         return (year, month, phase, title)
 
     return sorted(titles, key=sort_key)
-
-
 
 
 async def search_timeline_titles(query: str, *, limit: int = 50) -> list[str]:
@@ -87,11 +78,9 @@ async def search_timeline_titles(query: str, *, limit: int = 50) -> list[str]:
     except httpx.HTTPError:
         logger.exception("http error while searching wikipedia for '%s'.", query)
         return []
-    except (KeyError, ValueError):
+    except KeyError, ValueError:
         logger.exception("failed to parse wikipedia search response for '%s'.", query)
         return []
-
-
 
 
 async def search_wikipedia(query: str, *, limit: int = 5) -> list[str]:
@@ -100,7 +89,7 @@ async def search_wikipedia(query: str, *, limit: int = 5) -> list[str]:
         "list": "search",
         "srsearch": query,
         "srlimit": min(limit, _MAX_TITLES_PER_REQUEST),
-        "srnamespace": "0",  
+        "srnamespace": "0",
         "format": "json",
         "formatversion": "2",
     }
@@ -110,7 +99,7 @@ async def search_wikipedia(query: str, *, limit: int = 5) -> list[str]:
             response = await client.get(
                 MEDIAWIKI_API_URL,
                 params=params,
-                headers={ "User-Agent": _USER_AGENT },
+                headers={"User-Agent": _USER_AGENT},
                 timeout=_REQUEST_TIMEOUT,
             )
             response.raise_for_status()
@@ -118,7 +107,9 @@ async def search_wikipedia(query: str, *, limit: int = 5) -> list[str]:
         data = response.json()
         results: list[dict] = data.get("query", {}).get("search", [])
         titles = [r["title"] for r in results if "title" in r]
-        logger.info("wikipedia general search '%s' returned %s title(s).", query, len(titles))
+        logger.info(
+            "wikipedia general search '%s' returned %s title(s).", query, len(titles)
+        )
         return titles
     except httpx.HTTPError as e:
         logger.exception("http error while searching wikipedia for '%s'.", query)
@@ -128,9 +119,7 @@ async def search_wikipedia(query: str, *, limit: int = 5) -> list[str]:
         raise WikiSearchException(query=query) from e
 
 
-
-
-async def _fetch_extracts_batch(titles: list[str]) -> dict[str, Optional[str]]:
+async def _fetch_extracts_batch(titles: list[str]) -> dict[str, str | None]:
     params = {
         "action": "query",
         "prop": "extracts",
@@ -140,7 +129,7 @@ async def _fetch_extracts_batch(titles: list[str]) -> dict[str, Optional[str]]:
         "formatversion": "2",
     }
 
-    out: dict[str, Optional[str]] = {t: None for t in titles}
+    out: dict[str, str | None] = {t: None for t in titles}
     try:
         async with httpx.AsyncClient() as client:
             response = await client.get(
@@ -161,22 +150,24 @@ async def _fetch_extracts_batch(titles: list[str]) -> dict[str, Optional[str]]:
             returned_title: str = page.get("title", "")
             extract: str = page.get("extract", "").strip()
             if not extract:
-                logger.debug("wikipedia page '%s' returned an empty extract.", returned_title)
+                logger.debug(
+                    "wikipedia page '%s' returned an empty extract.", returned_title
+                )
                 continue
             lookup = returned_title.lower().replace("_", " ")
             caller_key = normalised.get(lookup, returned_title)
             out[caller_key] = extract
     except httpx.HTTPError:
         logger.exception("http error fetching extracts for batch: %s...", titles[:3])
-    except (KeyError, ValueError):
-        logger.exception("failed to parse extracts response for batch: %s...", titles[:3])
+    except KeyError, ValueError:
+        logger.exception(
+            "failed to parse extracts response for batch: %s...", titles[:3]
+        )
 
     return out
 
 
-
-
-async def fetch_page_extracts(titles: list[str]) -> dict[str, Optional[str]]:
+async def fetch_page_extracts(titles: list[str]) -> dict[str, str | None]:
     if not titles:
         return {}
 
@@ -187,7 +178,7 @@ async def fetch_page_extracts(titles: list[str]) -> dict[str, Optional[str]]:
             seen.add(t)
             unique_titles.append(t)
 
-    results: dict[str, Optional[str]] = {t: None for t in unique_titles}
+    results: dict[str, str | None] = {t: None for t in unique_titles}
     batches = [
         unique_titles[i : i + _MAX_TITLES_PER_REQUEST]
         for i in range(0, len(unique_titles), _MAX_TITLES_PER_REQUEST)
@@ -198,10 +189,10 @@ async def fetch_page_extracts(titles: list[str]) -> dict[str, Optional[str]]:
         results.update(batch_result)
 
     non_null = sum(1 for v in results.values() if v is not None)
-    logger.info("fetched extracts for %s/%s wikipedia page(s).", non_null, len(unique_titles))
+    logger.info(
+        "fetched extracts for %s/%s wikipedia page(s).", non_null, len(unique_titles)
+    )
     return results
-
-
 
 
 async def enumerate_tl_pages(main_title: str) -> list[str]:

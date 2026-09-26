@@ -50,35 +50,25 @@ dev = [
 requires = ["uv_build>=0.8.9,<0.9.0"]
 build-backend = "uv_build"
 
-[tool.ruff]
-exclude = [
-  ".ruff_cache",
-  ".svn",
-  ".tox",
-  ".venv",
-  "dist",
-]
 
+
+
+[tool.ruff]
 line-length = 88
 indent-width = 4
 
 [tool.ruff.lint]
 select = [
-  # pycodestyle
-  "E",
-  # Pyflakes
-  "F",
-  # pyupgrade
-  "UP",
-  # flake8-bugbear
-  "B",
-  # flake8-simplify
-  "SIM",
-  # isort
-  "I",
+  "E",      # pycodestyle
+  "F",      # Pyflakes
+  "UP",     # pyupgrade
+  "B",      # flake8-bugbear
+  "SIM",    # flake8-simplify
+  "I",      # isort
+  "ANN401", # Disallow explicit use of typing.Any
 ]
 ignore = [
-  "E501", # Line length is formatted via ruff format
+  "E501",   # Line length is formatted via ruff format
 ]
 
 fixable = ["ALL"]
@@ -93,3 +83,14 @@ extend-immutable-calls = [
   "fastapi.params.Query",
   "Query",
 ]
+
+[tool.ruff.lint.isort]
+lines-after-imports = 2
+known-first-party = ["src"]
+no-lines-before = [
+  "standard-library", "third-party", "first-party", "local-folder"
+]
+
+[tool.ruff.lint.flake8-annotations]
+allow-star-arg-any = true
+

@@ -1,19 +1,15 @@
 import logging
-from collections.abc import Sequence
-from typing import Any, Callable, Optional, TypeVar
-
+from collections.abc import Callable, Sequence
 import litellm
 from pydantic import BaseModel, Field, field_validator
-
 from hermes_api.core.config import settings
 from hermes_api.core.constants import PREDEFINED_CATEGORIES
+
 
 logger = logging.getLogger(__name__)
 
 ARTICLE_BATCH_SIZE: int = 10
 
-T = TypeVar("T")
-V = TypeVar("V")
 
 SYSTEM_PROMPT = """You are a news analyst for Hermes, a    
   geospatial news aggregator.
@@ -74,19 +70,9 @@ If true, provide the exact Wikipedia search query to find the article most speci
 """
 
 
-
-
-
-
-
-
-
-
-
 class ArticleInput(BaseModel):
     title: str
     content: str
-
 
 
 class ExtractedEvent(BaseModel):
@@ -100,55 +86,54 @@ class ExtractedEvent(BaseModel):
             False for abstract/global topics.
         """
     )
-    
-    location_name: Optional[str] = Field(
-        default=None,     
+
+    location_name: str | None = Field(
+        default=None,
         description="""
             The most specific place name. Format 'City, Country'. Null if has_location is false.
-        """
+        """,
     )
-    
-    country_code: Optional[str] = Field(
-        default=None,      
+
+    country_code: str | None = Field(
+        default=None,
         description="""
             ISO 3166-1 alpha-2 country code. Null if has_location is false.
-        """
+        """,
     )
-    
+
     headline: str = Field(
         description="""
             A concise, neutral, factual headline. Max 100 chars.
         """
     )
-    
+
     summary: str = Field(
         description="""
             A 2-3 sentence summary of the event.
         """
     )
-    
+
     category: str = Field(
         description=f"""
             The event category.
-            Use one of these predefined categories if it fits: {', '.join(PREDEFINED_CATEGORIES)}.
+            Use one of these predefined categories if it fits: {", ".join(PREDEFINED_CATEGORIES)}.
             Otherwise UPPER_SNAKE_CASE.
         """
     )
-    
-    category_color: Optional[str] = Field(
-        default=None,    
+
+    category_color: str | None = Field(
+        default=None,
         description="""
             Hex color code if using a custom category. Null if predefined.
-        """
-    )
-    
-    matched_event_id: Optional[str] = Field(
-        default=None,  
-        description="""
-            If this article is about the SAME exact event as an existing active event, set to its ID.
-        """
+        """,
     )
 
+    matched_event_id: str | None = Field(
+        default=None,
+        description="""
+            If this article is about the SAME exact event as an existing active event, set to its ID.
+        """,
+    )
 
 
 class ExtractionResponse(BaseModel):
@@ -157,8 +142,7 @@ class ExtractionResponse(BaseModel):
     )
 
 
-
-def _coerce_to_str(v: Any) -> str:
+def _coerce_to_str(v: object) -> str:
     """Coerce various LLM output formats (e.g. localized dicts {'en': '...'}) to plain string."""
     if isinstance(v, dict):
         return (
@@ -166,7 +150,14 @@ def _coerce_to_str(v: Any) -> str:
             or v.get("text")
             or v.get("summary")
             or v.get("headline")
-            or next((str(val) for val in v.values() if isinstance(val, str) and val.strip()), "")
+            or next(
+                (
+                    str(val)
+                    for val in v.values()
+                    if isinstance(val, str) and val.strip()
+                ),
+                "",
+            )
             or str(v)
         )
     if isinstance(v, (list, tuple)):
@@ -189,11 +180,11 @@ class tlNodeExtraction(BaseModel):
         """
     )
 
-    location_name: Optional[str] = Field(
+    location_name: str | None = Field(
         None,
         description="""
             The specific place name (City, Country).
-        """
+        """,
     )
 
     summary: str = Field(
@@ -204,17 +195,16 @@ class tlNodeExtraction(BaseModel):
 
     @field_validator("date", "headline", "summary", mode="before")
     @classmethod
-    def coerce_text_fields(cls, v: Any) -> str:
+    def coerce_text_fields(cls, v: object) -> str:
         return _coerce_to_str(v)
 
     @field_validator("location_name", mode="before")
     @classmethod
-    def coerce_location_name(cls, v: Any) -> Optional[str]:
+    def coerce_location_name(cls, v: object) -> str | None:
         if v is None:
             return None
         res = _coerce_to_str(v).strip()
         return res if res else None
-
 
 
 class TlEdgeExtraction(BaseModel):
@@ -238,34 +228,33 @@ class TlEdgeExtraction(BaseModel):
 
     @field_validator("relationship", mode="before")
     @classmethod
-    def coerce_relationship(cls, v: Any) -> str:
+    def coerce_relationship(cls, v: object) -> str:
         return _coerce_to_str(v)
 
-    
-    
+
 class TlExtractionResponse(BaseModel):
     tl_summary: str = Field(
         description="""
             A 1-2 paragraph summary of the entire timeline.
         """
     )
-    
+
     nodes: list[tlNodeExtraction] = Field(
         description="""
             The chronological list of events.
         """
     )
-    
+
     edges: list[TlEdgeExtraction] = Field(
         default_factory=list,
         description="""
             Causal relationships between the extracted nodes.
-        """
+        """,
     )
 
     @field_validator("tl_summary", mode="before")
     @classmethod
-    def coerce_tl_summary(cls, v: Any) -> str:
+    def coerce_tl_summary(cls, v: object) -> str:
         return _coerce_to_str(v)
 
 
@@ -277,18 +266,12 @@ class TimelineSearchQuery(BaseModel):
         """
     )
 
-    wiki_search_query: Optional[str] = Field(
+    wiki_search_query: str | None = Field(
         default=None,
         description="""
             If timeline_worthy is true, provide the most relevant Wikipedia search query to find the overarching historical context.
-        """
+        """,
     )
-
-
-
-
-
-
 
 
 def _build_items_prompt(items: list[ArticleInput], header: str, item_lbl: str) -> str:
@@ -302,8 +285,12 @@ def _build_items_prompt(items: list[ArticleInput], header: str, item_lbl: str) -
     return prompt
 
 
-def _build_user_prompt(articles: list[ArticleInput], existing_events: list[dict[str, str]]) -> str:
-    prompt = _build_items_prompt(articles, header="# Articles to analyse", item_lbl="Article")
+def _build_user_prompt(
+    articles: list[ArticleInput], existing_events: list[dict[str, str]]
+) -> str:
+    prompt = _build_items_prompt(
+        articles, header="# Articles to analyse", item_lbl="Article"
+    )
     if existing_events:
         prompt += "# Existing active events (match if applicable)\n\n"
         for event in existing_events:
@@ -315,7 +302,7 @@ def _build_user_prompt(articles: list[ArticleInput], existing_events: list[dict[
             )
     else:
         prompt += "# Existing active events\n\nNone currently.\n"
- 
+
     return prompt
 
 
@@ -325,16 +312,22 @@ def _resolve_category_color(event: ExtractedEvent) -> ExtractedEvent:
         return event.model_copy(
             update={
                 "category": category,
-                "category_color": PREDEFINED_CATEGORIES[category]["color"]
+                "category_color": PREDEFINED_CATEGORIES[category]["color"],
             }
         )
     elif not event.category_color:
-        return event.model_copy(update={ "category_color": "#6B7280" })
+        return event.model_copy(update={"category_color": "#6B7280"})
     else:
         return event
 
 
-def _reidx_results(raw_results: Sequence[T], count: int, get_idx: Callable[[T], int], get_val: Callable[[T], V], duplicate_lbl: str) -> list[Optional[V]]:
+def _reidx_results[T, V](
+    raw_results: Sequence[T],
+    count: int,
+    get_idx: Callable[[T], int],
+    get_val: Callable[[T], V],
+    duplicate_lbl: str,
+) -> list[V | None]:
     by_idx: dict[int, V] = {}
     for r in raw_results:
         idx = get_idx(r)
@@ -344,11 +337,6 @@ def _reidx_results(raw_results: Sequence[T], count: int, get_idx: Callable[[T], 
         by_idx[idx] = get_val(r)
 
     return [by_idx.get(i) for i in range(count)]
-
-
-
-
-
 
 
 class AiService:
@@ -366,7 +354,6 @@ class AiService:
         if not self._embed_api_key or not self._embed_model:
             logger.error("embed api key or model is missing.")
             raise ValueError("EMBED_API or EMBED_MODEL is missing.")
-
 
         model_list = [
             {
@@ -388,8 +375,7 @@ class AiService:
                     },
                 }
             )
-            fallbacks = [{ "primary-extractor": ["fallback-extractor"] }]
-
+            fallbacks = [{"primary-extractor": ["fallback-extractor"]}]
 
         self._router = litellm.Router(
             model_list=model_list,
@@ -407,10 +393,13 @@ class AiService:
             self._embed_model,
         )
 
-
-
-
-    async def _call_llm(self, sys_prompt: str, user_prompt: str, res_model: type[BaseModel], schema_name: str) -> Optional[BaseModel]:
+    async def _call_llm(
+        self,
+        sys_prompt: str,
+        user_prompt: str,
+        res_model: type[BaseModel],
+        schema_name: str,
+    ) -> BaseModel | None:
         try:
             res = await self._router.acompletion(
                 model="primary-extractor",
@@ -437,13 +426,15 @@ class AiService:
             logger.error("llm call failed for %s: %s.", schema_name, e)
             return None
 
-
-
-    async def get_metadata(self, articles: list[ArticleInput], existing_events: list[dict[str, str]]) -> list[Optional[ExtractedEvent]]:
+    async def get_metadata(
+        self, articles: list[ArticleInput], existing_events: list[dict[str, str]]
+    ) -> list[ExtractedEvent | None]:
         if not articles:
             return []
-        
-        user_prompt = _build_user_prompt(articles=articles, existing_events=existing_events or [])
+
+        user_prompt = _build_user_prompt(
+            articles=articles, existing_events=existing_events or []
+        )
         res = await self._call_llm(
             sys_prompt=SYSTEM_PROMPT,
             user_prompt=user_prompt,
@@ -459,21 +450,25 @@ class AiService:
             get_idx=lambda e: e.article_index,
             get_val=_resolve_category_color,
             duplicate_lbl="article_index",
-        ) 
+        )
         for i, article in enumerate(articles):
             extraction = ordered_results[i]
             if extraction:
-                logger.info("extracted: %s... | category = %s.", article.title[:50], extraction.category)
+                logger.info(
+                    "extracted: %s... | category = %s.",
+                    article.title[:50],
+                    extraction.category,
+                )
             else:
-                logger.warning("no extraction for article %s: '%s...'.", i, article.title[:120])
+                logger.warning(
+                    "no extraction for article %s: '%s...'.", i, article.title[:120]
+                )
         return ordered_results
 
-
-
-    async def gen_embeddings(self, texts: list[str]) -> list[Optional[list[float]]]:
+    async def gen_embeddings(self, texts: list[str]) -> list[list[float] | None]:
         if not texts:
             return []
-        
+
         try:
             kwargs = {
                 "model": self._embed_model,
@@ -484,14 +479,14 @@ class AiService:
                 kwargs["encoding_format"] = "float"
 
             res = await litellm.aembedding(**kwargs)
-            return [item['embedding'] for item in res.data]
+            return [item["embedding"] for item in res.data]
         except Exception as e:
             logger.error("failed to generate embeddings: %s.", e)
             return [None] * len(texts)
 
-
-
-    async def extract_tl(self, pg_title: str, prose: str) -> Optional[TlExtractionResponse]:
+    async def extract_tl(
+        self, pg_title: str, prose: str
+    ) -> TlExtractionResponse | None:
         if not prose.strip():
             return None
 
@@ -500,7 +495,7 @@ class AiService:
             sys_prompt=TL_SYSTEM_PROMPT,
             user_prompt=user_prompt,
             res_model=TlExtractionResponse,
-            schema_name="timeline_extraction"
+            schema_name="timeline_extraction",
         )
         if not res:
             logger.warning("failed to extract timeline for %s.", pg_title)
@@ -509,15 +504,13 @@ class AiService:
             logger.info("timeline extracted successfully for %s.", pg_title)
             return res
 
-
-
-    async def analyze_tl_context(self, headline: str) -> Optional[TimelineSearchQuery]:
+    async def analyze_tl_context(self, headline: str) -> TimelineSearchQuery | None:
         user_prompt = f"Headline: {headline}"
         res = await self._call_llm(
             sys_prompt=TIMELINE_TRIAGE_SYS_PROMPT,
             user_prompt=user_prompt,
             res_model=TimelineSearchQuery,
-            schema_name="timeline_search_query"
+            schema_name="timeline_search_query",
         )
 
         if isinstance(res, TimelineSearchQuery):

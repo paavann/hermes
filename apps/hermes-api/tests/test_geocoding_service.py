@@ -3,9 +3,7 @@
 import asyncio
 import time
 from unittest.mock import AsyncMock, MagicMock, patch
-
 import pytest
-
 from hermes_api.db.models.geocode_cache import GeocodeCache
 from hermes_api.services import geocoding_service
 from hermes_api.services.geocoding_service import (
@@ -60,7 +58,9 @@ class TestGeocodingService:
                 display_name="London, Greater London, England, United Kingdom",
             )
 
-            with patch.object(service, "_call_nominatim", new_callable=AsyncMock) as mock_call:
+            with patch.object(
+                service, "_call_nominatim", new_callable=AsyncMock
+            ) as mock_call:
                 mock_call.return_value = expected
                 res = await service.geocode(mock_session, "London, UK")
 
@@ -81,7 +81,9 @@ class TestGeocodingService:
 
             service = GeocodingService()
 
-            with patch.object(service, "_call_nominatim", new_callable=AsyncMock) as mock_call:
+            with patch.object(
+                service, "_call_nominatim", new_callable=AsyncMock
+            ) as mock_call:
                 mock_call.return_value = _NOT_FOUND
                 res = await service.geocode(mock_session, "Nonexistent Place 12345")
 
@@ -102,7 +104,9 @@ class TestGeocodingService:
 
             service = GeocodingService()
 
-            with patch.object(service, "_call_nominatim", new_callable=AsyncMock) as mock_call:
+            with patch.object(
+                service, "_call_nominatim", new_callable=AsyncMock
+            ) as mock_call:
                 mock_call.return_value = None  # transient 429 / error
                 res = await service.geocode(mock_session, "Brisbane, Australia")
 
@@ -126,7 +130,11 @@ class TestGeocodingService:
             mock_resp_200.status_code = 200
             mock_resp_200.raise_for_status = MagicMock()
             mock_resp_200.json.return_value = [
-                {"lat": "-27.4698", "lon": "153.0251", "display_name": "Brisbane, Australia"}
+                {
+                    "lat": "-27.4698",
+                    "lon": "153.0251",
+                    "display_name": "Brisbane, Australia",
+                }
             ]
 
             mock_client = AsyncMock()

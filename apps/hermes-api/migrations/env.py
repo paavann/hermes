@@ -1,14 +1,13 @@
 import asyncio
 from logging.config import fileConfig
-
 from alembic import context
 from geoalchemy2 import alembic_helpers
 from sqlalchemy import pool
 from sqlalchemy.ext.asyncio import async_engine_from_config
-
 import hermes_api.db.models  # noqa: F401
 from hermes_api.core.config import settings
 from hermes_api.db.base import Base
+
 
 config = context.config
 

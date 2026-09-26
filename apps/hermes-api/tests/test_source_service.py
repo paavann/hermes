@@ -7,14 +7,13 @@ the upsert/disable logic in isolation.
 import asyncio
 import json
 from pathlib import Path
-from typing import Optional
 from unittest.mock import AsyncMock, MagicMock, patch
-
 from hermes_api.db.models.source import Source
 from hermes_api.services.source_service import (
     _load_sources_config,
     sync_sources_from_config,
 )
+
 
 # --- Helpers ---
 
@@ -39,7 +38,7 @@ def _make_source(
 
 
 def _mock_session(
-    existing_sources: Optional[list] = None,
+    existing_sources: list | None = None,
 ) -> AsyncMock:
     """Create a mock AsyncSession.
 
