@@ -49,7 +49,7 @@ class Event(Base, TimestampMixin, UUIDPrimaryKeyMixin):
             "embedding",
             postgresql_using="hnsw",
             postgresql_with={ "M": "16", "ef_construction": "64" },
-            posgresql_ops={ "embedding": "halfvec_cosine_ops" },
+            postgresql_ops={ "embedding": "halfvec_cosine_ops" },
         ),
         Index(
             "idx_events_active_score",
