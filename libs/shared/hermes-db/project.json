@@ -2,7 +2,7 @@
   "name": "hermes-db",
   "$schema": "../../../node_modules/nx/schemas/project-schema.json",
   "projectType": "library",
-  "sourceRoot": "libs/shared/hermes-db/hermes_db",
+  "sourceRoot": "libs/shared/hermes-db/src",
   "targets": {
     "lock": {
       "executor": "@nxlv/python:lock",
@@ -72,6 +72,13 @@
         "args": "",
         "verbose": false,
         "debug": false
+      }
+    },
+    "migrate": {
+      "executor": "@nxlv/python:run-commands",
+      "options": {
+        "command": "uv run alembic upgrade head",
+        "cwd": "{projectRoot}"
       }
     }
   },
