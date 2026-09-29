@@ -8,10 +8,12 @@ from .article import Article
 from .event import Event
 from .event_tl import EventTl
 from .source import Source
+from .geocode_cache import GeocodeCache
 
 __all__ = [
     "Article",
     "Event",
     "EventTl",
     "Source",
+    "GeocodeCache",
 ]
