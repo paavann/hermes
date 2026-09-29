@@ -80,3 +80,7 @@ unfixable = []
 [tool.ruff.lint.isort]
 lines-after-imports = 2
 known-first-party = ["src"]
+
+[tool.pyright]
+typeCheckingMode = "basic"
+extraPaths = ["src"]
