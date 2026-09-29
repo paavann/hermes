@@ -1,12 +1,16 @@
 from datetime import datetime
 from typing import TYPE_CHECKING
+
 from sqlalchemy import Boolean, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+
 from hermes_db.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
 from hermes_db.enums import CredibilityTier, SourceType
 
+
 if TYPE_CHECKING:
     from hermes_db.models.article import Article
+
 
 class Source(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     __tablename__ = "sources"
@@ -23,4 +27,4 @@ class Source(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     last_fetched_at: Mapped[datetime | None] = mapped_column()
     fetch_interval_minutes: Mapped[int] = mapped_column(Integer, default=15)
 
-    articles: Mapped[list["Article"]] = relationship(back_populates="source")
+    articles: Mapped[list[Article]] = relationship(back_populates="source")

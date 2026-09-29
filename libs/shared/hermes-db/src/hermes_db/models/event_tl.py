@@ -1,21 +1,22 @@
 import uuid
 from datetime import datetime
+
 from sqlalchemy import DateTime, Enum, ForeignKey, Integer, Text
-from sqlalchemy.dialects.postgresql import JSONB           
-from sqlalchemy.orm import Mapped, mapped_column           
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.orm import Mapped, mapped_column
+
 from hermes_db.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
 from hermes_db.enums import EventTlStatus
 
 
-class EventTl(Base, UUIDPrimaryKeyMixin, TimestampMixin):  
+class EventTl(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     __tablename__ = "event_timelines"
 
-    event_id: Mapped[uuid.UUID] = mapped_column(           
-        ForeignKey("events.id", ondelete="CASCADE"),       
-        unique=True, index=True
+    event_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("events.id", ondelete="CASCADE"), unique=True, index=True
     )
 
-    status: Mapped[EventTlStatus] = mapped_column(         
+    status: Mapped[EventTlStatus] = mapped_column(
         Enum(
             EventTlStatus,
             native_enum=False,

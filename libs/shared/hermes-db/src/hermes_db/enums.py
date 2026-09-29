@@ -4,7 +4,8 @@ import enum
 class EventStatus(enum.StrEnum):
     ACTIVE = "ACTIVE"
     STALE = "STALE"
-    INACTIVE = "INACTIVE"
+    ARCHIVED = "ARCHIVED"
+
 
 class EventScope(enum.StrEnum):
     GLOBAL = "GLOBAL"
@@ -13,6 +14,7 @@ class EventScope(enum.StrEnum):
     CITY = "CITY"
     LOCAL = "LOCAL"
 
+
 class EventTlStatus(enum.StrEnum):
     READY = "READY"
     GENERATING = "GENERATING"
@@ -20,12 +22,10 @@ class EventTlStatus(enum.StrEnum):
     NO_CONTENT = "NO_CONTENT"
 
 
-
 class SourceType(enum.StrEnum):
     RSS = "RSS"
     API = "API"
     SCRAPE = "SCRAPE"
-
 
 
 class CredibilityTier(enum.StrEnum):

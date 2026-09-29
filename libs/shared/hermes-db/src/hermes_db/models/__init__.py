@@ -7,8 +7,9 @@ is fully populated. alembic reads this to discover all tables.
 from .article import Article
 from .event import Event
 from .event_tl import EventTl
-from .source import Source
 from .geocode_cache import GeocodeCache
+from .source import Source
+
 
 __all__ = [
     "Article",

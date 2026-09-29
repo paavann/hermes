@@ -1,7 +1,7 @@
 import os
-from pydantic_settings import SettingsConfigDict
 from functools import lru_cache
-from pydantic_settings import BaseSettings
+
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy import URL
 
 
@@ -19,11 +19,14 @@ class Settings(BaseSettings):
     DB_USER: str = "postgres"
     DB_PASSWORD: str = ""
 
+    EVENT_STALE_HRS: int = 24
+    EVENT_ARCHIVE_HRS: int = 48
+
     @property
     def db_url(self) -> URL:
         query = {}
         if self.DB_HOST not in ("localhost", "127.0.0.1", "hermes-db"):
-            query["sssl"] = "require"
+            query["ssl"] = "require"
         return URL.create(
             drivername="postgresql+asyncpg",
             username=self.DB_USER,
