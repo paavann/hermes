@@ -14,6 +14,7 @@ addopts = """
  --html='../../../reports/libs/shared/hermes-db/unittests/html/index.html'
  --junitxml='../../../reports/libs/shared/hermes-db/unittests/junit.xml'
 """
+pythonpath = ["tests"]
 
 [project]
 name = "hermes-db"
@@ -82,7 +83,3 @@ unfixable = []
 [tool.ruff.lint.isort]
 lines-after-imports = 2
 known-first-party = ["src"]
-
-[tool.pyright]
-typeCheckingMode = "basic"
-extraPaths = ["src"]
