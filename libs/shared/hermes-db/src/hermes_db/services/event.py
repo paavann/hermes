@@ -6,6 +6,8 @@ from typing import Protocol
 from sqlalchemy import select, update
 from sqlalchemy.engine import CursorResult
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
+from geoalchemy2.functions import ST_X, ST_Y, ST_MakeEnvelope, ST_Within
 
 from hermes_db.core.config import settings
 from hermes_db.enums import CredibilityTier, EventStatus
@@ -124,6 +126,51 @@ class EventService:
             event.article_count,
         )
         return event
+
+
+
+    async def get_events(
+        self, status: EventStatus | None = EventStatus.ACTIVE, scope: EventStatus | None = None, limit: int = 50,
+    ) -> list[Event]:
+        stmt = select(Event)
+        if status:
+            stmt = stmt.where(Event.status == status)
+        if scope:
+            stmt = stmt.where(Event.scope == scope)
+
+        stmt = stmt.order_by(Event.trending_score.desc()).limit(limit)
+        result = await self._session.execute(stmt)
+        return list(result.scalars().all())
+
+
+
+    async def get_events_by_bbox(
+        self, north: float, south: float, east: float, west: float
+    ):
+        bbox_poly = ST_MakeEnvelope(west, south, east, north, 4326)
+        stmt = (
+            select(
+                Event,
+                ST_X(Event.location).label("longitude"),
+                ST_Y(Event.location).label("latitude"),
+            )
+            .where(Event.location.isnot(None))
+            .where(ST_Within(Event.location, bbox_poly))
+            .where(Event.status == EventStatus.ACTIVE)
+            .order_by(Event.trending_score.desc())
+            .limit(200)
+        )
+        result = await self._session.execute(stmt)
+        return result.all()
+
+
+
+    async def get_event_by_id(self, event_id: uuid.UUID) -> Event | None:
+        stmt = (
+            select(Event).options(selectinload(Event.articles)).where(Event.id == event_id)
+        )
+        result = await self._session.execute(stmt)
+        return result.scalar_one_or_none()
 
 
 

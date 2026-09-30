@@ -1,1 +1,438 @@
-<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="0" skipped="0" tests="64" time="27.535" timestamp="2026-09-23T17:00:19.165141+05:30" hostname="pavanDebian"><testcase classname="tests.test_ai_service.TestGetMetadata" name="test_returns_empty_for_no_articles" time="0.118" /><testcase classname="tests.test_ai_service.TestGetMetadata" name="test_successful_batch_extraction" time="0.027" /><testcase classname="tests.test_ai_service.TestGetMetadata" name="test_handles_api_failure" time="0.037" /><testcase classname="tests.test_ai_service.TestExtractTl" name="test_returns_none_for_empty_prose" time="0.013" /><testcase classname="tests.test_ai_service.TestExtractTl" name="test_successful_tl_extraction" time="0.027" /><testcase classname="tests.test_ai_service.TestExtractTl" name="test_extract_tl_handles_localized_dict_summary" time="0.036" /><testcase classname="tests.test_ai_service.TestRouterFallback" name="test_router_configuration" time="0.013" /><testcase classname="tests.test_ai_service.TestGenEmbeddings" name="test_empty_input" time="0.015" /><testcase classname="tests.test_ai_service.TestGenEmbeddings" name="test_nvidia_nim_embedding_calls_with_float_encoding" time="0.020" /><testcase classname="tests.test_geocoding_service.TestGeocodingService" name="test_cache_hit_returns_immediately" time="0.058" /><testcase classname="tests.test_geocoding_service.TestGeocodingService" name="test_successful_geocoding_persists_cache" time="0.025" /><testcase classname="tests.test_geocoding_service.TestGeocodingService" name="test_empty_results_persists_negative_cache" time="0.033" /><testcase classname="tests.test_geocoding_service.TestGeocodingService" name="test_transient_failure_does_not_persist_cache" time="0.030" /><testcase classname="tests.test_geocoding_service.TestGeocodingService" name="test_call_nominatim_retries_on_429" time="0.039" /><testcase classname="tests.test_geocoding_service.TestGeocodingService" name="test_clean_location_name_sanitizes_complex_strings" time="0.002" /><testcase classname="tests.test_geocoding_service.TestGeocodingService" name="test_circuit_breaker_trips_on_persistent_429" time="0.028" /><testcase classname="tests.test_rate_limiter" name="test_rate_limiter_allows_burst_up_to_limit" time="0.005" /><testcase classname="tests.test_rate_limiter" name="test_rate_limiter_throttles_after_burst" time="1.006" /><testcase classname="tests.test_rate_limiter" name="test_rate_limiter_refills_over_time" time="2.005" /><testcase classname="tests.test_rate_limiter" name="test_rate_limiter_property" time="0.002" /><testcase classname="tests.test_source_service" name="test_load_sources_config_valid" time="0.004" /><testcase classname="tests.test_source_service" name="test_load_sources_config_not_a_list" time="0.006" /><testcase classname="tests.test_source_service" name="test_load_sources_config_file_not_found" time="0.005" /><testcase classname="tests.test_source_service" name="test_sync_inserts_new_sources" time="0.029" /><testcase classname="tests.test_source_service" name="test_sync_skips_entries_without_slug" time="0.026" /><testcase classname="tests.test_source_service" name="test_sync_disables_removed_sources" time="0.040" /><testcase classname="tests.test_source_service" name="test_sync_handles_missing_config_file" time="0.016" /><testcase classname="tests.test_source_service" name="test_sync_handles_invalid_json" time="0.022" /><testcase classname="tests.test_source_service" name="test_sync_is_idempotent" time="0.046" /><testcase classname="tests.test_tl_service" name="test_first_generation" time="0.135" /><testcase classname="tests.test_tl_service" name="test_second_click_returns_cache" time="0.034" /><testcase classname="tests.test_tl_service" name="test_concurrent_generation_returns_generating" time="0.031" /><testcase classname="tests.test_tl_service" name="test_no_wikipedia_match" time="0.125" /><testcase classname="tests.test_tl_service" name="test_force_refresh_regenerates" time="0.144" /><testcase classname="tests.test_wikipedia_service.TestSearchTimelineTitles" name="test_returns_titles_on_success" time="0.018" /><testcase classname="tests.test_wikipedia_service.TestSearchTimelineTitles" name="test_returns_empty_list_on_no_results" time="0.025" /><testcase classname="tests.test_wikipedia_service.TestSearchTimelineTitles" name="test_returns_empty_list_on_http_error" time="0.054" /><testcase classname="tests.test_wikipedia_service.TestSearchTimelineTitles" name="test_respects_limit_cap" time="0.034" /><testcase classname="tests.test_wikipedia_service.TestSearchTimelineTitles" name="test_user_agent_is_set" time="0.026" /><testcase classname="tests.test_wikipedia_service.TestFetchPageExtracts" name="test_returns_extract_for_single_title" time="0.020" /><testcase classname="tests.test_wikipedia_service.TestFetchPageExtracts" name="test_returns_none_for_missing_page" time="0.034" /><testcase classname="tests.test_wikipedia_service.TestFetchPageExtracts" name="test_returns_none_for_empty_extract" time="0.032" /><testcase classname="tests.test_wikipedia_service.TestFetchPageExtracts" name="test_batches_more_than_50_titles" time="0.026" /><testcase classname="tests.test_wikipedia_service.TestFetchPageExtracts" name="test_deduplicates_titles" time="0.043" /><testcase classname="tests.test_wikipedia_service.TestFetchPageExtracts" name="test_returns_empty_dict_for_empty_input" time="0.006" /><testcase classname="tests.test_wikipedia_service.TestFetchPageExtracts" name="test_returns_none_values_on_http_error" time="0.028" /><testcase classname="tests.test_wikipedia_service.TestFetchPageExtracts" name="test_user_agent_is_set_on_extract_request" time="0.019" /><testcase classname="tests.test_wikipedia_service.TestFetchPageExtracts" name="test_resolves_title_normalisation" time="0.023" /><testcase classname="tests.test_wikipedia_service.TestEdgeCases" name="test_multiple_titles_all_resolved" time="0.018" /><testcase classname="tests.test_wikipedia_service.TestEdgeCases" name="test_mixed_valid_and_missing_pages" time="0.031" /><testcase classname="tests.test_wikipedia_service.TestEdgeCases" name="test_batch_count[1-1]" time="0.027" /><testcase classname="tests.test_wikipedia_service.TestEdgeCases" name="test_batch_count[50-1]" time="0.029" /><testcase classname="tests.test_wikipedia_service.TestEdgeCases" name="test_batch_count[51-2]" time="0.030" /><testcase classname="tests.test_wikipedia_service.TestEdgeCases" name="test_batch_count[100-2]" time="0.021" /><testcase classname="tests.test_wikipedia_service.TestEdgeCases" name="test_batch_count[101-3]" time="0.026" /><testcase classname="tests.test_wikipedia_service.TestEnumerateTlPages" name="test_missing_main_page_returns_empty" time="0.019" /><testcase classname="tests.test_wikipedia_service.TestEnumerateTlPages" name="test_no_subpages_returns_main" time="0.009" /><testcase classname="tests.test_wikipedia_service.TestEnumerateTlPages" name="test_empty_sections_index_returns_subpages" time="0.014" /><testcase classname="tests.test_wikipedia_service.TestEnumerateTlPages" name="test_see_also_index_returns_subpages" time="0.013" /><testcase classname="tests.test_wikipedia_service.TestEnumerateTlPages" name="test_non_index_with_subpages_returns_main" time="0.023" /><testcase classname="tests.test_wikipedia_service.TestEnumerateTlPages" name="test_dash_normalization" time="0.015" /><testcase classname="tests.test_wikipedia_service.TestSortTimelineTitles" name="test_sorts_by_year" time="0.003" /><testcase classname="tests.test_wikipedia_service.TestSortTimelineTitles" name="test_sorts_by_month" time="0.004" /><testcase classname="tests.test_wikipedia_service.TestSortTimelineTitles" name="test_sorts_by_phase" time="0.003" /></testsuite></testsuites>
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="9" failures="3" skipped="0" tests="55" time="44.997" timestamp="2026-10-01T00:28:11.545352+05:30" hostname="pavanDebian"><testcase classname="tests.test_ai_service.TestGetMetadata" name="test_returns_empty_for_no_articles" time="0.017"><error message="failed on setup with &quot;ValueError: LLM_API or LLM_MODEL is missing.&quot;">monkeypatch = &lt;_pytest.monkeypatch.MonkeyPatch object at 0x7f6f24fdc770&gt;
+
+    #x1B[0m#x1B[37m@pytest#x1B[39;49;00m.fixture#x1B[90m#x1B[39;49;00m
+    #x1B[94mdef#x1B[39;49;00m#x1B[90m #x1B[39;49;00m#x1B[92mai_service#x1B[39;49;00m(monkeypatch):#x1B[90m#x1B[39;49;00m
+        monkeypatch.setenv(#x1B[33m"#x1B[39;49;00m#x1B[33mLLM_API#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m, #x1B[33m"#x1B[39;49;00m#x1B[33mfake-llm-key#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m)#x1B[90m#x1B[39;49;00m
+        monkeypatch.setenv(#x1B[33m"#x1B[39;49;00m#x1B[33mLLM_MODEL#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m, #x1B[33m"#x1B[39;49;00m#x1B[33mmistral/ministral-8b-latest#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m)#x1B[90m#x1B[39;49;00m
+        monkeypatch.setenv(#x1B[33m"#x1B[39;49;00m#x1B[33mLLM_API_1#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m, #x1B[33m"#x1B[39;49;00m#x1B[33mfake-fallback-key#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m)#x1B[90m#x1B[39;49;00m
+        monkeypatch.setenv(#x1B[33m"#x1B[39;49;00m#x1B[33mLLM_MODEL_1#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m, #x1B[33m"#x1B[39;49;00m#x1B[33mnvidia_nim/mistralai/mistral-nemotron#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m)#x1B[90m#x1B[39;49;00m
+        monkeypatch.setenv(#x1B[33m"#x1B[39;49;00m#x1B[33mEMBED_API#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m, #x1B[33m"#x1B[39;49;00m#x1B[33mfake-embed-key#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m)#x1B[90m#x1B[39;49;00m
+        monkeypatch.setenv(#x1B[33m"#x1B[39;49;00m#x1B[33mEMBED_MODEL#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m, #x1B[33m"#x1B[39;49;00m#x1B[33mnvidia_nim/nvidia/nemotron-3-embed-1b#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m)#x1B[90m#x1B[39;49;00m
+&gt;       #x1B[94mreturn#x1B[39;49;00m AiService()#x1B[90m#x1B[39;49;00m
+               ^^^^^^^^^^^#x1B[90m#x1B[39;49;00m
+
+#x1B[1m#x1B[31mtests/test_ai_service.py#x1B[0m:25: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = &lt;hermes_api.services.ai_service.AiService object at 0x7f6f24fd8ec0&gt;
+
+    #x1B[0m#x1B[94mdef#x1B[39;49;00m#x1B[90m #x1B[39;49;00m#x1B[92m__init__#x1B[39;49;00m(#x1B[96mself#x1B[39;49;00m) -&gt; #x1B[94mNone#x1B[39;49;00m:#x1B[90m#x1B[39;49;00m
+        #x1B[96mself#x1B[39;49;00m._primary_model = settings.LLM_MODEL#x1B[90m#x1B[39;49;00m
+        #x1B[96mself#x1B[39;49;00m._primary_api_key = settings.LLM_API#x1B[90m#x1B[39;49;00m
+        #x1B[96mself#x1B[39;49;00m._fallback_model = settings.LLM_MODEL_1#x1B[90m#x1B[39;49;00m
+        #x1B[96mself#x1B[39;49;00m._fallback_api_key = settings.LLM_API_1#x1B[90m#x1B[39;49;00m
+        #x1B[94mif#x1B[39;49;00m #x1B[95mnot#x1B[39;49;00m #x1B[96mself#x1B[39;49;00m._primary_api_key #x1B[95mor#x1B[39;49;00m #x1B[95mnot#x1B[39;49;00m #x1B[96mself#x1B[39;49;00m._primary_model:#x1B[90m#x1B[39;49;00m
+            logger.error(#x1B[33m"#x1B[39;49;00m#x1B[33mprimary llm api key or model is missing.#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m)#x1B[90m#x1B[39;49;00m
+&gt;           #x1B[94mraise#x1B[39;49;00m #x1B[96mValueError#x1B[39;49;00m(#x1B[33m"#x1B[39;49;00m#x1B[33mLLM_API or LLM_MODEL is missing.#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m)#x1B[90m#x1B[39;49;00m
+#x1B[1m#x1B[31mE           ValueError: LLM_API or LLM_MODEL is missing.#x1B[0m
+
+#x1B[1m#x1B[31msrc/hermes_api/services/ai_service.py#x1B[0m:350: ValueError</error></testcase><testcase classname="tests.test_ai_service.TestGetMetadata" name="test_successful_batch_extraction" time="0.002"><error message="failed on setup with &quot;ValueError: LLM_API or LLM_MODEL is missing.&quot;">monkeypatch = &lt;_pytest.monkeypatch.MonkeyPatch object at 0x7f6f24fdf820&gt;
+
+    #x1B[0m#x1B[37m@pytest#x1B[39;49;00m.fixture#x1B[90m#x1B[39;49;00m
+    #x1B[94mdef#x1B[39;49;00m#x1B[90m #x1B[39;49;00m#x1B[92mai_service#x1B[39;49;00m(monkeypatch):#x1B[90m#x1B[39;49;00m
+        monkeypatch.setenv(#x1B[33m"#x1B[39;49;00m#x1B[33mLLM_API#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m, #x1B[33m"#x1B[39;49;00m#x1B[33mfake-llm-key#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m)#x1B[90m#x1B[39;49;00m
+        monkeypatch.setenv(#x1B[33m"#x1B[39;49;00m#x1B[33mLLM_MODEL#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m, #x1B[33m"#x1B[39;49;00m#x1B[33mmistral/ministral-8b-latest#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m)#x1B[90m#x1B[39;49;00m
+        monkeypatch.setenv(#x1B[33m"#x1B[39;49;00m#x1B[33mLLM_API_1#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m, #x1B[33m"#x1B[39;49;00m#x1B[33mfake-fallback-key#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m)#x1B[90m#x1B[39;49;00m
+        monkeypatch.setenv(#x1B[33m"#x1B[39;49;00m#x1B[33mLLM_MODEL_1#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m, #x1B[33m"#x1B[39;49;00m#x1B[33mnvidia_nim/mistralai/mistral-nemotron#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m)#x1B[90m#x1B[39;49;00m
+        monkeypatch.setenv(#x1B[33m"#x1B[39;49;00m#x1B[33mEMBED_API#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m, #x1B[33m"#x1B[39;49;00m#x1B[33mfake-embed-key#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m)#x1B[90m#x1B[39;49;00m
+        monkeypatch.setenv(#x1B[33m"#x1B[39;49;00m#x1B[33mEMBED_MODEL#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m, #x1B[33m"#x1B[39;49;00m#x1B[33mnvidia_nim/nvidia/nemotron-3-embed-1b#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m)#x1B[90m#x1B[39;49;00m
+&gt;       #x1B[94mreturn#x1B[39;49;00m AiService()#x1B[90m#x1B[39;49;00m
+               ^^^^^^^^^^^#x1B[90m#x1B[39;49;00m
+
+#x1B[1m#x1B[31mtests/test_ai_service.py#x1B[0m:25: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = &lt;hermes_api.services.ai_service.AiService object at 0x7f6f24ff65d0&gt;
+
+    #x1B[0m#x1B[94mdef#x1B[39;49;00m#x1B[90m #x1B[39;49;00m#x1B[92m__init__#x1B[39;49;00m(#x1B[96mself#x1B[39;49;00m) -&gt; #x1B[94mNone#x1B[39;49;00m:#x1B[90m#x1B[39;49;00m
+        #x1B[96mself#x1B[39;49;00m._primary_model = settings.LLM_MODEL#x1B[90m#x1B[39;49;00m
+        #x1B[96mself#x1B[39;49;00m._primary_api_key = settings.LLM_API#x1B[90m#x1B[39;49;00m
+        #x1B[96mself#x1B[39;49;00m._fallback_model = settings.LLM_MODEL_1#x1B[90m#x1B[39;49;00m
+        #x1B[96mself#x1B[39;49;00m._fallback_api_key = settings.LLM_API_1#x1B[90m#x1B[39;49;00m
+        #x1B[94mif#x1B[39;49;00m #x1B[95mnot#x1B[39;49;00m #x1B[96mself#x1B[39;49;00m._primary_api_key #x1B[95mor#x1B[39;49;00m #x1B[95mnot#x1B[39;49;00m #x1B[96mself#x1B[39;49;00m._primary_model:#x1B[90m#x1B[39;49;00m
+            logger.error(#x1B[33m"#x1B[39;49;00m#x1B[33mprimary llm api key or model is missing.#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m)#x1B[90m#x1B[39;49;00m
+&gt;           #x1B[94mraise#x1B[39;49;00m #x1B[96mValueError#x1B[39;49;00m(#x1B[33m"#x1B[39;49;00m#x1B[33mLLM_API or LLM_MODEL is missing.#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m)#x1B[90m#x1B[39;49;00m
+#x1B[1m#x1B[31mE           ValueError: LLM_API or LLM_MODEL is missing.#x1B[0m
+
+#x1B[1m#x1B[31msrc/hermes_api/services/ai_service.py#x1B[0m:350: ValueError</error></testcase><testcase classname="tests.test_ai_service.TestGetMetadata" name="test_handles_api_failure" time="0.004"><error message="failed on setup with &quot;ValueError: LLM_API or LLM_MODEL is missing.&quot;">monkeypatch = &lt;_pytest.monkeypatch.MonkeyPatch object at 0x7f6f24fd39b0&gt;
+
+    #x1B[0m#x1B[37m@pytest#x1B[39;49;00m.fixture#x1B[90m#x1B[39;49;00m
+    #x1B[94mdef#x1B[39;49;00m#x1B[90m #x1B[39;49;00m#x1B[92mai_service#x1B[39;49;00m(monkeypatch):#x1B[90m#x1B[39;49;00m
+        monkeypatch.setenv(#x1B[33m"#x1B[39;49;00m#x1B[33mLLM_API#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m, #x1B[33m"#x1B[39;49;00m#x1B[33mfake-llm-key#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m)#x1B[90m#x1B[39;49;00m
+        monkeypatch.setenv(#x1B[33m"#x1B[39;49;00m#x1B[33mLLM_MODEL#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m, #x1B[33m"#x1B[39;49;00m#x1B[33mmistral/ministral-8b-latest#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m)#x1B[90m#x1B[39;49;00m
+        monkeypatch.setenv(#x1B[33m"#x1B[39;49;00m#x1B[33mLLM_API_1#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m, #x1B[33m"#x1B[39;49;00m#x1B[33mfake-fallback-key#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m)#x1B[90m#x1B[39;49;00m
+        monkeypatch.setenv(#x1B[33m"#x1B[39;49;00m#x1B[33mLLM_MODEL_1#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m, #x1B[33m"#x1B[39;49;00m#x1B[33mnvidia_nim/mistralai/mistral-nemotron#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m)#x1B[90m#x1B[39;49;00m
+        monkeypatch.setenv(#x1B[33m"#x1B[39;49;00m#x1B[33mEMBED_API#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m, #x1B[33m"#x1B[39;49;00m#x1B[33mfake-embed-key#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m)#x1B[90m#x1B[39;49;00m
+        monkeypatch.setenv(#x1B[33m"#x1B[39;49;00m#x1B[33mEMBED_MODEL#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m, #x1B[33m"#x1B[39;49;00m#x1B[33mnvidia_nim/nvidia/nemotron-3-embed-1b#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m)#x1B[90m#x1B[39;49;00m
+&gt;       #x1B[94mreturn#x1B[39;49;00m AiService()#x1B[90m#x1B[39;49;00m
+               ^^^^^^^^^^^#x1B[90m#x1B[39;49;00m
+
+#x1B[1m#x1B[31mtests/test_ai_service.py#x1B[0m:25: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = &lt;hermes_api.services.ai_service.AiService object at 0x7f6f24ff74d0&gt;
+
+    #x1B[0m#x1B[94mdef#x1B[39;49;00m#x1B[90m #x1B[39;49;00m#x1B[92m__init__#x1B[39;49;00m(#x1B[96mself#x1B[39;49;00m) -&gt; #x1B[94mNone#x1B[39;49;00m:#x1B[90m#x1B[39;49;00m
+        #x1B[96mself#x1B[39;49;00m._primary_model = settings.LLM_MODEL#x1B[90m#x1B[39;49;00m
+        #x1B[96mself#x1B[39;49;00m._primary_api_key = settings.LLM_API#x1B[90m#x1B[39;49;00m
+        #x1B[96mself#x1B[39;49;00m._fallback_model = settings.LLM_MODEL_1#x1B[90m#x1B[39;49;00m
+        #x1B[96mself#x1B[39;49;00m._fallback_api_key = settings.LLM_API_1#x1B[90m#x1B[39;49;00m
+        #x1B[94mif#x1B[39;49;00m #x1B[95mnot#x1B[39;49;00m #x1B[96mself#x1B[39;49;00m._primary_api_key #x1B[95mor#x1B[39;49;00m #x1B[95mnot#x1B[39;49;00m #x1B[96mself#x1B[39;49;00m._primary_model:#x1B[90m#x1B[39;49;00m
+            logger.error(#x1B[33m"#x1B[39;49;00m#x1B[33mprimary llm api key or model is missing.#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m)#x1B[90m#x1B[39;49;00m
+&gt;           #x1B[94mraise#x1B[39;49;00m #x1B[96mValueError#x1B[39;49;00m(#x1B[33m"#x1B[39;49;00m#x1B[33mLLM_API or LLM_MODEL is missing.#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m)#x1B[90m#x1B[39;49;00m
+#x1B[1m#x1B[31mE           ValueError: LLM_API or LLM_MODEL is missing.#x1B[0m
+
+#x1B[1m#x1B[31msrc/hermes_api/services/ai_service.py#x1B[0m:350: ValueError</error></testcase><testcase classname="tests.test_ai_service.TestExtractTl" name="test_returns_none_for_empty_prose" time="0.002"><error message="failed on setup with &quot;ValueError: LLM_API or LLM_MODEL is missing.&quot;">monkeypatch = &lt;_pytest.monkeypatch.MonkeyPatch object at 0x7f6f25007130&gt;
+
+    #x1B[0m#x1B[37m@pytest#x1B[39;49;00m.fixture#x1B[90m#x1B[39;49;00m
+    #x1B[94mdef#x1B[39;49;00m#x1B[90m #x1B[39;49;00m#x1B[92mai_service#x1B[39;49;00m(monkeypatch):#x1B[90m#x1B[39;49;00m
+        monkeypatch.setenv(#x1B[33m"#x1B[39;49;00m#x1B[33mLLM_API#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m, #x1B[33m"#x1B[39;49;00m#x1B[33mfake-llm-key#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m)#x1B[90m#x1B[39;49;00m
+        monkeypatch.setenv(#x1B[33m"#x1B[39;49;00m#x1B[33mLLM_MODEL#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m, #x1B[33m"#x1B[39;49;00m#x1B[33mmistral/ministral-8b-latest#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m)#x1B[90m#x1B[39;49;00m
+        monkeypatch.setenv(#x1B[33m"#x1B[39;49;00m#x1B[33mLLM_API_1#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m, #x1B[33m"#x1B[39;49;00m#x1B[33mfake-fallback-key#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m)#x1B[90m#x1B[39;49;00m
+        monkeypatch.setenv(#x1B[33m"#x1B[39;49;00m#x1B[33mLLM_MODEL_1#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m, #x1B[33m"#x1B[39;49;00m#x1B[33mnvidia_nim/mistralai/mistral-nemotron#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m)#x1B[90m#x1B[39;49;00m
+        monkeypatch.setenv(#x1B[33m"#x1B[39;49;00m#x1B[33mEMBED_API#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m, #x1B[33m"#x1B[39;49;00m#x1B[33mfake-embed-key#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m)#x1B[90m#x1B[39;49;00m
+        monkeypatch.setenv(#x1B[33m"#x1B[39;49;00m#x1B[33mEMBED_MODEL#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m, #x1B[33m"#x1B[39;49;00m#x1B[33mnvidia_nim/nvidia/nemotron-3-embed-1b#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m)#x1B[90m#x1B[39;49;00m
+&gt;       #x1B[94mreturn#x1B[39;49;00m AiService()#x1B[90m#x1B[39;49;00m
+               ^^^^^^^^^^^#x1B[90m#x1B[39;49;00m
+
+#x1B[1m#x1B[31mtests/test_ai_service.py#x1B[0m:25: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = &lt;hermes_api.services.ai_service.AiService object at 0x7f6f24f08510&gt;
+
+    #x1B[0m#x1B[94mdef#x1B[39;49;00m#x1B[90m #x1B[39;49;00m#x1B[92m__init__#x1B[39;49;00m(#x1B[96mself#x1B[39;49;00m) -&gt; #x1B[94mNone#x1B[39;49;00m:#x1B[90m#x1B[39;49;00m
+        #x1B[96mself#x1B[39;49;00m._primary_model = settings.LLM_MODEL#x1B[90m#x1B[39;49;00m
+        #x1B[96mself#x1B[39;49;00m._primary_api_key = settings.LLM_API#x1B[90m#x1B[39;49;00m
+        #x1B[96mself#x1B[39;49;00m._fallback_model = settings.LLM_MODEL_1#x1B[90m#x1B[39;49;00m
+        #x1B[96mself#x1B[39;49;00m._fallback_api_key = settings.LLM_API_1#x1B[90m#x1B[39;49;00m
+        #x1B[94mif#x1B[39;49;00m #x1B[95mnot#x1B[39;49;00m #x1B[96mself#x1B[39;49;00m._primary_api_key #x1B[95mor#x1B[39;49;00m #x1B[95mnot#x1B[39;49;00m #x1B[96mself#x1B[39;49;00m._primary_model:#x1B[90m#x1B[39;49;00m
+            logger.error(#x1B[33m"#x1B[39;49;00m#x1B[33mprimary llm api key or model is missing.#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m)#x1B[90m#x1B[39;49;00m
+&gt;           #x1B[94mraise#x1B[39;49;00m #x1B[96mValueError#x1B[39;49;00m(#x1B[33m"#x1B[39;49;00m#x1B[33mLLM_API or LLM_MODEL is missing.#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m)#x1B[90m#x1B[39;49;00m
+#x1B[1m#x1B[31mE           ValueError: LLM_API or LLM_MODEL is missing.#x1B[0m
+
+#x1B[1m#x1B[31msrc/hermes_api/services/ai_service.py#x1B[0m:350: ValueError</error></testcase><testcase classname="tests.test_ai_service.TestExtractTl" name="test_successful_tl_extraction" time="0.003"><error message="failed on setup with &quot;ValueError: LLM_API or LLM_MODEL is missing.&quot;">monkeypatch = &lt;_pytest.monkeypatch.MonkeyPatch object at 0x7f6f25007bd0&gt;
+
+    #x1B[0m#x1B[37m@pytest#x1B[39;49;00m.fixture#x1B[90m#x1B[39;49;00m
+    #x1B[94mdef#x1B[39;49;00m#x1B[90m #x1B[39;49;00m#x1B[92mai_service#x1B[39;49;00m(monkeypatch):#x1B[90m#x1B[39;49;00m
+        monkeypatch.setenv(#x1B[33m"#x1B[39;49;00m#x1B[33mLLM_API#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m, #x1B[33m"#x1B[39;49;00m#x1B[33mfake-llm-key#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m)#x1B[90m#x1B[39;49;00m
+        monkeypatch.setenv(#x1B[33m"#x1B[39;49;00m#x1B[33mLLM_MODEL#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m, #x1B[33m"#x1B[39;49;00m#x1B[33mmistral/ministral-8b-latest#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m)#x1B[90m#x1B[39;49;00m
+        monkeypatch.setenv(#x1B[33m"#x1B[39;49;00m#x1B[33mLLM_API_1#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m, #x1B[33m"#x1B[39;49;00m#x1B[33mfake-fallback-key#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m)#x1B[90m#x1B[39;49;00m
+        monkeypatch.setenv(#x1B[33m"#x1B[39;49;00m#x1B[33mLLM_MODEL_1#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m, #x1B[33m"#x1B[39;49;00m#x1B[33mnvidia_nim/mistralai/mistral-nemotron#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m)#x1B[90m#x1B[39;49;00m
+        monkeypatch.setenv(#x1B[33m"#x1B[39;49;00m#x1B[33mEMBED_API#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m, #x1B[33m"#x1B[39;49;00m#x1B[33mfake-embed-key#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m)#x1B[90m#x1B[39;49;00m
+        monkeypatch.setenv(#x1B[33m"#x1B[39;49;00m#x1B[33mEMBED_MODEL#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m, #x1B[33m"#x1B[39;49;00m#x1B[33mnvidia_nim/nvidia/nemotron-3-embed-1b#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m)#x1B[90m#x1B[39;49;00m
+&gt;       #x1B[94mreturn#x1B[39;49;00m AiService()#x1B[90m#x1B[39;49;00m
+               ^^^^^^^^^^^#x1B[90m#x1B[39;49;00m
+
+#x1B[1m#x1B[31mtests/test_ai_service.py#x1B[0m:25: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = &lt;hermes_api.services.ai_service.AiService object at 0x7f6f24f08e90&gt;
+
+    #x1B[0m#x1B[94mdef#x1B[39;49;00m#x1B[90m #x1B[39;49;00m#x1B[92m__init__#x1B[39;49;00m(#x1B[96mself#x1B[39;49;00m) -&gt; #x1B[94mNone#x1B[39;49;00m:#x1B[90m#x1B[39;49;00m
+        #x1B[96mself#x1B[39;49;00m._primary_model = settings.LLM_MODEL#x1B[90m#x1B[39;49;00m
+        #x1B[96mself#x1B[39;49;00m._primary_api_key = settings.LLM_API#x1B[90m#x1B[39;49;00m
+        #x1B[96mself#x1B[39;49;00m._fallback_model = settings.LLM_MODEL_1#x1B[90m#x1B[39;49;00m
+        #x1B[96mself#x1B[39;49;00m._fallback_api_key = settings.LLM_API_1#x1B[90m#x1B[39;49;00m
+        #x1B[94mif#x1B[39;49;00m #x1B[95mnot#x1B[39;49;00m #x1B[96mself#x1B[39;49;00m._primary_api_key #x1B[95mor#x1B[39;49;00m #x1B[95mnot#x1B[39;49;00m #x1B[96mself#x1B[39;49;00m._primary_model:#x1B[90m#x1B[39;49;00m
+            logger.error(#x1B[33m"#x1B[39;49;00m#x1B[33mprimary llm api key or model is missing.#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m)#x1B[90m#x1B[39;49;00m
+&gt;           #x1B[94mraise#x1B[39;49;00m #x1B[96mValueError#x1B[39;49;00m(#x1B[33m"#x1B[39;49;00m#x1B[33mLLM_API or LLM_MODEL is missing.#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m)#x1B[90m#x1B[39;49;00m
+#x1B[1m#x1B[31mE           ValueError: LLM_API or LLM_MODEL is missing.#x1B[0m
+
+#x1B[1m#x1B[31msrc/hermes_api/services/ai_service.py#x1B[0m:350: ValueError</error></testcase><testcase classname="tests.test_ai_service.TestExtractTl" name="test_extract_tl_handles_localized_dict_summary" time="0.001"><error message="failed on setup with &quot;ValueError: LLM_API or LLM_MODEL is missing.&quot;">monkeypatch = &lt;_pytest.monkeypatch.MonkeyPatch object at 0x7f6f24ee3650&gt;
+
+    #x1B[0m#x1B[37m@pytest#x1B[39;49;00m.fixture#x1B[90m#x1B[39;49;00m
+    #x1B[94mdef#x1B[39;49;00m#x1B[90m #x1B[39;49;00m#x1B[92mai_service#x1B[39;49;00m(monkeypatch):#x1B[90m#x1B[39;49;00m
+        monkeypatch.setenv(#x1B[33m"#x1B[39;49;00m#x1B[33mLLM_API#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m, #x1B[33m"#x1B[39;49;00m#x1B[33mfake-llm-key#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m)#x1B[90m#x1B[39;49;00m
+        monkeypatch.setenv(#x1B[33m"#x1B[39;49;00m#x1B[33mLLM_MODEL#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m, #x1B[33m"#x1B[39;49;00m#x1B[33mmistral/ministral-8b-latest#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m)#x1B[90m#x1B[39;49;00m
+        monkeypatch.setenv(#x1B[33m"#x1B[39;49;00m#x1B[33mLLM_API_1#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m, #x1B[33m"#x1B[39;49;00m#x1B[33mfake-fallback-key#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m)#x1B[90m#x1B[39;49;00m
+        monkeypatch.setenv(#x1B[33m"#x1B[39;49;00m#x1B[33mLLM_MODEL_1#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m, #x1B[33m"#x1B[39;49;00m#x1B[33mnvidia_nim/mistralai/mistral-nemotron#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m)#x1B[90m#x1B[39;49;00m
+        monkeypatch.setenv(#x1B[33m"#x1B[39;49;00m#x1B[33mEMBED_API#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m, #x1B[33m"#x1B[39;49;00m#x1B[33mfake-embed-key#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m)#x1B[90m#x1B[39;49;00m
+        monkeypatch.setenv(#x1B[33m"#x1B[39;49;00m#x1B[33mEMBED_MODEL#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m, #x1B[33m"#x1B[39;49;00m#x1B[33mnvidia_nim/nvidia/nemotron-3-embed-1b#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m)#x1B[90m#x1B[39;49;00m
+&gt;       #x1B[94mreturn#x1B[39;49;00m AiService()#x1B[90m#x1B[39;49;00m
+               ^^^^^^^^^^^#x1B[90m#x1B[39;49;00m
+
+#x1B[1m#x1B[31mtests/test_ai_service.py#x1B[0m:25: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = &lt;hermes_api.services.ai_service.AiService object at 0x7f6f24edca70&gt;
+
+    #x1B[0m#x1B[94mdef#x1B[39;49;00m#x1B[90m #x1B[39;49;00m#x1B[92m__init__#x1B[39;49;00m(#x1B[96mself#x1B[39;49;00m) -&gt; #x1B[94mNone#x1B[39;49;00m:#x1B[90m#x1B[39;49;00m
+        #x1B[96mself#x1B[39;49;00m._primary_model = settings.LLM_MODEL#x1B[90m#x1B[39;49;00m
+        #x1B[96mself#x1B[39;49;00m._primary_api_key = settings.LLM_API#x1B[90m#x1B[39;49;00m
+        #x1B[96mself#x1B[39;49;00m._fallback_model = settings.LLM_MODEL_1#x1B[90m#x1B[39;49;00m
+        #x1B[96mself#x1B[39;49;00m._fallback_api_key = settings.LLM_API_1#x1B[90m#x1B[39;49;00m
+        #x1B[94mif#x1B[39;49;00m #x1B[95mnot#x1B[39;49;00m #x1B[96mself#x1B[39;49;00m._primary_api_key #x1B[95mor#x1B[39;49;00m #x1B[95mnot#x1B[39;49;00m #x1B[96mself#x1B[39;49;00m._primary_model:#x1B[90m#x1B[39;49;00m
+            logger.error(#x1B[33m"#x1B[39;49;00m#x1B[33mprimary llm api key or model is missing.#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m)#x1B[90m#x1B[39;49;00m
+&gt;           #x1B[94mraise#x1B[39;49;00m #x1B[96mValueError#x1B[39;49;00m(#x1B[33m"#x1B[39;49;00m#x1B[33mLLM_API or LLM_MODEL is missing.#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m)#x1B[90m#x1B[39;49;00m
+#x1B[1m#x1B[31mE           ValueError: LLM_API or LLM_MODEL is missing.#x1B[0m
+
+#x1B[1m#x1B[31msrc/hermes_api/services/ai_service.py#x1B[0m:350: ValueError</error></testcase><testcase classname="tests.test_ai_service.TestRouterFallback" name="test_router_configuration" time="0.002"><error message="failed on setup with &quot;ValueError: LLM_API or LLM_MODEL is missing.&quot;">monkeypatch = &lt;_pytest.monkeypatch.MonkeyPatch object at 0x7f6f24df4450&gt;
+
+    #x1B[0m#x1B[37m@pytest#x1B[39;49;00m.fixture#x1B[90m#x1B[39;49;00m
+    #x1B[94mdef#x1B[39;49;00m#x1B[90m #x1B[39;49;00m#x1B[92mai_service#x1B[39;49;00m(monkeypatch):#x1B[90m#x1B[39;49;00m
+        monkeypatch.setenv(#x1B[33m"#x1B[39;49;00m#x1B[33mLLM_API#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m, #x1B[33m"#x1B[39;49;00m#x1B[33mfake-llm-key#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m)#x1B[90m#x1B[39;49;00m
+        monkeypatch.setenv(#x1B[33m"#x1B[39;49;00m#x1B[33mLLM_MODEL#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m, #x1B[33m"#x1B[39;49;00m#x1B[33mmistral/ministral-8b-latest#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m)#x1B[90m#x1B[39;49;00m
+        monkeypatch.setenv(#x1B[33m"#x1B[39;49;00m#x1B[33mLLM_API_1#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m, #x1B[33m"#x1B[39;49;00m#x1B[33mfake-fallback-key#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m)#x1B[90m#x1B[39;49;00m
+        monkeypatch.setenv(#x1B[33m"#x1B[39;49;00m#x1B[33mLLM_MODEL_1#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m, #x1B[33m"#x1B[39;49;00m#x1B[33mnvidia_nim/mistralai/mistral-nemotron#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m)#x1B[90m#x1B[39;49;00m
+        monkeypatch.setenv(#x1B[33m"#x1B[39;49;00m#x1B[33mEMBED_API#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m, #x1B[33m"#x1B[39;49;00m#x1B[33mfake-embed-key#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m)#x1B[90m#x1B[39;49;00m
+        monkeypatch.setenv(#x1B[33m"#x1B[39;49;00m#x1B[33mEMBED_MODEL#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m, #x1B[33m"#x1B[39;49;00m#x1B[33mnvidia_nim/nvidia/nemotron-3-embed-1b#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m)#x1B[90m#x1B[39;49;00m
+&gt;       #x1B[94mreturn#x1B[39;49;00m AiService()#x1B[90m#x1B[39;49;00m
+               ^^^^^^^^^^^#x1B[90m#x1B[39;49;00m
+
+#x1B[1m#x1B[31mtests/test_ai_service.py#x1B[0m:25: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = &lt;hermes_api.services.ai_service.AiService object at 0x7f6f24dbc490&gt;
+
+    #x1B[0m#x1B[94mdef#x1B[39;49;00m#x1B[90m #x1B[39;49;00m#x1B[92m__init__#x1B[39;49;00m(#x1B[96mself#x1B[39;49;00m) -&gt; #x1B[94mNone#x1B[39;49;00m:#x1B[90m#x1B[39;49;00m
+        #x1B[96mself#x1B[39;49;00m._primary_model = settings.LLM_MODEL#x1B[90m#x1B[39;49;00m
+        #x1B[96mself#x1B[39;49;00m._primary_api_key = settings.LLM_API#x1B[90m#x1B[39;49;00m
+        #x1B[96mself#x1B[39;49;00m._fallback_model = settings.LLM_MODEL_1#x1B[90m#x1B[39;49;00m
+        #x1B[96mself#x1B[39;49;00m._fallback_api_key = settings.LLM_API_1#x1B[90m#x1B[39;49;00m
+        #x1B[94mif#x1B[39;49;00m #x1B[95mnot#x1B[39;49;00m #x1B[96mself#x1B[39;49;00m._primary_api_key #x1B[95mor#x1B[39;49;00m #x1B[95mnot#x1B[39;49;00m #x1B[96mself#x1B[39;49;00m._primary_model:#x1B[90m#x1B[39;49;00m
+            logger.error(#x1B[33m"#x1B[39;49;00m#x1B[33mprimary llm api key or model is missing.#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m)#x1B[90m#x1B[39;49;00m
+&gt;           #x1B[94mraise#x1B[39;49;00m #x1B[96mValueError#x1B[39;49;00m(#x1B[33m"#x1B[39;49;00m#x1B[33mLLM_API or LLM_MODEL is missing.#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m)#x1B[90m#x1B[39;49;00m
+#x1B[1m#x1B[31mE           ValueError: LLM_API or LLM_MODEL is missing.#x1B[0m
+
+#x1B[1m#x1B[31msrc/hermes_api/services/ai_service.py#x1B[0m:350: ValueError</error></testcase><testcase classname="tests.test_ai_service.TestGenEmbeddings" name="test_empty_input" time="0.003"><error message="failed on setup with &quot;ValueError: LLM_API or LLM_MODEL is missing.&quot;">monkeypatch = &lt;_pytest.monkeypatch.MonkeyPatch object at 0x7f6f24de55e0&gt;
+
+    #x1B[0m#x1B[37m@pytest#x1B[39;49;00m.fixture#x1B[90m#x1B[39;49;00m
+    #x1B[94mdef#x1B[39;49;00m#x1B[90m #x1B[39;49;00m#x1B[92mai_service#x1B[39;49;00m(monkeypatch):#x1B[90m#x1B[39;49;00m
+        monkeypatch.setenv(#x1B[33m"#x1B[39;49;00m#x1B[33mLLM_API#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m, #x1B[33m"#x1B[39;49;00m#x1B[33mfake-llm-key#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m)#x1B[90m#x1B[39;49;00m
+        monkeypatch.setenv(#x1B[33m"#x1B[39;49;00m#x1B[33mLLM_MODEL#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m, #x1B[33m"#x1B[39;49;00m#x1B[33mmistral/ministral-8b-latest#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m)#x1B[90m#x1B[39;49;00m
+        monkeypatch.setenv(#x1B[33m"#x1B[39;49;00m#x1B[33mLLM_API_1#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m, #x1B[33m"#x1B[39;49;00m#x1B[33mfake-fallback-key#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m)#x1B[90m#x1B[39;49;00m
+        monkeypatch.setenv(#x1B[33m"#x1B[39;49;00m#x1B[33mLLM_MODEL_1#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m, #x1B[33m"#x1B[39;49;00m#x1B[33mnvidia_nim/mistralai/mistral-nemotron#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m)#x1B[90m#x1B[39;49;00m
+        monkeypatch.setenv(#x1B[33m"#x1B[39;49;00m#x1B[33mEMBED_API#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m, #x1B[33m"#x1B[39;49;00m#x1B[33mfake-embed-key#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m)#x1B[90m#x1B[39;49;00m
+        monkeypatch.setenv(#x1B[33m"#x1B[39;49;00m#x1B[33mEMBED_MODEL#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m, #x1B[33m"#x1B[39;49;00m#x1B[33mnvidia_nim/nvidia/nemotron-3-embed-1b#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m)#x1B[90m#x1B[39;49;00m
+&gt;       #x1B[94mreturn#x1B[39;49;00m AiService()#x1B[90m#x1B[39;49;00m
+               ^^^^^^^^^^^#x1B[90m#x1B[39;49;00m
+
+#x1B[1m#x1B[31mtests/test_ai_service.py#x1B[0m:25: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = &lt;hermes_api.services.ai_service.AiService object at 0x7f6f24dbce20&gt;
+
+    #x1B[0m#x1B[94mdef#x1B[39;49;00m#x1B[90m #x1B[39;49;00m#x1B[92m__init__#x1B[39;49;00m(#x1B[96mself#x1B[39;49;00m) -&gt; #x1B[94mNone#x1B[39;49;00m:#x1B[90m#x1B[39;49;00m
+        #x1B[96mself#x1B[39;49;00m._primary_model = settings.LLM_MODEL#x1B[90m#x1B[39;49;00m
+        #x1B[96mself#x1B[39;49;00m._primary_api_key = settings.LLM_API#x1B[90m#x1B[39;49;00m
+        #x1B[96mself#x1B[39;49;00m._fallback_model = settings.LLM_MODEL_1#x1B[90m#x1B[39;49;00m
+        #x1B[96mself#x1B[39;49;00m._fallback_api_key = settings.LLM_API_1#x1B[90m#x1B[39;49;00m
+        #x1B[94mif#x1B[39;49;00m #x1B[95mnot#x1B[39;49;00m #x1B[96mself#x1B[39;49;00m._primary_api_key #x1B[95mor#x1B[39;49;00m #x1B[95mnot#x1B[39;49;00m #x1B[96mself#x1B[39;49;00m._primary_model:#x1B[90m#x1B[39;49;00m
+            logger.error(#x1B[33m"#x1B[39;49;00m#x1B[33mprimary llm api key or model is missing.#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m)#x1B[90m#x1B[39;49;00m
+&gt;           #x1B[94mraise#x1B[39;49;00m #x1B[96mValueError#x1B[39;49;00m(#x1B[33m"#x1B[39;49;00m#x1B[33mLLM_API or LLM_MODEL is missing.#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m)#x1B[90m#x1B[39;49;00m
+#x1B[1m#x1B[31mE           ValueError: LLM_API or LLM_MODEL is missing.#x1B[0m
+
+#x1B[1m#x1B[31msrc/hermes_api/services/ai_service.py#x1B[0m:350: ValueError</error></testcase><testcase classname="tests.test_ai_service.TestGenEmbeddings" name="test_nvidia_nim_embedding_calls_with_float_encoding" time="0.007"><error message="failed on setup with &quot;ValueError: LLM_API or LLM_MODEL is missing.&quot;">monkeypatch = &lt;_pytest.monkeypatch.MonkeyPatch object at 0x7f6f24de5f40&gt;
+
+    #x1B[0m#x1B[37m@pytest#x1B[39;49;00m.fixture#x1B[90m#x1B[39;49;00m
+    #x1B[94mdef#x1B[39;49;00m#x1B[90m #x1B[39;49;00m#x1B[92mai_service#x1B[39;49;00m(monkeypatch):#x1B[90m#x1B[39;49;00m
+        monkeypatch.setenv(#x1B[33m"#x1B[39;49;00m#x1B[33mLLM_API#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m, #x1B[33m"#x1B[39;49;00m#x1B[33mfake-llm-key#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m)#x1B[90m#x1B[39;49;00m
+        monkeypatch.setenv(#x1B[33m"#x1B[39;49;00m#x1B[33mLLM_MODEL#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m, #x1B[33m"#x1B[39;49;00m#x1B[33mmistral/ministral-8b-latest#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m)#x1B[90m#x1B[39;49;00m
+        monkeypatch.setenv(#x1B[33m"#x1B[39;49;00m#x1B[33mLLM_API_1#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m, #x1B[33m"#x1B[39;49;00m#x1B[33mfake-fallback-key#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m)#x1B[90m#x1B[39;49;00m
+        monkeypatch.setenv(#x1B[33m"#x1B[39;49;00m#x1B[33mLLM_MODEL_1#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m, #x1B[33m"#x1B[39;49;00m#x1B[33mnvidia_nim/mistralai/mistral-nemotron#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m)#x1B[90m#x1B[39;49;00m
+        monkeypatch.setenv(#x1B[33m"#x1B[39;49;00m#x1B[33mEMBED_API#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m, #x1B[33m"#x1B[39;49;00m#x1B[33mfake-embed-key#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m)#x1B[90m#x1B[39;49;00m
+        monkeypatch.setenv(#x1B[33m"#x1B[39;49;00m#x1B[33mEMBED_MODEL#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m, #x1B[33m"#x1B[39;49;00m#x1B[33mnvidia_nim/nvidia/nemotron-3-embed-1b#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m)#x1B[90m#x1B[39;49;00m
+&gt;       #x1B[94mreturn#x1B[39;49;00m AiService()#x1B[90m#x1B[39;49;00m
+               ^^^^^^^^^^^#x1B[90m#x1B[39;49;00m
+
+#x1B[1m#x1B[31mtests/test_ai_service.py#x1B[0m:25: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = &lt;hermes_api.services.ai_service.AiService object at 0x7f6f24df5d50&gt;
+
+    #x1B[0m#x1B[94mdef#x1B[39;49;00m#x1B[90m #x1B[39;49;00m#x1B[92m__init__#x1B[39;49;00m(#x1B[96mself#x1B[39;49;00m) -&gt; #x1B[94mNone#x1B[39;49;00m:#x1B[90m#x1B[39;49;00m
+        #x1B[96mself#x1B[39;49;00m._primary_model = settings.LLM_MODEL#x1B[90m#x1B[39;49;00m
+        #x1B[96mself#x1B[39;49;00m._primary_api_key = settings.LLM_API#x1B[90m#x1B[39;49;00m
+        #x1B[96mself#x1B[39;49;00m._fallback_model = settings.LLM_MODEL_1#x1B[90m#x1B[39;49;00m
+        #x1B[96mself#x1B[39;49;00m._fallback_api_key = settings.LLM_API_1#x1B[90m#x1B[39;49;00m
+        #x1B[94mif#x1B[39;49;00m #x1B[95mnot#x1B[39;49;00m #x1B[96mself#x1B[39;49;00m._primary_api_key #x1B[95mor#x1B[39;49;00m #x1B[95mnot#x1B[39;49;00m #x1B[96mself#x1B[39;49;00m._primary_model:#x1B[90m#x1B[39;49;00m
+            logger.error(#x1B[33m"#x1B[39;49;00m#x1B[33mprimary llm api key or model is missing.#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m)#x1B[90m#x1B[39;49;00m
+&gt;           #x1B[94mraise#x1B[39;49;00m #x1B[96mValueError#x1B[39;49;00m(#x1B[33m"#x1B[39;49;00m#x1B[33mLLM_API or LLM_MODEL is missing.#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m)#x1B[90m#x1B[39;49;00m
+#x1B[1m#x1B[31mE           ValueError: LLM_API or LLM_MODEL is missing.#x1B[0m
+
+#x1B[1m#x1B[31msrc/hermes_api/services/ai_service.py#x1B[0m:350: ValueError</error></testcase><testcase classname="tests.test_geocoding_service.TestGeocodingService" name="test_cache_hit_returns_immediately" time="0.063" /><testcase classname="tests.test_geocoding_service.TestGeocodingService" name="test_successful_geocoding_persists_cache" time="0.008" /><testcase classname="tests.test_geocoding_service.TestGeocodingService" name="test_empty_results_persists_negative_cache" time="0.013" /><testcase classname="tests.test_geocoding_service.TestGeocodingService" name="test_transient_failure_does_not_persist_cache" time="0.017" /><testcase classname="tests.test_geocoding_service.TestGeocodingService" name="test_call_nominatim_retries_on_429" time="0.010" /><testcase classname="tests.test_geocoding_service.TestGeocodingService" name="test_clean_location_name_sanitizes_complex_strings" time="0.002" /><testcase classname="tests.test_geocoding_service.TestGeocodingService" name="test_circuit_breaker_trips_on_persistent_429" time="0.009"><failure message="AttributeError: module 'hermes_api.services.geocoding_service' has no attribute '_circuit_open_until'">self = &lt;tests.test_geocoding_service.TestGeocodingService object at 0x7f6f25004380&gt;
+mock_sleep = &lt;AsyncMock name='sleep' id='140115336694816'&gt;
+
+    #x1B[0m#x1B[37m@patch#x1B[39;49;00m(#x1B[33m"#x1B[39;49;00m#x1B[33masyncio.sleep#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m, new_callable=AsyncMock)#x1B[90m#x1B[39;49;00m
+    #x1B[94mdef#x1B[39;49;00m#x1B[90m #x1B[39;49;00m#x1B[92mtest_circuit_breaker_trips_on_persistent_429#x1B[39;49;00m(#x1B[96mself#x1B[39;49;00m, mock_sleep):#x1B[90m#x1B[39;49;00m
+        #x1B[94masync#x1B[39;49;00m #x1B[94mdef#x1B[39;49;00m#x1B[90m #x1B[39;49;00m#x1B[92mrun#x1B[39;49;00m():#x1B[90m#x1B[39;49;00m
+            service = GeocodingService()#x1B[90m#x1B[39;49;00m
+            mock_resp_429 = MagicMock()#x1B[90m#x1B[39;49;00m
+            mock_resp_429.status_code = #x1B[94m429#x1B[39;49;00m#x1B[90m#x1B[39;49;00m
+            mock_resp_429.headers = {#x1B[33m"#x1B[39;49;00m#x1B[33mRetry-After#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m: #x1B[33m"#x1B[39;49;00m#x1B[33m0#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m}#x1B[90m#x1B[39;49;00m
+    #x1B[90m#x1B[39;49;00m
+            mock_client = AsyncMock()#x1B[90m#x1B[39;49;00m
+            mock_client.get = AsyncMock(return_value=mock_resp_429)#x1B[90m#x1B[39;49;00m
+    #x1B[90m#x1B[39;49;00m
+            #x1B[94mwith#x1B[39;49;00m patch(#x1B[33m"#x1B[39;49;00m#x1B[33mhttpx.AsyncClient#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m) #x1B[94mas#x1B[39;49;00m mock_client_cls:#x1B[90m#x1B[39;49;00m
+                mock_client_cls.return_value.#x1B[92m__aenter__#x1B[39;49;00m.return_value = mock_client#x1B[90m#x1B[39;49;00m
+                res = #x1B[94mawait#x1B[39;49;00m service._call_nominatim(#x1B[33m"#x1B[39;49;00m#x1B[33mBlocked Location#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m, max_retries=#x1B[94m2#x1B[39;49;00m)#x1B[90m#x1B[39;49;00m
+                #x1B[94massert#x1B[39;49;00m res #x1B[95mis#x1B[39;49;00m #x1B[94mNone#x1B[39;49;00m#x1B[90m#x1B[39;49;00m
+                #x1B[90m# Verify circuit breaker is now active#x1B[39;49;00m#x1B[90m#x1B[39;49;00m
+                #x1B[94massert#x1B[39;49;00m geocoding_service._circuit_open_until &gt; time.monotonic()#x1B[90m#x1B[39;49;00m
+    #x1B[90m#x1B[39;49;00m
+                #x1B[90m# Subsequent call should immediately return None without calling httpx#x1B[39;49;00m#x1B[90m#x1B[39;49;00m
+                mock_client.get.reset_mock()#x1B[90m#x1B[39;49;00m
+                fast_res = #x1B[94mawait#x1B[39;49;00m service._call_nominatim(#x1B[33m"#x1B[39;49;00m#x1B[33mAnother Location#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m)#x1B[90m#x1B[39;49;00m
+                #x1B[94massert#x1B[39;49;00m fast_res #x1B[95mis#x1B[39;49;00m #x1B[94mNone#x1B[39;49;00m#x1B[90m#x1B[39;49;00m
+                mock_client.get.assert_not_called()#x1B[90m#x1B[39;49;00m
+    #x1B[90m#x1B[39;49;00m
+            #x1B[90m# Reset circuit breaker for subsequent tests#x1B[39;49;00m#x1B[90m#x1B[39;49;00m
+            geocoding_service._circuit_open_until = #x1B[94m0.0#x1B[39;49;00m#x1B[90m#x1B[39;49;00m
+    #x1B[90m#x1B[39;49;00m
+&gt;       asyncio.run(run())#x1B[90m#x1B[39;49;00m
+
+#x1B[1m#x1B[31mtests/test_geocoding_service.py#x1B[0m:192: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+#x1B[1m#x1B[31m/home/pavan/.local/share/uv/python/cpython-3.14.6-linux-x86_64-gnu/lib/python3.14/asyncio/runners.py#x1B[0m:205: in run
+    #x1B[0m#x1B[94mreturn#x1B[39;49;00m runner.run(main)#x1B[90m#x1B[39;49;00m
+           ^^^^^^^^^^^^^^^^#x1B[90m#x1B[39;49;00m
+#x1B[1m#x1B[31m/home/pavan/.local/share/uv/python/cpython-3.14.6-linux-x86_64-gnu/lib/python3.14/asyncio/runners.py#x1B[0m:128: in run
+    #x1B[0m#x1B[94mreturn#x1B[39;49;00m #x1B[96mself#x1B[39;49;00m._loop.run_until_complete(task)#x1B[90m#x1B[39;49;00m
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^#x1B[90m#x1B[39;49;00m
+#x1B[1m#x1B[31m/home/pavan/.local/share/uv/python/cpython-3.14.6-linux-x86_64-gnu/lib/python3.14/asyncio/base_events.py#x1B[0m:719: in run_until_complete
+    #x1B[0m#x1B[94mreturn#x1B[39;49;00m future.result()#x1B[90m#x1B[39;49;00m
+           ^^^^^^^^^^^^^^^#x1B[90m#x1B[39;49;00m
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+    #x1B[0m#x1B[94masync#x1B[39;49;00m #x1B[94mdef#x1B[39;49;00m#x1B[90m #x1B[39;49;00m#x1B[92mrun#x1B[39;49;00m():#x1B[90m#x1B[39;49;00m
+        service = GeocodingService()#x1B[90m#x1B[39;49;00m
+        mock_resp_429 = MagicMock()#x1B[90m#x1B[39;49;00m
+        mock_resp_429.status_code = #x1B[94m429#x1B[39;49;00m#x1B[90m#x1B[39;49;00m
+        mock_resp_429.headers = {#x1B[33m"#x1B[39;49;00m#x1B[33mRetry-After#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m: #x1B[33m"#x1B[39;49;00m#x1B[33m0#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m}#x1B[90m#x1B[39;49;00m
+    #x1B[90m#x1B[39;49;00m
+        mock_client = AsyncMock()#x1B[90m#x1B[39;49;00m
+        mock_client.get = AsyncMock(return_value=mock_resp_429)#x1B[90m#x1B[39;49;00m
+    #x1B[90m#x1B[39;49;00m
+        #x1B[94mwith#x1B[39;49;00m patch(#x1B[33m"#x1B[39;49;00m#x1B[33mhttpx.AsyncClient#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m) #x1B[94mas#x1B[39;49;00m mock_client_cls:#x1B[90m#x1B[39;49;00m
+            mock_client_cls.return_value.#x1B[92m__aenter__#x1B[39;49;00m.return_value = mock_client#x1B[90m#x1B[39;49;00m
+            res = #x1B[94mawait#x1B[39;49;00m service._call_nominatim(#x1B[33m"#x1B[39;49;00m#x1B[33mBlocked Location#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m, max_retries=#x1B[94m2#x1B[39;49;00m)#x1B[90m#x1B[39;49;00m
+            #x1B[94massert#x1B[39;49;00m res #x1B[95mis#x1B[39;49;00m #x1B[94mNone#x1B[39;49;00m#x1B[90m#x1B[39;49;00m
+            #x1B[90m# Verify circuit breaker is now active#x1B[39;49;00m#x1B[90m#x1B[39;49;00m
+&gt;           #x1B[94massert#x1B[39;49;00m geocoding_service._circuit_open_until &gt; time.monotonic()#x1B[90m#x1B[39;49;00m
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^#x1B[90m#x1B[39;49;00m
+#x1B[1m#x1B[31mE           AttributeError: module 'hermes_api.services.geocoding_service' has no attribute '_circuit_open_until'#x1B[0m
+
+#x1B[1m#x1B[31mtests/test_geocoding_service.py#x1B[0m:181: AttributeError</failure></testcase><testcase classname="tests.test_rate_limiter" name="test_rate_limiter_allows_burst_up_to_limit" time="0.015" /><testcase classname="tests.test_rate_limiter" name="test_rate_limiter_throttles_after_burst" time="1.008" /><testcase classname="tests.test_rate_limiter" name="test_rate_limiter_refills_over_time" time="2.006" /><testcase classname="tests.test_rate_limiter" name="test_rate_limiter_property" time="0.001" /><testcase classname="tests.test_tl_service" name="test_first_generation" time="0.065" /><testcase classname="tests.test_tl_service" name="test_second_click_returns_cache" time="0.007"><failure message="ValueError: LLM_API or LLM_MODEL is missing.">mock_session = &lt;AsyncMock id='140115335625568'&gt;
+dummy_event = &lt;hermes_db.models.event.Event object at 0x7f6f24ff7750&gt;
+
+    #x1B[0m#x1B[94mdef#x1B[39;49;00m#x1B[90m #x1B[39;49;00m#x1B[92mtest_second_click_returns_cache#x1B[39;49;00m(mock_session, dummy_event):#x1B[90m#x1B[39;49;00m
+        #x1B[94masync#x1B[39;49;00m #x1B[94mdef#x1B[39;49;00m#x1B[90m #x1B[39;49;00m#x1B[92mrun_test#x1B[39;49;00m():#x1B[90m#x1B[39;49;00m
+            existing_tl = EventTl(#x1B[90m#x1B[39;49;00m
+                event_id=dummy_event.id,#x1B[90m#x1B[39;49;00m
+                status=#x1B[33m"#x1B[39;49;00m#x1B[33mREADY#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m,#x1B[90m#x1B[39;49;00m
+                nodes=[#x1B[90m#x1B[39;49;00m
+                    {#x1B[90m#x1B[39;49;00m
+                        #x1B[33m"#x1B[39;49;00m#x1B[33mid#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m: #x1B[33m"#x1B[39;49;00m#x1B[33mn1#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m,#x1B[90m#x1B[39;49;00m
+                        #x1B[33m"#x1B[39;49;00m#x1B[33mdate#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m: #x1B[33m"#x1B[39;49;00m#x1B[33m2023-01-01#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m,#x1B[90m#x1B[39;49;00m
+                        #x1B[33m"#x1B[39;49;00m#x1B[33mheadline#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m: #x1B[33m"#x1B[39;49;00m#x1B[33mH1#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m,#x1B[90m#x1B[39;49;00m
+                        #x1B[33m"#x1B[39;49;00m#x1B[33msummary#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m: #x1B[33m"#x1B[39;49;00m#x1B[33mS1#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m,#x1B[90m#x1B[39;49;00m
+                        #x1B[33m"#x1B[39;49;00m#x1B[33mlocation_name#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m: #x1B[33m"#x1B[39;49;00m#x1B[33mL1#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m,#x1B[90m#x1B[39;49;00m
+                        #x1B[33m"#x1B[39;49;00m#x1B[33mlatitude#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m: #x1B[94mNone#x1B[39;49;00m,#x1B[90m#x1B[39;49;00m
+                        #x1B[33m"#x1B[39;49;00m#x1B[33mlongitude#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m: #x1B[94mNone#x1B[39;49;00m,#x1B[90m#x1B[39;49;00m
+                    }#x1B[90m#x1B[39;49;00m
+                ],#x1B[90m#x1B[39;49;00m
+                edges=[],#x1B[90m#x1B[39;49;00m
+                tl_summary=#x1B[33m"#x1B[39;49;00m#x1B[33mCached#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m,#x1B[90m#x1B[39;49;00m
+                generated_at=datetime.now(UTC),#x1B[90m#x1B[39;49;00m
+            )#x1B[90m#x1B[39;49;00m
+            result_mock = MagicMock()#x1B[90m#x1B[39;49;00m
+            result_mock.scalar_one_or_none.return_value = existing_tl#x1B[90m#x1B[39;49;00m
+            mock_session.execute.return_value = result_mock#x1B[90m#x1B[39;49;00m
+            mock_session.get.return_value = dummy_event#x1B[90m#x1B[39;49;00m
+    #x1B[90m#x1B[39;49;00m
+            service = TlService(mock_session)#x1B[90m#x1B[39;49;00m
+            response = #x1B[94mawait#x1B[39;49;00m service.gen_tl(dummy_event.id)#x1B[90m#x1B[39;49;00m
+    #x1B[90m#x1B[39;49;00m
+            #x1B[94massert#x1B[39;49;00m response.status == #x1B[33m"#x1B[39;49;00m#x1B[33mREADY#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m#x1B[90m#x1B[39;49;00m
+            #x1B[94massert#x1B[39;49;00m response.tl_summary == #x1B[33m"#x1B[39;49;00m#x1B[33mCached#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m#x1B[90m#x1B[39;49;00m
+            #x1B[94massert#x1B[39;49;00m #x1B[96mlen#x1B[39;49;00m(response.nodes) == #x1B[94m1#x1B[39;49;00m#x1B[90m#x1B[39;49;00m
+            mock_session.add.assert_not_called()#x1B[90m#x1B[39;49;00m
+    #x1B[90m#x1B[39;49;00m
+&gt;       asyncio.run(run_test())#x1B[90m#x1B[39;49;00m
+
+#x1B[1m#x1B[31mtests/test_tl_service.py#x1B[0m:137: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+#x1B[1m#x1B[31m/home/pavan/.local/share/uv/python/cpython-3.14.6-linux-x86_64-gnu/lib/python3.14/asyncio/runners.py#x1B[0m:205: in run
+    #x1B[0m#x1B[94mreturn#x1B[39;49;00m runner.run(main)#x1B[90m#x1B[39;49;00m
+           ^^^^^^^^^^^^^^^^#x1B[90m#x1B[39;49;00m
+#x1B[1m#x1B[31m/home/pavan/.local/share/uv/python/cpython-3.14.6-linux-x86_64-gnu/lib/python3.14/asyncio/runners.py#x1B[0m:128: in run
+    #x1B[0m#x1B[94mreturn#x1B[39;49;00m #x1B[96mself#x1B[39;49;00m._loop.run_until_complete(task)#x1B[90m#x1B[39;49;00m
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^#x1B[90m#x1B[39;49;00m
+#x1B[1m#x1B[31m/home/pavan/.local/share/uv/python/cpython-3.14.6-linux-x86_64-gnu/lib/python3.14/asyncio/base_events.py#x1B[0m:719: in run_until_complete
+    #x1B[0m#x1B[94mreturn#x1B[39;49;00m future.result()#x1B[90m#x1B[39;49;00m
+           ^^^^^^^^^^^^^^^#x1B[90m#x1B[39;49;00m
+#x1B[1m#x1B[31mtests/test_tl_service.py#x1B[0m:129: in run_test
+    #x1B[0mservice = TlService(mock_session)#x1B[90m#x1B[39;49;00m
+              ^^^^^^^^^^^^^^^^^^^^^^^#x1B[90m#x1B[39;49;00m
+#x1B[1m#x1B[31msrc/hermes_api/services/tl_service.py#x1B[0m:32: in __init__
+    #x1B[0m#x1B[96mself#x1B[39;49;00m._ai = AiService()#x1B[90m#x1B[39;49;00m
+               ^^^^^^^^^^^#x1B[90m#x1B[39;49;00m
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = &lt;hermes_api.services.ai_service.AiService object at 0x7f6f24ee3250&gt;
+
+    #x1B[0m#x1B[94mdef#x1B[39;49;00m#x1B[90m #x1B[39;49;00m#x1B[92m__init__#x1B[39;49;00m(#x1B[96mself#x1B[39;49;00m) -&gt; #x1B[94mNone#x1B[39;49;00m:#x1B[90m#x1B[39;49;00m
+        #x1B[96mself#x1B[39;49;00m._primary_model = settings.LLM_MODEL#x1B[90m#x1B[39;49;00m
+        #x1B[96mself#x1B[39;49;00m._primary_api_key = settings.LLM_API#x1B[90m#x1B[39;49;00m
+        #x1B[96mself#x1B[39;49;00m._fallback_model = settings.LLM_MODEL_1#x1B[90m#x1B[39;49;00m
+        #x1B[96mself#x1B[39;49;00m._fallback_api_key = settings.LLM_API_1#x1B[90m#x1B[39;49;00m
+        #x1B[94mif#x1B[39;49;00m #x1B[95mnot#x1B[39;49;00m #x1B[96mself#x1B[39;49;00m._primary_api_key #x1B[95mor#x1B[39;49;00m #x1B[95mnot#x1B[39;49;00m #x1B[96mself#x1B[39;49;00m._primary_model:#x1B[90m#x1B[39;49;00m
+            logger.error(#x1B[33m"#x1B[39;49;00m#x1B[33mprimary llm api key or model is missing.#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m)#x1B[90m#x1B[39;49;00m
+&gt;           #x1B[94mraise#x1B[39;49;00m #x1B[96mValueError#x1B[39;49;00m(#x1B[33m"#x1B[39;49;00m#x1B[33mLLM_API or LLM_MODEL is missing.#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m)#x1B[90m#x1B[39;49;00m
+#x1B[1m#x1B[31mE           ValueError: LLM_API or LLM_MODEL is missing.#x1B[0m
+
+#x1B[1m#x1B[31msrc/hermes_api/services/ai_service.py#x1B[0m:350: ValueError</failure></testcase><testcase classname="tests.test_tl_service" name="test_concurrent_generation_returns_generating" time="0.008"><failure message="ValueError: LLM_API or LLM_MODEL is missing.">mock_session = &lt;AsyncMock id='140115335415520'&gt;
+dummy_event = &lt;hermes_db.models.event.Event object at 0x7f6f24d6e0d0&gt;
+
+    #x1B[0m#x1B[94mdef#x1B[39;49;00m#x1B[90m #x1B[39;49;00m#x1B[92mtest_concurrent_generation_returns_generating#x1B[39;49;00m(mock_session, dummy_event):#x1B[90m#x1B[39;49;00m
+        #x1B[94masync#x1B[39;49;00m #x1B[94mdef#x1B[39;49;00m#x1B[90m #x1B[39;49;00m#x1B[92mrun_test#x1B[39;49;00m():#x1B[90m#x1B[39;49;00m
+            existing_tl = EventTl(#x1B[90m#x1B[39;49;00m
+                event_id=dummy_event.id,#x1B[90m#x1B[39;49;00m
+                status=#x1B[33m"#x1B[39;49;00m#x1B[33mGENERATING#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m,#x1B[90m#x1B[39;49;00m
+            )#x1B[90m#x1B[39;49;00m
+            result_mock = MagicMock()#x1B[90m#x1B[39;49;00m
+            result_mock.scalar_one_or_none.return_value = existing_tl#x1B[90m#x1B[39;49;00m
+            mock_session.execute.return_value = result_mock#x1B[90m#x1B[39;49;00m
+            mock_session.get.return_value = dummy_event#x1B[90m#x1B[39;49;00m
+    #x1B[90m#x1B[39;49;00m
+            service = TlService(mock_session)#x1B[90m#x1B[39;49;00m
+            response = #x1B[94mawait#x1B[39;49;00m service.gen_tl(dummy_event.id)#x1B[90m#x1B[39;49;00m
+    #x1B[90m#x1B[39;49;00m
+            #x1B[94massert#x1B[39;49;00m response.status == #x1B[33m"#x1B[39;49;00m#x1B[33mGENERATING#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m#x1B[90m#x1B[39;49;00m
+            mock_session.commit.assert_not_called()#x1B[90m#x1B[39;49;00m
+    #x1B[90m#x1B[39;49;00m
+&gt;       asyncio.run(run_test())#x1B[90m#x1B[39;49;00m
+
+#x1B[1m#x1B[31mtests/test_tl_service.py#x1B[0m:157: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+#x1B[1m#x1B[31m/home/pavan/.local/share/uv/python/cpython-3.14.6-linux-x86_64-gnu/lib/python3.14/asyncio/runners.py#x1B[0m:205: in run
+    #x1B[0m#x1B[94mreturn#x1B[39;49;00m runner.run(main)#x1B[90m#x1B[39;49;00m
+           ^^^^^^^^^^^^^^^^#x1B[90m#x1B[39;49;00m
+#x1B[1m#x1B[31m/home/pavan/.local/share/uv/python/cpython-3.14.6-linux-x86_64-gnu/lib/python3.14/asyncio/runners.py#x1B[0m:128: in run
+    #x1B[0m#x1B[94mreturn#x1B[39;49;00m #x1B[96mself#x1B[39;49;00m._loop.run_until_complete(task)#x1B[90m#x1B[39;49;00m
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^#x1B[90m#x1B[39;49;00m
+#x1B[1m#x1B[31m/home/pavan/.local/share/uv/python/cpython-3.14.6-linux-x86_64-gnu/lib/python3.14/asyncio/base_events.py#x1B[0m:719: in run_until_complete
+    #x1B[0m#x1B[94mreturn#x1B[39;49;00m future.result()#x1B[90m#x1B[39;49;00m
+           ^^^^^^^^^^^^^^^#x1B[90m#x1B[39;49;00m
+#x1B[1m#x1B[31mtests/test_tl_service.py#x1B[0m:151: in run_test
+    #x1B[0mservice = TlService(mock_session)#x1B[90m#x1B[39;49;00m
+              ^^^^^^^^^^^^^^^^^^^^^^^#x1B[90m#x1B[39;49;00m
+#x1B[1m#x1B[31msrc/hermes_api/services/tl_service.py#x1B[0m:32: in __init__
+    #x1B[0m#x1B[96mself#x1B[39;49;00m._ai = AiService()#x1B[90m#x1B[39;49;00m
+               ^^^^^^^^^^^#x1B[90m#x1B[39;49;00m
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = &lt;hermes_api.services.ai_service.AiService object at 0x7f6f24e254f0&gt;
+
+    #x1B[0m#x1B[94mdef#x1B[39;49;00m#x1B[90m #x1B[39;49;00m#x1B[92m__init__#x1B[39;49;00m(#x1B[96mself#x1B[39;49;00m) -&gt; #x1B[94mNone#x1B[39;49;00m:#x1B[90m#x1B[39;49;00m
+        #x1B[96mself#x1B[39;49;00m._primary_model = settings.LLM_MODEL#x1B[90m#x1B[39;49;00m
+        #x1B[96mself#x1B[39;49;00m._primary_api_key = settings.LLM_API#x1B[90m#x1B[39;49;00m
+        #x1B[96mself#x1B[39;49;00m._fallback_model = settings.LLM_MODEL_1#x1B[90m#x1B[39;49;00m
+        #x1B[96mself#x1B[39;49;00m._fallback_api_key = settings.LLM_API_1#x1B[90m#x1B[39;49;00m
+        #x1B[94mif#x1B[39;49;00m #x1B[95mnot#x1B[39;49;00m #x1B[96mself#x1B[39;49;00m._primary_api_key #x1B[95mor#x1B[39;49;00m #x1B[95mnot#x1B[39;49;00m #x1B[96mself#x1B[39;49;00m._primary_model:#x1B[90m#x1B[39;49;00m
+            logger.error(#x1B[33m"#x1B[39;49;00m#x1B[33mprimary llm api key or model is missing.#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m)#x1B[90m#x1B[39;49;00m
+&gt;           #x1B[94mraise#x1B[39;49;00m #x1B[96mValueError#x1B[39;49;00m(#x1B[33m"#x1B[39;49;00m#x1B[33mLLM_API or LLM_MODEL is missing.#x1B[39;49;00m#x1B[33m"#x1B[39;49;00m)#x1B[90m#x1B[39;49;00m
+#x1B[1m#x1B[31mE           ValueError: LLM_API or LLM_MODEL is missing.#x1B[0m
+
+#x1B[1m#x1B[31msrc/hermes_api/services/ai_service.py#x1B[0m:350: ValueError</failure></testcase><testcase classname="tests.test_tl_service" name="test_no_wikipedia_match" time="0.053" /><testcase classname="tests.test_tl_service" name="test_force_refresh_regenerates" time="0.061" /><testcase classname="tests.test_wikipedia_service.TestSearchTimelineTitles" name="test_returns_titles_on_success" time="0.013" /><testcase classname="tests.test_wikipedia_service.TestSearchTimelineTitles" name="test_returns_empty_list_on_no_results" time="0.008" /><testcase classname="tests.test_wikipedia_service.TestSearchTimelineTitles" name="test_returns_empty_list_on_http_error" time="0.270" /><testcase classname="tests.test_wikipedia_service.TestSearchTimelineTitles" name="test_respects_limit_cap" time="0.013" /><testcase classname="tests.test_wikipedia_service.TestSearchTimelineTitles" name="test_user_agent_is_set" time="0.008" /><testcase classname="tests.test_wikipedia_service.TestFetchPageExtracts" name="test_returns_extract_for_single_title" time="0.008" /><testcase classname="tests.test_wikipedia_service.TestFetchPageExtracts" name="test_returns_none_for_missing_page" time="0.017" /><testcase classname="tests.test_wikipedia_service.TestFetchPageExtracts" name="test_returns_none_for_empty_extract" time="0.010" /><testcase classname="tests.test_wikipedia_service.TestFetchPageExtracts" name="test_batches_more_than_50_titles" time="0.013" /><testcase classname="tests.test_wikipedia_service.TestFetchPageExtracts" name="test_deduplicates_titles" time="0.012" /><testcase classname="tests.test_wikipedia_service.TestFetchPageExtracts" name="test_returns_empty_dict_for_empty_input" time="0.004" /><testcase classname="tests.test_wikipedia_service.TestFetchPageExtracts" name="test_returns_none_values_on_http_error" time="0.012" /><testcase classname="tests.test_wikipedia_service.TestFetchPageExtracts" name="test_user_agent_is_set_on_extract_request" time="0.008" /><testcase classname="tests.test_wikipedia_service.TestFetchPageExtracts" name="test_resolves_title_normalisation" time="0.010" /><testcase classname="tests.test_wikipedia_service.TestEdgeCases" name="test_multiple_titles_all_resolved" time="0.011" /><testcase classname="tests.test_wikipedia_service.TestEdgeCases" name="test_mixed_valid_and_missing_pages" time="0.029" /><testcase classname="tests.test_wikipedia_service.TestEdgeCases" name="test_batch_count[1-1]" time="0.007" /><testcase classname="tests.test_wikipedia_service.TestEdgeCases" name="test_batch_count[50-1]" time="0.013" /><testcase classname="tests.test_wikipedia_service.TestEdgeCases" name="test_batch_count[51-2]" time="0.462" /><testcase classname="tests.test_wikipedia_service.TestEdgeCases" name="test_batch_count[100-2]" time="0.010" /><testcase classname="tests.test_wikipedia_service.TestEdgeCases" name="test_batch_count[101-3]" time="0.011" /><testcase classname="tests.test_wikipedia_service.TestEnumerateTlPages" name="test_missing_main_page_returns_empty" time="0.003" /><testcase classname="tests.test_wikipedia_service.TestEnumerateTlPages" name="test_no_subpages_returns_main" time="0.004" /><testcase classname="tests.test_wikipedia_service.TestEnumerateTlPages" name="test_empty_sections_index_returns_subpages" time="0.005" /><testcase classname="tests.test_wikipedia_service.TestEnumerateTlPages" name="test_see_also_index_returns_subpages" time="0.004" /><testcase classname="tests.test_wikipedia_service.TestEnumerateTlPages" name="test_non_index_with_subpages_returns_main" time="0.005" /><testcase classname="tests.test_wikipedia_service.TestEnumerateTlPages" name="test_dash_normalization" time="0.004" /><testcase classname="tests.test_wikipedia_service.TestSortTimelineTitles" name="test_sorts_by_year" time="0.001" /><testcase classname="tests.test_wikipedia_service.TestSortTimelineTitles" name="test_sorts_by_month" time="0.002" /><testcase classname="tests.test_wikipedia_service.TestSortTimelineTitles" name="test_sorts_by_phase" time="0.002" /></testsuite></testsuites>

@@ -2,9 +2,9 @@ import asyncio
 import logging
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
+from hermes_db.services import EventService
+from hermes_db.session import AsyncSessionLocal
 from hermes_api.core.config import settings
-from hermes_api.db.db import AsyncSessionLocal
-from hermes_api.services.event_service import EventService
 from hermes_api.services.ingestion_service import IngestionService
 
 

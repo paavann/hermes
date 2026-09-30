@@ -1,10 +1,9 @@
-from hermes_db import close_db
-from hermes_db import init_db
 import logging
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from hermes_db import close_db, init_db
 from hermes_api.api.v1.router import api_router
 from hermes_api.core.config import settings
 from hermes_api.core.errors import register_err_handlers

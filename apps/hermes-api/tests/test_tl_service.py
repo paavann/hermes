@@ -3,8 +3,7 @@ import uuid
 from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
-from hermes_api.db.models.event import Event
-from hermes_api.db.models.event_tl import EventTl
+from hermes_db.models import Event, EventTl
 from hermes_api.services.tl_service import TlService
 
 

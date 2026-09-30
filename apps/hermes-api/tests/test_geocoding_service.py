@@ -4,7 +4,7 @@ import asyncio
 import time
 from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
-from hermes_api.db.models.geocode_cache import GeocodeCache
+from hermes_db.models import GeocodeCache
 from hermes_api.services import geocoding_service
 from hermes_api.services.geocoding_service import (
     _NOT_FOUND,
@@ -178,7 +178,7 @@ class TestGeocodingService:
                 res = await service._call_nominatim("Blocked Location", max_retries=2)
                 assert res is None
                 # Verify circuit breaker is now active
-                assert geocoding_service._circuit_open_until > time.monotonic()
+                assert service._resilience.circuit_open_until > time.monotonic()
 
                 # Subsequent call should immediately return None without calling httpx
                 mock_client.get.reset_mock()
@@ -187,6 +187,6 @@ class TestGeocodingService:
                 mock_client.get.assert_not_called()
 
             # Reset circuit breaker for subsequent tests
-            geocoding_service._circuit_open_until = 0.0
+            service._resilience.circuit_open_until = 0.0
 
         asyncio.run(run())

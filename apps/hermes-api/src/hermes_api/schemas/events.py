@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
+from hermes_db.enums import EventStatus, EventTlStatus
 from pydantic import BaseModel, ConfigDict
-from hermes_api.db.enums import EventStatus, EventTlStatus
 
 
 class ArticleResponse(BaseModel):
@@ -52,7 +52,6 @@ class TlNodeResponse(BaseModel):
     location_name: str | None
     latitude: float | None
     longitude: float | None
-    # Only set for the terminal "current event" node; None for historical Wikipedia nodes.
     category_color: str | None = None
 
 

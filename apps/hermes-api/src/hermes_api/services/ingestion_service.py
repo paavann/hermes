@@ -2,14 +2,14 @@ import asyncio
 import logging
 import uuid
 from datetime import UTC, datetime, timedelta
+from hermes_db.models import Source
+from hermes_db.services import EventService, GeocodeCacheService
+from hermes_db.session import AsyncSessionLocal
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from hermes_api.core.config import settings
 from hermes_api.core.rate_limiter import TokenBucketRateLimiter
-from hermes_api.db.db import AsyncSessionLocal
-from hermes_api.db.models.source import Source
 from hermes_api.services.ai_service import ARTICLE_BATCH_SIZE, AiService, ArticleInput
-from hermes_api.services.event_service import EventService
 from hermes_api.services.geocoding_service import GeocodingService
 from hermes_api.services.rss_service import ParsedArticle, fetch_feed
 
@@ -20,7 +20,6 @@ logger = logging.getLogger(__name__)
 class IngestionService:
     def __init__(self) -> None:
         self._ai = AiService()
-        self._geocoding = GeocodingService()
         self._rate_limiter = TokenBucketRateLimiter(settings.RPM_LIMIT)
         self._embed_rate_limiter = TokenBucketRateLimiter(settings.EMBED_RPM_LIMIT)
 
@@ -101,8 +100,8 @@ class IngestionService:
                             event_service = EventService(session)
                             geocoding = None
                             if extraction.has_location and extraction.location_name:
-                                geocoding = await self._geocoding.geocode(
-                                    session,
+                                geocoding_svc = GeocodingService(GeocodeCacheService(session))
+                                geocoding = await geocoding_svc.geocode(
                                     extraction.location_name,
                                 )
 
