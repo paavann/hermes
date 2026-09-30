@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
@@ -26,6 +28,7 @@ class Article(Base, UUIDPrimaryKeyMixin):
     title: Mapped[str] = mapped_column(Text)
     url: Mapped[str] = mapped_column(Text, unique=True)
     thumbnail_url: Mapped[str | None] = mapped_column(Text)
+
     published_at: Mapped[datetime | None] = mapped_column()
     ingested_at: Mapped[datetime] = mapped_column(server_default="now()")
     created_at: Mapped[datetime] = mapped_column(server_default="now()")

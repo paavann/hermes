@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from datetime import datetime
 from typing import TYPE_CHECKING
 
@@ -14,11 +16,13 @@ if TYPE_CHECKING:
 
 class Source(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     __tablename__ = "sources"
+
     name: Mapped[str] = mapped_column(String(255))
     slug: Mapped[str] = mapped_column(String(128), unique=True)
 
     url: Mapped[str] = mapped_column(Text)
     feed_url: Mapped[str | None] = mapped_column(Text)
+
     source_type: Mapped[SourceType] = mapped_column(default=SourceType.RSS)
     credibility: Mapped[CredibilityTier] = mapped_column(default=CredibilityTier.TIER_3)
 
