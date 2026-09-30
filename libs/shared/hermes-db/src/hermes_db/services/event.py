@@ -9,8 +9,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from hermes_db.core.config import settings
 from hermes_db.enums import CredibilityTier, EventStatus
-from hermes_db.models.article import Article
 from hermes_db.models.event import Event
+from hermes_db.services.article import ArticleService
 
 
 logger = logging.getLogger(__name__)
@@ -36,18 +36,22 @@ class GeocodingData(Protocol):
     longitude: float
 
 
+
+
+
 class EventService:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
+        self._article_service = ArticleService(session)
+
+
 
     async def create_event_with_article(
         self,
         extraction: EventExtractionData,
         geocoding: GeocodingData | None,
-        article_title: str,
-        article_url: str,
-        source_id: uuid.UUID,
-        source_credibility: CredibilityTier,
+        article_title: str, article_url: str,
+        source_id: uuid.UUID, source_credibility: CredibilityTier,
         published_at: datetime | None = None,
         embedding: list[float] | None = None,
     ) -> Event:
@@ -61,41 +65,35 @@ class EventService:
         initial_score = CREDIBILITY_WEIGHTS.get(source_credibility, 1.0)
 
         event = Event(
-            ai_headline=extraction.headline,
-            ai_summary=extraction.summary,
-            category=extraction.category,
-            category_color=extraction.category_color,
-            location=location_wkt,
-            location_name=extraction.location_name,
+            ai_headline=extraction.headline, ai_summary=extraction.summary,
+            category=extraction.category, category_color=extraction.category_color,
+            location=location_wkt, location_name=extraction.location_name,
             embedding=embedding,
-            trending_score=initial_score,
-            article_count=1,
-            first_reported_at=now,
-            last_updated_at=now,
+            trending_score=initial_score, article_count=1,
+            first_reported_at=now, last_updated_at=now,
         )
         self._session.add(event)
         await self._session.flush()
 
-        article = Article(
+        await self._article_service.create_article(
             event_id=event.id,
             source_id=source_id,
             title=article_title,
             url=article_url,
             published_at=published_at,
         )
-        self._session.add(article)
         await self._session.commit()
 
         logger.info("created event '%s' with 1 article.", event.ai_headline)
         return event
 
+
+
     async def add_article_to_event(
         self,
         event_id: uuid.UUID,
-        article_title: str,
-        article_url: str,
-        source_id: uuid.UUID,
-        source_credibility: CredibilityTier,
+        article_title: str, article_url: str,
+        source_id: uuid.UUID, source_credibility: CredibilityTier,
         published_at: datetime | None = None,
     ) -> Event | None:
         event = await self._session.get(Event, event_id)
@@ -103,14 +101,13 @@ class EventService:
             logger.warning("event not found for event id: %s.", event_id)
             return None
 
-        article = Article(
+        await self._article_service.create_article(
             event_id=event.id,
             source_id=source_id,
             title=article_title,
             url=article_url,
             published_at=published_at,
         )
-        self._session.add(article)
 
         event.article_count += 1
         added_score = CREDIBILITY_WEIGHTS.get(source_credibility, 1.0)
@@ -127,6 +124,8 @@ class EventService:
             event.article_count,
         )
         return event
+
+
 
     async def get_active_events(self) -> list[dict[str, str]]:
         stmt = (
@@ -151,9 +150,9 @@ class EventService:
             for event_id, headline, location_name, category in result.all()
         ]
 
-    async def get_active_events_by_embeddings(
-        self, embeddings: list[list[float]]
-    ) -> list[dict[str, str]]:
+
+
+    async def get_active_events_by_embeddings(self, embeddings: list[list[float]]) -> list[dict[str, str]]:
         if not embeddings:
             return []
 
@@ -186,10 +185,12 @@ class EventService:
 
         return list(unique_events.values())
 
+
+
     async def article_url_exists(self, url: str) -> bool:
-        stmt = select(Article.id).where(Article.url == url).limit(1)
-        result = await self._session.execute(stmt)
-        return result.scalar_one_or_none() is not None
+        return await self._article_service.article_url_exists(url)
+
+
 
     async def _transition_event_status(
         self, from_status: EventStatus, to_status: EventStatus, cutoff: datetime
