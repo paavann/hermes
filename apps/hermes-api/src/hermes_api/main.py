@@ -1,16 +1,15 @@
+from hermes_db import close_db
+from hermes_db import init_db
 import logging
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import text
 from hermes_api.api.v1.router import api_router
 from hermes_api.core.config import settings
 from hermes_api.core.errors import register_err_handlers
 from hermes_api.core.logger import setup_logging
-from hermes_api.db.db import AsyncSessionLocal, engine
 from hermes_api.scheduler.jobs import setup_scheduler, shutdown_scheduler
-from hermes_api.services.source_service import sync_sources_from_config
 
 
 setup_logging()
@@ -19,20 +18,7 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
-    try:
-        async with engine.begin() as conn:
-            await conn.execute(text("SELECT 1"))
-        logger.info("successfully connected to the database.")
-    except Exception:
-        logger.exception("failed to connect to the database.")
-        raise
-
-    try:
-        async with AsyncSessionLocal() as session:
-            await sync_sources_from_config(session)
-    except Exception:
-        logger.exception("failed to sync sources from config.")
-
+    await init_db()
     setup_scheduler()
 
     logger.info("hermes api running on port %s.", settings.API_PORT)
@@ -40,7 +26,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
 
     logger.info("shutting down server...")
     shutdown_scheduler()
-    await engine.dispose()
+    await close_db()
 
 
 app = FastAPI(title="hermes api", version=settings.VERSION, lifespan=lifespan)
