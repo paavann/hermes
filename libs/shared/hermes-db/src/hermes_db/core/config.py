@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     DB_PORT: int = 5432
     DB_NAME: str = "hermes"
     DB_USER: str = "postgres"
-    DB_PASSWORD: str = ""
+    DB_PASSWORD: str
 
     EVENT_STALE_HRS: int = 24
     EVENT_ARCHIVE_HRS: int = 48
