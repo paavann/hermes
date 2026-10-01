@@ -55,7 +55,9 @@ def clean_location_name(loc: str) -> str | None:
 
 
 class NominatimResilienceManager:
-    def __init__(self, min_request_interval: float = 1.5, circuit_cooldown_seconds: float = 120.0) -> None:
+    def __init__(
+        self, min_request_interval: float = 1.5, circuit_cooldown_seconds: float = 120.0
+    ) -> None:
         self.min_request_interval = min_request_interval
         self.circuit_cooldown_seconds = circuit_cooldown_seconds
         self.last_request_time: float = 0.0
@@ -77,9 +79,6 @@ class NominatimResilienceManager:
         if elapsed < self.min_request_interval:
             await asyncio.sleep(self.min_request_interval - elapsed)
         self.last_request_time = time.monotonic()
-
-
-
 
 
 class GeocodingService:
@@ -223,9 +222,10 @@ class GeocodingService:
                             await asyncio.sleep(2.0 * (attempt + 1))
                         else:
                             return None
-                    except (KeyError, ValueError, IndexError):
+                    except KeyError, ValueError, IndexError:
                         logger.exception(
-                            "Failed to parse Nominatim response for '%s'.", location_name
+                            "Failed to parse Nominatim response for '%s'.",
+                            location_name,
                         )
                         return None
 

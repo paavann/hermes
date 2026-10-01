@@ -12,9 +12,9 @@ def test_get_events_with_scope_parameter():
     with (
         patch("hermes_api.main.init_db", new_callable=AsyncMock),
         patch("hermes_api.main.close_db", new_callable=AsyncMock),
-        patch("hermes_api.main.setup_scheduler"),
-        patch("hermes_api.main.shutdown_scheduler"),
-        patch("hermes_api.api.v1.events.EventService.get_events", new_callable=AsyncMock) as mock_get_events,
+        patch(
+            "hermes_api.api.v1.events.EventService.get_events", new_callable=AsyncMock
+        ) as mock_get_events,
     ):
         mock_get_events.return_value = []
         with TestClient(app) as client:

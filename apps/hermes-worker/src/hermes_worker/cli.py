@@ -83,7 +83,6 @@ def main() -> None:
     parser = build_parser()
     args = parser.parse_args()
     force = getattr(args, "force", False)
-
     exit_code = asyncio.run(_run_command(command=args.command, force=force))
     sys.exit(exit_code)
 

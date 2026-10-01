@@ -6,15 +6,11 @@ This document provides backend-specific architectural context for the `hermes-ap
 
 ## 1. Application Role
 
-This is the **backend API and autonomous data ingestion engine** of Project Hermes. It is a Python application built with **FastAPI**, **SQLAlchemy 2.0 (Async)**, **PostGIS**, **pgvector**, and **LiteLLM**, using `uv` for dependency management and `@nxlv/python` for Nx integration. Its responsibilities are:
+This is the **stateless backend REST API and on-demand timeline synthesis engine** of Project Hermes. It is a Python application built with **FastAPI**, **SQLAlchemy 2.0 (Async)**, **PostGIS**, **pgvector**, and **LiteLLM**, using `uv` for dependency management and `@nxlv/python` for Nx integration. Its responsibilities are:
 
-1. **Ingest** raw news concurrently from RSS feeds on dynamic, per-source schedules.
-2. **Deduplicate** articles using `pgvector` half-precision semantic embeddings (`halfvec(2048)`) to avoid redundant LLM extraction.
-3. **Extract** structured geospatial metadata using LiteLLM (Mistral primary with NVIDIA NIM fallback) enforcing strict Pydantic v2 JSON schemas.
-4. **Geocode** location names into verified coordinates using OpenStreetMap Nominatim, shielded by an async rate limiter and persistent PostGIS cache.
-5. **Score & Decay** events via a Smart Editor algorithm weighting source credibility tiers and hourly 10% time decay.
-6. **Synthesize** on-demand historical causality graphs (`event_timelines`) from Wikipedia extracts to provide deep context.
-7. **Serve** processed events and bounding-box queries to the frontend via a high-performance REST API.
+1. **Serve** processed events and bounding-box queries to the frontend via a high-performance REST API.
+2. **Synthesize** on-demand historical causality graphs (`event_timelines`) from Wikipedia extracts to provide deep context.
+3. **Execute** zero background schedulers, adhering strictly to 12-factor stateless process architecture (autonomous RSS ingestion and lifecycle transitions are managed by `apps/hermes-worker`).
 
 ---
 
@@ -128,8 +124,7 @@ src/hermes_api/
 ├── api/v1/              # APIRouter modules (router.py, events.py, tl.py)
 ├── core/                # Settings (multi-env cascade), constants, rate limiter, custom exceptions
 ├── schemas/             # Pydantic v2 DTOs (events.py, errors.py)
-├── services/            # Ingestion, AI extraction, geocoding, RSS, timeline, and Wikipedia services
-├── scheduler/           # APScheduler background workers (jobs.py)
+├── services/            # AI extraction, geocoding, timeline, and Wikipedia services
 └── utils/               # Database transaction helpers (db.py)
 
 Shared Data Layer:

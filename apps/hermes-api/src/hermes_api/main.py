@@ -8,7 +8,6 @@ from hermes_api.api.v1.router import api_router
 from hermes_api.core.config import settings
 from hermes_api.core.errors import register_err_handlers
 from hermes_api.core.logger import setup_logging
-from hermes_api.scheduler.jobs import setup_scheduler, shutdown_scheduler
 
 
 setup_logging()
@@ -24,13 +23,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
         settings.DB_NAME,
     )
     await init_db(db_url=settings.db_url)
-    setup_scheduler()
 
     logger.info("hermes api running on port %s.", settings.API_PORT)
     yield
 
     logger.info("shutting down server...")
-    shutdown_scheduler()
     await close_db()
 
 

@@ -4,7 +4,6 @@ from typing import Any
 from hermes_db.enums import EventTlStatus
 from hermes_db.models import Event, EventTl
 from hermes_db.services.tl import EventTlService
-
 from hermes_api.core.exceptions import (
     EventNotFoundException,
     TlGenErr,
@@ -198,9 +197,13 @@ class TlService:
                     message="Timeline is currently being generated. Please wait...",
                 )
             else:
-                await self._tl_db.update_tl_status(existing_tl, EventTlStatus.GENERATING)
+                await self._tl_db.update_tl_status(
+                    existing_tl, EventTlStatus.GENERATING
+                )
         else:
-            existing_tl = await self._tl_db.create_tl(event_id, EventTlStatus.GENERATING)
+            existing_tl = await self._tl_db.create_tl(
+                event_id, EventTlStatus.GENERATING
+            )
 
         try:
             return await self._exec_gen(event, existing_tl)

@@ -1,13 +1,13 @@
 import uuid
 from typing import Annotated
 from fastapi import APIRouter, Depends, Path, Query
+from hermes_db.services import GeocodeCacheService
+from hermes_db.services.tl import EventTlService
 from hermes_db.session import get_db
 from sqlalchemy.ext.asyncio import AsyncSession
 from hermes_api.schemas.events import TlResponse
-from hermes_api.services.tl_service import TlService
 from hermes_api.services.geocoding_service import GeocodingService
-from hermes_db.services import GeocodeCacheService
-from hermes_db.services.tl import EventTlService
+from hermes_api.services.tl_service import TlService
 
 
 router = APIRouter()

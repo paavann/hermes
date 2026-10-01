@@ -5,7 +5,6 @@ import time
 from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from hermes_db.models import GeocodeCache
-from hermes_api.services import geocoding_service
 from hermes_api.services.geocoding_service import (
     _NOT_FOUND,
     GeocodingResult,

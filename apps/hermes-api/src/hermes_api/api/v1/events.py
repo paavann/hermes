@@ -18,7 +18,6 @@ async def get_event_service(db: AsyncSession = Depends(get_db)) -> EventService:
     return EventService(db)
 
 
-
 @router.get("/", response_model=list[EventResponse])
 async def get_events(
     status: EventStatus | None = Query(
@@ -32,7 +31,6 @@ async def get_events(
 ) -> list[EventResponse]:
     events = await event_service.get_events(status=status, scope=scope, limit=limit)
     return [EventResponse.model_validate(e) for e in events]
-
 
 
 @router.get("/bbox", response_model=list[MapEventResponse])
@@ -54,14 +52,16 @@ async def get_events_by_bbox(
         MapEventResponse(
             id=row.Event.id,
             ai_headline=row.Event.ai_headline,
-            category=row.Event.category, category_color=row.Event.category_color,
+            category=row.Event.category,
+            category_color=row.Event.category_color,
             location_name=row.Event.location_name,
-            latitude=row.latitude, longitude=row.longitude,
-            trending_score=row.Event.trending_score, article_count=row.Event.article_count,
+            latitude=row.latitude,
+            longitude=row.longitude,
+            trending_score=row.Event.trending_score,
+            article_count=row.Event.article_count,
         )
         for row in rows
     ]
-
 
 
 @router.get("/{event_id}", response_model=EventDetailResponse)
@@ -73,4 +73,3 @@ async def get_event(
         raise HTTPException(status_code=404, detail="event not found.")
     else:
         return EventDetailResponse.model_validate(event, from_attributes=True)
-
