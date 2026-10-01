@@ -1,6 +1,6 @@
 import logging
-import litellm
 from collections.abc import Callable, Sequence
+import litellm
 from pydantic import BaseModel, Field, field_validator
 from hermes_worker.core.config import settings
 from hermes_worker.core.constants import PREDEFINED_CATEGORIES
@@ -32,11 +32,7 @@ def _coerce_to_str(v: object) -> str:
             or v.get("summary")
             or v.get("headline")
             or next(
-                (
-                    val
-                    for val in v.values()
-                    if isinstance(val, str) and val.strip()
-                ),
+                (val for val in v.values() if isinstance(val, str) and val.strip()),
                 "",
             )
             or str(v)
@@ -189,7 +185,8 @@ def _resolve_category_color(event: ExtractedEvent) -> ExtractedEvent:
 def _reidx_results[T, V](
     raw_results: Sequence[T],
     count: int,
-    get_idx: Callable[[T], int], get_val: Callable[[T], V],
+    get_idx: Callable[[T], int],
+    get_val: Callable[[T], V],
     duplicate_lbl: str,
 ) -> list[V | None]:
     by_idx: dict[int, V] = {}
@@ -256,10 +253,10 @@ class AiService:
             self._embed_model,
         )
 
-
     async def _call_llm(
         self,
-        sys_prompt: str, user_prompt: str,
+        sys_prompt: str,
+        user_prompt: str,
         res_model: type[BaseModel],
         schema_name: str,
     ) -> BaseModel | None:
@@ -288,7 +285,6 @@ class AiService:
         except Exception as e:
             logger.error("llm call failed for %s: %s.", schema_name, e)
             return None
-
 
     async def get_metadata(
         self, articles: list[ArticleInput], existing_events: list[dict[str, str]]
@@ -328,7 +324,6 @@ class AiService:
                     "no extraction for article %s: '%s...'.", i, article.title[:120]
                 )
         return ordered_results
-
 
     async def gen_embeddings(self, texts: list[str]) -> list[list[float] | None]:
         if not texts:

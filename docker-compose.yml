@@ -37,6 +37,27 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  hermes-worker:
+    build:
+      context: .
+      dockerfile: apps/hermes-worker/Dockerfile
+    volumes:
+      - ./apps/hermes-worker/src:/app/apps/hermes-worker/src
+    env_file:
+      - .env.development
+      - path: ./apps/hermes-worker/.env.development
+        required: false
+      - path: ./apps/hermes-worker/.env.local
+        required: false
+      - path: ./apps/hermes-api/.env.development
+        required: false
+      - path: ./apps/hermes-api/.env.local
+        required: false
+    depends_on:
+      hermes-db:
+        condition: service_healthy
+    profiles: ["worker"]
+
   hermes:
     build:
       context: .

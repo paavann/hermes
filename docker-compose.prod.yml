@@ -13,6 +13,20 @@ services:
       ENV: production
     restart: always
 
+  hermes-worker:
+    build:
+      context: .
+      dockerfile: apps/hermes-worker/Dockerfile
+    env_file:
+      - .env.production
+      - path: ./apps/hermes-worker/.env.production
+        required: false
+      - path: ./apps/hermes-api/.env.production
+        required: false
+    environment:
+      ENV: production
+    profiles: ["worker"]
+
   hermes:
     build:
       context: .
