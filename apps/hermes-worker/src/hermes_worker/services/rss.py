@@ -1,0 +1,106 @@
+import logging
+from datetime import datetime
+import feedparser
+import httpx
+from pydantic import BaseModel, computed_field
+from hermes_worker.core.config import settings
+
+
+logger = logging.getLogger(__name__)
+MAX_WORDS: int = 500
+
+
+class ParsedArticle(BaseModel):
+    title: str
+    url: str
+    description: str
+    content: str | None = None
+    published_at: datetime | None = None
+
+    @computed_field
+    @property
+    def text_for_ai(self) -> str:
+        if self.content:
+            return _truncate_to_words(self.content, MAX_WORDS)
+        return self.description
+
+
+def _parse_date(entry: dict) -> datetime | None:
+    parsed_time = entry.get("published_parsed")
+    if parsed_time:
+        try:
+            return datetime(*parsed_time[:6])
+        except ValueError, TypeError:
+            return None
+    return None
+
+
+def _truncate_to_words(text: str, max_words: int) -> str:
+    words = text.split()
+    if len(words) <= max_words:
+        return text
+    return " ".join(words[:max_words]) + "..."
+
+
+def _extract_content(entry: dict) -> str | None:
+    content_list = entry.get("content", [])
+    if content_list:
+        return content_list[0].get("value", "").strip() or None
+
+    encoded = entry.get("content_encoded", "")
+    if encoded:
+        return encoded.strip() or None
+
+    return None
+
+
+async def fetch_feed(feed_url: str) -> list[ParsedArticle]:
+    try:
+        async with httpx.AsyncClient() as client:
+            res = await client.get(
+                feed_url,
+                timeout=30.0,
+                follow_redirects=True,
+                headers={"User-Agent": settings.NOMINATIM_USER_AGENT},
+            )
+            res.raise_for_status()
+    except httpx.TimeoutException:
+        logger.warning(
+            "timeout fetching RSS feed %s (> 30s). Skipping source.", feed_url
+        )
+        return []
+    except httpx.HTTPError as exc:
+        logger.warning("failed to fetch RSS feed %s: %s.", feed_url, exc)
+        return []
+
+    feed = feedparser.parse(res.text)
+    if feed.bozo and not feed.bozo_exception:
+        logger.warning("malformed feed with no entries: %s.", feed_url)
+        return []
+
+    articles: list[ParsedArticle] = []
+    for entry in feed.entries:
+        title_val = entry.get("title")
+        title = title_val.strip() if isinstance(title_val, str) else ""
+
+        url_val = entry.get("link")
+        url = url_val.strip() if isinstance(url_val, str) else ""
+        if not title or not url:
+            continue
+
+        desc_val = entry.get("summary")
+        description = desc_val.strip() if isinstance(desc_val, str) else ""
+        content = _extract_content(entry)
+        pub_at = _parse_date(entry)
+        articles.append(
+            ParsedArticle(
+                title=title,
+                url=url,
+                description=description,
+                content=content,
+                published_at=pub_at,
+            )
+        )
+
+    logger.info("fetched %d articles from %s", len(articles), feed_url)
+    return articles

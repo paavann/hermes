@@ -2,7 +2,7 @@
   "name": "hermes-worker",
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
   "projectType": "application",
-  "sourceRoot": "apps/hermes-worker/hermes_worker",
+  "sourceRoot": "apps/hermes-worker/src",
   "targets": {
     "lock": {
       "executor": "@nxlv/python:lock",
@@ -72,6 +72,13 @@
         "args": "",
         "verbose": false,
         "debug": false
+      }
+    },
+    "run": {
+      "executor": "@nxlv/python:run-commands",
+      "options": {
+        "command": "uv run python -m hermes_worker.cli",
+        "cwd": "{projectRoot}"
       }
     }
   },

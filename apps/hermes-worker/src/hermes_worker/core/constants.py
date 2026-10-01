@@ -1,4 +1,4 @@
-PREDEFINED_CATEGORIES: dict[str, dict[str, str]] = {       
+PREDEFINED_CATEGORIES: dict[str, dict[str, str]] = {
     "CONFLICT": {
         "display_name": "Conflict & Crisis",
         "color": "#EF4444",
@@ -12,7 +12,7 @@ PREDEFINED_CATEGORIES: dict[str, dict[str, str]] = {
         "color": "#22C55E",
     },
     "POLITICS": {
-        "display_name": "Politics & Governance",           
+        "display_name": "Politics & Governance",
         "color": "#3B82F6",
     },
     "TECHNOLOGY": {
@@ -28,7 +28,7 @@ PREDEFINED_CATEGORIES: dict[str, dict[str, str]] = {
         "color": "#EC4899",
     },
     "ENVIRONMENT": {
-        "display_name": "Environment & Climate",           
+        "display_name": "Environment & Climate",
         "color": "#14B8A6",
     },
     "SPORTS": {
@@ -36,7 +36,7 @@ PREDEFINED_CATEGORIES: dict[str, dict[str, str]] = {
         "color": "#F97316",
     },
     "ENTERTAINMENT": {
-        "display_name": "Entertainment & Culture",         
+        "display_name": "Entertainment & Culture",
         "color": "#EAB308",
-    },                                                     
+    },
 }

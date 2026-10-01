@@ -29,7 +29,7 @@ class Settings(BaseSettings):
     # fallback llm credentials.
     LLM_API_1: str | None = None
     LLM_MODEL_1: str | None = None
-  
+
     # primary embedding credentials.
     EMBED_API: str = ""
     EMBED_MODEL: str = ""
@@ -37,7 +37,7 @@ class Settings(BaseSettings):
     # fallback embeddings credentials.
     EMBED_API_1: str | None = None
     EMBED_MODEL_1: str | None = None
-  
+
     # rate limits.
     RPM_LIMIT: int = 26
     EMBED_RPM_LIMIT: int = 90
@@ -52,7 +52,6 @@ class Settings(BaseSettings):
     INGESTION_INTERVAL_MIN: int = 360
     EVENT_STALE_HOURS: int = 24
     EVENT_ARCHIVE_HOURS: int = 48
-
 
     @property
     def db_url(self) -> URL:
@@ -71,10 +70,9 @@ class Settings(BaseSettings):
         )
 
 
-
 @lru_cache
 def get_settings() -> Settings:
-    env = os.getenv("ENV", "development").lower()          
+    env = os.getenv("ENV", "development").lower()
     return Settings(
         _env_file=(
             "../../.env",
@@ -87,5 +85,6 @@ def get_settings() -> Settings:
             f".env.{env}.local",
         )
     )
+
 
 settings = get_settings()
