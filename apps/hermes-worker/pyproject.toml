@@ -1,0 +1,98 @@
+[tool.coverage.run]
+branch = true
+source = [ "src" ]
+
+[tool.coverage.report]
+exclude_lines = ['if TYPE_CHECKING:']
+show_missing = true
+
+[tool.pytest.ini_options]
+addopts = """
+ --cov
+ --cov-report html:'../../coverage/apps/hermes-worker/html'
+ --cov-report xml:'../../coverage/apps/hermes-worker/coverage.xml'
+ --html='../../reports/apps/hermes-worker/unittests/html/index.html'
+ --junitxml='../../reports/apps/hermes-worker/unittests/junit.xml'
+"""
+
+[project]
+name = "hermes-worker"
+version = "1.0.0"
+description = "Hermes Worker."
+requires-python = ">=3.14"
+readme = 'README.md'
+dependencies = [
+  "hermes-db",
+  "asyncpg>=0.31.0",
+  "feedparser>=6.0.12",
+  "geoalchemy2>=0.17.1",
+  "httpx>=0.28.1",
+  "litellm>=1.83.0",
+  "pydantic-settings>=2.11.0",
+  "python-dotenv>=1.2.1",
+]
+
+
+[dependency-groups]
+dev = [
+  "autopep8>=2.3.1",
+  "ruff>=0.8.2",
+  "pytest>=8.3.4",
+  "pytest-sugar>=1.0.0",
+  "pytest-cov>=6.0.0",
+  "pytest-html>=4.1.1",
+]
+
+[build-system]
+requires = ["uv_build>=0.8.9,<0.9.0"]
+build-backend = "uv_build"
+
+[tool.ruff]
+exclude = [
+  ".ruff_cache",
+  ".svn",
+  ".tox",
+  ".venv",
+  "dist",
+]
+
+line-length = 88
+indent-width = 4
+
+[tool.ruff.lint]
+select = [
+  # pycodestyle
+  "E",
+  # Pyflakes
+  "F",
+  # pyupgrade
+  "UP",
+  # flake8-bugbear
+  "B",
+  # flake8-simplify
+  "SIM",
+  # isort
+  "I",
+  # Disallow explicit use of typing.Any
+  "ANN401", 
+]
+ignore = [
+  # Line length is formatted via ruff format
+  "E501", 
+]
+
+fixable = ["ALL"]
+unfixable = []
+
+[tool.ruff.lint.isort]
+lines-after-imports = 2
+known-first-party = ["src"]
+no-lines-before = [
+  "standard-library", "third-party", "first-party", "local-folder"
+]
+
+[tool.ruff.lint.flake8-annotations]
+allow-star-arg-any = true
+
+[tool.uv.sources]
+hermes-db = { path = "../../libs/shared/hermes-db", editable = true }
