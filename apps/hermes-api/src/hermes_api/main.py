@@ -17,7 +17,13 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
-    await init_db()
+    logger.info(
+        "initializing database connection to %s:%s/%s...",
+        settings.DB_HOST,
+        settings.DB_PORT,
+        settings.DB_NAME,
+    )
+    await init_db(db_url=settings.db_url)
     setup_scheduler()
 
     logger.info("hermes api running on port %s.", settings.API_PORT)

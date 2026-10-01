@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     DB_PORT: int = 5432
     DB_NAME: str = "hermes"
     DB_USER: str = "postgres"
-    DB_PASSWORD: str
+    DB_PASSWORD: str = ""
 
     EVENT_STALE_HRS: int = 24
     EVENT_ARCHIVE_HRS: int = 48
@@ -40,13 +40,17 @@ class Settings(BaseSettings):
 
 @lru_cache
 def get_settings() -> Settings:
-    env = os.getenv("ENV", "development")
+    env = os.getenv("ENV", "development").lower()
     return Settings(
         _env_file=(
-            f".env.{env}",
-            ".env",
-            f"../../../.env.{env}",
             "../../../.env",
+            f"../../../.env.{env}",
+            "../../../.env.local",
+            f"../../../.env.{env}.local",
+            ".env",
+            f".env.{env}",
+            ".env.local",
+            f".env.{env}.local",
         )
     )
 

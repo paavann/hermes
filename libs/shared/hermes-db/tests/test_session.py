@@ -174,6 +174,42 @@ class TestInitDb:
 
         assert any("failed to sync" in r.message for r in caplog.records)
 
+    def test_reconfigures_engine_when_db_url_provided(self):
+        """When db_url is passed, a new engine must be created and AsyncSessionLocal reconfigured."""
+        old_engine = self._make_engine_mock()
+        old_engine.dispose = AsyncMock()
+
+        new_engine = self._make_engine_mock()
+        new_engine.dispose = AsyncMock()
+
+        mock_session = AsyncMock()
+        mock_session.__aenter__ = AsyncMock(return_value=mock_session)
+        mock_session.__aexit__ = AsyncMock(return_value=False)
+        mock_factory = MagicMock(return_value=mock_session)
+        mock_factory.configure = MagicMock()
+
+        with (
+            patch("hermes_db.session.engine", old_engine),
+            patch("hermes_db.session.create_async_engine", return_value=new_engine) as mock_create,
+            patch("hermes_db.session.AsyncSessionLocal", mock_factory),
+            patch("hermes_db.session.sync_sources_from_config", new_callable=AsyncMock),
+        ):
+            from hermes_db.session import init_db
+
+            custom_url = "postgresql+asyncpg://user:pass@dbhost:5432/custom_db"
+            run(init_db(db_url=custom_url))
+
+            old_engine.dispose.assert_awaited_once()
+            mock_create.assert_called_once_with(
+                custom_url,
+                echo=False,
+                pool_size=5,
+                pool_pre_ping=True,
+                max_overflow=10,
+                connect_args={"statement_cache_size": 0},
+            )
+            mock_factory.configure.assert_called_once_with(bind=new_engine)
+
 
 # ---------------------------------------------------------------------------
 # close_db

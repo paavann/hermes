@@ -1,3 +1,4 @@
+import os
 from functools import lru_cache
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy import URL
@@ -5,23 +6,22 @@ from sqlalchemy import URL
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=(".env", ".env.local", "../../.env"),
         env_file_encoding="utf-8",
         extra="ignore",
     )
 
     # server metadata.
     APP: str = "hermes"
-    ENV: str = "dev"
+    ENV: str = "development"
     API_PORT: int
-    VERSION: str = ""
+    VERSION: str = "1.0.0"
     API_BASE_PATH: str = "/api/v1"
 
     # db credentials.
     DB_HOST: str = "localhost"
     DB_PORT: int = 5432
     DB_USER: str = "postgres"
-    DB_PASSWORD: str = ""
+    DB_PASSWORD: str
     DB_NAME: str = "hermes"
 
     # primary llm credentials.
@@ -75,7 +75,19 @@ class Settings(BaseSettings):
 
 @lru_cache
 def get_settings() -> Settings:
-    return Settings()
+    env = os.getenv("ENV", "development").lower()
+    return Settings(
+        _env_file=(
+            "../../.env",
+            f"../../.env.{env}",
+            "../../.env.local",
+            f"../../.env.{env}.local",
+            ".env",
+            f".env.{env}",
+            ".env.local",
+            f".env.{env}.local",
+        )
+    )
 
 
 settings = get_settings()
