@@ -1,9 +1,8 @@
 import uuid
-from collections.abc import AsyncGenerator
 from fastapi import APIRouter, Depends, HTTPException, Query
-from hermes_db.enums import EventStatus
-from hermes_db.session import AsyncSessionLocal
+from hermes_db.enums import EventScope, EventStatus
 from hermes_db.services.event import EventService
+from hermes_db.session import get_db
 from sqlalchemy.ext.asyncio import AsyncSession
 from hermes_api.schemas.events import (
     EventDetailResponse,
@@ -13,11 +12,6 @@ from hermes_api.schemas.events import (
 
 
 router = APIRouter()
-
-
-async def get_db() -> AsyncGenerator[AsyncSession]:
-    async with AsyncSessionLocal() as session:
-        yield session
 
 
 async def get_event_service(db: AsyncSession = Depends(get_db)) -> EventService:
@@ -30,7 +24,7 @@ async def get_events(
     status: EventStatus | None = Query(
         EventStatus.ACTIVE, description="filter events by status."
     ),
-    scope: EventStatus | None = Query(None, description="filter by event scope."),
+    scope: EventScope | None = Query(None, description="filter by event scope."),
     limit: int = Query(
         50, ge=1, le=200, description="maximum number of events to return."
     ),

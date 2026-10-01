@@ -10,7 +10,7 @@ from sqlalchemy.orm import selectinload
 from geoalchemy2.functions import ST_X, ST_Y, ST_MakeEnvelope, ST_Within
 
 from hermes_db.core.config import settings
-from hermes_db.enums import CredibilityTier, EventStatus
+from hermes_db.enums import CredibilityTier, EventScope, EventStatus
 from hermes_db.models.event import Event
 from hermes_db.services.article import ArticleService
 
@@ -130,7 +130,10 @@ class EventService:
 
 
     async def get_events(
-        self, status: EventStatus | None = EventStatus.ACTIVE, scope: EventStatus | None = None, limit: int = 50,
+        self,
+        status: EventStatus | None = EventStatus.ACTIVE,
+        scope: EventScope | None = None,
+        limit: int = 50,
     ) -> list[Event]:
         stmt = select(Event)
         if status:
