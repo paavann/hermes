@@ -126,10 +126,12 @@ Managed globally via `register_err_handlers()`:
 src/hermes_api/
 ├── main.py              # FastAPI app factory, lifespan, CORS, error handler registration
 ├── api/v1/              # APIRouter modules (router.py, events.py, tl.py)
-├── core/                # Settings, constants, rate limiter, custom exceptions, sources.json
-├── db/                  # Async engine, session, enums, declarative models (Event, Article, Source, GeocodeCache, EventTl)
+├── core/                # Settings (multi-env cascade), constants, rate limiter, custom exceptions
 ├── schemas/             # Pydantic v2 DTOs (events.py, errors.py)
-├── services/            # Business logic (ingestion, ai, event, geocoding, rss, source, tl, wikipedia)
+├── services/            # Ingestion, AI extraction, geocoding, RSS, timeline, and Wikipedia services
 ├── scheduler/           # APScheduler background workers (jobs.py)
 └── utils/               # Database transaction helpers (db.py)
+
+Shared Data Layer:
+└── libs/shared/hermes-db/ # Shared models (Event, Article, Source, GeocodeCache, EventTl), Alembic migrations, session management, and DB services
 ```

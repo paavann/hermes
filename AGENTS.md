@@ -129,6 +129,7 @@ This is an Nx monorepo. The workspace contains the following projects:
 | **`hermes-api`** | `apps/hermes-api/` | Python backend — ingestion, AI, and REST API | FastAPI, SQLAlchemy 2.0 Async, PostGIS, pgvector (`halfvec`), LiteLLM, APScheduler, feedparser, uv |
 | **`hermes-e2e`** | `apps/hermes-e2e/` | End-to-end browser tests | Playwright |
 | **`@hermes/feature-map`** | `libs/feature-map/` | Mapbox GL WebGL implementation & timeline drawer | Mapbox GL JS, Zustand store, TanStack Query hooks, `MapView`, `EventPopup`, `TlPanel` |
+| **`hermes-db`** | `libs/shared/hermes-db/` | Shared PostGIS + pgvector models, migrations & DB services | SQLAlchemy 2.0 Async, PostGIS, pgvector (`halfvec`), GeoAlchemy2, Alembic, uv |
 | **`@hermes/ui-components`** | `libs/shared/ui-components/`| Tactical Mission Control HUD widgets | React 19, Tailwind CSS 4, `BootSequence`, `LiveClock` |
 | **`@hermes/util-types`** | `libs/shared/util-types/` | Shared TypeScript API response interfaces | TypeScript interfaces (`MapEventResponse`, `EventDetailResponse`, `TlResponse`) |
 | **`@hermes/utils`** | `libs/shared/utils/` | Cross-cutting shared utility helpers | TypeScript |
@@ -137,6 +138,7 @@ Each app has its own `AGENTS.md` and `README.md` with detailed, app-specific arc
 
 - **Frontend context**: See `apps/hermes/AGENTS.md` and `apps/hermes/README.md`
 - **Backend context**: See `apps/hermes-api/AGENTS.md` and `apps/hermes-api/README.md`
+- **Database context**: See `libs/shared/hermes-db/AGENTS.md` and `libs/shared/hermes-db/README.md`
 - **Strict coding rules**: See `.agents/rules/`
 
 ---
