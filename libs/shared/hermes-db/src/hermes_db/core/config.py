@@ -1,6 +1,7 @@
 import os
 from functools import lru_cache
 
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy import URL
 
@@ -17,7 +18,7 @@ class Settings(BaseSettings):
     DB_PORT: int = 5432
     DB_NAME: str = "hermes"
     DB_USER: str = "postgres"
-    DB_PASSWORD: str = ""
+    DB_PASSWORD: str = Field(..., min_length=1)
 
     EVENT_STALE_HRS: int = 24
     EVENT_ARCHIVE_HRS: int = 48
@@ -47,6 +48,10 @@ def get_settings() -> Settings:
             f"../../../.env.{env}",
             "../../../.env.local",
             f"../../../.env.{env}.local",
+            "../../.env",
+            f"../../.env.{env}",
+            "../../.env.local",
+            f"../../.env.{env}.local",
             ".env",
             f".env.{env}",
             ".env.local",

@@ -63,12 +63,20 @@ class TestSettingsDefaults:
         s = _make_settings()
         assert s.EVENT_ARCHIVE_HRS == 48
 
-    def test_db_password_is_required(self):
+    def test_db_password_is_required(self, monkeypatch):
         """DB_PASSWORD has no default — pydantic must raise if omitted."""
         from pydantic import ValidationError
 
+        monkeypatch.delenv("DB_PASSWORD", raising=False)
         with pytest.raises(ValidationError):
             Settings()  # no DB_PASSWORD provided
+
+    def test_db_password_cannot_be_empty(self):
+        """DB_PASSWORD cannot be an empty string — min_length=1 enforced."""
+        from pydantic import ValidationError
+
+        with pytest.raises(ValidationError):
+            Settings(DB_PASSWORD="")
 
 
 # ---------------------------------------------------------------------------
