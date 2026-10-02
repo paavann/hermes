@@ -6,11 +6,15 @@ the upsert/disable logic in isolation.
 
 import asyncio
 import json
+import uuid
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from hermes_db.models import Source
 from hermes_db.services.source import (
+    DueSource,
+    SourceService,
     _load_sources_config,
     sync_sources_from_config,
 )
@@ -314,4 +318,78 @@ def test_sync_reactivates_inactive_source():
 
     assert stats["updated"] == 1
     assert existing.is_active is True
+
+
+# --- Tests for SourceService ---
+
+
+def test_source_service_get_due_sources():
+    """Should return sources that are due for fetching."""
+    now = datetime.now(UTC)
+    source_id1 = uuid.uuid4()
+    source_id2 = uuid.uuid4()
+    source_id3 = uuid.uuid4()
+
+    # Source 1: never fetched -> should be due
+    s1 = _make_source("s1", name="S1", feed_url="https://s1.com/rss")
+    s1.id = source_id1
+    s1.fetch_interval_minutes = 15
+    s1.last_fetched_at = None
+
+    # Source 2: fetched 5 mins ago (interval 15) -> not due
+    s2 = _make_source("s2", name="S2", feed_url="https://s2.com/rss")
+    s2.id = source_id2
+    s2.fetch_interval_minutes = 15
+    s2.last_fetched_at = now - timedelta(minutes=5)
+
+    # Source 3: fetched 20 mins ago (interval 15) -> due
+    s3 = _make_source("s3", name="S3", feed_url="https://s3.com/rss")
+    s3.id = source_id3
+    s3.fetch_interval_minutes = 15
+    s3.last_fetched_at = now - timedelta(minutes=20)
+
+    session = AsyncMock()
+    mock_result = MagicMock()
+    mock_result.scalars.return_value.all.return_value = [s1, s2, s3]
+    session.execute.return_value = mock_result
+
+    service = SourceService(session)
+    due = asyncio.run(service.get_due_sources(force=False))
+
+    assert len(due) == 2
+    assert [d.name for d in due] == ["S1", "S3"]
+    assert isinstance(due[0], DueSource)
+    assert due[0].id == source_id1
+    assert due[0].feed_url == "https://s1.com/rss"
+
+
+def test_source_service_get_due_sources_force():
+    """Should return all sources when force=True."""
+    now = datetime.now(UTC)
+    s1 = _make_source("s1", name="S1", feed_url="https://s1.com/rss")
+    s1.id = uuid.uuid4()
+    s1.fetch_interval_minutes = 15
+    s1.last_fetched_at = now - timedelta(minutes=2)
+
+    session = AsyncMock()
+    mock_result = MagicMock()
+    mock_result.scalars.return_value.all.return_value = [s1]
+    session.execute.return_value = mock_result
+
+    service = SourceService(session)
+    due = asyncio.run(service.get_due_sources(force=True))
+
+    assert len(due) == 1
+    assert due[0].name == "S1"
+
+
+def test_source_service_update_last_fetched():
+    """Should execute an update statement with the source_id."""
+    source_id = uuid.uuid4()
+    session = AsyncMock()
+
+    service = SourceService(session)
+    asyncio.run(service.update_last_fetched(source_id))
+
+    session.execute.assert_called_once()
 

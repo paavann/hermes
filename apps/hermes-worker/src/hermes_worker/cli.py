@@ -5,8 +5,8 @@ import sys
 from hermes_db import close_db, init_db
 from hermes_worker.core.config import settings
 from hermes_worker.core.logger import setup_logging
-from hermes_worker.services.ingestion import IngestionService
 from hermes_worker.services.lifecycle import run_lifecycle
+from hermes_worker.services.sync import SyncService
 
 
 logger = logging.getLogger("hermes_worker")
@@ -16,21 +16,21 @@ async def _run_command(command: str, force: bool = False) -> int:
     logger.info("initializing database connection for %s...", settings.APP)
     await init_db(db_url=str(settings.db_url))
     try:
-        if command == "run-ingestion":
-            service = IngestionService()
-            stats = await service.ingest_all_sources(force=force)
-            logger.info("ingestion finished: %s", stats)
+        if command == "run-sync":
+            service = SyncService()
+            stats = await service.sync_all_sources(force=force)
+            logger.info("sync finished: %s.", stats)
         elif command == "run-lifecycle":
             stats = await run_lifecycle()
-            logger.info("lifecycle transitions finished: %s", stats)
+            logger.info("lifecycle transitions finished: %s.", stats)
         elif command == "run-all":
             lifecycle_stats = await run_lifecycle()
-            logger.info("lifecycle transitions finished: %s", lifecycle_stats)
-            service = IngestionService()
-            ingest_stats = await service.ingest_all_sources(force=force)
-            logger.info("ingestion finished: %s", ingest_stats)
+            logger.info("lifecycle transitions finished: %s.", lifecycle_stats)
+            service = SyncService()
+            sync_stats = await service.sync_all_sources(force=force)
+            logger.info("sync finished: %s.", sync_stats)
         else:
-            logger.error("unknown command: %s", command)
+            logger.error("unknown command: %s.", command)
             return 1
         return 0
     except Exception:
@@ -44,18 +44,18 @@ async def _run_command(command: str, force: bool = False) -> int:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="hermes-worker",
-        description="Hermes Ephemeral Data Ingestion & Event Lifecycle Worker",
+        description="Hermes Ephemeral Data Sync & Event Lifecycle Worker",
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    # run-ingestion.
-    ingest_p = subparsers.add_parser(
-        "run-ingestion", help="Execute RSS source ingestion cycle"
+    # run-sync.
+    sync_p = subparsers.add_parser(
+        "run-sync", help="Execute RSS source sync cycle"
     )
-    ingest_p.add_argument(
+    sync_p.add_argument(
         "--force",
         action="store_true",
-        help="Force ingestion of all sources regardless of interval",
+        help="Force sync of all sources regardless of interval",
     )
 
     # run-lifecycle.
@@ -67,12 +67,12 @@ def build_parser() -> argparse.ArgumentParser:
     # run-all.
     all_p = subparsers.add_parser(
         "run-all",
-        help="Execute lifecycle transitions followed by due ingestion",
+        help="Execute lifecycle transitions followed by due sync",
     )
     all_p.add_argument(
         "--force",
         action="store_true",
-        help="Force ingestion of all sources regardless of interval",
+        help="Force sync of all sources regardless of interval",
     )
 
     return parser

@@ -1,6 +1,8 @@
 import logging
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from hermes_db.models.geocode_cache import GeocodeCache
 
 

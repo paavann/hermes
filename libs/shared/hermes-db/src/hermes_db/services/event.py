@@ -1,13 +1,14 @@
 import logging
 import uuid
+from collections.abc import Sequence
 from datetime import UTC, datetime, timedelta
 from typing import Protocol
 
+from geoalchemy2.functions import ST_X, ST_Y, ST_MakeEnvelope, ST_Within
 from sqlalchemy import select, update
 from sqlalchemy.engine import CursorResult
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
-from geoalchemy2.functions import ST_X, ST_Y, ST_MakeEnvelope, ST_Within
 
 from hermes_db.core.config import settings
 from hermes_db.enums import CredibilityTier, EventScope, EventStatus
@@ -26,16 +27,28 @@ CREDIBILITY_WEIGHTS = {
 
 
 class EventExtractionData(Protocol):
-    headline: str
-    summary: str
-    category: str
-    category_color: str | None
-    location_name: str | None
+    @property
+    def headline(self) -> str: ...
+
+    @property
+    def summary(self) -> str: ...
+
+    @property
+    def category(self) -> str: ...
+
+    @property
+    def category_color(self) -> str | None: ...
+
+    @property
+    def location_name(self) -> str | None: ...
 
 
 class GeocodingData(Protocol):
-    latitude: float
-    longitude: float
+    @property
+    def latitude(self) -> float: ...
+
+    @property
+    def longitude(self) -> float: ...
 
 
 
@@ -202,7 +215,9 @@ class EventService:
 
 
 
-    async def get_active_events_by_embeddings(self, embeddings: list[list[float]]) -> list[dict[str, str]]:
+    async def get_active_events_by_embeddings(
+        self, embeddings: Sequence[Sequence[float] | None]
+    ) -> list[dict[str, str]]:
         if not embeddings:
             return []
 

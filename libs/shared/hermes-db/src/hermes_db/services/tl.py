@@ -1,8 +1,10 @@
 import uuid
 from datetime import UTC, datetime
+
 from geoalchemy2.functions import ST_X, ST_Y
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from hermes_db.enums import EventTlStatus
 from hermes_db.models import Event, EventTl
 

@@ -47,9 +47,9 @@ class Settings(BaseSettings):
         "HermesGeospatialNews/1.0 (https://github.com/paavann/hermes)"
     )
 
-    # ingestion configuration.
+    # sync configuration.
     RSS_FETCH_INTERVAL_MIN: int = 15
-    INGESTION_INTERVAL_MIN: int = 360
+    SYNC_INTERVAL_MIN: int = 360
     EVENT_STALE_HOURS: int = 24
     EVENT_ARCHIVE_HOURS: int = 48
 

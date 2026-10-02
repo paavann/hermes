@@ -1,5 +1,6 @@
 import logging
 from collections.abc import AsyncGenerator
+
 from sqlalchemy import URL, text
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
@@ -7,6 +8,7 @@ from sqlalchemy.ext.asyncio import (
     async_sessionmaker,
     create_async_engine,
 )
+
 from hermes_db.core.config import settings
 from hermes_db.services import sync_sources_from_config
 
@@ -29,7 +31,7 @@ AsyncSessionLocal = async_sessionmaker(
 )
 
 
-async def get_db() -> AsyncGenerator[AsyncSession, None]:
+async def get_db() -> AsyncGenerator[AsyncSession]:
     async with AsyncSessionLocal() as session:
         try:
             yield session

@@ -7,7 +7,6 @@ from hermes_worker.core.constants import PREDEFINED_CATEGORIES
 
 
 logger = logging.getLogger(__name__)
-ARTICLE_BATCH_SIZE: int = 10
 
 SYSTEM_PROMPT = """You are a news analyst for Hermes, a geospatial news aggregator.
 Your job is to extract structured metadata from news articles so they can be plotted on a world map.

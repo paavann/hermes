@@ -1,16 +1,96 @@
 import json
 import logging
+import uuid
+from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from hermes_db.enums import CredibilityTier
 from hermes_db.models.source import Source
 
 
 logger = logging.getLogger(__name__)
 DEFAULT_SOURCES_PATH = Path(__file__).resolve().parent.parent / "data" / "sources.json"
+
+
+@dataclass(frozen=True, slots=True)
+class DueSource:
+    id: uuid.UUID
+    name: str
+    feed_url: str
+    credibility: CredibilityTier
+    fetch_interval_minutes: int
+    last_fetched_at: datetime | None = None
+
+
+class SourceService:
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    async def get_due_sources(self, force: bool = False) -> list[DueSource]:
+        stmt = (
+            select(Source)
+            .where(
+                Source.is_active.is_(True),
+                Source.feed_url.is_not(None),
+            )
+        )
+        result = await self._session.execute(stmt)
+        sources = result.scalars().all()
+
+        due_sources: list[DueSource] = []
+        now = datetime.now(UTC)
+
+        for source in sources:
+            if not source.feed_url:
+                continue
+
+            last = source.last_fetched_at
+            if last is None:
+                due_sources.append(
+                    DueSource(
+                        id=source.id,
+                        name=source.name,
+                        feed_url=source.feed_url,
+                        credibility=source.credibility,
+                        fetch_interval_minutes=source.fetch_interval_minutes,
+                        last_fetched_at=None,
+                    )
+                )
+                continue
+
+            if last.tzinfo is None:
+                last = last.replace(tzinfo=UTC)
+
+            delta = timedelta(minutes=source.fetch_interval_minutes)
+            if force or now >= last + delta:
+                due_sources.append(
+                    DueSource(
+                        id=source.id,
+                        name=source.name,
+                        feed_url=source.feed_url,
+                        credibility=source.credibility,
+                        fetch_interval_minutes=source.fetch_interval_minutes,
+                        last_fetched_at=last,
+                    )
+                )
+
+        return due_sources
+
+    async def update_last_fetched(
+        self, source_id: uuid.UUID, fetched_at: datetime | None = None
+    ) -> None:
+        now = fetched_at or datetime.now(UTC)
+        stmt = (
+            update(Source)
+            .where(Source.id == source_id)
+            .values(last_fetched_at=now)
+        )
+        await self._session.execute(stmt)
 
 
 async def _load_sources_config(config_path: Path | None = None) -> list[dict[str, Any]]:

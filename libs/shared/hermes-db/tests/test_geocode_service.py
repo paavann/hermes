@@ -5,7 +5,6 @@ All tests use a mocked AsyncSession so no database is involved.
 
 from unittest.mock import AsyncMock, MagicMock
 
-import pytest
 from conftest import make_async_session, run
 
 from hermes_db.models.geocode_cache import GeocodeCache

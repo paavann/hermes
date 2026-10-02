@@ -1,16 +1,17 @@
 import asyncio
 import logging
 import uuid
-from datetime import UTC, datetime, timedelta
-from hermes_db.models import Source
-from hermes_db.services import EventService, GeocodeCacheService
+from hermes_db.services import (
+    DueSource,
+    EventService,
+    GeocodeCacheService,
+    SourceService,
+)
 from hermes_db.session import AsyncSessionLocal
-from sqlalchemy import func, select, update
-from sqlalchemy.ext.asyncio import AsyncSession
 from hermes_worker.core.config import settings
+from hermes_worker.core.constants import ARTICLE_BATCH_SIZE
 from hermes_worker.core.rate_limiter import TbRateLimiter
 from hermes_worker.services.ai import (
-    ARTICLE_BATCH_SIZE,
     AiService,
     ArticleInput,
 )
@@ -21,13 +22,14 @@ from hermes_worker.services.rss import ParsedArticle, fetch_feed
 logger = logging.getLogger(__name__)
 
 
-class IngestionService:
+class SyncService:
     def __init__(self) -> None:
         self._ai = AiService()
         self._rate_limiter = TbRateLimiter(settings.RPM_LIMIT)
         self._embed_rate_limiter = TbRateLimiter(settings.EMBED_RPM_LIMIT)
 
-    async def _ingest_source(self, source: dict) -> dict[str, int]:
+
+    async def _sync_source(self, source: DueSource) -> dict[str, int]:
         stats = {
             "articles_fetched": 0,
             "articles_skipped": 0,
@@ -36,11 +38,11 @@ class IngestionService:
             "events_created": 0,
             "events_matched": 0,
         }
-        feed_url = source["feed_url"]
-        source_id = source["id"]
-        source_name = source["name"]
+        feed_url = source.feed_url
+        source_id = source.id
+        source_name = source.name
 
-        logger.info("ingesting source: %s - %s.", source_name, feed_url)
+        logger.info("syncing source: %s (%s).", source_name, feed_url)
         articles = await fetch_feed(feed_url)
         stats["articles_fetched"] = len(articles)
         if not articles:
@@ -55,7 +57,6 @@ class IngestionService:
                     stats["articles_skipped"] += 1
                 else:
                     articles_to_process.append(article)
-
         if not articles_to_process:
             logger.info(
                 "source '%s': all %s articles already processed.",
@@ -73,7 +74,6 @@ class IngestionService:
 
             await self._embed_rate_limiter.acquire()
             embeddings = await self._ai.gen_embeddings(batch_texts)
-
             async with AsyncSessionLocal() as session:
                 event_service = EventService(session)
                 existing_events = await event_service.get_active_events_by_embeddings(
@@ -85,7 +85,6 @@ class IngestionService:
                 articles=ai_inputs,
                 existing_events=existing_events,
             )
-
             for i, extraction in enumerate(extractions):
                 article = batch[i]
                 article_embedding = embeddings[i] if i < len(embeddings) else None
@@ -112,7 +111,7 @@ class IngestionService:
                                 article_title=article.title,
                                 article_url=article.url,
                                 source_id=source_id,
-                                source_credibility=source["credibility"],
+                                source_credibility=source.credibility,
                                 published_at=article.published_at,
                             )
                             if matched:
@@ -125,7 +124,7 @@ class IngestionService:
                                 article_title=article.title,
                                 article_url=article.url,
                                 source_id=source_id,
-                                source_credibility=source["credibility"],
+                                source_credibility=source.credibility,
                                 published_at=article.published_at,
                                 embedding=article_embedding,
                             )
@@ -145,56 +144,8 @@ class IngestionService:
         )
         return stats
 
-    async def _get_active_sources(
-        self, session: AsyncSession, force: bool = False
-    ) -> list[dict]:
-        stmt = (
-            select(
-                Source.id,
-                Source.name,
-                Source.feed_url,
-                Source.last_fetched_at,
-                Source.fetch_interval_minutes,
-                Source.credibility,
-            )
-            .where(Source.is_active.is_(True))
-            .where(Source.feed_url.isnot(None))
-        )
-        result = await session.execute(stmt)
-        rows = result.all()
-        due_sources = []
-        now = datetime.now(UTC)
 
-        for row in rows:
-            if not row.last_fetched_at:
-                due_sources.append(
-                    {
-                        "id": row.id,
-                        "name": row.name,
-                        "feed_url": row.feed_url,
-                        "credibility": row.credibility,
-                    }
-                )
-                continue
-
-            last = row.last_fetched_at
-            if last.tzinfo is None:
-                last = last.replace(tzinfo=UTC)
-
-            delta = timedelta(minutes=row.fetch_interval_minutes)
-            if force or now >= last + delta:
-                due_sources.append(
-                    {
-                        "id": row.id,
-                        "name": row.name,
-                        "feed_url": row.feed_url,
-                        "credibility": row.credibility,
-                    }
-                )
-
-        return due_sources
-
-    async def ingest_all_sources(self, force: bool = False) -> dict[str, int]:
+    async def sync_all_sources(self, force: bool = False) -> dict[str, int]:
         stats = {
             "sources_processed": 0,
             "articles_fetched": 0,
@@ -206,29 +157,27 @@ class IngestionService:
         }
 
         async with AsyncSessionLocal() as session:
-            sources = await self._get_active_sources(session, force=force)
+            source_service = SourceService(session)
+            sources = await source_service.get_due_sources(force=force)
         if not sources:
-            logger.warning("no active sources found due for ingestion.")
+            logger.warning("no active sources found due for sync.")
             return stats
 
-        logger.info("starting ingestion for %s sources.", len(sources))
+        logger.info("starting sync for %s sources.", len(sources))
         semaphore = asyncio.Semaphore(5)
 
-        async def _process_source(source: dict) -> dict[str, int]:
+        async def _process_source(source: DueSource) -> dict[str, int]:
             async with semaphore:
                 try:
-                    s_stats = await self._ingest_source(source)
+                    s_stats = await self._sync_source(source)
                     async with AsyncSessionLocal() as db_session:
-                        await db_session.execute(
-                            update(Source)
-                            .where(Source.id == source["id"])
-                            .values(last_fetched_at=func.now())
-                        )
+                        source_service = SourceService(db_session)
+                        await source_service.update_last_fetched(source.id)
                         await db_session.commit()
                     return s_stats
                 except Exception:
                     logger.exception(
-                        "unhandled error ingesting source %s.", source["name"]
+                        "unhandled error syncing source %s.", source.name
                     )
                     return {k: 0 for k in stats if k != "sources_processed"}
 
@@ -241,7 +190,7 @@ class IngestionService:
             stats["sources_processed"] += 1
 
         logger.info(
-            "ingestion complete: %s sources, %s articles processed, %s new events, %s matched to existing.",
+            "sync complete: %s sources, %s articles processed, %s new events, %s matched to existing.",
             stats["sources_processed"],
             stats["articles_processed"],
             stats["events_created"],

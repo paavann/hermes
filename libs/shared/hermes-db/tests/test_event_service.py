@@ -453,10 +453,10 @@ class TestGetActiveEventsByEmbeddings:
         session.execute.assert_not_awaited()
 
     def test_none_embedding_in_list_skipped(self):
-        """An empty embedding vector inside the list must be skipped."""
+        """None and empty embedding vectors inside the list must be skipped."""
         session = make_async_session(execute_all=[])
         svc = EventService(session)
-        result = run(svc.get_active_events_by_embeddings([[], []]))
+        result = run(svc.get_active_events_by_embeddings([None, [], None]))
         assert result == []
 
     def test_returns_unique_events(self):

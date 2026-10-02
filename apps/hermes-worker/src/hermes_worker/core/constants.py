@@ -40,3 +40,5 @@ PREDEFINED_CATEGORIES: dict[str, dict[str, str]] = {
         "color": "#EAB308",
     },
 }
+
+ARTICLE_BATCH_SIZE: int = 10
