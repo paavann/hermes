@@ -1,7 +1,7 @@
 """Unit tests for hermes_worker.services.geocoding client, location cleaner, and cache integration."""
 
 import asyncio
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 import pytest
 from hermes_db.models import GeocodeCache
 from hermes_db.services import GeocodeCacheService

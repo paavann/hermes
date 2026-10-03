@@ -1,6 +1,7 @@
 import logging
 from collections.abc import Callable, Sequence
 import litellm
+from litellm.router import Router
 from pydantic import BaseModel, Field, field_validator
 from hermes_worker.core.config import settings
 from hermes_worker.core.constants import PREDEFINED_CATEGORIES
@@ -24,23 +25,28 @@ Rules:
 
 
 def _coerce_to_str(v: object) -> str:
-    if isinstance(v, dict):
-        return (
-            v.get("en")
-            or v.get("text")
-            or v.get("summary")
-            or v.get("headline")
-            or next(
-                (val for val in v.values() if isinstance(val, str) and val.strip()),
-                "",
-            )
-            or str(v)
-        )
-    if isinstance(v, (list, tuple)):
-        return " ".join(str(item) for item in v if item is not None)
-    if v is None:
-        return ""
-    return str(v)
+    match v:
+        case None:
+            return ""
+        case str():
+            return v.strip()
+        case bool():
+            return ""
+        case dict():
+            for key in ("en", "text", "summary", "headline"):
+                val = v.get(key)
+                if isinstance(val, str) and val.strip():
+                    return val.strip()
+            for val in v.values():
+                if isinstance(val, str) and val.strip():
+                    return val.strip()
+            return ""
+        case list() | tuple():
+            parts = [str(item).strip() for item in v if item is not None and str(item).strip()]
+            return " ".join(parts)
+        case _:
+            return str(v).strip()
+
 
 
 class ArticleInput(BaseModel):
@@ -204,12 +210,12 @@ class AiService:
         self._primary_api_key = settings.LLM_API
         self._fallback_model = settings.LLM_MODEL_1
         self._fallback_api_key = settings.LLM_API_1
+        self._embed_api_key = settings.EMBED_API
+        self._embed_model = settings.EMBED_MODEL
+
         if not self._primary_api_key or not self._primary_model:
             logger.error("primary llm api key or model is missing.")
             raise ValueError("LLM_API or LLM_MODEL is missing.")
-
-        self._embed_api_key = settings.EMBED_API
-        self._embed_model = settings.EMBED_MODEL
         if not self._embed_api_key or not self._embed_model:
             logger.error("embed api key or model is missing.")
             raise ValueError("EMBED_API or EMBED_MODEL is missing.")
@@ -236,7 +242,7 @@ class AiService:
             )
             fallbacks = [{"primary-extractor": ["fallback-extractor"]}]
 
-        self._router = litellm.Router(
+        self._router = Router(
             model_list=model_list,
             fallbacks=fallbacks,
             num_retries=2,
@@ -252,13 +258,14 @@ class AiService:
             self._embed_model,
         )
 
-    async def _call_llm(
+
+    async def _call_llm[T: BaseModel](
         self,
         sys_prompt: str,
         user_prompt: str,
-        res_model: type[BaseModel],
+        res_model: type[T],
         schema_name: str,
-    ) -> BaseModel | None:
+    ) -> T | None:
         try:
             res = await self._router.acompletion(
                 model="primary-extractor",
@@ -285,6 +292,7 @@ class AiService:
             logger.error("llm call failed for %s: %s.", schema_name, e)
             return None
 
+
     async def get_metadata(
         self, articles: list[ArticleInput], existing_events: list[dict[str, str]]
     ) -> list[ExtractedEvent | None]:
@@ -304,7 +312,7 @@ class AiService:
             return [None] * len(articles)
 
         ordered_results = _reidx_results(
-            raw_results=res.events,  # type: ignore[union-attr]
+            raw_results=res.events,
             count=len(articles),
             get_idx=lambda e: e.article_index,
             get_val=_resolve_category_color,
@@ -323,6 +331,7 @@ class AiService:
                     "no extraction for article %s: '%s...'.", i, article.title[:120]
                 )
         return ordered_results
+
 
     async def gen_embeddings(self, texts: list[str]) -> list[list[float] | None]:
         if not texts:

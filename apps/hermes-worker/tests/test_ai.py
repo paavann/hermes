@@ -22,9 +22,22 @@ class TestAiHelpers:
 
     def test_coerce_to_str_with_list(self):
         assert _coerce_to_str(["part1", "part2"]) == "part1 part2"
+        assert _coerce_to_str(["part1", None, "   ", "part2"]) == "part1 part2"
 
     def test_coerce_to_str_with_none(self):
         assert _coerce_to_str(None) == ""
+
+    def test_coerce_to_str_with_empty_or_non_string_dict(self):
+        assert _coerce_to_str({}) == ""
+        assert _coerce_to_str({"count": 42}) == ""
+        assert _coerce_to_str({"en": "  "}) == ""
+
+    def test_coerce_to_str_with_bool(self):
+        assert _coerce_to_str(False) == ""
+        assert _coerce_to_str(True) == ""
+
+    def test_coerce_to_str_with_scalar(self):
+        assert _coerce_to_str(42) == "42"
 
 
 class TestExtractedEventModel:

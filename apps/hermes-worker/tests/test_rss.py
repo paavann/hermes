@@ -1,11 +1,10 @@
 """Unit tests for hermes_worker.services.rss feed parsing and article extraction."""
 
 import asyncio
-from datetime import datetime
 import time
+from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 import httpx
-import pytest
 from hermes_worker.services.rss import (
     ParsedArticle,
     _extract_content,
