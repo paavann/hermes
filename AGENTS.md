@@ -32,7 +32,7 @@ Project Hermes is a real-time geospatial news aggregator designed to combat mode
 
 As an agent, you must design features that align with these core mechanics:
 
-- **Dual-Mode Interface**: Users can seamlessly transition between a two-dimensional regional map and a three-dimensional geopolitical globe, allowing them to visually digest information at both local and macro scales.
+- **Dual-Mode Interface (Roadmap Vision)**: The target product design envisions seamless transitions between a two-dimensional regional map and a three-dimensional geopolitical globe. *(Current Implementation: Runs on a 2D Mercator WebGL canvas with native clustering, panning, and dynamic viewport querying).*
 - **Smart Editor Algorithm**: The application must not overwhelm the user with raw data. Instead, it relies on a backend algorithm that ranks news based on **source consensus** and **time decay**. The initial load displays only the most critical global events.
 - **Dynamic Viewport Queries**: As users zoom into specific regions, the application queries the spatial database to populate hyper-local news within their bounding box.
 - **Visual Categorization**: Use color-coded pins to categorize events (e.g., economic shifts, conflicts). Pins automatically cluster at higher zoom levels via WebGL to prevent screen clutter.
@@ -43,7 +43,7 @@ As an agent, you must design features that align with these core mechanics:
 
 When building any feature, keep these critical user journeys in mind:
 
-1. **Globe Landing**: A first-time user opens the app, watches the tactical boot sequence, and immediately sees the day's most critical global events displayed as color-coded pins.
+1. **Map Landing**: A first-time user opens the app, watches the tactical boot sequence, and immediately sees the day's most critical global events displayed as color-coded pins on the world map.
 2. **Regional Zoom**: The user zooms into a specific region (e.g., the Middle East) and sees hyper-local news events dynamically populate within their viewport.
 3. **Event Inspection**: The user clicks an event pin, centers the camera smoothly, reads a concise AI-generated summary with a terminal scramble-text decode, and sees original news sources.
 4. **Historical Timeline Investigation**: The user opens the timeline panel to trace the historical roots of the event via a causal graph (MediaWiki extracts linked to the current incident).
@@ -80,11 +80,12 @@ RSS Feeds (Global Sources)
         │
         ▼
 ┌───────────────────┐
-│   hermes-api      │  ← Python/FastAPI backend
-│   (Ingestion +    │     - LiteLLM Multi-Model Router (Mistral + NVIDIA NIM fallback)
+│   hermes-worker   │  ← Python standalone CLI worker
+│   (Ingestion +    │     - Parallel RSS Ingestion (feedparser + httpx)
 │    Embeddings +   │     - 2048-dim Embeddings (nemotron-3-embed-1b)
+│    Batch Ext +    │     - AI Batch Extraction (LiteLLM Mistral/NIM)
 │    Nominatim +    │     - Grounded Geocoding (Nominatim + GeocodeCache)
-│    Timeline Svc)  │     - APScheduler Dynamic Cadence & Decay Jobs
+│    Lifecycle)     │     - Hourly Time Decay & Status Transitions
 └───────┬───────────┘
         │
         ▼
@@ -93,6 +94,13 @@ RSS Feeds (Global Sources)
 │   (PostgreSQL 16  │     - Point Geometry (SRID 4326) with GIST Index
 │    + PostGIS      │     - pgvector halfvec(2048) with HNSW Index
 │    + pgvector)    │     - JSONB Historical Timeline Nodes & Edges
+└───────┬───────────┘
+        ▲
+        │ (SQLAlchemy 2.0 Async / Event & Timeline Models)
+┌───────┴───────────┐
+│   hermes-api      │  ← Python/FastAPI stateless REST API
+│   (REST API +     │     - Viewport Bounding-Box & Event Query Endpoints
+│    Timeline Svc)  │     - On-Demand Historical Causality Synthesis (LiteLLM + Wikipedia)
 └───────┬───────────┘
         │
         ▼  (REST API: /api/v1/events, /api/v1/events/bbox, /api/v1/events/tl)
@@ -126,7 +134,8 @@ This is an Nx monorepo. The workspace contains the following projects:
 | Project | Path | Role | Key Tech |
 | :--- | :--- | :--- | :--- |
 | **`hermes`** | `apps/hermes/` | React frontend shell — interactive map and HUD | React 19, React Router 8 (SPA mode), Vite, Mapbox GL JS v3, Zustand 5, TanStack Query v5, Tailwind CSS 4 |
-| **`hermes-api`** | `apps/hermes-api/` | Python backend — ingestion, AI, and REST API | FastAPI, SQLAlchemy 2.0 Async, PostGIS, pgvector (`halfvec`), LiteLLM, APScheduler, feedparser, uv |
+| **`hermes-api`** | `apps/hermes-api/` | Python backend — stateless REST API & on-demand historical timeline synthesis | FastAPI, SQLAlchemy 2.0 Async, PostGIS, pgvector (`halfvec`), LiteLLM, uv |
+| **`hermes-worker`** | `apps/hermes-worker/` | Python CLI worker — autonomous RSS ingestion, AI batch extraction, geocoding shield & event lifecycle decay | Python, feedparser, LiteLLM, PostGIS, pgvector (`halfvec`), httpx, uv |
 | **`hermes-e2e`** | `apps/hermes-e2e/` | End-to-end browser tests | Playwright |
 | **`@hermes/feature-map`** | `libs/feature-map/` | Mapbox GL WebGL implementation & timeline drawer | Mapbox GL JS, Zustand store, TanStack Query hooks, `MapView`, `EventPopup`, `TlPanel` |
 | **`hermes-db`** | `libs/shared/hermes-db/` | Shared PostGIS + pgvector models, migrations & DB services | SQLAlchemy 2.0 Async, PostGIS, pgvector (`halfvec`), GeoAlchemy2, Alembic, uv |
@@ -137,7 +146,8 @@ This is an Nx monorepo. The workspace contains the following projects:
 Each app has its own `AGENTS.md` and `README.md` with detailed, app-specific architectural context:
 
 - **Frontend context**: See `apps/hermes/AGENTS.md` and `apps/hermes/README.md`
-- **Backend context**: See `apps/hermes-api/AGENTS.md` and `apps/hermes-api/README.md`
+- **Backend API context**: See `apps/hermes-api/AGENTS.md` and `apps/hermes-api/README.md`
+- **Worker context**: See `apps/hermes-worker/AGENTS.md` and `apps/hermes-worker/README.md`
 - **Database context**: See `libs/shared/hermes-db/AGENTS.md` and `libs/shared/hermes-db/README.md`
 - **Strict coding rules**: See `.agents/rules/`
 

@@ -82,7 +82,10 @@
       }
     }
   },
-  "tags": [],
+  "tags": [
+    "type:app",
+    "scope:worker"
+  ],
   "release": {
     "version": {
       "versionActions": "@nxlv/python/release/version-actions"

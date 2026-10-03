@@ -94,11 +94,17 @@ All code in this library must follow modern SQLAlchemy 2.0 async conventions. Le
 Database schema migrations are append-only and strictly governed:
 
 1. **Append-Only History**: Never edit, rewrite, or squash historical migration scripts in `migrations/versions/`. Every schema change requires a newly generated migration file.
-2. **Generation Command**:
-   ```bash
-   # From workspace root
-   npx nx migrate hermes-db
-   ```
+2. **Migration Commands**:
+   - **Apply Pending Migrations**:
+     ```bash
+     # From workspace root (runs uv run alembic upgrade head)
+     npx nx migrate hermes-db
+     ```
+   - **Generate New Migration Revision**:
+     ```bash
+     # Generate revision from model changes
+     cd libs/shared/hermes-db && uv run alembic revision --autogenerate -m "<migration_description>"
+     ```
 3. **Explicit Type Verification**: Alembic autogenerate often misinterprets PostGIS and pgvector types. Always manually inspect generated migration files to ensure:
    - Geometry columns explicitly declare `srid=4326`.
    - Vector columns explicitly use `pgvector.sqlalchemy.HALFVEC(2048)`.

@@ -14,39 +14,7 @@ This is the **stateless backend REST API and on-demand timeline synthesis engine
 
 ---
 
-## 2. Data Ingestion & Timeline Pipelines
-
-### Ingestion Pipeline Flow
-
-```text
-┌─────────────┐   ┌────────────┐   ┌────────────────┐   ┌──────────────┐   ┌─────────────┐   ┌───────────┐
-│ APScheduler │──▶│ feedparser │──▶│ LiteLLM Embed  │──▶│ pgvector     │──▶│ LiteLLM Ext │──▶│ Nominatim │──▶ PostGIS
-│ (Heartbeat) │   │ (Parallel) │   │ (nemotron 2048)│   │ (HNSW < 0.25)│   │ (Mistral/NIM│   │ (Geocode) │
-└─────────────┘   └────────────┘   └────────────────┘   └──────────────┘   └─────────────┘   └───────────┘
-```
-
-### Stage Details
-
-1. **Scheduling (`apscheduler`)**: Runs an interval heartbeat (`INGESTION_HEARTBEAT_MIN`, default 360m). It queries the database for active sources where `last_fetched_at + fetch_interval_minutes <= NOW()`. On application boot, an immediate background task is launched with `force=True` to guarantee initial data population.
-2. **Fetching (`feedparser` + `httpx`)**: Uses `asyncio.Semaphore(5)` to concurrently fetch and parse RSS feeds in parallel. Content is sanitized and truncated to 500 words (`MAX_CONTENT_WORDS`). URL deduplication against the `articles` table immediately drops previously ingested stories.
-3. **Semantic Filtering (`litellm` + `pgvector`)**: Batched article texts are converted into 2048-dimensional vector embeddings (`nvidia_nim/nvidia/nemotron-3-embed-1b`) guarded by `EMBED_RPM_LIMIT`. PostGIS is queried using cosine distance against active events (`Event.embedding.cosine_distance(emb) < 0.25`, limit 5 per article) to retrieve candidate duplicates.
-4. **AI Batch Extraction (`litellm.Router`)**:
-   - Sends article inputs and candidate events to the LLM router in **batches of 10** (`ARTICLE_BATCH_SIZE`) guarded by `RPM_LIMIT`.
-   - **Primary Model**: `mistral/ministral-8b-latest`.
-   - **Fallback Model**: `nvidia_nim/mistralai/mistral-nemotron`.
-   - The model determines whether to merge the article into an existing candidate event or create a new event.
-   - Extracted attributes: headline, summary, category, category color (from `PREDEFINED_CATEGORIES`), and location name (e.g., `"Geneva, Switzerland"`).
-5. **Geocoding Shield (`geocoding_service.py` + PostGIS Cache)**:
-   - Extracted location strings are checked against `geocode_cache` by normalized key (`location_name.strip().lower()`).
-   - Cache misses call Nominatim under an `asyncio.Lock()` with a mandatory 1.0-second delay to comply with OpenStreetMap rate limits.
-   - Results (including negative `NULL` results) are permanently cached to prevent redundant lookups.
-6. **Persistence & Consensus Scoring (`event_service.py`)**:
-   - **Matched Event**: Adds `Article`, increments `article_count`, adds source credibility weight to `trending_score`, updates `last_updated_at`, and reactivates event if `STALE`.
-   - **New Event**: Inserts `Event` with SRID 4326 `POINT` geometry (`location`), initial credibility score, and embedding vector.
-
----
-
-### Historical Timeline Engine (`tl_service.py`)
+## 2. Historical Timeline Engine (`tl_service.py`)
 
 Synthesizes on-demand geopolitical lineage for major events:
 
@@ -58,9 +26,9 @@ Synthesizes on-demand geopolitical lineage for major events:
 
 ---
 
-## 3. Smart Editor Algorithm
+## 3. Smart Editor Algorithm & Ranking
 
-The backend implements an algorithmic ranking model that surfaces critical global events while filtering low-signal noise:
+The API serves events ranked by the smart editor algorithm. While ingestion, consensus score accumulation, and decay transitions are executed autonomously by `hermes-worker`, `hermes-api` queries depend on these signals:
 
 - **Source Credibility Weighting**:
   - `TIER_1` (Reuters, BBC, NYT, WSJ, DW): `+3.0` points
@@ -68,9 +36,8 @@ The backend implements an algorithmic ranking model that surfaces critical globa
   - `TIER_3` (Standard publishers): `+1.0` point
   - `TIER_4` (Aggregators / Tabloids): `+0.5` points
 - **Semantic Consensus**: Multiple independent outlets reporting the same incident compound the event's `trending_score`.
-- **Hourly Time Decay**: Every 60 minutes, `run_event_lifecycle_job()` executes an automated decay statement across all `ACTIVE` events:
+- **Hourly Time Decay & Lifecycle**: Maintained by `hermes-worker` (using `run_lifecycle_transitions()`):
   $$\text{trending\_score}_{t+1} = \text{trending\_score}_t \times 0.90$$
-- **Lifecycle Transitions**:
   - `ACTIVE` &rarr; `STALE` after 24 hours without new articles.
   - `STALE` &rarr; `ARCHIVED` after 48 hours without new articles.
 
@@ -124,7 +91,7 @@ src/hermes_api/
 ├── api/v1/              # APIRouter modules (router.py, events.py, tl.py)
 ├── core/                # Settings (multi-env cascade), constants, rate limiter, custom exceptions
 ├── schemas/             # Pydantic v2 DTOs (events.py, errors.py)
-├── services/            # AI extraction, geocoding, timeline, and Wikipedia services
+├── services/            # Timeline synthesis (tl_service.py), Wikipedia extraction (wikipedia_service.py), AI timeline graph prompts (ai_service.py), and geocoding fallback (geocoding_service.py)
 └── utils/               # Database transaction helpers (db.py)
 
 Shared Data Layer:
