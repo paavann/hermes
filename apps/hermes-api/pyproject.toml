@@ -92,5 +92,5 @@ allow-star-arg-any = true
 
 
 [tool.uv.sources]
-hermes-db = { path = "../../libs/shared/hermes-db", editable = true }
+hermes-db = { workspace = true }
 

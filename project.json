@@ -1,0 +1,53 @@
+{
+  "name": "workspace",
+  "$schema": "node_modules/nx/schemas/project-schema.json",
+  "projectType": "application",
+  "root": ".",
+  "targets": {
+    "sync": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "uv sync",
+        "cwd": "."
+      }
+    },
+    "lock": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "uv lock",
+        "cwd": "."
+      }
+    },
+    "update": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "uv lock --upgrade && uv sync",
+        "cwd": "."
+      }
+    },
+    "lint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "nx run-many -t lint"
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "nx run-many -t test"
+      }
+    },
+    "lint:py": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "nx run-many -t lint -p hermes-api hermes-worker hermes-db"
+      }
+    },
+    "test:py": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "nx run-many -t test -p hermes-api hermes-worker hermes-db"
+      }
+    }
+  }
+}

@@ -2,7 +2,15 @@
   "name": "@hermes/source",
   "version": "0.0.0",
   "license": "MIT",
-  "scripts": {},
+  "scripts": {
+    "sync": "nx run workspace:sync",
+    "lock": "nx run workspace:lock",
+    "update": "nx run workspace:update",
+    "lint": "nx run workspace:lint",
+    "test": "nx run workspace:test",
+    "lint:py": "nx run workspace:lint:py",
+    "test:py": "nx run workspace:test:py"
+  },
   "private": true,
   "dependencies": {
     "@react-router/node": "^8.3.1",
