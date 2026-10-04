@@ -1,8 +1,9 @@
 services:
   hermes-api:
     build:
-      context: ./apps/hermes-api
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: apps/hermes-api/Dockerfile
+      target: production
     ports:
       - '${API_PORT:-8000}:8000'
     env_file:
@@ -11,6 +12,22 @@ services:
         required: false
     environment:
       ENV: production
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/')\""]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    deploy:
+      resources:
+        limits:
+          cpus: '1.5'
+          memory: 1500M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
     restart: always
 
   hermes-worker:
@@ -25,12 +42,23 @@ services:
         required: false
     environment:
       ENV: production
+    deploy:
+      resources:
+        limits:
+          cpus: '1.5'
+          memory: 2000M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
     profiles: ["worker"]
 
   hermes:
     build:
       context: .
       dockerfile: apps/hermes/Dockerfile
+      target: production
     ports:
       - '${FRONTEND_PORT:-4200}:4200'
     env_file:
@@ -40,4 +68,15 @@ services:
     environment:
       HOST: 0.0.0.0
       NODE_ENV: production
+      PORT: 4200
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1000M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
     restart: always

@@ -22,16 +22,21 @@ services:
 
   hermes-api:
     build:
-      context: ./apps/hermes-api
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: apps/hermes-api/Dockerfile
+      target: development
     ports:
       - '${API_PORT}:8000'
     volumes:
-      - ./apps/hermes-api/src:/app/src
+      - ./apps/hermes-api/src:/app/apps/hermes-api/src
+      - ./libs/shared/hermes-db/src:/app/libs/shared/hermes-db/src
+      
     env_file:
       - .env.development
-      - ./apps/hermes-api/.env.development
-      - ./apps/hermes-api/.env.local
+      - path: ./apps/hermes-api/.env.development
+        required: false
+      - path: ./apps/hermes-api/.env.local
+        required: false
     depends_on:
       hermes-db:
         condition: service_healthy
@@ -41,6 +46,7 @@ services:
     build:
       context: .
       dockerfile: apps/hermes-worker/Dockerfile
+      target: development
     volumes:
       - ./apps/hermes-worker/src:/app/apps/hermes-worker/src
     env_file:
@@ -62,6 +68,7 @@ services:
     build:
       context: .
       dockerfile: apps/hermes/Dockerfile
+      target: development
     ports:
       - '${FRONTEND_PORT}:4200'
     volumes:
@@ -71,11 +78,14 @@ services:
       - ./libs:/app/libs
     env_file:
       - .env.development
-      - ./apps/hermes/.env.development
-      - ./apps/hermes/.env.local
+      - path: ./apps/hermes/.env.development
+        required: false
+      - path: ./apps/hermes/.env.local
+        required: false
     environment:
       HOST: 0.0.0.0
     restart: unless-stopped
+
 
 volumes:
   hermes_data:
