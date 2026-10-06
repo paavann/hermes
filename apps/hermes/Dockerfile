@@ -4,10 +4,15 @@ WORKDIR /app
 
 COPY package.json package-lock.json nx.json tsconfig.base.json ./
 COPY apps/hermes/package.json ./apps/hermes/
+COPY apps/hermes-e2e/package.json ./apps/hermes-e2e/
+COPY libs/feature-map/package.json ./libs/feature-map/
+COPY libs/shared/ui-components/package.json ./libs/shared/ui-components/
+COPY libs/shared/util-types/package.json ./libs/shared/util-types/
+COPY libs/shared/utils/package.json ./libs/shared/utils/
+
+RUN --mount=type=cache,target=/root/.npm npm ci
+
 COPY libs/ ./libs
-
-RUN npm ci
-
 COPY apps/hermes/ ./apps/hermes
 
 # development target (vite dev server).

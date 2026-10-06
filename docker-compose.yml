@@ -10,6 +10,10 @@ services:
     restart: always
     env_file:
       - .env.development
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
     ports:
       - '${DB_PORT}:5432'
     volumes:
@@ -30,7 +34,6 @@ services:
     volumes:
       - ./apps/hermes-api/src:/app/apps/hermes-api/src
       - ./libs/shared/hermes-db/src:/app/libs/shared/hermes-db/src
-      
     env_file:
       - .env.development
       - path: ./apps/hermes-api/.env.development
@@ -49,6 +52,7 @@ services:
       target: development
     volumes:
       - ./apps/hermes-worker/src:/app/apps/hermes-worker/src
+      - ./libs/shared/hermes-db/src:/app/libs/shared/hermes-db/src
     env_file:
       - .env.development
       - path: ./apps/hermes-worker/.env.development

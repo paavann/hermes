@@ -34,6 +34,7 @@ services:
     build:
       context: .
       dockerfile: apps/hermes-worker/Dockerfile
+      target: production
     env_file:
       - .env.production
       - path: ./apps/hermes-worker/.env.production
