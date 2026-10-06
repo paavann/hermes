@@ -17,7 +17,6 @@
     "strict": true,
     "target": "es2022",
     "customConditions": ["@hermes/source"],
-    "baseUrl": ".",
     "paths": {
       "@hermes/util-types": ["./libs/shared/util-types/src/index.ts"],
       "@hermes/ui-components": ["./libs/shared/ui-components/src/index.ts"],
