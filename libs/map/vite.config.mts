@@ -2,14 +2,14 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 export default defineConfig(() => ({
   root: __dirname,
-  cacheDir: '../../node_modules/.vite/libs/feature-map',
+  cacheDir: '../../node_modules/.vite/libs/map',
   plugins: [react()],
   // Uncomment this if you are using workers.
   // worker: {
   //  plugins: [],
   // },
   test: {
-    name: '@hermes/feature-map',
+    name: '@hermes/map',
     watch: false,
     globals: true,
     environment: 'jsdom',

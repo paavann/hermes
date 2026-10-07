@@ -20,7 +20,7 @@
     "paths": {
       "@hermes/util-types": ["./libs/shared/util-types/src/index.ts"],
       "@hermes/ui-components": ["./libs/shared/ui-components/src/index.ts"],
-      "@hermes/feature-map": ["./libs/feature-map/src/index.ts"]
+      "@hermes/map": ["./libs/map/src/index.ts"]
     }
   }
 }

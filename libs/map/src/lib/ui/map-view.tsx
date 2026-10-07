@@ -1,19 +1,16 @@
-import { useEffect, useRef, useState } from 'react'
-import mapboxgl from 'mapbox-gl'
-import 'mapbox-gl/dist/mapbox-gl.css'
-import { useMapStore } from '../store/store'
-import { useMapDataSync } from '../hooks/datasync'
-import { EventPopup } from './components/EventPopup'
-import { TlPanel } from './components/TlPanel'
-import type { FeatureCollection } from 'geojson'
-import type { MapEventResponse } from '@hermes/util-types'
-import { useMapConfig } from '../config-context'
-
-
-
+import { useEffect, useRef, useState } from 'react';
+import mapboxgl from 'mapbox-gl';
+import 'mapbox-gl/dist/mapbox-gl.css';
+import { useMapStore } from '../store/store';
+import { useMapDataSync } from '../hooks/datasync';
+import { EventPopup } from './components/EventPopup';
+import { TlPanel } from './components/TlPanel';
+import type { FeatureCollection } from 'geojson';
+import type { MapEventResponse } from '@hermes/util-types';
+import { useMapConfig } from '../config-context';
 
 const createGeoJson = (events: MapEventResponse[]): FeatureCollection => {
-  const uniqueEvents = new Map<string, MapEventResponse>()
+  const uniqueEvents = new Map<string, MapEventResponse>();
   events.forEach((event) => {
     const key = `${event.latitude.toFixed(4)},${event.longitude.toFixed(4)}`;
     const existing = uniqueEvents.get(key);
@@ -38,27 +35,21 @@ const createGeoJson = (events: MapEventResponse[]): FeatureCollection => {
   };
 };
 
-
-
-
-
 export function MapView() {
-  const config = useMapConfig()
-  mapboxgl.accessToken = config.mapboxToken
+  const config = useMapConfig();
+  mapboxgl.accessToken = config.mapboxToken;
 
-  const mapContainer = useRef<HTMLDivElement>(null)
-  const map = useRef<mapboxgl.Map | null>(null)
-  const [isMapReady, setIsMapReady] = useState(false)
-  const setViewport = useMapStore((state) => state.setViewport)
-  const { data: events, isFetching } = useMapDataSync()
-  const setSelectedId = useMapStore((s) => s.setSelectedEventId)
+  const mapContainer = useRef<HTMLDivElement>(null);
+  const map = useRef<mapboxgl.Map | null>(null);
+  const [isMapReady, setIsMapReady] = useState(false);
+  const setViewport = useMapStore((state) => state.setViewport);
+  const { data: events, isFetching } = useMapDataSync();
+  const setSelectedId = useMapStore((s) => s.setSelectedEventId);
 
-  const isTimelineMode = useMapStore((s) => s.isTlMode)
-
-
+  const isTimelineMode = useMapStore((s) => s.isTlMode);
 
   useEffect(() => {
-    if (!mapContainer.current || map.current) return
+    if (!mapContainer.current || map.current) return;
 
     map.current = new mapboxgl.Map({
       container: mapContainer.current,

@@ -102,7 +102,7 @@ hermes/
 │   │   └── README.md              # Detailed backend architectural documentation
 │   └── hermes-e2e/                # Playwright end-to-end browser test suite
 ├── libs/
-│   ├── feature-map/               # Core Mapbox GL WebGL implementation
+│   ├── map/                       # Core Mapbox GL WebGL implementation
 │   │   ├── src/lib/ui/            # MapView, EventPopup, TlPanel
 │   │   ├── src/lib/store/         # Zustand global map state store (useMapStore)
 │   │   └── src/lib/hooks/         # Data synchronization and timeline polling hooks
@@ -112,7 +112,7 @@ hermes/
 │       └── utils/                 # Cross-cutting utility functions
 ├── docker-compose.yml             # Orchestration for PostGIS/pgvector, API, and Frontend
 ├── package.json                   # Monorepo dependencies (Nx, React 19, Mapbox, Tailwind 4)
-├── tsconfig.base.json             # Absolute path alias mappings (@hermes/feature-map, etc.)
+├── tsconfig.base.json             # Absolute path alias mappings (@hermes/map, etc.)
 └── nx.json                        # Nx workspace target and generator configuration
 ```
 

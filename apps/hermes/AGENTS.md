@@ -11,7 +11,7 @@ This is the **frontend shell** of Project Hermes. It is a React application buil
 As a thin `apps/` shell in the Nx monorepo:
 - `apps/hermes` contains **only** route definitions, layout providers, and application configuration.
 - Reusable UI widgets live in `libs/shared/ui-components` (`BootSequence`, `LiveClock`).
-- Map engine, layers, custom projection hooks, and map state live in `libs/feature-map` (`MapView`, `EventPopup`, `TlPanel`, `useMapStore`).
+- Map engine, layers, custom projection hooks, and map state live in `libs/map` (`MapView`, `EventPopup`, `TlPanel`, `useMapStore`).
 - Shared TypeScript API interfaces live in `libs/shared/util-types` (`MapEventResponse`, `EventDetailResponse`, `TlResponse`).
 
 ---
@@ -40,8 +40,8 @@ Defined in `tailwind.config.js`:
 
 - **`BootSequence`** (`libs/shared/ui-components`): Terminal startup sequence displaying ASCII logo, simulated satellite handshake, and system integrity checks before revealing the map.
 - **`LiveClock`** (`libs/shared/ui-components`): Real-time dual UTC and Local digital clock with a blinking heartbeat monitor in the top-right corner.
-- **`EventPopup`** (`libs/feature-map`): Floating HUD window that tracks geographic coordinates via `requestAnimationFrame` projection calculations (`map.project()`). Features an automatic text-scrambler decode effect on AI summaries and links to original sources.
-- **`TlPanel`** (`libs/feature-map`): Slide-out intelligence dossier rendering historical causal events, Wikipedia context, and interactive map camera hops to historical sub-event coordinates.
+- **`EventPopup`** (`libs/map`): Floating HUD window that tracks geographic coordinates via `requestAnimationFrame` projection calculations (`map.project()`). Features an automatic text-scrambler decode effect on AI summaries and links to original sources.
+- **`TlPanel`** (`libs/map`): Slide-out intelligence dossier rendering historical causal events, Wikipedia context, and interactive map camera hops to historical sub-event coordinates.
 
 ---
 
@@ -49,7 +49,7 @@ Defined in `tailwind.config.js`:
 
 ### Zustand as Single Source of Truth
 
-- **Zustand** (`useMapStore` in `libs/feature-map/src/lib/store/store.ts`) is the global map store.
+- **Zustand** (`useMapStore` in `libs/map/src/lib/store/store.ts`) is the global map store.
 - **State Properties**:
   - `selectedEventId`: UUID string of the actively selected event (or `null`).
   - `selectedEventLngLat`: `[longitude, latitude]` of the active event.

@@ -34,7 +34,7 @@
 In accordance with Hermes monorepo guidelines, `apps/hermes` serves strictly as a **lightweight routing and configuration shell**:
 
 - **App Shell (`apps/hermes`)**: Owns application bootstrapping, environment variable injection, global HTML root layout, route definitions, and root providers.
-- **Feature Libraries (`libs/feature-map`)**: Owns the Mapbox GL canvas, map lifecycle hooks, custom projection event listeners, timeline panels, and Zustand map state stores.
+- **Feature Libraries (`libs/map`)**: Owns the Mapbox GL canvas, map lifecycle hooks, custom projection event listeners, timeline panels, and Zustand map state stores.
 - **Shared UI Libraries (`libs/shared/ui-components`)**: Owns decoupled tactical HUD widgets (boot sequence animations, military-style live clocks).
 - **Shared Types (`libs/shared/util-types`)**: Defines TypeScript interfaces representing backend DTO contracts.
 
@@ -116,8 +116,8 @@ Configured in [`tailwind.config.js`](file:///home/pavan/proj/hermes/apps/hermes/
 
 - **[`BootSequence`](file:///home/pavan/proj/hermes/libs/shared/ui-components/src/lib/BootSequence.tsx)**: Displays an ASCII command-center boot sequence with simulated satellite uplink initialization, memory scans, and telemetry checks before revealing the live interface.
 - **[`LiveClock`](file:///home/pavan/proj/hermes/libs/shared/ui-components/src/lib/LiveClock.tsx)**: Persistent upper-right tactical widget rendering synchronized UTC and Local timestamps alongside a blinking heartbeat monitor.
-- **[`EventPopup`](file:///home/pavan/proj/hermes/libs/feature-map/src/lib/ui/components/EventPopup.tsx)**: Floating HUD window that tracks geographic coordinates via `requestAnimationFrame` projection calculations (`map.project()`). Features an automatic cybernetic text-scrambler decode effect on summaries and direct links to original news sources.
-- **[`TlPanel`](file:///home/pavan/proj/hermes/libs/feature-map/src/lib/ui/components/TlPanel.tsx)**: Slide-out intelligence dossier rendering historical causal events, Wikipedia context, and interactive map camera hops to historical sub-event coordinates.
+- **[`EventPopup`](file:///home/pavan/proj/hermes/libs/map/src/lib/ui/components/EventPopup.tsx)**: Floating HUD window that tracks geographic coordinates via `requestAnimationFrame` projection calculations (`map.project()`). Features an automatic cybernetic text-scrambler decode effect on summaries and direct links to original news sources.
+- **[`TlPanel`](file:///home/pavan/proj/hermes/libs/map/src/lib/ui/components/TlPanel.tsx)**: Slide-out intelligence dossier rendering historical causal events, Wikipedia context, and interactive map camera hops to historical sub-event coordinates.
 
 ---
 
@@ -157,7 +157,7 @@ Unclustered markers utilize data-driven Mapbox expressions to dynamically size p
 
 ### Dynamic Timeline Graph Layering
 
-When a user initiates timeline mode on an event, [`TlPanel`](file:///home/pavan/proj/hermes/libs/feature-map/src/lib/ui/components/TlPanel.tsx) injects historical coordinates and causal graph edges:
+When a user initiates timeline mode on an event, [`TlPanel`](file:///home/pavan/proj/hermes/libs/map/src/lib/ui/components/TlPanel.tsx) injects historical coordinates and causal graph edges:
 
 - **Nodes**: Rendered as circles at historical geographic coordinates.
 - **Edges**: Directional `LineString` features connecting causal sub-events to successor incidents.
@@ -169,7 +169,7 @@ When a user initiates timeline mode on an event, [`TlPanel`](file:///home/pavan/
 
 ### Zustand Global Map Store
 
-Centralized in [`libs/feature-map/src/lib/store/store.ts`](file:///home/pavan/proj/hermes/libs/feature-map/src/lib/store/store.ts):
+Centralized in [`libs/map/src/lib/store/store.ts`](file:///home/pavan/proj/hermes/libs/map/src/lib/store/store.ts):
 
 ```typescript
 interface MapState {
@@ -222,7 +222,7 @@ apps/hermes/
         └── _index.spec.tsx        # React Router stub unit tests
 
 libs/
-├── feature-map/                   # Mapbox GL engine, timeline panel, event popup, map store
+├── map/                           # Mapbox GL engine, timeline panel, event popup, map store
 │   └── src/lib/
 │       ├── ui/map-view.tsx        # Mapbox container, camera controls, WebGL layers
 │       ├── ui/components/

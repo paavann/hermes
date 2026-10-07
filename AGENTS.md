@@ -137,7 +137,7 @@ This is an Nx monorepo. The workspace contains the following projects:
 | **`hermes-api`** | `apps/hermes-api/` | Python backend — stateless REST API & on-demand historical timeline synthesis | FastAPI, SQLAlchemy 2.0 Async, PostGIS, pgvector (`halfvec`), LiteLLM, uv |
 | **`hermes-worker`** | `apps/hermes-worker/` | Python CLI worker — autonomous RSS ingestion, AI batch extraction, geocoding shield & event lifecycle decay | Python, feedparser, LiteLLM, PostGIS, pgvector (`halfvec`), httpx, uv |
 | **`hermes-e2e`** | `apps/hermes-e2e/` | End-to-end browser tests | Playwright |
-| **`@hermes/feature-map`** | `libs/feature-map/` | Mapbox GL WebGL implementation & timeline drawer | Mapbox GL JS, Zustand store, TanStack Query hooks, `MapView`, `EventPopup`, `TlPanel` |
+| **`@hermes/map`** | `libs/map/` | Mapbox GL WebGL implementation & timeline drawer | Mapbox GL JS, Zustand store, TanStack Query hooks, `MapView`, `EventPopup`, `TlPanel` |
 | **`hermes-db`** | `libs/shared/hermes-db/` | Shared PostGIS + pgvector models, migrations & DB services | SQLAlchemy 2.0 Async, PostGIS, pgvector (`halfvec`), GeoAlchemy2, Alembic, uv |
 | **`@hermes/ui-components`** | `libs/shared/ui-components/`| Tactical Mission Control HUD widgets | React 19, Tailwind CSS 4, `BootSequence`, `LiveClock` |
 | **`@hermes/util-types`** | `libs/shared/util-types/` | Shared TypeScript API response interfaces | TypeScript interfaces (`MapEventResponse`, `EventDetailResponse`, `TlResponse`) |
@@ -159,7 +159,7 @@ As an AI agent, you must act as a strict **Nx Monorepo Mentor** for the user. Co
 
 - **Root Execution Only**: ALL commands must be executed from the workspace root using `npx nx <target> <project>` (e.g., `npx nx serve hermes`, `npx nx serve hermes-api`). Never `cd` into child directories to run scripts.
 - **Strict Generators**: Never create new UI components, libraries, or Python modules by manually adding files to the tree. Always use Nx generators (e.g., `npx nx g @nx/react:component`, `npx nx g @nx/python:library`) so paths and configs remain synchronized.
-- **The 80/20 Rule (Apps vs Libs)**: `apps/` must remain thin and act primarily as routing and configuration shells. Most business logic, UI components, and API utilities must reside in shared libraries within the `libs/` directory (`libs/feature-map`, `libs/shared/ui-components`, `libs/shared/util-types`). Warn the user if they attempt to build monolithic logic directly inside `apps/`.
+- **The 80/20 Rule (Apps vs Libs)**: `apps/` must remain thin and act primarily as routing and configuration shells. Most business logic, UI components, and API utilities must reside in shared libraries within the `libs/` directory (`libs/map`, `libs/shared/ui-components`, `libs/shared/util-types`). Warn the user if they attempt to build monolithic logic directly inside `apps/`.
 - **Module Boundaries**: Configure and enforce strict architectural boundary tags in `project.json` (e.g., `type:app`, `scope:frontend`). Rely on ESLint (`@nx/enforce-module-boundaries`) to prevent circular dependencies or architectural violations.
 - **Shared Types**: Store TypeScript interfaces for API responses in a dedicated library (`libs/shared/util-types`) to keep contracts aligned between backend schemas and frontend consumers.
 
