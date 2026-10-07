@@ -30,7 +30,7 @@ def _parse_date(entry: dict) -> datetime | None:
     if parsed_time:
         try:
             return datetime(*parsed_time[:6])
-        except ValueError, TypeError:
+        except (ValueError, TypeError):
             return None
     return None
 

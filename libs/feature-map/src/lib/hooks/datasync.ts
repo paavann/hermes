@@ -13,7 +13,6 @@ export function useMapDataSync() {
     queryKey: ['events', viewport],
     queryFn: async () => {
       if (!viewport) return [];
-      console.info('fetching map data for viewport...');
       let { north, south, east, west } = viewport;
 
       // Clamp coordinates to valid ranges expected by the backend
@@ -23,7 +22,6 @@ export function useMapDataSync() {
       west = Math.min(Math.max(west, -180), 180);
 
       const url = `${config.baseUrl}/api/${config.apiVer}/events/bbox`;
-      console.log('constructed url: ', url);
       const res = await axios.get<MapEventResponse[]>(url, {
         params: { north, south, east, west },
       });

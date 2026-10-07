@@ -55,6 +55,9 @@ class Settings(BaseSettings):
     EVENT_STALE_HOURS: int = 24
     EVENT_ARCHIVE_HOURS: int = 48
 
+    # cors configuration.
+    CORS_ORIGINS: list[str] = ["*"]
+
     # database connection url.
     @property
     def db_url(self) -> URL:

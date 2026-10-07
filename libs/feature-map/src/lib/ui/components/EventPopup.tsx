@@ -6,6 +6,7 @@ export function EventPopup({ map }: { map: mapboxgl.Map | null }) {
   const selectedEventId = useMapStore((s) => s.selectedEventId);
   const selectedEventLngLat = useMapStore((s) => s.selectedEventLngLat);
   const setSelectedEventId = useMapStore((s) => s.setSelectedEventId);
+  const setTlMode = useMapStore((s) => s.setTlMode);
 
   const { data: event, isLoading, isError } = useEventDetails(selectedEventId);
   const [pos, setPos] = useState({ x: -9999, y: -9999 });
@@ -156,7 +157,7 @@ export function EventPopup({ map }: { map: mapboxgl.Map | null }) {
               {/* Lineage Analyze Button */}
               <button
                 onClick={() => {
-                  useMapStore.getState().setTlMode(true, event.id);
+                  setTlMode(true, event.id);
                   setSelectedEventId(null);
                 }}
                 className="w-full py-2 bg-neon-blue/20 hover:bg-neon-blue/40 border border-neon-blue text-neon-blue cursor-pointer text-xs font-bold tracking-widest uppercase transition-colors"

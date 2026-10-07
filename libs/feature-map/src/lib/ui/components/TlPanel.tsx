@@ -205,7 +205,7 @@ export function TlPanel({ map }: { map: mapboxgl.Map | null }) {
     }, [activeNodeId]);
 
     const isGenerating = isLoading || isRegenerating || tlData?.status === 'GENERATING';
-    const noContent    = (tlData?.status === 'no_content' || tlData?.status === 'NO_CONTENT') && !isGenerating;
+    const noContent    = tlData?.status === 'NO_CONTENT' && !isGenerating;
     const isFailed     = (isError || tlData?.status === 'FAILED') && !isGenerating;
 
     return (

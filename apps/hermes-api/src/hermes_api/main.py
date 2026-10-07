@@ -25,6 +25,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     await init_db(db_url=settings.db_url)
 
     logger.info("hermes api running on port %s.", settings.API_PORT)
+    if not settings.LLM_API or not settings.LLM_MODEL:
+        logger.warning(
+            "llm credentials not configured. timeline synthesis will be unavailable."
+        )
     yield
 
     logger.info("shutting down server...")
@@ -36,7 +40,7 @@ register_err_handlers(app)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=settings.CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

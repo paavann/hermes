@@ -78,7 +78,7 @@ async def search_timeline_titles(query: str, *, limit: int = 50) -> list[str]:
     except httpx.HTTPError:
         logger.exception("http error while searching wikipedia for '%s'.", query)
         return []
-    except KeyError, ValueError:
+    except (KeyError, ValueError):
         logger.exception("failed to parse wikipedia search response for '%s'.", query)
         return []
 
@@ -159,7 +159,7 @@ async def _fetch_extracts_batch(titles: list[str]) -> dict[str, str | None]:
             out[caller_key] = extract
     except httpx.HTTPError:
         logger.exception("http error fetching extracts for batch: %s...", titles[:3])
-    except KeyError, ValueError:
+    except (KeyError, ValueError):
         logger.exception(
             "failed to parse extracts response for batch: %s...", titles[:3]
         )

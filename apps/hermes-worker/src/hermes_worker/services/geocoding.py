@@ -121,9 +121,9 @@ class GeocodingService:
                         longitude=float(first["lon"]),
                         display_name=first.get("display_name", location_name),
                     )
-                except KeyError, ValueError, TypeError:
+                except (KeyError, ValueError, TypeError):
                     logger.exception(
-                        "malformed nominatim response for '%s': %s",
+                        "malformed nominatim response for '%s': %s.",
                         location_name,
                         first,
                     )

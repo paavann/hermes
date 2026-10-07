@@ -222,9 +222,9 @@ class GeocodingService:
                             await asyncio.sleep(2.0 * (attempt + 1))
                         else:
                             return None
-                    except KeyError, ValueError, IndexError:
+                    except (KeyError, ValueError, IndexError):
                         logger.exception(
-                            "Failed to parse Nominatim response for '%s'.",
+                            "failed to parse Nominatim response for '%s'.",
                             location_name,
                         )
                         return None
