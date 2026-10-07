@@ -3,6 +3,7 @@ import uuid
 from datetime import datetime
 
 from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from hermes_db.models.article import Article
@@ -27,13 +28,18 @@ class ArticleService:
         title: str,
         url: str,
         published_at: datetime | None = None,
-    ) -> Article:
-        article = Article(
-            event_id=event_id,
-            source_id=source_id,
-            title=title,
-            url=url,
-            published_at=published_at,
+    ) -> Article | None:
+        stmt = (
+            pg_insert(Article)
+            .values(
+                event_id=event_id,
+                source_id=source_id,
+                title=title,
+                url=url,
+                published_at=published_at,
+            )
+            .on_conflict_do_nothing(index_elements=["url"])
+            .returning(Article)
         )
-        self._session.add(article)
-        return article
+        result = await self._session.execute(stmt)
+        return result.scalar_one_or_none()

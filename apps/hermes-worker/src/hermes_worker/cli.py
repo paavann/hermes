@@ -14,7 +14,8 @@ logger = logging.getLogger("hermes_worker")
 
 async def _run_command(command: str, force: bool = False) -> int:
     logger.info("initializing database connection for %s...", settings.APP)
-    await init_db(db_url=str(settings.db_url))
+    await init_db(db_url=settings.db_url)
+    logger.info("database connection initialized.")
     try:
         if command == "run-sync":
             service = SyncService()

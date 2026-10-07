@@ -106,19 +106,30 @@ class SyncService:
 
                         matched = False
                         if extraction.matched_event_id:
-                            matched = await event_service.add_article_to_event(
-                                event_id=uuid.UUID(extraction.matched_event_id),
-                                article_title=article.title,
-                                article_url=article.url,
-                                source_id=source_id,
-                                source_credibility=source.credibility,
-                                published_at=article.published_at,
-                            )
-                            if matched:
-                                stats["events_matched"] += 1
+                            try:
+                                matched_uuid = uuid.UUID(extraction.matched_event_id)
+                            except ValueError:
+                                logger.warning(
+                                    "ignoring malformed matched_event_id '%s' for article '%s'.",
+                                    extraction.matched_event_id,
+                                    article.title,
+                                )
+                                matched_uuid = None
+
+                            if matched_uuid:
+                                matched = await event_service.add_article_to_event(
+                                    event_id=matched_uuid,
+                                    article_title=article.title,
+                                    article_url=article.url,
+                                    source_id=source_id,
+                                    source_credibility=source.credibility,
+                                    published_at=article.published_at,
+                                )
+                                if matched:
+                                    stats["events_matched"] += 1
 
                         if not matched:
-                            await event_service.create_event_with_article(
+                            created = await event_service.create_event_with_article(
                                 extraction=extraction,
                                 geocoding=geocoding,
                                 article_title=article.title,
@@ -128,7 +139,8 @@ class SyncService:
                                 published_at=article.published_at,
                                 embedding=article_embedding,
                             )
-                            stats["events_created"] += 1
+                            if created:
+                                stats["events_created"] += 1
 
                         stats["articles_processed"] += 1
                 except Exception:

@@ -48,35 +48,65 @@ class TestGetByLocationName:
 # ---------------------------------------------------------------------------
 
 class TestSaveGeocodeResult:
-    def _make_svc(self) -> tuple[GeocodeCacheService, AsyncMock]:
-        session = make_async_session()
+    def _make_svc_with_entry(
+        self, entry: GeocodeCache | None
+    ) -> tuple[GeocodeCacheService, AsyncMock]:
+        """Wire a session mock so both execute() calls return appropriately.
+
+        The upsert (first execute) uses its result for nothing meaningful.
+        The re-fetch SELECT (second execute) must return the GeocodeCache entry
+        via scalar_one_or_none().  We set the same return value for all calls
+        since the mock returns the same result object each time — that's fine
+        because the upsert result is never read.
+        """
+        session = make_async_session(execute_scalar_one_or_none=entry)
         return GeocodeCacheService(session), session
 
     def test_returns_geocode_cache_instance(self):
-        svc, session = self._make_svc()
+        """save_geocode_result must return the re-fetched GeocodeCache row."""
+        mock_entry = MagicMock(spec=GeocodeCache)
+        mock_entry.location_name = "paris"
+        mock_entry.latitude = 48.8566
+        mock_entry.longitude = 2.3522
+        mock_entry.display_name = "Paris, France"
+
+        svc, _ = self._make_svc_with_entry(mock_entry)
         result = run(
             svc.save_geocode_result(
                 location_name=" Paris ",
                 latitude=48.8566,
                 longitude=2.3522,
-                display_name="Paris, France"
+                display_name="Paris, France",
             )
         )
-        assert isinstance(result, GeocodeCache)
-        assert result.location_name == "paris"
-        assert result.latitude == 48.8566
-        assert result.longitude == 2.3522
-        assert result.display_name == "Paris, France"
+        assert result is mock_entry
 
-    def test_entry_added_to_session_and_committed(self):
-        svc, session = self._make_svc()
-        result = run(
+    def test_execute_called_twice_and_committed(self):
+        """Must issue two executes (upsert + re-fetch SELECT) and commit exactly once."""
+        mock_entry = MagicMock(spec=GeocodeCache)
+        svc, session = self._make_svc_with_entry(mock_entry)
+        run(
             svc.save_geocode_result(
                 location_name="Berlin",
                 latitude=52.5200,
                 longitude=13.4050,
-                display_name="Berlin, Germany"
+                display_name="Berlin, Germany",
             )
         )
-        session.add.assert_called_once_with(result)
+        assert session.execute.await_count == 2
         session.commit.assert_awaited_once()
+
+    def test_does_not_call_session_add(self):
+        """Upsert path must not use session.add()."""
+        mock_entry = MagicMock(spec=GeocodeCache)
+        svc, session = self._make_svc_with_entry(mock_entry)
+        run(
+            svc.save_geocode_result(
+                location_name="Tokyo",
+                latitude=35.6762,
+                longitude=139.6503,
+                display_name="Tokyo, Japan",
+            )
+        )
+        session.add.assert_not_called()
+

@@ -4,8 +4,7 @@ All tests use a mocked AsyncSession so no database is involved.
 """
 
 import uuid
-from datetime import UTC, datetime
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from conftest import make_async_session, make_uuid, run
@@ -74,13 +73,21 @@ class TestArticleUrlExists:
 
 
 class TestCreateArticle:
-    def _make_svc(self) -> tuple[ArticleService, AsyncMock]:
-        session = make_async_session()
+    def _make_svc(
+        self, *, returned_article: Article | None = None
+    ) -> tuple[ArticleService, AsyncMock]:
+        """Build a service backed by a session mock.
+
+        ``returned_article`` is what ``execute(...).scalar_one_or_none()`` yields,
+        simulating the RETURNING clause on the pg upsert.
+        """
+        session = make_async_session(execute_scalar_one_or_none=returned_article)
         return ArticleService(session), session
 
     def test_returns_article_instance(self):
-        """create_article must return an Article ORM object."""
-        svc, _ = self._make_svc()
+        """create_article must return the Article returned by the upsert RETURNING clause."""
+        mock_article = MagicMock(spec=Article)
+        svc, _ = self._make_svc(returned_article=mock_article)
         result = run(
             svc.create_article(
                 event_id=make_uuid(),
@@ -89,34 +96,25 @@ class TestCreateArticle:
                 url="https://example.com/article-1",
             )
         )
-        assert isinstance(result, Article)
+        assert result is mock_article
 
-    def test_article_fields_populated(self):
-        """Returned article must carry the supplied field values."""
-        svc, _ = self._make_svc()
-        event_id = make_uuid()
-        source_id = make_uuid()
-        published = datetime(2024, 1, 15, 12, 0, tzinfo=UTC)
-
-        article = run(
+    def test_returns_none_on_duplicate_url(self):
+        """When the upsert hits ON CONFLICT DO NOTHING, RETURNING yields nothing → None."""
+        svc, _ = self._make_svc(returned_article=None)
+        result = run(
             svc.create_article(
-                event_id=event_id,
-                source_id=source_id,
-                title="Breaking news",
-                url="https://example.com/breaking",
-                published_at=published,
+                event_id=make_uuid(),
+                source_id=make_uuid(),
+                title="Dupe",
+                url="https://example.com/duplicate",
             )
         )
-        assert article.event_id == event_id
-        assert article.source_id == source_id
-        assert article.title == "Breaking news"
-        assert article.url == "https://example.com/breaking"
-        assert article.published_at == published
+        assert result is None
 
-    def test_article_added_to_session(self):
-        """session.add must be called with the new Article object."""
+    def test_executes_exactly_one_query(self):
+        """create_article must issue exactly one execute (the upsert INSERT ... RETURNING)."""
         svc, session = self._make_svc()
-        article = run(
+        run(
             svc.create_article(
                 event_id=make_uuid(),
                 source_id=make_uuid(),
@@ -124,10 +122,10 @@ class TestCreateArticle:
                 url="https://example.com/x",
             )
         )
-        session.add.assert_called_once_with(article)
+        session.execute.assert_awaited_once()
 
-    def test_commit_not_called(self):
-        """create_article must NOT commit — that's the caller's responsibility."""
+    def test_does_not_call_session_add(self):
+        """Upsert path must not call session.add() — that was the old plain-insert approach."""
         svc, session = self._make_svc()
         run(
             svc.create_article(
@@ -137,11 +135,13 @@ class TestCreateArticle:
                 url="https://example.com/y",
             )
         )
-        session.commit.assert_not_awaited()
+        session.add.assert_not_called()
 
-    def test_published_at_defaults_to_none(self):
-        """When published_at is omitted it should default to None."""
-        svc, _ = self._make_svc()
+    def test_published_at_defaults_to_none_on_new_article(self):
+        """When published_at is omitted the article returned from DB should be unchanged."""
+        mock_article = MagicMock(spec=Article)
+        mock_article.published_at = None
+        svc, _ = self._make_svc(returned_article=mock_article)
         article = run(
             svc.create_article(
                 event_id=make_uuid(),
@@ -166,3 +166,4 @@ class TestCreateArticle:
         col = inspect(Article).columns["id"]
         assert col.default is not None and col.default.is_callable
         assert isinstance(col.default.arg(None), uuid.UUID)
+

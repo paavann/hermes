@@ -1,6 +1,7 @@
 import logging
 
 from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from hermes_db.models.geocode_cache import GeocodeCache
@@ -29,12 +30,22 @@ class GeocodeCacheService:
         display_name: str | None
     ) -> GeocodeCache:
         norm_key = location_name.strip().lower()
-        cache_entry = GeocodeCache(
-            location_name=norm_key,
-            latitude=latitude,
-            longitude=longitude,
-            display_name=display_name,
+        stmt = (
+            pg_insert(GeocodeCache)
+            .values(
+                location_name=norm_key,
+                latitude=latitude,
+                longitude=longitude,
+                display_name=display_name,
+            )
+            .on_conflict_do_nothing(index_elements=["location_name"])
         )
-        self._session.add(cache_entry)
+        await self._session.execute(stmt)
         await self._session.commit()
-        return cache_entry
+
+        existing = await self.get_by_location_name(norm_key)
+        if existing is None:
+            raise RuntimeError(
+                f"geocode_cache row missing after upsert for location '{norm_key}'."
+            )
+        return existing

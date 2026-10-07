@@ -69,7 +69,7 @@ class EventService:
         source_id: uuid.UUID, source_credibility: CredibilityTier,
         published_at: datetime | None = None,
         embedding: list[float] | None = None,
-    ) -> Event:
+    ) -> Event | None:
         location_wkt = None
         if geocoding:
             location_wkt = (
@@ -90,13 +90,21 @@ class EventService:
         self._session.add(event)
         await self._session.flush()
 
-        await self._article_service.create_article(
+        article = await self._article_service.create_article(
             event_id=event.id,
             source_id=source_id,
             title=article_title,
             url=article_url,
             published_at=published_at,
         )
+        if article is None:
+            await self._session.rollback()
+            logger.info(
+                "duplicate article url for new event '%s', rolling back.",
+                event.ai_headline,
+            )
+            return None
+
         await self._session.commit()
 
         logger.info("created event '%s' with 1 article.", event.ai_headline)
@@ -116,13 +124,19 @@ class EventService:
             logger.warning("event not found for event id: %s.", event_id)
             return None
 
-        await self._article_service.create_article(
+        article = await self._article_service.create_article(
             event_id=event.id,
             source_id=source_id,
             title=article_title,
             url=article_url,
             published_at=published_at,
         )
+        if article is None:
+            logger.info(
+                "duplicate article url for event '%s', skipping score update.",
+                event.ai_headline,
+            )
+            return None
 
         event.article_count += 1
         added_score = CREDIBILITY_WEIGHTS.get(source_credibility, 1.0)

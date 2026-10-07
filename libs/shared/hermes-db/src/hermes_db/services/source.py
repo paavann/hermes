@@ -84,7 +84,7 @@ class SourceService:
     async def update_last_fetched(
         self, source_id: uuid.UUID, fetched_at: datetime | None = None
     ) -> None:
-        now = fetched_at or datetime.now(UTC)
+        now = (fetched_at or datetime.now(UTC)).replace(tzinfo=None)
         stmt = (
             update(Source)
             .where(Source.id == source_id)
