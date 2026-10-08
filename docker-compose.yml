@@ -58,12 +58,8 @@ services:
     env_file:
       - .env.development
       - path: ./apps/hermes-worker/.env.development
-        required: false
+        required: true
       - path: ./apps/hermes-worker/.env.local
-        required: false
-      - path: ./apps/hermes-api/.env.development
-        required: false
-      - path: ./apps/hermes-api/.env.local
         required: false
     depends_on:
       hermes-db:

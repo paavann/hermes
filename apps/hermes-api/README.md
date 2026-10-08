@@ -1,12 +1,12 @@
 # Hermes API (Backend Service)
 
-The `hermes-api` is a highly performant, stateless RESTful service built with Python 3.12 and FastAPI. It acts as the critical bridge between the PostGIS database and the React client shell, serving hyper-local geospatial data and synthesizing historical timelines on demand.
+The `hermes-api` is a highly performant, stateless RESTful service built with Python 3.14 and FastAPI. It acts as the critical bridge between the PostGIS database and the React client shell, serving hyper-local geospatial data and synthesizing historical timelines on demand.
 
 ---
 
 ## Architectural Role
 
-In the 12-factor architecture of the Hermes platform, this service strictly handles **read and synthesis** operations. Data ingestion, LLM embedding, and heavy background processing are delegated to the `hermes-worker` service. 
+In the 12-factor architecture of the Hermes platform, this service strictly handles **read and synthesis** operations. Data ingestion, LLM embedding, and heavy background processing are delegated to the `hermes-worker` service.
 
 This separation of concerns ensures that the REST API remains highly responsive for map viewport queries, even during intensive global news ingestion spikes.
 
@@ -46,13 +46,16 @@ sequenceDiagram
 ## Core Features & Endpoints
 
 ### 1. Viewport Bounding-Box Queries
-As the user pans and zooms across the globe on the frontend, the client emits debounced bounding-box queries to the API. 
+
+As the user pans and zooms across the globe on the frontend, the client emits debounced bounding-box queries to the API.
 The API translates these bounds into PostGIS `ST_MakeEnvelope` spatial intersections, returning only the most critical events occurring precisely within the user's field of view.
 
 ### 2. On-Demand Timeline Synthesis
+
 When a user investigates a specific event, the API powers the timeline drawer by generating a historical causality graph. If the timeline is missing, the API orchestrates a pipeline involving MediaWiki data extraction and LiteLLM prompt engineering to derive a chronological sequence of events, caching the result in PostgreSQL as JSONB.
 
 ### 3. Event Investigation & Detail Retrieval
+
 Provides rich, augmented details for specific events, including semantic summaries, original source URLs, and geographical confirmation metrics.
 
 ---
@@ -61,13 +64,13 @@ Provides rich, augmented details for specific events, including semantic summari
 
 The application relies on `.env.local` for sensitive credentials and `.env` for shared database configurations.
 
-| Variable | Description |
-| :--- | :--- |
-| `DB_USER` / `DB_PASSWORD` | PostgreSQL connection credentials. |
-| `DB_HOST` / `DB_PORT` | Database networking. |
-| `DB_NAME` | Database schema name (`hermes`). |
-| `LLM_API` | Primary LLM provider key for timeline synthesis. |
-| `LLM_MODEL` | Specific model string (e.g., `mistral/ministral-8b-latest`). |
+| Variable                  | Description                                                  |
+| :------------------------ | :----------------------------------------------------------- |
+| `DB_USER` / `DB_PASSWORD` | PostgreSQL connection credentials.                           |
+| `DB_HOST` / `DB_PORT`     | Database networking.                                         |
+| `DB_NAME`                 | Database schema name (`hermes`).                             |
+| `LLM_API`                 | Primary LLM provider key for timeline synthesis.             |
+| `LLM_MODEL`               | Specific model string (e.g., `mistral/ministral-8b-latest`). |
 
 ---
 
@@ -92,9 +95,9 @@ apps/hermes-api/
 
 Execute from the workspace root:
 
-| Target | Command | Description |
-| :--- | :--- | :--- |
-| **Start Server** | `npx nx serve hermes-api` | Run Uvicorn dev server on port 8000 with reload. |
-| **Sync Deps** | `npx nx run hermes-api:sync` | Update Python dependencies via `uv`. |
-| **Run Tests** | `npx nx test hermes-api` | Execute Pytest suite. |
-| **Format Code** | `npx nx run hermes-api:format` | Format with Ruff. |
+| Target           | Command                        | Description                                      |
+| :--------------- | :----------------------------- | :----------------------------------------------- |
+| **Start Server** | `npx nx serve hermes-api`      | Run Uvicorn dev server on port 8000 with reload. |
+| **Sync Deps**    | `npx nx run hermes-api:sync`   | Update Python dependencies via `uv`.             |
+| **Run Tests**    | `npx nx test hermes-api`       | Execute Pytest suite.                            |
+| **Format Code**  | `npx nx run hermes-api:format` | Format with Ruff.                                |

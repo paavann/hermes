@@ -77,7 +77,7 @@
     "run": {
       "executor": "@nxlv/python:run-commands",
       "options": {
-        "command": "uv run python -m hermes_worker.cli",
+        "command": "uv run hermes-worker",
         "cwd": "{projectRoot}"
       }
     }

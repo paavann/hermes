@@ -101,6 +101,6 @@ Execute from the workspace root:
 
 | Target | Command | Description |
 | :--- | :--- | :--- |
-| **Start Worker** | `npx nx run hermes-worker:ingest` | Launch the continuous ingestion loop. |
+| **Start Worker** | `npx nx run hermes-worker:run` | Launch the continuous ingestion loop. |
 | **Sync Deps** | `npx nx run hermes-worker:sync` | Update dependencies via `uv`. |
 | **Test** | `npx nx test hermes-worker` | Run Pytest suite. |

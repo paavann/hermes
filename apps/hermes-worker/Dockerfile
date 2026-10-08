@@ -20,7 +20,7 @@ COPY apps/hermes-worker ./apps/hermes-worker
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --package hermes-worker --frozen
 WORKDIR /app/apps/hermes-worker
-ENTRYPOINT ["uv", "run", "python", "-m", "hermes_worker.cli"]
+ENTRYPOINT ["uv", "run", "hermes-worker"]
 CMD ["run-all"]
 
 # production target (--no-dev, precompiled bytecode).
@@ -33,5 +33,5 @@ COPY apps/hermes-worker ./apps/hermes-worker
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --package hermes-worker --frozen --no-dev
 WORKDIR /app/apps/hermes-worker
-ENTRYPOINT ["uv", "run", "python", "-m", "hermes_worker.cli"]
+ENTRYPOINT ["uv", "run", "hermes-worker"]
 CMD ["run-all"]

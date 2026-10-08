@@ -32,6 +32,9 @@ dependencies = [
   "python-dotenv>=1.2.1",
 ]
 
+[project.scripts]
+hermes-worker = "hermes_worker.cli:main"
+
 
 [dependency-groups]
 dev = [

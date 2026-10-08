@@ -197,7 +197,7 @@ EMBED_MODEL=nvidia_nim/nvidia/nemotron-3-embed-1b
 4. Run Migrations: `npx nx migrate hermes-api`
 5. Start API: `npx nx serve hermes-api`
 6. Start Frontend: `npx nx dev hermes`
-7. Start Worker: `npx nx run hermes-worker:ingest`
+7. Start Worker: `npx nx run hermes-worker:run`
 
 ---
 
