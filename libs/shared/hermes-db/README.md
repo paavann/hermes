@@ -1,68 +1,71 @@
-# Hermes Database
+# Hermes Shared Database Library
 
-Shared PostGIS and pgvector data access layer, declarative ORM models, Alembic migrations, and database transaction services for Project Hermes.
+The `hermes-db` library serves as the central source of truth for the entire platform's data layer. It houses the SQLAlchemy 2.0 ORM models, PostGIS geospatial configurations, `pgvector` index definitions, and Alembic database migrations.
 
----
-
-## 1. Architectural Role & Inversion of Control
-
-`hermes-db` is an independent, pure Python library designed to be consumed by application runtime shells (such as `hermes-api`) and background worker jobs.
-
-### Host-Injected Connection Configuration
-
-To prevent configuration drift across monorepo packages, `hermes-db` relies on **Inversion of Control (IoC)**:
-
-- The host application (e.g. `hermes-api`) loads and validates runtime environment credentials (via `.env`, `.env.development`, or container secrets).
-- During startup lifespan, the host passes its validated database URL directly to `init_db`:
-
-  ```python
-  from hermes_db import init_db, close_db
-
-  # In application startup lifespan:
-  await init_db(db_url=settings.db_url)
-  ```
-
-- `init_db(db_url)` rebinds the active async engine and updates `AsyncSessionLocal` in-place, ensuring all importing services seamlessly use the injected connection pool.
-- On shutdown, `await close_db()` safely disposes of the connection pool.
+By centralizing the database logic, both the `hermes-api` (read operations) and the `hermes-worker` (write/ingest operations) guarantee perfect schema synchronization and type safety.
 
 ---
 
-## 2. Models & Schema
+## Architectural Posture
 
-The library defines declarative SQLAlchemy 2.0 models with spatial and vector extensions:
+This library acts strictly as a dependency provider. It does not expose REST endpoints or run background loops. It dictates the structural integrity of the PostgreSQL 16 database.
 
-- **`Event`**: Core news event entity with PostGIS `Geometry(POINT, 4326)` for coordinates, pgvector `halfvec(2048)` for semantic embeddings with HNSW indexing, trending scores, and lifecycle statuses (`ACTIVE`, `STALE`, `ARCHIVED`).
-- **`Article`**: Individual news stories associated with events, tracking source provenance, titles, URLs, and publication timestamps.
-- **`Source`**: Curated RSS publishers and news feeds with credibility tier assignments (`TIER_1` through `TIER_4`).
-- **`GeocodeCache`**: Persistent geocoding cache mapping normalized place names to latitude/longitude coordinates to shield external geocoding providers.
-- **`EventTl`**: Historical causality timeline graphs stored as JSONB nodes and causal edges.
+### Entity-Relationship Schema
 
----
+```mermaid
+erDiagram
+    EVENTS ||--o{ EVENT_TIMELINES : "possesses"
+    GEOCODE_CACHE ||--o{ EVENTS : "resolves coordinates for"
 
-## 3. Services
+    EVENTS {
+        uuid id PK
+        varchar title
+        text summary
+        geometry location_point "PostGIS SRID 4326 Point"
+        halfvec embedding "pgvector halfvec(2048) HNSW Index"
+        float trending_score
+        enum category "CONFLICT, DISASTER, POLITICS, ECONOMY"
+        enum status "ACTIVE, STALE, ARCHIVED"
+        timestamp created_at
+        timestamp updated_at
+    }
 
-The library provides dedicated async services operating over `AsyncSession`:
+    EVENT_TIMELINES {
+        uuid id PK
+        uuid event_id FK
+        jsonb graph_data "Nodes and Edges for Historical Lineage"
+        timestamp generated_at
+    }
 
-- **`EventService`**: Querying events by bounding box (`ST_Within`), trending score, and vector similarity; creating events; and executing hourly lifecycle score decay.
-- **`ArticleService`**: Article persistence and URL deduplication.
-- **`GeocodeCacheService`**: Spatial cache lookup and storage.
-- **`EventTlService`**: Timeline graph retrieval, generation lifecycle tracking, and node/edge persistence.
-- **`sync_sources_from_config`**: Synchronizes publisher definitions from `sources.json` into the database.
-
----
-
-## 4. Migrations & CLI Usage
-
-Alembic migrations reside inside this library (`migrations/`).
-
-To run migrations:
-
-```bash
-# From workspace root
-npx nx migrate hermes-db
-
-# Or directly via uv inside the library
-uv run alembic upgrade head
+    GEOCODE_CACHE {
+        varchar location_name PK
+        float latitude
+        float longitude
+        timestamp cached_at
+    }
 ```
 
-During standalone CLI executions, Alembic falls back to reading the root `.env.development` (or `.env.production` when `ENV=production` is set).
+---
+
+## Advanced Database Features
+
+### 1. Spatial Geometry (PostGIS)
+The `location_point` column on the `Events` table utilizes the PostGIS `Geometry(POINT, 4326)` type. This allows the backend to execute highly performant `ST_Within` bounding-box queries, isolating millions of rows to just the coordinates visible on the user's screen in milliseconds.
+
+### 2. Vector Similarity Indexing (pgvector)
+To handle semantic deduplication at scale, the `embedding` column uses the `halfvec(2048)` data type. Half-precision floats significantly reduce RAM footprint without compromising search accuracy. Furthermore, an **HNSW (Hierarchical Navigable Small World)** index with `halfvec_cosine_ops` guarantees ultra-fast nearest-neighbor lookups for real-time article clustering.
+
+### 3. Asynchronous Database Sessions
+The library provides an `async_sessionmaker` configured strictly for asynchronous operations (`asyncpg` driver). This ensures that neither the API nor the Worker blocks the event loop while waiting for database I/O.
+
+---
+
+## Migrations Workflow
+
+Migrations are managed via Alembic and executed strictly from the workspace root using Nx task runners.
+
+| Task | Command | Description |
+| :--- | :--- | :--- |
+| **Generate Revision** | `npx nx run hermes-db:revision --message="add_table"` | Scans SQLAlchemy models and auto-generates an Alembic migration script. |
+| **Apply Migrations** | `npx nx migrate hermes-api` | Applies pending revisions to the database (Note: API target is used for execution context). |
+| **Sync Deps** | `npx nx run hermes-db:sync` | Update dependencies. |

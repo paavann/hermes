@@ -1,6 +1,5 @@
 ---
 trigger: always_on
-description: Strict workflow for context gathering and step-by-step execution on larger tasks.
 ---
 
 # Step-by-Step Execution & Development Workflow
@@ -28,3 +27,5 @@ Whenever the user assigns a new task (e.g., building a feature, major refactorin
 4. **Progression**
    - Once a step is verified and approved by the user, move on to the next execution step in the plan and repeat the Execution & Verification Loop.
    - Continue until all steps of the original task are complete.
+
+5. **Documentation Maintenance**: After the full completion of a task, you MUST automatically review and suggest any necessary updates to `AGENTS.md` and `README.md` files across the repository to ensure they never become outdated.
