@@ -2,8 +2,18 @@ import logging
 from collections.abc import Callable, Sequence
 from typing import TYPE_CHECKING
 
-from hermes_ai.core.constants import DEFAULT_CATEGORY_COLOR, PREDEFINED_CATEGORIES
-from hermes_ai.models.events import ArticleInput, ExtractedEvent, ExtractionResponse
+from hermes_ai.core.constants import (
+    ARTICLE_BATCH_SIZE,
+    DEFAULT_CATEGORY_COLOR,
+    PREDEFINED_CATEGORIES,
+)
+from hermes_ai.models.events import (
+    ArticleInput,
+    ExtractedEvent,
+    ExtractionResponse,
+    GroundedEvent,
+)
+from hermes_ai.services.geocoding import GeocodingService
 from hermes_ai.utils.prompts import ARTICLE_SYSTEM_PROMPT
 
 
@@ -79,9 +89,22 @@ class EventExtractor:
         self,
         articles: list[ArticleInput],
         existing_events: list[dict[str, str]] | None = None,
+        geocoding_svc: GeocodingService | None = None,
     ) -> list[ExtractedEvent | None]:
         if not articles:
             return []
+
+        if len(articles) > ARTICLE_BATCH_SIZE:
+            all_results: list[ExtractedEvent | None] = []
+            for i in range(0, len(articles), ARTICLE_BATCH_SIZE):
+                chunk = articles[i : i + ARTICLE_BATCH_SIZE]
+                chunk_results = await self.extract_events(
+                    articles=chunk,
+                    existing_events=existing_events,
+                    geocoding_svc=geocoding_svc,
+                )
+                all_results.extend(chunk_results)
+            return all_results
 
         user_prompt = _build_events_prompt(articles, existing_events)
         res = await self._client.call_llm(
@@ -101,17 +124,40 @@ class EventExtractor:
             duplicate_lbl="article_index",
         )
 
+        final_results: list[ExtractedEvent | None] = []
         for i, article in enumerate(articles):
             extraction = ordered[i]
-            if extraction:
-                logger.info(
-                    "extracted: %s... | category = %s.",
-                    article.title[:50],
-                    extraction.category,
-                )
-            else:
+            if not extraction:
                 logger.warning(
                     "no extraction for article %s: '%s...'.", i, article.title[:120]
                 )
+                final_results.append(None)
+                continue
 
-        return ordered
+            if geocoding_svc and extraction.has_location and extraction.location_name:
+                geo_res = await geocoding_svc.geocode(extraction.location_name)
+                grounded = GroundedEvent(
+                    article_index=extraction.article_index,
+                    has_location=extraction.has_location,
+                    location_name=extraction.location_name,
+                    country_code=extraction.country_code,
+                    headline=extraction.headline,
+                    summary=extraction.summary,
+                    category=extraction.category,
+                    category_color=extraction.category_color,
+                    matched_event_id=extraction.matched_event_id,
+                    latitude=geo_res.latitude if geo_res else None,
+                    longitude=geo_res.longitude if geo_res else None,
+                    display_name=geo_res.display_name if geo_res else None,
+                )
+                final_results.append(grounded)
+            else:
+                final_results.append(extraction)
+
+            logger.info(
+                "extracted: %s... | category = %s.",
+                article.title[:50],
+                extraction.category,
+            )
+
+        return final_results

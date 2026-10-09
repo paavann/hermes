@@ -10,6 +10,7 @@ from hermes_ai.extractors.events import EventExtractor
 from hermes_ai.extractors.tl import TlExtractor
 from hermes_ai.models.events import ArticleInput, ExtractedEvent
 from hermes_ai.models.tl import TlExtractionResponse, TlSearchQuery
+from hermes_ai.services.geocoding import GeocodingService
 from hermes_ai.utils.rate_limiter import TbRateLimiter
 
 
@@ -81,7 +82,7 @@ class HermesAiClient:
         return self._embed_rate_limiter
 
 
-    async def call_llm[T: BaseModel](
+    async def call_llm[T: BaseModel] (
         self,
         sys_prompt: str,
         user_prompt: str,
@@ -146,14 +147,20 @@ class HermesAiClient:
         self,
         articles: list[ArticleInput],
         existing_events: list[dict[str, str]] | None = None,
+        geocoding_svc: GeocodingService | None = None,
     ) -> list[ExtractedEvent | None]:
-        return await self._events_extractor.extract_events(articles, existing_events)
+        return await self._events_extractor.extract_events(
+            articles, existing_events, geocoding_svc
+        )
 
 
     async def extract_tl(
-        self, pg_title: str, prose: str
+        self,
+        pg_title: str,
+        prose: str,
+        geocoding_svc: GeocodingService | None = None,
     ) -> TlExtractionResponse | None:
-        return await self._tl_extractor.extract_tl(pg_title, prose)
+        return await self._tl_extractor.extract_tl(pg_title, prose, geocoding_svc)
 
 
     async def analyze_tl_context(self, headline: str) -> TlSearchQuery | None:

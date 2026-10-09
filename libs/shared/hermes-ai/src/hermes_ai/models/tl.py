@@ -108,3 +108,14 @@ class TlSearchQuery(BaseModel):
             If timeline_worthy is true, provide the most relevant Wikipedia search query to find the overarching historical context.
         """,
     )
+
+
+class GroundedTlNode(TlNodeExtraction):
+    latitude: float | None = Field(
+        default=None,
+        description="Resolved latitude coordinate from geocoding service.",
+    )
+    longitude: float | None = Field(
+        default=None,
+        description="Resolved longitude coordinate from geocoding service.",
+    )

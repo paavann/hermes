@@ -94,3 +94,18 @@ class ExtractionResponse(BaseModel):
     events: list[ExtractedEvent] = Field(
         description="One extraction result per input article."
     )
+
+
+class GroundedEvent(ExtractedEvent):
+    latitude: float | None = Field(
+        default=None,
+        description="Resolved latitude coordinate from geocoding service.",
+    )
+    longitude: float | None = Field(
+        default=None,
+        description="Resolved longitude coordinate from geocoding service.",
+    )
+    display_name: str | None = Field(
+        default=None,
+        description="Resolved location display name from geocoding service.",
+    )
