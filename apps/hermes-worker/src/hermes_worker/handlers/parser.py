@@ -6,6 +6,7 @@ from hermes_worker.handlers.commands import (
     handle_sync,
 )
 
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="hermes-worker",

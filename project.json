@@ -28,13 +28,13 @@
     "lint": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "nx run-many -t lint"
+        "command": "nx run-many -t lint --exclude workspace"
       }
     },
     "test": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "nx run-many -t test"
+        "command": "nx run-many -t test --exclude workspace"
       }
     },
     "lint:py": {
