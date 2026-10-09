@@ -19,9 +19,11 @@ async def handle_sync(args: argparse.Namespace) -> None:
     stats = await service.sync_all_sources(force=args.force)
     logger.info("sync finished: %s.", stats)
 
+
 async def handle_lifecycle(_args: argparse.Namespace) -> None:
     stats = await run_lifecycle()
     logger.info("lifecycle transitions finished: %s.", stats)
+
 
 async def handle_all(args: argparse.Namespace) -> None:
     lifecycle_stats = await run_lifecycle()

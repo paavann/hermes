@@ -1,4 +1,5 @@
 import logging
+from dataclasses import dataclass
 
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
@@ -10,25 +11,43 @@ from hermes_db.models.geocode_cache import GeocodeCache
 logger = logging.getLogger(__name__)
 
 
+@dataclass(frozen=True, slots=True)
+class GeocodeCacheEntry:
+    location_name: str
+    latitude: float | None
+    longitude: float | None
+    display_name: str | None
+
 
 class GeocodeCacheService:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
 
-    async def get_by_location_name(self, location_name: str) -> GeocodeCache | None:
+    async def get_by_location_name(
+        self, location_name: str
+    ) -> GeocodeCacheEntry | None:
         norm_key = location_name.strip().lower()
         stmt = select(GeocodeCache).where(GeocodeCache.location_name == norm_key)
         result = await self._session.execute(stmt)
-        return result.scalar_one_or_none()
+        row = result.scalar_one_or_none()
+        if row is None:
+            return None
+        return GeocodeCacheEntry(
+            location_name=row.location_name,
+            latitude=row.latitude,
+            longitude=row.longitude,
+            display_name=row.display_name,
+        )
 
 
     async def save_geocode_result(
         self,
         location_name: str,
-        latitude: float | None, longitude: float | None,
-        display_name: str | None
-    ) -> GeocodeCache:
+        latitude: float | None,
+        longitude: float | None,
+        display_name: str | None,
+    ) -> GeocodeCacheEntry:
         norm_key = location_name.strip().lower()
         stmt = (
             pg_insert(GeocodeCache)
@@ -48,4 +67,5 @@ class GeocodeCacheService:
             raise RuntimeError(
                 f"geocode_cache row missing after upsert for location '{norm_key}'."
             )
+
         return existing

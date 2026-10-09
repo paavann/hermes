@@ -139,7 +139,11 @@ class TestFetchFeed:
     def test_fetch_feed_handles_http_error(self):
         async def run():
             mock_client = AsyncMock()
-            mock_client.get = AsyncMock(side_effect=httpx.HTTPStatusError("404 Not Found", request=MagicMock(), response=MagicMock()))
+            mock_client.get = AsyncMock(
+                side_effect=httpx.HTTPStatusError(
+                    "404 Not Found", request=MagicMock(), response=MagicMock()
+                )
+            )
 
             with patch("httpx.AsyncClient") as mock_client_cls:
                 mock_client_cls.return_value.__aenter__.return_value = mock_client

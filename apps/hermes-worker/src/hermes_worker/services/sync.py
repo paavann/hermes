@@ -1,6 +1,11 @@
 import asyncio
 import logging
 import uuid
+from hermes_ai import (
+    ARTICLE_BATCH_SIZE,
+    ArticleInput,
+    GeocodingService,
+)
 from hermes_db.services import (
     DueSource,
     EventService,
@@ -8,14 +13,7 @@ from hermes_db.services import (
     SourceService,
 )
 from hermes_db.session import AsyncSessionLocal
-from hermes_worker.core.config import settings
-from hermes_worker.core.constants import ARTICLE_BATCH_SIZE
-from hermes_worker.core.rate_limiter import TbRateLimiter
-from hermes_worker.services.ai import (
-    AiService,
-    ArticleInput,
-)
-from hermes_worker.services.geocoding import GeocodingService
+from hermes_worker.services.ai import AiService
 from hermes_worker.services.rss import ParsedArticle, fetch_feed
 
 
@@ -25,8 +23,6 @@ logger = logging.getLogger(__name__)
 class SyncService:
     def __init__(self) -> None:
         self._ai = AiService()
-        self._rate_limiter = TbRateLimiter(settings.RPM_LIMIT)
-        self._embed_rate_limiter = TbRateLimiter(settings.EMBED_RPM_LIMIT)
 
 
     async def _sync_source(self, source: DueSource) -> dict[str, int]:
@@ -71,8 +67,6 @@ class SyncService:
                 ArticleInput(title=a.title, content=a.text_for_ai) for a in batch
             ]
             batch_texts = [f"{a.title}\n{a.text_for_ai}" for a in batch]
-
-            await self._embed_rate_limiter.acquire()
             embeddings = await self._ai.gen_embeddings(batch_texts)
             async with AsyncSessionLocal() as session:
                 event_service = EventService(session)
@@ -80,7 +74,6 @@ class SyncService:
                     embeddings
                 )
 
-            await self._rate_limiter.acquire()
             extractions = await self._ai.get_metadata(
                 articles=ai_inputs,
                 existing_events=existing_events,
@@ -188,9 +181,7 @@ class SyncService:
                         await db_session.commit()
                     return s_stats
                 except Exception:
-                    logger.exception(
-                        "unhandled error syncing source %s.", source.name
-                    )
+                    logger.exception("unhandled error syncing source %s.", source.name)
                     return {k: 0 for k in stats if k != "sources_processed"}
 
         tasks = [_process_source(s) for s in sources]

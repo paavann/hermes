@@ -3,13 +3,14 @@
 import asyncio
 from unittest.mock import AsyncMock, patch
 import pytest
-from hermes_db.models import GeocodeCache
-from hermes_db.services import GeocodeCacheService
-from hermes_worker.services.geocoding import (
+from hermes_ai.services.geocoding import (
+    _NOT_FOUND,
     GeocodingResult,
     GeocodingService,
     clean_location_name,
 )
+from hermes_db.models import GeocodeCache
+from hermes_db.services import GeocodeCacheService
 
 
 @pytest.fixture
@@ -86,7 +87,7 @@ class TestWorkerGeocodingService:
             with patch.object(
                 service, "_call_nominatim", new_callable=AsyncMock
             ) as mock_nominatim:
-                mock_nominatim.return_value = None
+                mock_nominatim.return_value = _NOT_FOUND
                 res = await service.geocode("Unreachable Fantasy Land")
 
                 assert res is None
@@ -96,6 +97,23 @@ class TestWorkerGeocodingService:
                     longitude=None,
                     display_name=None,
                 )
+
+        asyncio.run(run())
+
+    def test_geocode_transient_failure_does_not_persist_cache(
+        self, mock_cache_service
+    ):
+        async def run():
+            service = GeocodingService(mock_cache_service)
+
+            with patch.object(
+                service, "_call_nominatim", new_callable=AsyncMock
+            ) as mock_nominatim:
+                mock_nominatim.return_value = None  # transient 429 / timeout
+                res = await service.geocode("Brisbane, Australia")
+
+                assert res is None
+                mock_cache_service.save_geocode_result.assert_not_awaited()
 
         asyncio.run(run())
 

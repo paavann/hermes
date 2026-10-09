@@ -1,5 +1,5 @@
 import asyncio
-from hermes_worker.core.rate_limiter import TbRateLimiter
+from hermes_ai.utils.rate_limiter import TbRateLimiter
 
 
 def test_rate_limiter_acquire():

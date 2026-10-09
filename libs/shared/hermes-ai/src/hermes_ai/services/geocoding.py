@@ -52,14 +52,6 @@ class GeocodeCacheProtocol(Protocol):
 
 
 def clean_location_name(loc: str) -> str | None:
-    """Sanitize location names extracted from news articles or Wikipedia.
-
-    Args:
-        loc: Raw location string.
-
-    Returns:
-        Sanitized location name or None if unlocatable.
-    """
     if not loc or not loc.strip():
         return None
 
@@ -91,8 +83,6 @@ def clean_location_name(loc: str) -> str | None:
 
 
 class NominatimResilienceManager:
-    """Thread-safe rate-limiter and circuit breaker for Nominatim OSM API."""
-
     def __init__(
         self,
         min_request_interval: float = 1.0,
@@ -104,11 +94,13 @@ class NominatimResilienceManager:
         self.circuit_open_until: float = 0.0
         self._lock = asyncio.Lock()
 
+
     def is_circuit_open(self) -> tuple[bool, float]:
         now = time.monotonic()
         if now < self.circuit_open_until:
             return True, self.circuit_open_until - now
-        return False, 0.0
+        else:
+            return False, 0.0
 
 
     def trip_circuit_breaker(self) -> None:
@@ -125,14 +117,11 @@ class NominatimResilienceManager:
 
 
 class GeocodingService:
-    """Resilient geocoding service backed by OpenStreetMap Nominatim and optional cache."""
-
     def __init__(
         self,
         cache_service: GeocodeCacheProtocol | None = None,
         user_agent: str = "hermes-geocoder/1.0",
-        min_interval: float = 1.0,
-        circuit_cooldown: float = 120.0,
+        min_interval: float = 1.0, circuit_cooldown: float = 120.0,
         client: httpx.AsyncClient | None = None,
     ) -> None:
         self._cache = cache_service
@@ -146,14 +135,6 @@ class GeocodingService:
 
 
     async def geocode(self, location_name: str) -> GeocodingResult | None:
-        """Geocode a location name into latitude and longitude coordinates.
-
-        Args:
-            location_name: Free-text place name.
-
-        Returns:
-            GeocodingResult if resolved, None otherwise.
-        """
         cleaned = clean_location_name(location_name)
         if not cleaned:
             return None
@@ -211,7 +192,6 @@ class GeocodingService:
     async def _call_nominatim(
         self, location_name: str, max_retries: int = 3
     ) -> GeocodingResult | _NotFoundSentinel | None:
-        """Execute HTTP request to Nominatim API with retries and circuit breaker."""
         circuit_open, remaining = self._resilience.is_circuit_open()
         if circuit_open:
             logger.warning(
@@ -222,16 +202,11 @@ class GeocodingService:
             return None
 
         last_was_429 = False
-        params = {
-            "q": location_name,
-            "format": "jsonv2",
-            "limit": 1,
-        }
-        headers = {"User-Agent": self._user_agent}
+        params = {"q": location_name, "format": "jsonv2", "limit": 1}
+        headers = { "User-Agent": self._user_agent }
 
         for attempt in range(max_retries):
             await self._resilience.enforce_pacing()
-
             try:
                 if self._client is not None:
                     res = await self._client.get(
@@ -290,7 +265,6 @@ class GeocodingService:
                     result.longitude,
                 )
                 return result
-
             except httpx.HTTPStatusError as exc:
                 logger.warning(
                     "nominatim http status error %s for '%s' (attempt %d/%d).",
