@@ -14,3 +14,5 @@ class AiConfig:
     num_retries: int = 2
     cooldown_time: int = 180
     retry_after: bool = True
+    rpm_limit: int | None = None
+    embed_rpm_limit: int | None = None

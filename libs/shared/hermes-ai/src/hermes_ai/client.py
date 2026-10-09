@@ -10,6 +10,7 @@ from hermes_ai.extractors.events import EventExtractor
 from hermes_ai.extractors.tl import TlExtractor
 from hermes_ai.models.events import ArticleInput, ExtractedEvent
 from hermes_ai.models.tl import TlExtractionResponse, TlSearchQuery
+from hermes_ai.utils.rate_limiter import TbRateLimiter
 
 
 logger = logging.getLogger(__name__)
@@ -53,6 +54,12 @@ class HermesAiClient:
         )
         self._events_extractor = EventExtractor(self)
         self._tl_extractor = TlExtractor(self)
+        self._rate_limiter = (
+            TbRateLimiter(config.rpm_limit) if config.rpm_limit else None
+        )
+        self._embed_rate_limiter = (
+            TbRateLimiter(config.embed_rpm_limit) if config.embed_rpm_limit else None
+        )
 
         logger.info(
             "ai service initialized. primary=%s, fallback=%s via litellm router.",
@@ -60,9 +67,19 @@ class HermesAiClient:
             config.fallback_model if fallbacks else "none",
         )
 
+
     @property
     def router(self) -> Router:
         return self._router
+
+    @property
+    def rate_limiter(self) -> TbRateLimiter | None:
+        return self._rate_limiter
+
+    @property
+    def embed_rate_limiter(self) -> TbRateLimiter | None:
+        return self._embed_rate_limiter
+
 
     async def call_llm[T: BaseModel](
         self,
@@ -71,6 +88,8 @@ class HermesAiClient:
         res_model: type[T],
         schema_name: str,
     ) -> T | None:
+        if self._rate_limiter:
+            await self._rate_limiter.acquire()
         try:
             res = await self._router.acompletion(
                 model="primary-extractor",
@@ -96,6 +115,7 @@ class HermesAiClient:
             logger.error("llm call failed for %s: %s.", schema_name, exc)
             return None
 
+
     async def gen_embeddings(self, texts: list[str]) -> list[list[float] | None]:
         if not texts:
             return []
@@ -103,6 +123,9 @@ class HermesAiClient:
         if not self._config.embed_model or not self._config.embed_api_key:
             logger.error("embed api key or model is missing.")
             return [None] * len(texts)
+
+        if self._embed_rate_limiter:
+            await self._embed_rate_limiter.acquire()
 
         try:
             res = await litellm.aembedding(
@@ -118,6 +141,7 @@ class HermesAiClient:
             logger.error("failed to generate embeddings: %s.", exc)
             return [None] * len(texts)
 
+
     async def extract_events(
         self,
         articles: list[ArticleInput],
@@ -125,10 +149,12 @@ class HermesAiClient:
     ) -> list[ExtractedEvent | None]:
         return await self._events_extractor.extract_events(articles, existing_events)
 
+
     async def extract_tl(
         self, pg_title: str, prose: str
     ) -> TlExtractionResponse | None:
         return await self._tl_extractor.extract_tl(pg_title, prose)
+
 
     async def analyze_tl_context(self, headline: str) -> TlSearchQuery | None:
         return await self._tl_extractor.analyze_tl_context(headline)
