@@ -7,6 +7,7 @@ trigger: always_on
 ## Coding Style & Conventions
 
 - **Strict Type Hinting**: ALWAYS add explicit Python type hints for EVERY function argument and return type. Untyped functions are strictly forbidden. Use `snake_case` for Python variables and functions.
+- **Strict Prohibition of `Any`**: Using `Any` (from `typing` or any other module) is strictly prohibited across all functions, methods, models, schemas, and services. Code must always use concrete types, specific Pydantic models, `TypedDict`, generics, or explicit unions. If handling arbitrary, unvalidated data, use `object` with explicit type guards or validation instead.
 - **Strict Enum Usage**: ALWAYS use Python `enum.Enum` (specifically `(str, enum.Enum)`) wherever appropriate when handling a fixed set of status, scope, type, category, or tier values. Hardcoding raw string literals across services, models, schemas, or status updates is strictly forbidden.
 - **Python Imports**: Strictly use absolute imports in Python (e.g., `from src.services.db import get_db`) and avoid relative dot imports.
 - **Minimal Naming Conventions**: The naming of variables, functions, and other identifiers should be kept minimal and short. Use concise forms to keep the code clean.

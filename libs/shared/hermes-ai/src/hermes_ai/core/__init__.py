@@ -1,5 +1,3 @@
-"""Core configuration and constants for hermes_ai."""
-
 from hermes_ai.core.config import AiConfig
 from hermes_ai.core.constants import (
     ARTICLE_BATCH_SIZE,

@@ -1,11 +1,12 @@
-"""Hermes AI: Shared AI and LLM abstraction library."""
-
+from hermes_ai.client import HermesAiClient
 from hermes_ai.core.config import AiConfig
 from hermes_ai.core.constants import (
     ARTICLE_BATCH_SIZE,
     DEFAULT_CATEGORY_COLOR,
     PREDEFINED_CATEGORIES,
 )
+from hermes_ai.extractors.events import EventExtractor
+from hermes_ai.extractors.tl import TlExtractor
 from hermes_ai.models.events import (
     ArticleInput,
     ExtractedEvent,
@@ -14,8 +15,8 @@ from hermes_ai.models.events import (
 from hermes_ai.models.tl import (
     TlEdgeExtraction,
     TlExtractionResponse,
-    tlNodeExtraction,
-    tlSearchQuery,
+    TlNodeExtraction,
+    TlSearchQuery,
 )
 from hermes_ai.utils.coercion import coerce_to_str
 from hermes_ai.utils.prompts import (
@@ -33,12 +34,15 @@ __all__ = [
     "DEFAULT_CATEGORY_COLOR",
     "ExtractedEvent",
     "ExtractionResponse",
+    "EventExtractor",
+    "HermesAiClient",
+    "TlEdgeExtraction",
+    "TlExtractionResponse",
+    "TlNodeExtraction",
+    "TlSearchQuery",
+    "TlExtractor",
     "PREDEFINED_CATEGORIES",
     "TL_SYSTEM_PROMPT",
     "TL_TRIAGE_SYSTEM_PROMPT",
-    "TlEdgeExtraction",
-    "TlExtractionResponse",
     "coerce_to_str",
-    "tlNodeExtraction",
-    "tlSearchQuery",
 ]

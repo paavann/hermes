@@ -12,8 +12,8 @@ from hermes_ai.models import (
     ExtractionResponse,
     TlEdgeExtraction,
     TlExtractionResponse,
-    tlNodeExtraction,
-    tlSearchQuery,
+    TlNodeExtraction,
+    TlSearchQuery,
 )
 from hermes_ai.utils.coercion import coerce_to_str
 from hermes_ai.utils.prompts import (
@@ -66,7 +66,7 @@ def test_article_input_and_extraction_response() -> None:
 
 
 def test_timeline_models_coercion() -> None:
-    node = tlNodeExtraction(
+    node = TlNodeExtraction(
         date="2024-01-01",
         headline={"en": "Treaty Signed"},
         location_name={"en": "Geneva, Switzerland"},
@@ -82,7 +82,7 @@ def test_timeline_models_coercion() -> None:
     )
     assert edge.relationship == "led to"
 
-    triage = tlSearchQuery(
+    triage = TlSearchQuery(
         is_tl_worthy=True,
         wiki_search_query="Treaty of Geneva",
     )
