@@ -36,6 +36,7 @@ services:
     volumes:
       - ./apps/hermes-api/src:/app/apps/hermes-api/src
       - ./libs/shared/hermes-db/src:/app/libs/shared/hermes-db/src
+      - ./libs/shared/hermes-ai/src:/app/libs/shared/hermes-ai/src
     env_file:
       - .env.development
       - path: ./apps/hermes-api/.env.development
@@ -55,6 +56,7 @@ services:
     volumes:
       - ./apps/hermes-worker/src:/app/apps/hermes-worker/src
       - ./libs/shared/hermes-db/src:/app/libs/shared/hermes-db/src
+      - ./libs/shared/hermes-ai/src:/app/libs/shared/hermes-ai/src
     env_file:
       - .env.development
       - path: ./apps/hermes-worker/.env.development
