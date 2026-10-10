@@ -21,7 +21,7 @@ def base_config() -> AiConfig:
     return AiConfig(
         primary_model="mistral/ministral-8b-latest",
         primary_api_key="primary-key",
-        fallback_model="nvidia_nim/mistral-nemotron",
+        fallback_model="nvidia_nim/meta/llama-3.1-70b-instruct",
         fallback_api_key="fallback-key",
         embed_model="nvidia/nemotron-3-embed-1b",
         embed_api_key="embed-key",
@@ -146,3 +146,36 @@ def test_gen_embeddings_success(
 def test_gen_embeddings_empty_list(base_config: AiConfig) -> None:
     client = HermesAiClient(base_config)
     assert asyncio.run(client.gen_embeddings([])) == []
+
+
+@patch("litellm.Router.acompletion")
+def test_call_llm_fallback_on_validation_failure(
+    mock_acompletion: AsyncMock, base_config: AiConfig
+) -> None:
+    client = HermesAiClient(base_config)
+
+    # Primary returns invalid json, fallback returns valid
+    bad_res = MagicMock()
+    bad_res.choices = [MagicMock(message=MagicMock(content='{"invalid": "data"}'))]
+    good_res = MagicMock()
+    good_res.choices = [
+        MagicMock(
+            message=MagicMock(
+                content='{"is_tl_worthy": true, "wiki_search_query": "Crisis"}'
+            )
+        )
+    ]
+    mock_acompletion.side_effect = [bad_res, good_res]
+
+    res = asyncio.run(
+        client.call_llm(
+            sys_prompt="system",
+            user_prompt="user",
+            res_model=TlSearchQuery,
+            schema_name="triage",
+        )
+    )
+    assert res is not None
+    assert res.is_tl_worthy is True
+    assert res.wiki_search_query == "Crisis"
+    assert mock_acompletion.call_count == 2

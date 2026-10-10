@@ -1,4 +1,5 @@
 from pydantic import BaseModel, Field, field_validator
+
 from hermes_ai.utils.coercion import coerce_to_str
 
 

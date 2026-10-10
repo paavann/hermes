@@ -23,7 +23,6 @@ class TlExtractor:
     def __init__(self, client: HermesAiClient) -> None:
         self._client = client
 
-
     async def extract_tl(
         self,
         pg_title: str,

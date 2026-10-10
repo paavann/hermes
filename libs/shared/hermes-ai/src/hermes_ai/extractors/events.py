@@ -1,6 +1,7 @@
 import logging
 from collections.abc import Callable, Sequence
 from typing import TYPE_CHECKING
+
 from hermes_ai.core.constants import (
     ARTICLE_BATCH_SIZE,
     DEFAULT_CATEGORY_COLOR,

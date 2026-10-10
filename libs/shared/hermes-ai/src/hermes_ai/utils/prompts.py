@@ -7,9 +7,11 @@ Return exactly one result per input article, using the article_index field to ma
 Rules:
 1. Be factual and neutral. Do not editorialize.
 2. For location, identify WHERE the event is physically happening, not where it was reported from. "BBC reports earthquake in Turkey" -> location is Turkey.
-3. If the article is about an abstract or global topic with no specific geographic anchor, set has_location to false.
-4. For categories, prefer the predefined list. Only create a custom category if none fit.
-5. For event matching, only match if the articles are about the EXACT same incident.
+3. For 'location_name', output strictly the clean, fully spelled place name in 'City, Country' or 'City' format (e.g., 'New Delhi, India' or 'Paris, France'). NEVER append trailing ISO country codes (e.g., do NOT write 'New Delhi, India, IN'), abbreviations, or parenthetical descriptions like '(e.g., ...)' or '(capital)'.
+4. If the article is about an abstract or global topic with no specific geographic anchor, or spans widespread locations with no single epicenter, set has_location to false and location_name to null. Never output generic text like 'multiple locations', 'various', 'global', or 'worldwide'.
+5. For categories, prefer the predefined list. Only create a custom category if none fit.
+6. For event matching, only match if the articles are about the EXACT same incident.
+7. Output ONLY the data instance object with the 'events' array. Never output schema definitions, '$defs', or property descriptors.
 """
 
 
@@ -19,7 +21,7 @@ Your job is to extract a chronological timeline of sub-events from Wikipedia pro
 Rules:
 1. Extract the major sub-events. Merge tightly related consecutive sentences into a single event.
 2. For 'date', use YYYY-MM-DD if possible.
-3. For 'location_name', identify where the event physically happened. If purely political/conceptual without a place, omit it.
+3. For 'location_name', identify where the event physically happened as a clean 'City, Country' or 'City' format. Omit parentheticals, abbreviations, or trailing ISO codes. If purely political/conceptual without a place, omit it.
 4. Provide a 'tl_summary' (1-2 paragraphs as a plain string, never an object or dictionary) summarizing the overarching historical arc of the timeline.
 5. In 'edges', identify causal/thematic relationships between the extracted events (e.g. event 0 triggered event 2).
    Use the 0-based array index of the events you just extracted for source_index and target_index.

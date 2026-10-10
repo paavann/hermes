@@ -25,6 +25,7 @@ from hermes_ai.services.geocoding import (
     NominatimResilienceManager,
     clean_location_name,
 )
+from hermes_ai.services.llm import LlmService
 from hermes_ai.utils.coercion import coerce_to_str
 from hermes_ai.utils.prompts import (
     ARTICLE_SYSTEM_PROMPT,
@@ -47,6 +48,7 @@ __all__ = [
     "GeocodingResult",
     "GeocodingService",
     "HermesAiClient",
+    "LlmService",
     "NominatimResilienceManager",
     "PREDEFINED_CATEGORIES",
     "TL_SYSTEM_PROMPT",
@@ -60,3 +62,4 @@ __all__ = [
     "clean_location_name",
     "coerce_to_str",
 ]
+

@@ -2,12 +2,14 @@ import asyncio
 import logging
 import re
 import time
-import httpx
 from dataclasses import dataclass
 from typing import Protocol
 
+import httpx
+
 
 logger = logging.getLogger(__name__)
+
 
 NOMINATIM_SEARCH_URL = "https://nominatim.openstreetmap.org/search"
 
@@ -56,28 +58,25 @@ def clean_location_name(loc: str) -> str | None:
         return None
 
     loc = loc.strip()
-    eg_match = re.search(
-        r"\((?:e\.g\.,?\s*|including\s*)([^\),]+)", loc, re.IGNORECASE
-    )
-    loc = (
-        eg_match.group(1).strip()
-        if eg_match
-        else re.sub(r"\(.*?\)", "", loc).strip()
-    )
+    eg_match = re.search(r"\((?:e\.g\.,?\s*|including\s*)([^\),]+)", loc, re.IGNORECASE)
+    loc = eg_match.group(1).strip() if eg_match else re.sub(r"\(.*?\)", "", loc).strip()
 
     loc = loc.strip(" ,.-")
-    if len(loc) < 2 or loc.lower() in {
-        "multiple cities",
-        "multiple locations",
+    lower_loc = loc.lower()
+    unlocatable_tokens = (
+        "multiple",
         "various",
-        "various locations",
-        "various cities",
         "several locations",
         "nationwide",
         "unknown",
         "global",
         "worldwide",
-    }:
+    )
+    if any(token in lower_loc for token in unlocatable_tokens):
+        return None
+
+    loc = re.sub(r",\s*[A-Z]{2}$", "", loc).strip()
+    if len(loc) < 2:
         return None
     return loc
 
@@ -94,7 +93,6 @@ class NominatimResilienceManager:
         self.circuit_open_until: float = 0.0
         self._lock = asyncio.Lock()
 
-
     def is_circuit_open(self) -> tuple[bool, float]:
         now = time.monotonic()
         if now < self.circuit_open_until:
@@ -102,10 +100,8 @@ class NominatimResilienceManager:
         else:
             return False, 0.0
 
-
     def trip_circuit_breaker(self) -> None:
         self.circuit_open_until = time.monotonic() + self.circuit_cooldown_seconds
-
 
     async def enforce_pacing(self) -> None:
         async with self._lock:
@@ -121,7 +117,8 @@ class GeocodingService:
         self,
         cache_service: GeocodeCacheProtocol | None = None,
         user_agent: str = "hermes-geocoder/1.0",
-        min_interval: float = 1.0, circuit_cooldown: float = 120.0,
+        min_interval: float = 1.0,
+        circuit_cooldown: float = 120.0,
         client: httpx.AsyncClient | None = None,
     ) -> None:
         self._cache = cache_service
@@ -132,7 +129,6 @@ class GeocodingService:
         )
         self._client = client
         self._in_flight: dict[str, asyncio.Future[GeocodingResult | None]] = {}
-
 
     async def geocode(self, location_name: str) -> GeocodingResult | None:
         cleaned = clean_location_name(location_name)
@@ -188,7 +184,6 @@ class GeocodingService:
         finally:
             self._in_flight.pop(norm_key, None)
 
-
     async def _call_nominatim(
         self, location_name: str, max_retries: int = 3
     ) -> GeocodingResult | _NotFoundSentinel | None:
@@ -203,7 +198,7 @@ class GeocodingService:
 
         last_was_429 = False
         params = {"q": location_name, "format": "jsonv2", "limit": 1}
-        headers = { "User-Agent": self._user_agent }
+        headers = {"User-Agent": self._user_agent}
 
         for attempt in range(max_retries):
             await self._resilience.enforce_pacing()
@@ -289,7 +284,7 @@ class GeocodingService:
                     await asyncio.sleep(2.0 * (attempt + 1))
                 else:
                     return None
-            except (KeyError, ValueError, IndexError):
+            except KeyError, ValueError, IndexError:
                 logger.exception(
                     "failed to parse nominatim response for '%s'.",
                     location_name,

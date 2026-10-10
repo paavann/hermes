@@ -65,6 +65,39 @@ def test_article_input_and_extraction_response() -> None:
     assert len(response.events) == 1
 
 
+def test_extraction_response_raw_list_validation() -> None:
+    raw_list_data = [
+        {
+            "article_index": 0,
+            "has_location": True,
+            "location_name": "Paris, France",
+            "country_code": "FR",
+            "headline": "Peace summit begins",
+            "summary": "Diplomats gather in Paris.",
+            "category": "POLITICS",
+        },
+        {
+            "article_index": 1,
+            "has_location": False,
+            "headline": "Global trade update",
+            "summary": "Supply chains recover.",
+            "category": "ECONOMY",
+        },
+    ]
+    res_from_list = ExtractionResponse.model_validate(raw_list_data)
+    assert len(res_from_list.events) == 2
+    assert res_from_list.events[0].location_name == "Paris, France"
+    assert res_from_list.events[1].category == "ECONOMY"
+
+    raw_json = (
+        '[{"article_index": 0, "has_location": false, "headline": "H", '
+        '"summary": "S", "category": "SCIENCE"}]'
+    )
+    res_from_json = ExtractionResponse.model_validate_json(raw_json)
+    assert len(res_from_json.events) == 1
+    assert res_from_json.events[0].category == "SCIENCE"
+
+
 def test_timeline_models_coercion() -> None:
     node = TlNodeExtraction(
         date="2024-01-01",

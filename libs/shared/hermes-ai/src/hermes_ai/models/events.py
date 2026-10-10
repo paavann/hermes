@@ -1,4 +1,5 @@
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
+
 from hermes_ai.core.constants import PREDEFINED_CATEGORIES
 from hermes_ai.utils.coercion import coerce_to_str
 
@@ -75,6 +76,7 @@ class ExtractedEvent(BaseModel):
             return v.strip().lower() in ("true", "1", "yes")
         return bool(v)
 
+
     @field_validator("location_name", mode="before")
     @classmethod
     def coerce_location_name(cls, v: object) -> str | None:
@@ -82,6 +84,7 @@ class ExtractedEvent(BaseModel):
             return None
         res = coerce_to_str(v).strip()
         return res if res else None
+
 
     @field_validator("headline", "summary", mode="before")
     @classmethod
@@ -93,6 +96,14 @@ class ExtractionResponse(BaseModel):
     events: list[ExtractedEvent] = Field(
         description="One extraction result per input article."
     )
+
+
+    @model_validator(mode="before")
+    @classmethod
+    def wrap_raw_list(cls, data: object) -> object:
+        if isinstance(data, list):
+            return {"events": data}
+        return data
 
 
 class GroundedEvent(ExtractedEvent):

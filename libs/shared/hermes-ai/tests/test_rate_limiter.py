@@ -99,9 +99,7 @@ def test_client_rate_limiter_wiring() -> None:
             ) as mock_embed_acquire,
             patch("litellm.aembedding", new_callable=AsyncMock) as mock_embed,
         ):
-            mock_embed.return_value = AsyncMock(
-                data=[{"embedding": [0.1, 0.2]}]
-            )
+            mock_embed.return_value = AsyncMock(data=[{"embedding": [0.1, 0.2]}])
             embeddings = await client.gen_embeddings(["sample"])
             assert mock_embed_acquire.called
             assert embeddings == [[0.1, 0.2]]

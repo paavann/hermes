@@ -7,12 +7,15 @@ from hermes_ai.services.geocoding import (
     NominatimResilienceManager,
     clean_location_name,
 )
+from hermes_ai.services.llm import LlmService
 
 
 __all__ = [
     "GeocodeCacheProtocol",
     "GeocodingResult",
     "GeocodingService",
+    "LlmService",
     "NominatimResilienceManager",
     "clean_location_name",
 ]
+
