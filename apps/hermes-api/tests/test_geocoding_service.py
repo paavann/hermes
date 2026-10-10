@@ -4,18 +4,18 @@ import asyncio
 import time
 from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
-from hermes_db.models import GeocodeCache
-from hermes_db.services import GeocodeCacheService
-from hermes_api.services.geocoding_service import (
-    _NOT_FOUND,
+from hermes_ai import (
     GeocodingResult,
     GeocodingService,
     clean_location_name,
 )
+from hermes_ai.services.geocoding import _NOT_FOUND
+from hermes_db.models import GeocodeCache
+from hermes_db.services import GeocodeCacheService
 
 
 @pytest.fixture
-def mock_cache_service():
+def mock_cache_service() -> AsyncMock:
     service = AsyncMock(spec=GeocodeCacheService)
     service.get_by_location_name = AsyncMock(return_value=None)
     service.save_geocode_result = AsyncMock()
@@ -23,8 +23,10 @@ def mock_cache_service():
 
 
 class TestGeocodingService:
-    def test_cache_hit_returns_immediately(self, mock_cache_service):
-        async def run():
+    def test_cache_hit_returns_immediately(
+        self, mock_cache_service: AsyncMock
+    ) -> None:
+        async def run() -> None:
             mock_cache_entry = GeocodeCache(
                 location_name="paris, france",
                 latitude=48.8566,
@@ -43,8 +45,11 @@ class TestGeocodingService:
 
         asyncio.run(run())
 
-    def test_successful_geocoding_persists_cache(self, mock_cache_service):
-        async def run():
+
+    def test_successful_geocoding_persists_cache(
+        self, mock_cache_service: AsyncMock
+    ) -> None:
+        async def run() -> None:
             service = GeocodingService(cache_service=mock_cache_service)
             expected = GeocodingResult(
                 latitude=51.5074,
@@ -60,16 +65,20 @@ class TestGeocodingService:
 
                 assert res == expected
                 mock_cache_service.save_geocode_result.assert_awaited_once_with(
-                    location_name="London, UK",
+                    location_name="london",
                     latitude=51.5074,
                     longitude=-0.1278,
                     display_name="London, Greater London, England, United Kingdom",
                 )
 
+
         asyncio.run(run())
 
-    def test_empty_results_persists_negative_cache(self, mock_cache_service):
-        async def run():
+
+    def test_empty_results_persists_negative_cache(
+        self, mock_cache_service: AsyncMock
+    ) -> None:
+        async def run() -> None:
             service = GeocodingService(cache_service=mock_cache_service)
 
             with patch.object(
@@ -80,16 +89,20 @@ class TestGeocodingService:
 
                 assert res is None
                 mock_cache_service.save_geocode_result.assert_awaited_once_with(
-                    location_name="Nonexistent Place 12345",
+                    location_name="nonexistent place 12345",
                     latitude=None,
                     longitude=None,
                     display_name=None,
                 )
 
+
         asyncio.run(run())
 
-    def test_transient_failure_does_not_persist_cache(self, mock_cache_service):
-        async def run():
+
+    def test_transient_failure_does_not_persist_cache(
+        self, mock_cache_service: AsyncMock
+    ) -> None:
+        async def run() -> None:
             service = GeocodingService(cache_service=mock_cache_service)
 
             with patch.object(
@@ -103,9 +116,12 @@ class TestGeocodingService:
 
         asyncio.run(run())
 
+
     @patch("asyncio.sleep", new_callable=AsyncMock)
-    def test_call_nominatim_retries_on_429(self, mock_sleep, mock_cache_service):
-        async def run():
+    def test_call_nominatim_retries_on_429(
+        self, mock_sleep: AsyncMock, mock_cache_service: AsyncMock
+    ) -> None:
+        async def run() -> None:
             service = GeocodingService(cache_service=mock_cache_service)
 
             # First attempt 429, second attempt 200 with result
@@ -139,7 +155,8 @@ class TestGeocodingService:
 
         asyncio.run(run())
 
-    def test_clean_location_name_sanitizes_complex_strings(self):
+
+    def test_clean_location_name_sanitizes_complex_strings(self) -> None:
         assert clean_location_name("Multiple cities (e.g., Sanaa, Taiz)") == "Sanaa"
         assert clean_location_name("Sanaa (mosque)") == "Sanaa"
         assert clean_location_name("Yemen (nationwide)") == "Yemen"
@@ -149,9 +166,12 @@ class TestGeocodingService:
         assert clean_location_name("Nationwide") is None
         assert clean_location_name("") is None
 
+
     @patch("asyncio.sleep", new_callable=AsyncMock)
-    def test_circuit_breaker_trips_on_persistent_429(self, mock_sleep, mock_cache_service):
-        async def run():
+    def test_circuit_breaker_trips_on_persistent_429(
+        self, mock_sleep: AsyncMock, mock_cache_service: AsyncMock
+    ) -> None:
+        async def run() -> None:
             service = GeocodingService(cache_service=mock_cache_service)
             mock_resp_429 = MagicMock()
             mock_resp_429.status_code = 429

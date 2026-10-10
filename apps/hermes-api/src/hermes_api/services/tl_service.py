@@ -1,6 +1,6 @@
 import logging
 import uuid
-from typing import Any
+from hermes_ai import GeocodingResult, GeocodingService
 from hermes_db.enums import EventTlStatus
 from hermes_db.models import Event, EventTl
 from hermes_db.services.tl import EventTlService
@@ -11,7 +11,6 @@ from hermes_api.core.exceptions import (
 )
 from hermes_api.schemas.events import TlEdgeResponse, TlNodeResponse, TlResponse
 from hermes_api.services.ai_service import AiService
-from hermes_api.services.geocoding_service import GeocodingService
 from hermes_api.services.wikipedia_service import (
     enumerate_tl_pages,
     fetch_page_extracts,
@@ -28,11 +27,13 @@ class TlService:
         self._geocoding = geocoding
         self._tl_db = tl_db
 
+
     async def _abort_tl_gen(
         self, existing_tl: EventTl, status: EventTlStatus, message: str
     ) -> TlResponse:
         await self._tl_db.delete_tl(existing_tl)
         return TlResponse(status=status, message=message)
+
 
     def _build_response_from_existingtl(self, tl: EventTl) -> TlResponse:
         return TlResponse(
@@ -42,6 +43,7 @@ class TlService:
             tl_summary=tl.tl_summary,
             generated_at=tl.generated_at,
         )
+
 
     async def _exec_gen(self, event: Event, existing_tl: EventTl) -> TlResponse:
         search_context = await self._ai.analyze_tl_context(event.ai_headline)
@@ -79,7 +81,7 @@ class TlService:
             all_edges: list[TlEdgeResponse] = []
             tl_summaries: list[str] = []
 
-            geo_cache: dict[str, Any] = {}
+            geo_cache: dict[str, GeocodingResult | None] = {}
             for page_title, prose in page_extracts.items():
                 if not prose.strip():
                     continue
@@ -179,6 +181,7 @@ class TlService:
                     status=EventTlStatus.READY,
                 )
                 return self._build_response_from_existingtl(existing_tl)
+
 
     async def gen_tl(
         self, event_id: uuid.UUID, force_refresh: bool = False

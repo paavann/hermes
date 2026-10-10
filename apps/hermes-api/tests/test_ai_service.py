@@ -17,7 +17,7 @@ def ai_service(monkeypatch):
     monkeypatch.setenv("LLM_API", "fake-llm-key")
     monkeypatch.setenv("LLM_MODEL", "mistral/ministral-8b-latest")
     monkeypatch.setenv("LLM_API_1", "fake-fallback-key")
-    monkeypatch.setenv("LLM_MODEL_1", "nvidia_nim/mistralai/mistral-nemotron")
+    monkeypatch.setenv("LLM_MODEL_1", "nvidia_nim/meta/llama-3.1-70b-instruct")
     return AiService()
 
 

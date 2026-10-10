@@ -3,10 +3,10 @@ import uuid
 from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
+from hermes_ai import GeocodingService
 from hermes_db.enums import EventTlStatus
 from hermes_db.models import Event, EventTl
 from hermes_db.services.tl import EventTlService
-from hermes_api.services.geocoding_service import GeocodingService
 from hermes_api.services.tl_service import TlService
 
 
