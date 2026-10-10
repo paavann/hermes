@@ -816,9 +816,9 @@ dependencies = [
     { name = "asyncpg" },
     { name = "fastapi", extra = ["standard"] },
     { name = "geoalchemy2" },
+    { name = "hermes-ai" },
     { name = "hermes-db" },
     { name = "httpx" },
-    { name = "litellm" },
     { name = "pydantic-settings" },
     { name = "python-dotenv" },
 ]
@@ -837,9 +837,9 @@ requires-dist = [
     { name = "asyncpg", specifier = ">=0.31.0" },
     { name = "fastapi", extras = ["standard"], specifier = ">=0.128.8" },
     { name = "geoalchemy2", specifier = ">=0.17.1" },
+    { name = "hermes-ai", editable = "libs/shared/hermes-ai" },
     { name = "hermes-db", editable = "libs/shared/hermes-db" },
     { name = "httpx", specifier = ">=0.28.1" },
-    { name = "litellm", specifier = ">=1.83.0" },
     { name = "pydantic-settings", specifier = ">=2.11.0" },
     { name = "python-dotenv", specifier = ">=1.2.1" },
 ]

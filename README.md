@@ -119,6 +119,7 @@ hermes/
 ├── libs/
 │   ├── map/                       # Core Mapbox GL WebGL implementation (libs/map)
 │   └── shared/
+│       ├── hermes-ai/             # Shared AI extraction, LLM client, and geocoding services
 │       ├── hermes-db/             # Shared PostGIS models and alembic migrations
 │       ├── ui-components/         # Decoupled Mission Control HUD widgets
 │       ├── util-types/            # Shared TypeScript contracts
