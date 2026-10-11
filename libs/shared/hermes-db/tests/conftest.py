@@ -13,7 +13,6 @@ import os
 
 
 # Set fallback test credentials before any hermes_db imports load settings
-os.environ.setdefault("ENV", "test")
 os.environ.setdefault("DB_PASSWORD", "mock_test_password")
 
 import asyncio
