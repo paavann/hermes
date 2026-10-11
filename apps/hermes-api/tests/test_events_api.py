@@ -52,7 +52,8 @@ def test_get_events_by_bbox_success():
         patch("hermes_api.main.init_db", new_callable=AsyncMock),
         patch("hermes_api.main.close_db", new_callable=AsyncMock),
         patch(
-            "hermes_api.api.v1.events.EventService.get_events_by_bbox", new_callable=AsyncMock
+            "hermes_api.api.v1.events.EventService.get_events_by_bbox",
+            new_callable=AsyncMock,
         ) as mock_bbox,
     ):
         mock_bbox.return_value = [mock_row]
@@ -69,8 +70,11 @@ def test_get_events_by_bbox_success():
 
 
 def test_get_events_by_bbox_invalid_lat():
-    with TestClient(app) as client:
-        # Latitude out of bounds (> 90)
+    with (
+        patch("hermes_api.main.init_db", new_callable=AsyncMock),
+        patch("hermes_api.main.close_db", new_callable=AsyncMock),
+        TestClient(app) as client
+    ):
         resp = client.get("/api/v1/events/bbox?north=120&south=40&east=20&west=0")
         assert resp.status_code == 422
 
@@ -99,7 +103,8 @@ def test_get_event_detail_success():
         patch("hermes_api.main.init_db", new_callable=AsyncMock),
         patch("hermes_api.main.close_db", new_callable=AsyncMock),
         patch(
-            "hermes_api.api.v1.events.EventService.get_event_by_id", new_callable=AsyncMock
+            "hermes_api.api.v1.events.EventService.get_event_by_id",
+            new_callable=AsyncMock,
         ) as mock_get_detail,
     ):
         mock_get_detail.return_value = mock_detail
@@ -122,7 +127,8 @@ def test_get_event_detail_not_found():
         patch("hermes_api.main.init_db", new_callable=AsyncMock),
         patch("hermes_api.main.close_db", new_callable=AsyncMock),
         patch(
-            "hermes_api.api.v1.events.EventService.get_event_by_id", new_callable=AsyncMock
+            "hermes_api.api.v1.events.EventService.get_event_by_id",
+            new_callable=AsyncMock,
         ) as mock_get_detail,
     ):
         mock_get_detail.return_value = None

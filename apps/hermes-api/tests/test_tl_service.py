@@ -176,7 +176,9 @@ def test_second_click_returns_cache(mock_tl_db, mock_geocoding, dummy_event):
     asyncio.run(run_test())
 
 
-def test_concurrent_generation_returns_generating(mock_tl_db, mock_geocoding, dummy_event):
+def test_concurrent_generation_returns_generating(
+    mock_tl_db, mock_geocoding, dummy_event
+):
     async def run_test():
         existing_tl = EventTl(
             id=uuid.uuid4(),
@@ -200,7 +202,9 @@ def test_concurrent_generation_returns_generating(mock_tl_db, mock_geocoding, du
 
 @patch("hermes_api.services.tl_service.search_wikipedia", new_callable=AsyncMock)
 @patch("hermes_api.services.tl_service.AiService", autospec=True)
-def test_no_wikipedia_match(mock_ai_cls, mock_search, mock_tl_db, mock_geocoding, dummy_event):
+def test_no_wikipedia_match(
+    mock_ai_cls, mock_search, mock_tl_db, mock_geocoding, dummy_event
+):
     async def run_test():
         mock_ai = mock_ai_cls.return_value
         mock_ai.analyze_tl_context = AsyncMock(

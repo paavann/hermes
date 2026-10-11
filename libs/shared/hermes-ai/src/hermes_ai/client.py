@@ -27,31 +27,25 @@ class HermesAiClient:
 
         logger.info("hermes ai client initialized.")
 
-
     @property
     def llm(self) -> LlmService:
         return self._llm
-
 
     @property
     def router(self) -> Router:
         return self._llm.router
 
-
     @property
     def _router(self) -> Router:
         return self._llm.router
-
 
     @property
     def rate_limiter(self) -> TbRateLimiter | None:
         return self._llm.rate_limiter
 
-
     @property
     def embed_rate_limiter(self) -> TbRateLimiter | None:
         return self._llm.embed_rate_limiter
-
 
     async def call_llm[T: BaseModel](
         self,
@@ -67,10 +61,8 @@ class HermesAiClient:
             schema_name=schema_name,
         )
 
-
     async def gen_embeddings(self, texts: list[str]) -> list[list[float] | None]:
         return await self._llm.gen_embeddings(texts)
-
 
     async def extract_events(
         self,
@@ -82,7 +74,6 @@ class HermesAiClient:
             articles, existing_events, geocoding_svc
         )
 
-
     async def extract_tl(
         self,
         pg_title: str,
@@ -90,7 +81,6 @@ class HermesAiClient:
         geocoding_svc: GeocodingService | None = None,
     ) -> TlExtractionResponse | None:
         return await self._tl_extractor.extract_tl(pg_title, prose, geocoding_svc)
-
 
     async def analyze_tl_context(self, headline: str) -> TlSearchQuery | None:
         return await self._tl_extractor.analyze_tl_context(headline)

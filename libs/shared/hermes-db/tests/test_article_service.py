@@ -166,4 +166,3 @@ class TestCreateArticle:
         col = inspect(Article).columns["id"]
         assert col.default is not None and col.default.is_callable
         assert isinstance(col.default.arg(None), uuid.UUID)
-

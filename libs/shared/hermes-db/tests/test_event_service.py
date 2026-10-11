@@ -76,10 +76,16 @@ class TestCredibilityWeights:
             assert tier in CREDIBILITY_WEIGHTS
 
     def test_tier1_is_highest(self):
-        assert CREDIBILITY_WEIGHTS[CredibilityTier.TIER_1] > CREDIBILITY_WEIGHTS[CredibilityTier.TIER_2]
+        assert (
+            CREDIBILITY_WEIGHTS[CredibilityTier.TIER_1]
+            > CREDIBILITY_WEIGHTS[CredibilityTier.TIER_2]
+        )
 
     def test_tier4_is_lowest(self):
-        assert CREDIBILITY_WEIGHTS[CredibilityTier.TIER_4] < CREDIBILITY_WEIGHTS[CredibilityTier.TIER_3]
+        assert (
+            CREDIBILITY_WEIGHTS[CredibilityTier.TIER_4]
+            < CREDIBILITY_WEIGHTS[CredibilityTier.TIER_3]
+        )
 
     @pytest.mark.parametrize(
         ("tier", "expected"),
@@ -102,9 +108,11 @@ class TestCredibilityWeights:
 class TestCreateEventWithArticle:
     def _make_session_and_svc(self):
         session = make_async_session()
+
         # Ensure flush is awaitable and sets event.id after it runs.
         async def _flush():
             pass
+
         session.flush = AsyncMock(side_effect=_flush)
         svc = EventService(session)
         return session, svc
@@ -133,14 +141,18 @@ class TestCreateEventWithArticle:
     def test_returns_event_instance(self):
         """Must return an Event ORM object."""
         session, svc = self._make_session_and_svc()
-        with patch.object(svc._article_service, "create_article", new_callable=AsyncMock):
+        with patch.object(
+            svc._article_service, "create_article", new_callable=AsyncMock
+        ):
             result = self._run_create(svc)
         assert isinstance(result, Event)
 
     def test_event_added_to_session(self):
         """session.add must be called with the new Event."""
         session, svc = self._make_session_and_svc()
-        with patch.object(svc._article_service, "create_article", new_callable=AsyncMock):
+        with patch.object(
+            svc._article_service, "create_article", new_callable=AsyncMock
+        ):
             result = self._run_create(svc)
         session.add.assert_called()
         call_args = [args[0] for args, _ in session.add.call_args_list]
@@ -155,7 +167,9 @@ class TestCreateEventWithArticle:
             flush_called_before_article.append(session.flush.await_count)
             return MagicMock()
 
-        with patch.object(svc._article_service, "create_article", side_effect=_create_article):
+        with patch.object(
+            svc._article_service, "create_article", side_effect=_create_article
+        ):
             self._run_create(svc)
 
         # flush must have been awaited at least once before article creation.
@@ -164,27 +178,35 @@ class TestCreateEventWithArticle:
     def test_session_committed(self):
         """commit() must be awaited at the end."""
         session, svc = self._make_session_and_svc()
-        with patch.object(svc._article_service, "create_article", new_callable=AsyncMock):
+        with patch.object(
+            svc._article_service, "create_article", new_callable=AsyncMock
+        ):
             self._run_create(svc)
         session.commit.assert_awaited_once()
 
     def test_initial_score_from_credibility(self):
         """trending_score must equal the credibility weight of the source."""
         session, svc = self._make_session_and_svc()
-        with patch.object(svc._article_service, "create_article", new_callable=AsyncMock):
+        with patch.object(
+            svc._article_service, "create_article", new_callable=AsyncMock
+        ):
             event = self._run_create(svc, credibility=CredibilityTier.TIER_2)
         assert event.trending_score == CREDIBILITY_WEIGHTS[CredibilityTier.TIER_2]
 
     def test_article_count_initialised_to_one(self):
         session, svc = self._make_session_and_svc()
-        with patch.object(svc._article_service, "create_article", new_callable=AsyncMock):
+        with patch.object(
+            svc._article_service, "create_article", new_callable=AsyncMock
+        ):
             event = self._run_create(svc)
         assert event.article_count == 1
 
     def test_location_wkt_set_when_geocoding_provided(self):
         session, svc = self._make_session_and_svc()
         geo = _Geocoding(lat=48.85, lon=2.35)  # Paris
-        with patch.object(svc._article_service, "create_article", new_callable=AsyncMock):
+        with patch.object(
+            svc._article_service, "create_article", new_callable=AsyncMock
+        ):
             event = self._run_create(svc, geocoding=geo)
         assert event.location is not None
         assert "POINT" in event.location
@@ -193,26 +215,34 @@ class TestCreateEventWithArticle:
 
     def test_location_none_when_no_geocoding(self):
         session, svc = self._make_session_and_svc()
-        with patch.object(svc._article_service, "create_article", new_callable=AsyncMock):
+        with patch.object(
+            svc._article_service, "create_article", new_callable=AsyncMock
+        ):
             event = self._run_create(svc, geocoding=None)
         assert event.location is None
 
     def test_embedding_stored_on_event(self):
         session, svc = self._make_session_and_svc()
         emb = [0.1] * 2048
-        with patch.object(svc._article_service, "create_article", new_callable=AsyncMock):
+        with patch.object(
+            svc._article_service, "create_article", new_callable=AsyncMock
+        ):
             event = self._run_create(svc, embedding=emb)
         assert event.embedding == emb
 
     def test_embedding_none_when_not_provided(self):
         session, svc = self._make_session_and_svc()
-        with patch.object(svc._article_service, "create_article", new_callable=AsyncMock):
+        with patch.object(
+            svc._article_service, "create_article", new_callable=AsyncMock
+        ):
             event = self._run_create(svc, embedding=None)
         assert event.embedding is None
 
     def test_headline_and_summary_set(self):
         session, svc = self._make_session_and_svc()
-        with patch.object(svc._article_service, "create_article", new_callable=AsyncMock):
+        with patch.object(
+            svc._article_service, "create_article", new_callable=AsyncMock
+        ):
             event = self._run_create(svc)
         assert event.ai_headline == "Test headline"
         assert event.ai_summary == "Test summary"
@@ -220,7 +250,9 @@ class TestCreateEventWithArticle:
     @pytest.mark.parametrize("credibility", list(CredibilityTier))
     def test_all_credibility_tiers_produce_correct_initial_score(self, credibility):
         session, svc = self._make_session_and_svc()
-        with patch.object(svc._article_service, "create_article", new_callable=AsyncMock):
+        with patch.object(
+            svc._article_service, "create_article", new_callable=AsyncMock
+        ):
             event = self._run_create(svc, credibility=credibility)
         assert event.trending_score == CREDIBILITY_WEIGHTS[credibility]
 
@@ -252,9 +284,13 @@ class TestAddArticleToEvent:
 
     def test_returns_updated_event(self):
         """When event is found, the updated Event must be returned."""
-        event = make_event(status=EventStatus.ACTIVE, trending_score=3.0, article_count=1)
+        event = make_event(
+            status=EventStatus.ACTIVE, trending_score=3.0, article_count=1
+        )
         session, svc = self._make_session_and_svc(event=event)
-        with patch.object(svc._article_service, "create_article", new_callable=AsyncMock):
+        with patch.object(
+            svc._article_service, "create_article", new_callable=AsyncMock
+        ):
             result = run(
                 svc.add_article_to_event(
                     event_id=event.id,
@@ -269,7 +305,9 @@ class TestAddArticleToEvent:
     def test_article_count_incremented(self):
         event = make_event(article_count=3)
         session, svc = self._make_session_and_svc(event=event)
-        with patch.object(svc._article_service, "create_article", new_callable=AsyncMock):
+        with patch.object(
+            svc._article_service, "create_article", new_callable=AsyncMock
+        ):
             run(
                 svc.add_article_to_event(
                     event_id=event.id,
@@ -284,7 +322,9 @@ class TestAddArticleToEvent:
     def test_trending_score_incremented_by_credibility_weight(self):
         event = make_event(trending_score=2.0)
         session, svc = self._make_session_and_svc(event=event)
-        with patch.object(svc._article_service, "create_article", new_callable=AsyncMock):
+        with patch.object(
+            svc._article_service, "create_article", new_callable=AsyncMock
+        ):
             run(
                 svc.add_article_to_event(
                     event_id=event.id,
@@ -294,13 +334,17 @@ class TestAddArticleToEvent:
                     source_credibility=CredibilityTier.TIER_1,
                 )
             )
-        assert event.trending_score == pytest.approx(2.0 + CREDIBILITY_WEIGHTS[CredibilityTier.TIER_1])
+        assert event.trending_score == pytest.approx(
+            2.0 + CREDIBILITY_WEIGHTS[CredibilityTier.TIER_1]
+        )
 
     def test_stale_event_reactivated(self):
         """Adding an article to a STALE event must flip it back to ACTIVE."""
         event = make_event(status=EventStatus.STALE)
         session, svc = self._make_session_and_svc(event=event)
-        with patch.object(svc._article_service, "create_article", new_callable=AsyncMock):
+        with patch.object(
+            svc._article_service, "create_article", new_callable=AsyncMock
+        ):
             run(
                 svc.add_article_to_event(
                     event_id=event.id,
@@ -315,7 +359,9 @@ class TestAddArticleToEvent:
     def test_active_event_stays_active(self):
         event = make_event(status=EventStatus.ACTIVE)
         session, svc = self._make_session_and_svc(event=event)
-        with patch.object(svc._article_service, "create_article", new_callable=AsyncMock):
+        with patch.object(
+            svc._article_service, "create_article", new_callable=AsyncMock
+        ):
             run(
                 svc.add_article_to_event(
                     event_id=event.id,
@@ -330,7 +376,9 @@ class TestAddArticleToEvent:
     def test_commit_called(self):
         event = make_event()
         session, svc = self._make_session_and_svc(event=event)
-        with patch.object(svc._article_service, "create_article", new_callable=AsyncMock):
+        with patch.object(
+            svc._article_service, "create_article", new_callable=AsyncMock
+        ):
             run(
                 svc.add_article_to_event(
                     event_id=event.id,
@@ -361,7 +409,9 @@ class TestAddArticleToEvent:
         initial = 1.0
         event = make_event(trending_score=initial)
         session, svc = self._make_session_and_svc(event=event)
-        with patch.object(svc._article_service, "create_article", new_callable=AsyncMock):
+        with patch.object(
+            svc._article_service, "create_article", new_callable=AsyncMock
+        ):
             run(
                 svc.add_article_to_event(
                     event_id=event.id,
@@ -371,7 +421,9 @@ class TestAddArticleToEvent:
                     source_credibility=credibility,
                 )
             )
-        assert event.trending_score == pytest.approx(initial + CREDIBILITY_WEIGHTS[credibility])
+        assert event.trending_score == pytest.approx(
+            initial + CREDIBILITY_WEIGHTS[credibility]
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -410,18 +462,13 @@ class TestGetActiveEvents:
     def test_null_location_name_becomes_na(self):
         """location_name=None in the DB must become 'N/A' in the output."""
         event_id = make_uuid()
-        session = make_async_session(
-            execute_all=[(event_id, "Headline", None, "Tech")]
-        )
+        session = make_async_session(execute_all=[(event_id, "Headline", None, "Tech")])
         svc = EventService(session)
         result = run(svc.get_active_events())
         assert result[0]["location_name"] == "N/A"
 
     def test_multiple_rows_all_returned(self):
-        rows = [
-            (make_uuid(), f"Event {i}", f"City {i}", "Category")
-            for i in range(5)
-        ]
+        rows = [(make_uuid(), f"Event {i}", f"City {i}", "Category") for i in range(5)]
         session = make_async_session(execute_all=rows)
         svc = EventService(session)
         result = run(svc.get_active_events())
@@ -430,9 +477,7 @@ class TestGetActiveEvents:
     def test_id_is_stringified_uuid(self):
         """Event IDs must be converted from UUID to str."""
         event_id = make_uuid()
-        session = make_async_session(
-            execute_all=[(event_id, "H", "L", "C")]
-        )
+        session = make_async_session(execute_all=[(event_id, "H", "L", "C")])
         svc = EventService(session)
         result = run(svc.get_active_events())
         assert isinstance(result[0]["id"], str)
@@ -472,18 +517,14 @@ class TestGetActiveEventsByEmbeddings:
 
     def test_result_contains_expected_keys(self):
         event_id = make_uuid()
-        session = make_async_session(
-            execute_all=[(event_id, "H", "L", "C")]
-        )
+        session = make_async_session(execute_all=[(event_id, "H", "L", "C")])
         svc = EventService(session)
         result = run(svc.get_active_events_by_embeddings([[0.1] * 2048]))
         assert set(result[0].keys()) == {"id", "headline", "location_name", "category"}
 
     def test_null_location_name_becomes_na(self):
         event_id = make_uuid()
-        session = make_async_session(
-            execute_all=[(event_id, "H", None, "C")]
-        )
+        session = make_async_session(execute_all=[(event_id, "H", None, "C")])
         svc = EventService(session)
         result = run(svc.get_active_events_by_embeddings([[0.1] * 2048]))
         assert result[0]["location_name"] == "N/A"

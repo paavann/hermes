@@ -64,7 +64,9 @@ class TestGetDb:
         mock_session.__aexit__ = AsyncMock(return_value=False)
         mock_session.rollback = AsyncMock()
 
-        with patch("hermes_db.session.AsyncSessionLocal", MagicMock(return_value=mock_session)):
+        with patch(
+            "hermes_db.session.AsyncSessionLocal", MagicMock(return_value=mock_session)
+        ):
             from hermes_db.session import get_db
 
             class _CustomError(Exception):
@@ -190,7 +192,9 @@ class TestInitDb:
 
         with (
             patch("hermes_db.session.engine", old_engine),
-            patch("hermes_db.session.create_async_engine", return_value=new_engine) as mock_create,
+            patch(
+                "hermes_db.session.create_async_engine", return_value=new_engine
+            ) as mock_create,
             patch("hermes_db.session.AsyncSessionLocal", mock_factory),
             patch("hermes_db.session.sync_sources_from_config", new_callable=AsyncMock),
         ):

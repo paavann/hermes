@@ -31,7 +31,6 @@ class AiService:
         self._router = self._client.router
         self.router = self._client.router
 
-
     async def get_metadata(
         self,
         articles: list[ArticleInput],
@@ -43,7 +42,6 @@ class AiService:
             existing_events=existing_events,
             geocoding_svc=geocoding_svc,
         )
-
 
     async def gen_embeddings(self, texts: list[str]) -> list[list[float] | None]:
         return await self._client.gen_embeddings(texts)

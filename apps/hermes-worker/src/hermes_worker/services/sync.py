@@ -24,7 +24,6 @@ class SyncService:
     def __init__(self) -> None:
         self._ai = AiService()
 
-
     async def _sync_source(self, source: DueSource) -> dict[str, int]:
         stats = {
             "articles_fetched": 0,
@@ -148,7 +147,6 @@ class SyncService:
             stats["articles_failed"],
         )
         return stats
-
 
     async def sync_all_sources(self, force: bool = False) -> dict[str, int]:
         stats = {

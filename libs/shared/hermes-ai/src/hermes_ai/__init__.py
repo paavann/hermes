@@ -62,4 +62,3 @@ __all__ = [
     "clean_location_name",
     "coerce_to_str",
 ]
-

@@ -100,9 +100,7 @@ class TestWorkerGeocodingService:
 
         asyncio.run(run())
 
-    def test_geocode_transient_failure_does_not_persist_cache(
-        self, mock_cache_service
-    ):
+    def test_geocode_transient_failure_does_not_persist_cache(self, mock_cache_service):
         async def run():
             service = GeocodingService(mock_cache_service)
 

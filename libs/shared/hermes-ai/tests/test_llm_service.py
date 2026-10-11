@@ -146,4 +146,3 @@ def test_llm_service_call_llm_markdown_fence_and_raw_list(
     assert res is not None
     assert len(res.events) == 1
     assert res.events[0].headline == "Fence"
-

@@ -23,7 +23,6 @@ class GeocodeCacheService:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
-
     async def get_by_location_name(
         self, location_name: str
     ) -> GeocodeCacheEntry | None:
@@ -39,7 +38,6 @@ class GeocodeCacheService:
             longitude=row.longitude,
             display_name=row.display_name,
         )
-
 
     async def save_geocode_result(
         self,

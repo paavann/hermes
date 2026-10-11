@@ -15,6 +15,7 @@ from hermes_db.services.geocode import GeocodeCacheEntry, GeocodeCacheService
 # get_by_location_name
 # ---------------------------------------------------------------------------
 
+
 class TestGetByLocationName:
     def test_returns_cache_entry_when_found(self):
         mock_entry = MagicMock(spec=GeocodeCache)
@@ -35,7 +36,6 @@ class TestGetByLocationName:
         )
         session.execute.assert_awaited_once()
 
-
     def test_normalizes_location_name(self):
         session = make_async_session(execute_scalar_one_or_none=None)
         svc = GeocodeCacheService(session)
@@ -43,7 +43,6 @@ class TestGetByLocationName:
         result = run(svc.get_by_location_name("  New York  "))
         assert result is None
         session.execute.assert_awaited_once()
-
 
     def test_returns_none_when_not_found(self):
         session = make_async_session(execute_scalar_one_or_none=None)
@@ -57,6 +56,7 @@ class TestGetByLocationName:
 # ---------------------------------------------------------------------------
 # save_geocode_result
 # ---------------------------------------------------------------------------
+
 
 class TestSaveGeocodeResult:
     def _make_svc_with_entry(
@@ -72,7 +72,6 @@ class TestSaveGeocodeResult:
         """
         session = make_async_session(execute_scalar_one_or_none=entry)
         return GeocodeCacheService(session), session
-
 
     def test_returns_geocode_cache_instance(self):
         """save_geocode_result must return the re-fetched GeocodeCacheEntry."""
@@ -98,7 +97,6 @@ class TestSaveGeocodeResult:
             display_name="Paris, France",
         )
 
-
     def test_execute_called_twice_and_committed(self):
         """Must issue two executes (upsert + re-fetch SELECT) and commit exactly once."""
         mock_entry = MagicMock(spec=GeocodeCache)
@@ -118,7 +116,6 @@ class TestSaveGeocodeResult:
         assert session.execute.await_count == 2
         session.commit.assert_awaited_once()
 
-
     def test_does_not_call_session_add(self):
         """Upsert path must not use session.add()."""
         mock_entry = MagicMock(spec=GeocodeCache)
@@ -136,4 +133,3 @@ class TestSaveGeocodeResult:
             )
         )
         session.add.assert_not_called()
-

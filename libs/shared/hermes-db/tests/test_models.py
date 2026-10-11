@@ -287,7 +287,15 @@ class TestSourceModel:
 
     def test_required_columns_present(self):
         cols = {c.name for c in inspect(Source).columns}
-        required = {"id", "name", "slug", "url", "source_type", "credibility", "is_active"}
+        required = {
+            "id",
+            "name",
+            "slug",
+            "url",
+            "source_type",
+            "credibility",
+            "is_active",
+        }
         assert required.issubset(cols)
 
     def test_slug_is_unique(self):
@@ -360,5 +368,12 @@ class TestModelsPackage:
             cls = getattr(models, name)
             # Every model must be registered in Base.metadata.
             assert cls.__tablename__ in {
-                t for t in ["articles", "events", "event_timelines", "sources", "geocode_cache"]
+                t
+                for t in [
+                    "articles",
+                    "events",
+                    "event_timelines",
+                    "sources",
+                    "geocode_cache",
+                ]
             }

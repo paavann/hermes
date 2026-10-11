@@ -51,22 +51,19 @@ class GeocodingData(Protocol):
     def longitude(self) -> float: ...
 
 
-
-
-
 class EventService:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
         self._article_service = ArticleService(session)
 
-
-
     async def create_event_with_article(
         self,
         extraction: EventExtractionData,
         geocoding: GeocodingData | None,
-        article_title: str, article_url: str,
-        source_id: uuid.UUID, source_credibility: CredibilityTier,
+        article_title: str,
+        article_url: str,
+        source_id: uuid.UUID,
+        source_credibility: CredibilityTier,
         published_at: datetime | None = None,
         embedding: list[float] | None = None,
     ) -> Event | None:
@@ -80,12 +77,17 @@ class EventService:
         initial_score = CREDIBILITY_WEIGHTS.get(source_credibility, 1.0)
 
         event = Event(
-            ai_headline=extraction.headline, ai_summary=extraction.summary,
-            category=extraction.category, category_color=extraction.category_color,
-            location=location_wkt, location_name=extraction.location_name,
+            ai_headline=extraction.headline,
+            ai_summary=extraction.summary,
+            category=extraction.category,
+            category_color=extraction.category_color,
+            location=location_wkt,
+            location_name=extraction.location_name,
             embedding=embedding,
-            trending_score=initial_score, article_count=1,
-            first_reported_at=now, last_updated_at=now,
+            trending_score=initial_score,
+            article_count=1,
+            first_reported_at=now,
+            last_updated_at=now,
         )
         self._session.add(event)
         await self._session.flush()
@@ -110,13 +112,13 @@ class EventService:
         logger.info("created event '%s' with 1 article.", event.ai_headline)
         return event
 
-
-
     async def add_article_to_event(
         self,
         event_id: uuid.UUID,
-        article_title: str, article_url: str,
-        source_id: uuid.UUID, source_credibility: CredibilityTier,
+        article_title: str,
+        article_url: str,
+        source_id: uuid.UUID,
+        source_credibility: CredibilityTier,
         published_at: datetime | None = None,
     ) -> Event | None:
         event = await self._session.get(Event, event_id)
@@ -154,8 +156,6 @@ class EventService:
         )
         return event
 
-
-
     async def get_events(
         self,
         status: EventStatus | None = EventStatus.ACTIVE,
@@ -171,8 +171,6 @@ class EventService:
         stmt = stmt.order_by(Event.trending_score.desc()).limit(limit)
         result = await self._session.execute(stmt)
         return list(result.scalars().all())
-
-
 
     async def get_events_by_bbox(
         self, north: float, south: float, east: float, west: float
@@ -193,16 +191,14 @@ class EventService:
         result = await self._session.execute(stmt)
         return result.all()
 
-
-
     async def get_event_by_id(self, event_id: uuid.UUID) -> Event | None:
         stmt = (
-            select(Event).options(selectinload(Event.articles)).where(Event.id == event_id)
+            select(Event)
+            .options(selectinload(Event.articles))
+            .where(Event.id == event_id)
         )
         result = await self._session.execute(stmt)
         return result.scalar_one_or_none()
-
-
 
     async def get_active_events(self) -> list[dict[str, str]]:
         stmt = (
@@ -226,8 +222,6 @@ class EventService:
             }
             for event_id, headline, location_name, category in result.all()
         ]
-
-
 
     async def get_active_events_by_embeddings(
         self, embeddings: Sequence[Sequence[float] | None]
@@ -264,12 +258,8 @@ class EventService:
 
         return list(unique_events.values())
 
-
-
     async def article_url_exists(self, url: str) -> bool:
         return await self._article_service.article_url_exists(url)
-
-
 
     async def _transition_event_status(
         self, from_status: EventStatus, to_status: EventStatus, cutoff: datetime

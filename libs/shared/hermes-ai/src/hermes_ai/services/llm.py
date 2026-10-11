@@ -72,21 +72,17 @@ class LlmService:
             config.fallback_model if fallbacks else "none",
         )
 
-
     @property
     def router(self) -> Router:
         return self._router
-
 
     @property
     def rate_limiter(self) -> TbRateLimiter | None:
         return self._rate_limiter
 
-
     @property
     def embed_rate_limiter(self) -> TbRateLimiter | None:
         return self._embed_rate_limiter
-
 
     async def call_llm[T: BaseModel](
         self,
@@ -154,7 +150,6 @@ class LlmService:
                     )
             logger.error("llm call failed for %s: %s.", schema_name, exc)
             return None
-
 
     async def gen_embeddings(self, texts: list[str]) -> list[list[float] | None]:
         if not texts:

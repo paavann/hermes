@@ -23,9 +23,7 @@ def mock_cache_service() -> AsyncMock:
 
 
 class TestGeocodingService:
-    def test_cache_hit_returns_immediately(
-        self, mock_cache_service: AsyncMock
-    ) -> None:
+    def test_cache_hit_returns_immediately(self, mock_cache_service: AsyncMock) -> None:
         async def run() -> None:
             mock_cache_entry = GeocodeCache(
                 location_name="paris, france",
@@ -44,7 +42,6 @@ class TestGeocodingService:
                 mock_call.assert_not_called()
 
         asyncio.run(run())
-
 
     def test_successful_geocoding_persists_cache(
         self, mock_cache_service: AsyncMock
@@ -71,9 +68,7 @@ class TestGeocodingService:
                     display_name="London, Greater London, England, United Kingdom",
                 )
 
-
         asyncio.run(run())
-
 
     def test_empty_results_persists_negative_cache(
         self, mock_cache_service: AsyncMock
@@ -95,9 +90,7 @@ class TestGeocodingService:
                     display_name=None,
                 )
 
-
         asyncio.run(run())
-
 
     def test_transient_failure_does_not_persist_cache(
         self, mock_cache_service: AsyncMock
@@ -115,7 +108,6 @@ class TestGeocodingService:
                 mock_cache_service.save_geocode_result.assert_not_awaited()
 
         asyncio.run(run())
-
 
     @patch("asyncio.sleep", new_callable=AsyncMock)
     def test_call_nominatim_retries_on_429(
@@ -155,7 +147,6 @@ class TestGeocodingService:
 
         asyncio.run(run())
 
-
     def test_clean_location_name_sanitizes_complex_strings(self) -> None:
         assert clean_location_name("Multiple cities (e.g., Sanaa, Taiz)") == "Sanaa"
         assert clean_location_name("Sanaa (mosque)") == "Sanaa"
@@ -165,7 +156,6 @@ class TestGeocodingService:
         assert clean_location_name("Various locations") is None
         assert clean_location_name("Nationwide") is None
         assert clean_location_name("") is None
-
 
     @patch("asyncio.sleep", new_callable=AsyncMock)
     def test_circuit_breaker_trips_on_persistent_429(

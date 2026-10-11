@@ -269,7 +269,7 @@ def test_sync_updates_changed_source_fields():
         slug="bbc-world",
         name="BBC World",
         url="https://old-bbc.com",  # will be overwritten
-        credibility="TIER_3",       # will be upgraded to TIER_1
+        credibility="TIER_3",  # will be upgraded to TIER_1
         is_active=True,
     )
     config = [
@@ -392,4 +392,3 @@ def test_source_service_update_last_fetched():
     asyncio.run(service.update_last_fetched(source_id))
 
     session.execute.assert_called_once()
-

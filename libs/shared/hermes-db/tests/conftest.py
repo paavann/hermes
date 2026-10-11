@@ -10,6 +10,7 @@ constructed MagicMock / AsyncMock so that:
 """
 
 import asyncio
+import os
 import uuid
 from datetime import UTC, datetime
 from typing import Any
@@ -17,6 +18,12 @@ from unittest.mock import AsyncMock, MagicMock
 
 from hermes_db.enums import EventStatus
 from hermes_db.models import Article, Event, Source
+
+
+# Set fallback test credentials so unit tests run cleanly
+# without .env
+os.environ.setdefault("ENV", "test")
+os.environ.setdefault("DB_PASSWORD", "mock_test_password")
 
 
 # ---------------------------------------------------------------------------

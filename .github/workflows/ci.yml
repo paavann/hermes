@@ -11,8 +11,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  PYTHON_VERSION: '3.14'
   NODE_VERSION: '22'
+  PYTHON_VERSION: '3.14'
   UV_VERSION: 'latest'
 
 jobs:
@@ -48,7 +48,7 @@ jobs:
         run: uv sync --frozen
 
       - name: run linters
-        run: npx nx run-many -t lint
+        run: npm run lint
 
       - name: run Tests
-        run: npx nx run-many -t test
+        run: npm test

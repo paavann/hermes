@@ -76,7 +76,6 @@ class ExtractedEvent(BaseModel):
             return v.strip().lower() in ("true", "1", "yes")
         return bool(v)
 
-
     @field_validator("location_name", mode="before")
     @classmethod
     def coerce_location_name(cls, v: object) -> str | None:
@@ -84,7 +83,6 @@ class ExtractedEvent(BaseModel):
             return None
         res = coerce_to_str(v).strip()
         return res if res else None
-
 
     @field_validator("headline", "summary", mode="before")
     @classmethod
@@ -96,7 +94,6 @@ class ExtractionResponse(BaseModel):
     events: list[ExtractedEvent] = Field(
         description="One extraction result per input article."
     )
-
 
     @model_validator(mode="before")
     @classmethod

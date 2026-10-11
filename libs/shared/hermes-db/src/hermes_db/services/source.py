@@ -32,12 +32,9 @@ class SourceService:
         self._session = session
 
     async def get_due_sources(self, force: bool = False) -> list[DueSource]:
-        stmt = (
-            select(Source)
-            .where(
-                Source.is_active.is_(True),
-                Source.feed_url.is_not(None),
-            )
+        stmt = select(Source).where(
+            Source.is_active.is_(True),
+            Source.feed_url.is_not(None),
         )
         result = await self._session.execute(stmt)
         sources = result.scalars().all()
@@ -85,11 +82,7 @@ class SourceService:
         self, source_id: uuid.UUID, fetched_at: datetime | None = None
     ) -> None:
         now = (fetched_at or datetime.now(UTC)).replace(tzinfo=None)
-        stmt = (
-            update(Source)
-            .where(Source.id == source_id)
-            .values(last_fetched_at=now)
-        )
+        stmt = update(Source).where(Source.id == source_id).values(last_fetched_at=now)
         await self._session.execute(stmt)
 
 

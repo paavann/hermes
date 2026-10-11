@@ -27,13 +27,11 @@ class TlService:
         self._geocoding = geocoding
         self._tl_db = tl_db
 
-
     async def _abort_tl_gen(
         self, existing_tl: EventTl, status: EventTlStatus, message: str
     ) -> TlResponse:
         await self._tl_db.delete_tl(existing_tl)
         return TlResponse(status=status, message=message)
-
 
     def _build_response_from_existingtl(self, tl: EventTl) -> TlResponse:
         return TlResponse(
@@ -43,7 +41,6 @@ class TlService:
             tl_summary=tl.tl_summary,
             generated_at=tl.generated_at,
         )
-
 
     async def _exec_gen(self, event: Event, existing_tl: EventTl) -> TlResponse:
         search_context = await self._ai.analyze_tl_context(event.ai_headline)
@@ -181,7 +178,6 @@ class TlService:
                     status=EventTlStatus.READY,
                 )
                 return self._build_response_from_existingtl(existing_tl)
-
 
     async def gen_tl(
         self, event_id: uuid.UUID, force_refresh: bool = False

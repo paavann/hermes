@@ -18,4 +18,3 @@ __all__ = [
     "NominatimResilienceManager",
     "clean_location_name",
 ]
-

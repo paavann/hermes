@@ -13,16 +13,13 @@ class EventTlService:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
-
     async def get_event(self, event_id: uuid.UUID) -> Event | None:
         return await self._session.get(Event, event_id)
-
 
     async def get_tl(self, event_id: uuid.UUID) -> EventTl | None:
         stmt = select(EventTl).where(EventTl.event_id == event_id)
         result = await self._session.execute(stmt)
         return result.scalar_one_or_none()
-
 
     async def create_tl(self, event_id: uuid.UUID, status: EventTlStatus) -> EventTl:
         existing_tl = EventTl(event_id=event_id, status=status)
@@ -30,18 +27,18 @@ class EventTlService:
         await self._session.commit()
         return existing_tl
 
-
     async def update_tl_status(self, tl: EventTl, status: EventTlStatus) -> None:
         tl.status = status
         await self._session.commit()
 
-
     async def save_generated_tl(
         self,
         tl: EventTl,
-        nodes: list[dict], edges: list[dict],
+        nodes: list[dict],
+        edges: list[dict],
         tl_summary: str,
-        wikipedia_title: str, page_count: int,
+        wikipedia_title: str,
+        page_count: int,
         node_count: int,
         status: EventTlStatus,
     ) -> None:
@@ -55,13 +52,13 @@ class EventTlService:
         tl.generated_at = datetime.now(UTC)
         await self._session.commit()
 
-
     async def delete_tl(self, tl: EventTl) -> None:
         await self._session.delete(tl)
         await self._session.commit()
 
-
-    async def get_event_coordinates(self, event_id: uuid.UUID) -> tuple[float | None, float | None]:
+    async def get_event_coordinates(
+        self, event_id: uuid.UUID
+    ) -> tuple[float | None, float | None]:
         stmt = select(
             ST_Y(Event.location).label("latitude"),
             ST_X(Event.location).label("longitude"),
