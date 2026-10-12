@@ -1,0 +1,57 @@
+name: Deploy Hermes Worker to Amazon ECR
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - 'apps/hermes-worker/**'
+      - 'libs/shared/hermes-db/**'
+      - 'libs/shared/hermes-ai/**'
+      - 'pyproject.toml'
+      - 'uv.lock'
+      - '.github/workflows/cd-worker.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-push:
+    name: build and push worker image
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@v4
+
+      - name: configure aws credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: log in to amazon ecr
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: set up docker buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: build and push worker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./apps/hermes-worker/Dockerfile
+          target: production
+          push: true
+          tags: |
+            ${{ steps.login-ecr.outputs.registry }}/${{ secrets.AWS_ECR_REPOSITORY }}:latest
+            ${{ steps.login-ecr.outputs.registry }}/${{ secrets.AWS_ECR_REPOSITORY }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
