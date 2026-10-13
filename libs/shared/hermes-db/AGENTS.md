@@ -1,14 +1,59 @@
-# Hermes DB — AI Agent Context
+# Hermes DB — AI Agent Context & Brain
 
-## 1. Architectural Boundary
-`hermes-db` is strictly a low-level data access layer.
-- **Unidirectional Dependency**: It must NEVER import anything from consumer applications (`apps/hermes-api`, `apps/hermes`). 
-- **No Domain Logic**: Business workflows and AI logic belong in the apps. *(Note: `CREDIBILITY_WEIGHTS` and `run_lifecycle_transitions` currently live here, which is recognized technical debt slated for relocation. Do not introduce new domain logic).*
+This document defines the architectural boundaries, engineering rationale, constraints, and operational guidelines for [`libs/shared/hermes-db`](file:///home/pavan/proj/hermes/libs/shared/hermes-db). Read and internalize this context before making changes to models, services, migrations, or database connection lifecycles.
 
-## 2. Inversion of Control (IoC)
-To prevent environment configuration drift, host apps (API/Worker) own environment variables. They pass their validated database URL to `init_db(db_url)`, which dynamically rebinds the asynchronous connection pool in-place. Standalone CLI commands (like Alembic migrations) use an internal `Settings` fallback to read `.env.development`.
+---
 
-## 3. Spatial & Vector Precision Rationale
-- **HALFVEC(2048)**: Embeddings use 16-bit half-precision floats (`halfvec`) instead of 32-bit floats. This halves memory overhead with zero loss in retrieval quality for the Nemotron embedding model.
-- **Cosine Threshold**: Duplicate semantic matching is tuned to `cosine_distance < 0.25`.
-- **Geometry Extraction**: Viewport bounding box queries extract coordinate floats directly in PostGIS using `ST_X` and `ST_Y` to bypass expensive client-side WKB deserialization.
+## 1. Architectural Boundary & Inversion of Control (IoC)
+
+`hermes-db` is strictly a foundational, low-level asynchronous data-access library.
+
+- **Strict Unidirectional Dependency**: `hermes-db` must NEVER import anything from consumer applications ([`apps/hermes-api`](file:///home/pavan/proj/hermes/apps/hermes-api), [`apps/hermes-worker`](file:///home/pavan/proj/hermes/apps/hermes-worker), or [`apps/hermes`](file:///home/pavan/proj/hermes/apps/hermes)).
+- **Inversion of Control for Engine Lifecycles**: Host applications own their environment validation and runtime configurations. Consumers pass their validated database connection URL to [`init_db(db_url)`](file:///home/pavan/proj/hermes/libs/shared/hermes-db/src/hermes_db/session.py#L43-L72), which rebinds the global [`AsyncEngine`](file:///home/pavan/proj/hermes/libs/shared/hermes-db/src/hermes_db/session.py#L19-L26) and [`AsyncSessionLocal`](file:///home/pavan/proj/hermes/libs/shared/hermes-db/src/hermes_db/session.py#L28-L31) pool in place. Standalone execution environments (such as Alembic CLI migrations) fall back to the internal [`Settings`](file:///home/pavan/proj/hermes/libs/shared/hermes-db/src/hermes_db/core/config.py#L9-L40) instance reading `.env` / `.env.development`.
+- **Acknowledged Domain Logic Debt**: `CREDIBILITY_WEIGHTS` and [`run_lifecycle_transitions()`](file:///home/pavan/proj/hermes/libs/shared/hermes-db/src/hermes_db/services/event.py#L278-L305) currently reside in [`EventService`](file:///home/pavan/proj/hermes/libs/shared/hermes-db/src/hermes_db/services/event.py#L54-L305). This is recognized technical debt slated for relocation to dedicated domain services. Do NOT introduce additional business workflows, AI prompting, or ingestion pipelines here.
+
+---
+
+## 2. Engineering Decisions, Tradeoffs & "The Why"
+
+Every key architectural design choice in `hermes-db` addresses specific performance, concurrency, or cloud infrastructure constraints:
+
+### Why SQLAlchemy 2.0 Async with `asyncpg`?
+- **Concurrency Without Thread Exhaustion**: Both [`hermes-api`](file:///home/pavan/proj/hermes/apps/hermes-api) (serving high-frequency spatial bounding-box viewport queries) and [`hermes-worker`](file:///home/pavan/proj/hermes/apps/hermes-worker) (processing parallel RSS article extraction pipelines) run on `asyncio` event loops. Synchronous drivers (`psycopg2`) block worker event threads during DB roundtrips.
+- **Pure Asynchronous Protocol**: The `asyncpg` driver speaks PostgreSQL's frontend/backend wire protocol directly in asynchronous binary format, avoiding C-extension GIL contention and maximizing I/O throughput.
+
+### Why PostGIS `Geometry(POINT, 4326)` with GIST Indexing?
+- **WGS 84 Standard (EPSG:4326)**: Geographic coordinates (`longitude`, `latitude`) conform natively to standard GPS and Mapbox GL projection spaces without runtime coordinate reprojection.
+- **Sub-10ms Viewport Bounding Box Filtering**: Mapbox GL sends dynamic bounding boxes (`west`, `south`, `east`, `north`). By combining `ST_MakeEnvelope` and `ST_Within` over a GIST (Generalized Search Tree) spatial index, PostgreSQL performs multi-dimensional R-tree bounding box filtering across 10,000+ active events in milliseconds.
+- **Direct Coordinate Projection (`ST_X`, `ST_Y`)**: Rather than returning complex Well-Known Binary (WKB) geometry objects requiring expensive client-side deserialization, [`get_events_by_bbox()`](file:///home/pavan/proj/hermes/libs/shared/hermes-db/src/hermes_db/services/event.py#L175-L193) projects `ST_X(Event.location)` as `longitude` and `ST_Y(Event.location)` as `latitude` directly inside PostgreSQL, stripping deserialization overhead entirely.
+
+### Why `pgvector` `halfvec(2048)` with HNSW `halfvec_cosine_ops`?
+- **50% RAM Footprint Reduction**: Full 32-bit floats (`vector(2048)`) consume 8,192 bytes per row for vector embeddings generated by Nemotron-3 (`nemotron-3-embed-1b`). 16-bit half-precision floats (`halfvec(2048)`) cut memory consumption exactly in half (4,096 bytes per vector) with zero measurable loss in semantic retrieval accuracy.
+- **Sub-15ms Nearest-Neighbor Traversal**: Hierarchical Navigable Small World (HNSW) graph indexing with `halfvec_cosine_ops` (`M=16`, `ef_construction=64`) bypasses full table scans during article deduplication, executing approximate nearest-neighbor (ANN) lookups in sub-15ms.
+- **Empirical Semantic Duplicate Threshold (< 0.25)**: Cosine distance matching is strictly thresholded to `cosine_distance < 0.25` in [`get_active_events_by_embeddings()`](file:///home/pavan/proj/hermes/libs/shared/hermes-db/src/hermes_db/services/event.py#L226-L260). Vectors with distance $< 0.25$ merge into existing events, avoiding article duplicates while preventing false-positive clustering of distinct regional stories.
+
+### Why Credibility Tier Weights (+3.0 / +2.0 / +1.0 / +0.5)?
+- **Source Consensus Algorithm**:
+  - [`CredibilityTier.TIER_1`](file:///home/pavan/proj/hermes/libs/shared/hermes-db/src/hermes_db/enums.py#L32): `+3.0` points (Global tier-1 wires e.g. Reuters, AP).
+  - [`CredibilityTier.TIER_2`](file:///home/pavan/proj/hermes/libs/shared/hermes-db/src/hermes_db/enums.py#L33): `+2.0` points (Major national publications e.g. BBC, NYT).
+  - [`CredibilityTier.TIER_3`](file:///home/pavan/proj/hermes/libs/shared/hermes-db/src/hermes_db/enums.py#L34): `+1.0` points (Regional or standard news sources).
+  - [`CredibilityTier.TIER_4`](file:///home/pavan/proj/hermes/libs/shared/hermes-db/src/hermes_db/enums.py#L35): `+0.5` points (Specialized or aggregate blogs).
+- **Corroboration Multiplier**: Independent sources reporting the same event increment `trending_score` proportionally. Corroboration also reactivates [`EventStatus.STALE`](file:///home/pavan/proj/hermes/libs/shared/hermes-db/src/hermes_db/enums.py#L6) events back to [`EventStatus.ACTIVE`](file:///home/pavan/proj/hermes/libs/shared/hermes-db/src/hermes_db/enums.py#L5).
+
+### Why `geocode_cache` Permanently Caches Negative Resolutions?
+- **Strict Nominatim Rate Limit (1 req/sec)**: OpenStreetMap's Nominatim usage policy strictly forbids spamming geocoding endpoints.
+- **Shielding Against Malformed Entity Names**: AI batch extraction frequently extracts unresolvable or fictional location names. Storing `latitude=NULL` and `longitude=NULL` in [`GeocodeCache`](file:///home/pavan/proj/hermes/libs/shared/hermes-db/src/hermes_db/models/geocode_cache.py#L9-L22) permanently flags these normalized names, preventing endless API calls and 429 rate limit floods.
+
+### Why SSL Enforcement & `statement_cache_size: 0` for Neon Serverless?
+- **Neon Cloud Requirement**: Production runs on Neon Serverless PostgreSQL, requiring SSL connections (`ssl=require`). [`Settings.db_url`](file:///home/pavan/proj/hermes/libs/shared/hermes-db/src/hermes_db/core/config.py#L26-L39) automatically injects `query={"ssl": "require"}` whenever `DB_HOST` is not local.
+- **PgBouncer / Transaction Pooling Compatibility**: Neon Serverless and PgBouncer run in transaction pooling mode, which breaks client-side prepared statement persistence across pooled sessions. Passing `connect_args={"statement_cache_size": 0}` to [`create_async_engine`](file:///home/pavan/proj/hermes/libs/shared/hermes-db/src/hermes_db/session.py#L19-L26) disables client-side statement caching and prevents `prepared statement "..." already exists` failures.
+
+---
+
+## 3. Strict Coding Conventions for Agents
+
+1. **Absolute Imports**: Always use absolute imports: `from hermes_db.models import Event`, never relative imports.
+2. **Explicit Typings & No `Any`**: Functions and methods must have full type hints. Use concrete models, protocols, `dataclass`, or `TypedDict`. Never use `Any`.
+3. **Parameterized Logging**: Developer logs must use `%s` formatting (`logger.info("event staled %s.", event_id)`), never f-strings. Messages must start with a lowercase letter and end with a period.
+4. **Enums Over Raw Strings**: Always use [`EventStatus`](file:///home/pavan/proj/hermes/libs/shared/hermes-db/src/hermes_db/enums.py#L4-L7), [`EventScope`](file:///home/pavan/proj/hermes/libs/shared/hermes-db/src/hermes_db/enums.py#L10-L15), [`EventTlStatus`](file:///home/pavan/proj/hermes/libs/shared/hermes-db/src/hermes_db/enums.py#L18-L22), [`CredibilityTier`](file:///home/pavan/proj/hermes/libs/shared/hermes-db/src/hermes_db/enums.py#L31-L36), and [`SourceType`](file:///home/pavan/proj/hermes/libs/shared/hermes-db/src/hermes_db/enums.py#L25-L29).
+5. **Testing Verification**: Always verify changes by running `npx nx test hermes-db` and `npx nx lint hermes-db` from the workspace root.

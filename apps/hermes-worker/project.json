@@ -80,6 +80,13 @@
         "command": "uv run hermes-worker",
         "cwd": "{projectRoot}"
       }
+    },
+    "run-all": {
+      "executor": "@nxlv/python:run-commands",
+      "options": {
+        "command": "uv run hermes-worker run-all",
+        "cwd": "{projectRoot}"
+      }
     }
   },
   "tags": [

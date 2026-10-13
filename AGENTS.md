@@ -122,24 +122,25 @@ RSS Feeds (Global Sources)
 
 ### Infrastructure
 
-- **Database**: PostGIS runs via `docker-compose.yml` at the workspace root using a custom build based on `postgis/postgis` with `postgresql-$PG_MAJOR-pgvector` installed inline.
-- **Environment Variables**: Loaded from `.env` at the workspace root (shared variables like DB credentials, ports, Mapbox token) and `.env.local` inside `apps/hermes-api/` (backend keys like `LLM_API`, `LLM_MODEL`, `EMBED_API`, `EMBED_MODEL`). The frontend reads its variables via Vite's `import.meta.env` (e.g., `VITE_MAPBOX_TOKEN`, `VITE_BASE_URL`, `VITE_API_VER`).
+- **Database**: Local development runs via `docker-compose.yml` at the workspace root (PostGIS 16 + pgvector). Production runs on **Neon Serverless PostgreSQL** with `postgis` and `pgvector` extensions enabled.
+- **Worker (Cloud Orchestration)**: In production, `hermes-worker` is containerized (Amazon ECR) and executed as an ephemeral serverless task on **AWS ECS Fargate** (`0.25 vCPU`, `512 MiB`), automatically triggered 3x daily by **Amazon EventBridge** (`cron(0 0,8,16 * * ? *)`).
+- **Environment Variables**: Loaded from `.env` at the workspace root (shared defaults like DB credentials, ports, Mapbox token) and app-specific `.env.local` / `.env.production` files (e.g., `apps/hermes-api/` and `apps/hermes-worker/` for AI/embedding keys `LLM_API`, `LLM_MODEL`, `EMBED_API`, `EMBED_MODEL`; and `apps/hermes/` for Vite frontend variables `VITE_MAPBOX_TOKEN`, `VITE_BASE_URL`, `VITE_API_VER`).
 
 ---
 
 ## 5. Workspace Map
 
-This is an Nx monorepo. The workspace contains the following projects:
+This is an Nx monorepo. The workspace contains the following projects (configured for Node.js 22 LTS and Python 3.14+):
 
-| Project | Path | Role | Key Tech |
+| Project Name | Path | Role | Key Tech |
 | :--- | :--- | :--- | :--- |
-| **`hermes`** | `apps/hermes/` | React frontend shell — interactive map and HUD | React 19, React Router 8 (SPA mode), Vite, Mapbox GL JS v3, Zustand 5, TanStack Query v5, Tailwind CSS 4 |
-| **`hermes-api`** | `apps/hermes-api/` | Python backend — stateless REST API & on-demand historical timeline synthesis | FastAPI, SQLAlchemy 2.0 Async, PostGIS, pgvector (`halfvec`), LiteLLM, uv |
-| **`hermes-worker`** | `apps/hermes-worker/` | Python CLI worker — autonomous RSS ingestion, AI batch extraction, geocoding shield & event lifecycle decay | Python, feedparser, LiteLLM, PostGIS, pgvector (`halfvec`), httpx, uv |
-| **`hermes-e2e`** | `apps/hermes-e2e/` | End-to-end browser tests | Playwright |
+| **`@hermes/hermes`** | `apps/hermes/` | React frontend shell — interactive map and HUD | React 19, React Router 8 (SPA mode), Vite, Mapbox GL JS v3, Zustand 5, TanStack Query v5, Tailwind CSS 4 |
+| **`hermes-api`** | `apps/hermes-api/` | Python backend — stateless REST API & on-demand historical timeline synthesis | Python 3.14+, FastAPI, SQLAlchemy 2.0 Async, PostGIS, pgvector (`halfvec`), LiteLLM, uv |
+| **`hermes-worker`** | `apps/hermes-worker/` | Python CLI worker — autonomous RSS ingestion, AI batch extraction, geocoding shield & lifecycle decay. Ephemeral batch execution on AWS ECS Fargate + EventBridge | Python 3.14+, feedparser, LiteLLM, PostGIS, pgvector (`halfvec`), httpx, uv, Docker, AWS Fargate |
+| **`@hermes/hermes-e2e`** | `apps/hermes-e2e/` | End-to-end browser tests | Playwright, TypeScript |
 | **`@hermes/map`** | `libs/map/` | Mapbox GL WebGL implementation & timeline drawer | Mapbox GL JS, Zustand store, TanStack Query hooks, `MapView`, `EventPopup`, `TlPanel` |
-| **`hermes-ai`** | `libs/shared/hermes-ai/` | Shared AI extraction, LLM client, embeddings, geocoding shield, & rate limiter | LiteLLM, Pydantic, httpx, uv |
-| **`hermes-db`** | `libs/shared/hermes-db/` | Shared PostGIS + pgvector models, migrations & DB services | SQLAlchemy 2.0 Async, PostGIS, pgvector (`halfvec`), GeoAlchemy2, Alembic, uv |
+| **`hermes-ai`** | `libs/shared/hermes-ai/` | Shared AI extraction, LLM client, embeddings, geocoding shield, & rate limiter | Python 3.14+, LiteLLM, Pydantic, httpx, uv |
+| **`hermes-db`** | `libs/shared/hermes-db/` | Shared PostGIS + pgvector models, migrations & DB services | Python 3.14+, SQLAlchemy 2.0 Async, PostGIS, pgvector (`halfvec`), GeoAlchemy2, Alembic, uv |
 | **`@hermes/ui-components`** | `libs/shared/ui-components/`| Tactical Mission Control HUD widgets | React 19, Tailwind CSS 4, `BootSequence`, `LiveClock` |
 | **`@hermes/util-types`** | `libs/shared/util-types/` | Shared TypeScript API response interfaces | TypeScript interfaces (`MapEventResponse`, `EventDetailResponse`, `TlResponse`) |
 | **`@hermes/utils`** | `libs/shared/utils/` | Cross-cutting shared utility helpers | TypeScript |

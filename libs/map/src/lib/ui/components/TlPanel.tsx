@@ -2,6 +2,7 @@ import { useMapStore } from '../../store/store';
 import { useTl } from '../../hooks/useTl';
 import { useEffect, useRef, useState } from 'react';
 import { Feature, FeatureCollection, LineString } from 'geojson';
+import type { MapLayerMouseEvent, MapMouseEvent } from 'mapbox-gl';
 
 const NODES_SOURCE = 'tl-nodes-source';
 const EDGES_SOURCE = 'tl-edges-source';
@@ -14,10 +15,13 @@ function buildGeoJson(
   const nodesGeoJson: FeatureCollection = {
     type: 'FeatureCollection',
     features: tlData.nodes
-      .filter((n) => n.latitude !== null && n.longitude !== null)
+      .filter(
+        (n): n is typeof n & { latitude: number; longitude: number } =>
+          n.latitude !== null && n.longitude !== null,
+      )
       .map((n) => ({
         type: 'Feature',
-        geometry: { type: 'Point', coordinates: [n.longitude!, n.latitude!] },
+        geometry: { type: 'Point', coordinates: [n.longitude, n.latitude] },
         properties: { ...n },
       })),
   };
@@ -146,10 +150,10 @@ export function TlPanel({ map }: { map: mapboxgl.Map | null }) {
       }
 
       // ── Event handlers ───────────────────────────────────────────────
-      const onNodeClick = (e: any) => {
-        if (e.features?.[0]) setActiveNodeId(e.features[0].properties.id);
+      const onNodeClick = (e: MapLayerMouseEvent) => {
+        if (e.features?.[0]) setActiveNodeId(e.features[0].properties?.id);
       };
-      const onMapClick = (e: any) => {
+      const onMapClick = (e: MapMouseEvent) => {
         const hits = map.queryRenderedFeatures(e.point, {
           layers: [NODES_LAYER],
         });

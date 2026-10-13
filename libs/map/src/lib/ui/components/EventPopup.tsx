@@ -178,7 +178,7 @@ export function EventPopup({ map }: { map: mapboxgl.Map | null }) {
                         'www.',
                         '',
                       );
-                    } catch (e) {
+                    } catch {
                       domain = 'source';
                     }
 
