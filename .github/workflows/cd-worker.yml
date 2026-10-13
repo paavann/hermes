@@ -2,8 +2,7 @@ name: Deploy Hermes Worker to Amazon ECR
 
 on:
   push:
-    branches:
-      - master
+    branches: [master, dev]
     paths:
       - 'apps/hermes-worker/**'
       - 'libs/shared/hermes-db/**'
