@@ -1,105 +1,74 @@
-# Hermes Frontend — AI Agent Context
+# Hermes Frontend (`apps/hermes`) — AI Agent Context & Brain
 
-This document provides frontend-specific architectural context for the `hermes` React application. It is scoped to this directory and supplements the root `AGENTS.md`.
-
----
-
-## 1. Application Role
-
-This is the **frontend shell** of Project Hermes. It is a React application built with **React 19**, **React Router 8** (SPA mode via Vite), **Tailwind CSS 4**, **Zustand 5**, **TanStack React Query v5**, and **Mapbox GL JS v3**. Its primary job is to render an interactive geospatial map and tactical "Mission Control" UI overlays for users to observe global news events.
-
-As a thin `apps/` shell in the Nx monorepo:
-- `apps/hermes` contains **only** route definitions, layout providers, and application configuration.
-- Reusable UI widgets live in `libs/shared/ui-components` (`BootSequence`, `LiveClock`).
-- Map engine, layers, custom projection hooks, and map state live in `libs/feature-map` (`MapView`, `EventPopup`, `TlPanel`, `useMapStore`).
-- Shared TypeScript API interfaces live in `libs/shared/util-types` (`MapEventResponse`, `EventDetailResponse`, `TlResponse`).
+This document provides high-level architectural context, constraints, and engineering decisions specific to the frontend shell in `apps/hermes`. All AI agents contributing to this module must adhere to the principles outlined below.
 
 ---
 
-## 2. UI/UX Design Language
+## 1. Module Role & The 80/20 Monorepo Boundary
 
-### Theme & Visual Identity ("Mission Control")
+`apps/hermes` is an ultra-thin configuration and routing shell. In accordance with the Nx monorepo **80/20 rule**:
+- **What belongs here (<20%)**: Route configuration (`app/routes.tsx`), root HTML/document shell (`app/root.tsx`), top-level provider tree assembly (`app/app.tsx`), build toolchain (`vite.config.mts`, `react-router.config.ts`), and environment binding.
+- **What is strictly forbidden here (>80%)**: Business logic, spatial queries, Mapbox layer configurations, raw WebGL operations, and reusable UI widgets. These must reside in dedicated libraries:
+  - Geospatial visualization, clustering, timeline drawer, and telemetry store: [`libs/map`](file:///home/pavan/proj/hermes/libs/map)
+  - Mission Control HUD widgets (`BootSequence`, `LiveClock`): [`libs/shared/ui-components`](file:///home/pavan/proj/hermes/libs/shared/ui-components)
+  - Shared TypeScript data contracts: [`libs/shared/util-types`](file:///home/pavan/proj/hermes/libs/shared/util-types)
 
-- **Theme**: "Mission Control" — a tech-forward, high-density aesthetic inspired by military tactical command centers and financial terminals.
-- **Dark Mode**: Strictly dark-themed (`#050505` background, slate text).
-- **Glassmorphism**: Floating panels use translucent backgrounds with `backdrop-blur-md` (`bg-hud-bg/95`) and glowing tactical borders (`border border-hud-border`).
-- **Sharp Edges (Zero Border Radius)**: All cards, modals, buttons, badges, and popups must have **zero border-radius** (completely squared, sharp-edged). This is strictly enforced in `tailwind.config.js` via `corePlugins: { borderRadius: false }`. Rounded corners are strictly forbidden.
-- **Typography**: Strictly monospaced (`"JetBrains Mono"`, `"Fira Code"`, monospace) to maintain columnar alignment and telemetry precision.
-- **Single Page Application**: Configured with `ssr: false` in `react-router.config.ts` because Mapbox GL relies entirely on client-side WebGL canvas and `window`.
-
-### Color System & Tactical Tokens
-
-Defined in `tailwind.config.js`:
-- `hud-bg`: `rgba(10, 15, 25, 0.85)` (deep semi-transparent tactical navy)
-- `hud-border`: `#1e3a8a` (dark military blue border)
-- `hud-glow`: `#3b82f6` (neon electric blue glow)
-- `neon-blue`: `#00f0ff` (cyberpunk bright cyan)
-- `warning-yellow`: `#fbbf24` (alert highlight yellow)
-
-### Core Presentation Components
-
-- **`BootSequence`** (`libs/shared/ui-components`): Terminal startup sequence displaying ASCII logo, simulated satellite handshake, and system integrity checks before revealing the map.
-- **`LiveClock`** (`libs/shared/ui-components`): Real-time dual UTC and Local digital clock with a blinking heartbeat monitor in the top-right corner.
-- **`EventPopup`** (`libs/feature-map`): Floating HUD window that tracks geographic coordinates via `requestAnimationFrame` projection calculations (`map.project()`). Features an automatic text-scrambler decode effect on AI summaries and links to original sources.
-- **`TlPanel`** (`libs/feature-map`): Slide-out intelligence dossier rendering historical causal events, Wikipedia context, and interactive map camera hops to historical sub-event coordinates.
+**Engineering Tradeoff**: Isolating the shell prevents framework coupling, ensures high component reusability (e.g., E2E harnesses, potential embedded views), and enforces strict Nx architectural boundaries (`type:app`, `scope:frontend`).
 
 ---
 
-## 3. State Management Architecture
+## 2. Architectural Rationale: Strict SPA Mode (`ssr: false`)
 
-### Zustand as Single Source of Truth
+The application is explicitly configured for Single Page Application mode via `ssr: false` in [`react-router.config.ts`](file:///home/pavan/proj/hermes/apps/hermes/react-router.config.ts).
 
-- **Zustand** (`useMapStore` in `libs/feature-map/src/lib/store/store.ts`) is the global map store.
-- **State Properties**:
-  - `selectedEventId`: UUID string of the actively selected event (or `null`).
-  - `selectedEventLngLat`: `[longitude, latitude]` of the active event.
-  - `viewport`: Current geographic bounding box (`north`, `south`, `east`, `west`).
-  - `isTlMode`: Boolean flag indicating if historical timeline mode is active.
-  - `tlTargetId`: Event ID whose timeline is currently being inspected.
-- Both the Mapbox GL instance and React HUD overlays react to and update the same Zustand store. Never allow the Mapbox map instance to maintain shadow state that React cannot observe.
+### Why SSR Was Rejected
+1. **WebGL Canvas Hydration Impossibility**: The core Hermes interface is driven by Mapbox GL JS v3, which requires a live `window` reference, direct DOM measurements, and an active `WebGLRenderingContext`. A server-side streaming or pre-rendering pass cannot construct or hydrate a WebGL canvas context.
+2. **Hydration Mismatches & Double Mounting**: Attempting SSR for map-heavy pages produces hydration mismatches, awkward DOM flashing, or forced two-phase mounting shields that introduce unnecessary latency.
+3. **Domain Applicability**: Hermes is an interactive, real-time tactical command console rather than a text-heavy, indexable blog. SEO crawlers do not index real-time WebGL canvas frames.
 
-### Data Flow Pattern
-
-1. **User pans/zooms the map** &rarr; Mapbox `moveend` updates `viewport` in Zustand.
-2. **`useMapDataSync` (TanStack Query)** observes `viewport` &rarr; fires a debounced API request to `/api/v1/events/bbox?north=..&south=..&east=..&west=..`.
-3. **Client GeoJSON Transformation**: Since the backend returns `MapEventResponse[]`, `createGeoJson()` deduplicates coordinates and constructs a GeoJSON `FeatureCollection` with ranked properties (`rank: 1, 2, 3...`).
-4. **Mapbox GeoJSON Source** updates `events-source` &rarr; WebGL pipeline updates markers natively.
-5. **Marker Selection**: Clicking an unclustered marker writes `selectedEventId` and coordinates to Zustand, centers the camera smoothly with `easeTo`, and displays `EventPopup`.
+**Implementation**: Vite builds a minimal HTML host document (`build/client/index.html`) that boots React 19 directly in the client browser, completely eliminating SSR overhead while maximizing runtime stability.
 
 ---
 
-## 4. Map Rendering & WebGL Performance
+## 3. Telemetry & Unidirectional Data Flow (No Shadow State)
 
-### Mapbox Native Layers (Critical Rule)
+State and telemetry flow strictly unidirectionally across three synchronized layers:
 
-All event pins, clusters, and relationship lines must be rendered using **Mapbox GL native layers** fed by GeoJSON sources (`map.addSource` and `map.addLayer`). **HTML DOM markers (`new mapboxgl.Marker()`) are strictly forbidden** for event pins because rendering thousands of DOM elements destroys browser performance.
+```
+Mapbox GL Canvas (Pan/Zoom/Click)
+        │ (Dispatches raw map events)
+        ▼
+Zustand Store (`useMapStore` in libs/map)  ◄── Single Source of Truth
+        │ (Observes viewport bbox)
+        ▼
+TanStack Query (`useMapDataSync` in libs/map)
+        │ (HTTP GET /api/v1/events/bbox)
+        ▼
+Backend REST API (`hermes-api`)
+        │ (GeoJSON FeatureCollection transformation)
+        ▼
+Mapbox GL Native Layers (GeoJSON Source Update)
+```
 
-### Visualization Layers
-
-1. **`events-source`**: Native GeoJSON source with clustering enabled (`clusterMaxZoom: 14`, `clusterRadius: 50`).
-2. **`hermes-clusters`**: Circle layer for dense marker clusters. Uses step expressions to become transparent at zoom &ge; 8 with hollow borders.
-3. **`hermes-cluster-count`**: Symbol layer rendering `point_count_abbreviated` in JetBrains Mono.
-4. **`hermes-unclustered-point`**: Circle layer for individual breaking news pins. Data-driven styled by `category_color` and rank-based radius (`[1, 18, 2, 14, 3, 10, 6]`).
-5. **`tl-edges-layer`**: Dashed cyan line layer (`#00f0ff`, `line-width: 2`, `line-dasharray: [2, 2]`) connecting causal historical timeline nodes.
-6. **`tl-nodes-layer`**: Circle layer for historical timeline nodes with category colors and halo outlines.
-
-### Camera Interactions
-
-- **Robotic Cluster Zoom**: Clicking a cluster calculates the expansion zoom and executes a pure linear easing transition (`easing: (t) => t`) for a responsive tactical feel.
-- **Event Pin Selection**: Clicking a pin pans the camera smoothly to center the popup (`easeTo` with quadratic ease-out).
-
----
-
-## 5. Server State & Timeline Polling
-
-- **TanStack Query v5**: Handles all HTTP fetching and caching:
-  - `useMapDataSync`: 5-second `staleTime` for viewport data.
-  - `useEventDetails`: 60-second `staleTime` for event summaries and source articles.
-  - `useTl`: Initiates historical timeline generation. If `query.state.data?.status === 'GENERATING'`, automatically sets `refetchInterval: 3000` to poll until graph synthesis completes.
+### Strict State Rules
+- **Single Source of Truth**: [`useMapStore`](file:///home/pavan/proj/hermes/libs/map/src/lib/store/store.ts) is the sole authority for viewport bounding boxes (`north`, `south`, `east`, `west`), active event selection (`selectedEventId`), and timeline drawer mode (`isTlMode`).
+- **No Mapbox Shadow State**: The Mapbox GL JS map instance is strictly a rendering sink. It must **never** maintain internal state that diverges from Zustand. User panning/zooming dispatches directly into `useMapStore.setViewport`.
+- **Declarative Query Sync**: TanStack Query (`useQuery`) observes the Zustand `viewport` key, executing debounced spatial bbox fetches against `hermes-api`. When responses arrive, GeoJSON data is pushed cleanly to Mapbox native sources without cyclical re-renders.
 
 ---
 
-## 6. Accessibility (a11y)
+## 4. Pragmatic Accessibility (a11y) Boundaries
 
-- **Pragmatic Accessibility**: All UI elements **outside the map** (sidebars, timeline panels, popups, buttons) must support keyboard navigation (`Tab`, `Enter`, `Escape`), proper ARIA labels, and high contrast against dark backgrounds.
-- **Map Canvas**: The WebGL canvas is recognized as visually dependent. Individual WebGL markers are not exposed to screen readers; the drawer panels provide accessible textual alternatives.
+Because Mapbox renders pins onto a hardware-accelerated WebGL `<canvas>`, individual map markers are not distinct DOM elements:
+- **Canvas Rule**: Do NOT attempt to mount thousands of hidden off-screen DOM nodes to represent geospatial map pins. Doing so causes severe DOM bloat, breaks 60 FPS canvas performance, and creates an unusable screen-reader experience.
+- **HUD & Overlay Rule**: All standard HTML DOM elements—including tactical HUD overlays, modal dialogs, the timeline drawer (`TlPanel`), and event inspection popups (`EventPopup`)—must maintain strict semantic markup, keyboard navigability (`Escape` dismissal, focus trapping), and descriptive ARIA roles.
+- **Information Parity**: Assistive tech users inspect event details, causality timelines, and source citations via the accessible overlay panels rather than raw canvas markers.
+
+---
+
+## 5. Design System: Mission Control Constraints
+
+The UI enforces a strict tactical command center aesthetic configured via Tailwind CSS 4:
+- **Zero Border Radius**: Globally enforced via `corePlugins: { borderRadius: false }` in [`tailwind.config.js`](file:///home/pavan/proj/hermes/apps/hermes/tailwind.config.js). Rounded corners (`rounded-*`) are strictly disallowed.
+- **Monospace Typography**: `JetBrains Mono` and `Fira Code` are applied across all text elements (`font-mono`, `font-sans`).
+- **Tactical Palette**: Cyberpunk/tactical accents (`hud-bg`, `hud-border: #1e3a8a`, `hud-glow: #3b82f6`, `neon-blue: #00f0ff`, `warning-yellow: #fbbf24`).

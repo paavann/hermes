@@ -1,13 +1,15 @@
 /// <reference types='vitest' />
 import { defineConfig } from 'vite';
 import { reactRouter } from '@react-router/dev/vite';
-import tsconfigPaths from 'vite-tsconfig-paths';
 import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig(() => ({
   root: import.meta.dirname,
   cacheDir: '../../node_modules/.vite/apps/hermes',
   envDir: '../../',
+  resolve: {
+    tsconfigPaths: true,
+  },
   server: {
     port: 4200,
     host: process.env.HOST || 'localhost',
@@ -18,7 +20,6 @@ export default defineConfig(() => ({
   },
   plugins: [
     tailwindcss(),
-    tsconfigPaths(),
     !process.env.VITEST && reactRouter(),
   ],
   // Uncomment this if you are using workers.

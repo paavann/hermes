@@ -58,7 +58,7 @@ export interface TlEdgeResponse {
 }
 
 export interface TlResponse {
-  status: 'READY' | 'GENERATING' | 'no_content' | 'NO_CONTENT' | 'FAILED';           
+  status: 'READY' | 'GENERATING' | 'NO_CONTENT' | 'FAILED';
   message?: string | null;
   nodes: TlNodeResponse[];
   edges: TlEdgeResponse[];

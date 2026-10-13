@@ -3,8 +3,8 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { vi } from 'vitest';
 import App from '../../app/app';
 
-vi.mock('@hermes/feature-map', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@hermes/feature-map')>();
+vi.mock('@hermes/map', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@hermes/map')>();
   return {
     ...actual,
     MapView: () => <div data-testid="map-view" />,

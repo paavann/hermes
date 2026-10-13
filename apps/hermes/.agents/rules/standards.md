@@ -8,7 +8,7 @@ trigger: always_on
 - **Tailwind Exclusivity**: Use Tailwind CSS utility classes exclusively. Creating custom `.css` or `.scss` files is strictly forbidden unless absolutely necessary for complex Mapbox GL overrides. Extract reusable styles into React components rather than using `@apply`.
 - **Zustand State**: NEVER mutate Zustand state directly. Strictly define and call action functions inside the store.
 - **React Router Data**: Prioritize using React Router v7/v8 `loader` and `action` functions for route-level data fetching rather than triggering fetches inside `useEffect`.
-- **File Naming & Casing**: Strictly use `camelCase.tsx` for all React files (e.g., `eventMarker.tsx`) and for naming variables, functions, and filenames in the JS/TS ecosystem.
+- **File Naming & Casing**: Strictly use `PascalCase.tsx` for React component files (e.g., `BootSequence.tsx`, `EventPopup.tsx`). Use `camelCase.ts` for custom React hooks and utility helpers (e.g., `useMapDataSync.ts`), and `camelCase` for variables and functions. Route files may follow React Router conventions.
 - **Props**: ALWAYS destructure React props in the function signature (e.g., `function Map({ data }):`) rather than accessing them via `props.data`.
 - **Exhaustive Deps**: Strictly follow React's `exhaustive-deps` rule. NEVER suppress the eslint warning (`// eslint-disable-next-line`) to make a bug go away.
 - **TypeScript Strictness**:

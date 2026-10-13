@@ -10,14 +10,13 @@ The test surface covers:
 import asyncio
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
-
 import pytest
-
 from hermes_api.services.wikipedia_service import (
     _MAX_TITLES_PER_REQUEST,
     fetch_page_extracts,
     search_timeline_titles,
 )
+
 
 # ---------------------------------------------------------------------------
 # Helpers

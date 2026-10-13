@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { MapView, MapConfigProvider } from '@hermes/feature-map'
+import { MapView, MapConfigProvider } from '@hermes/map'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { BootSequence, LiveClock } from '@hermes/ui-components'
 

@@ -1,285 +1,364 @@
-# Hermes Frontend (`hermes`)
+# Hermes React Client (`@hermes/hermes`)
 
-**Hermes Frontend** is the client application shell for [Project Hermes](file:///home/pavan/proj/hermes/README.md). Built with **React 19**, **React Router 8** (SPA mode via Vite), **Tailwind CSS 4**, **Zustand**, and **Mapbox GL JS**, it provides an interactive, data-dense geospatial interface that transforms traditional text-heavy news feeds into a dynamic global map.
+The `@hermes/hermes` application is the React 19 frontend shell for the Hermes geospatial intelligence platform. It provides the tactical Mission Control user interface, orchestrating the hardware-accelerated Mapbox GL JS WebGL canvas, reactive spatial telemetry, and cybernetic HUD overlays into a unified Single Page Application (SPA).
 
 ---
 
 ## Table of Contents
 
-- [1. Application Role & Architecture](#1-application-role--architecture)
-  - [The 80/20 Monorepo Shell Pattern](#the-8020-monorepo-shell-pattern)
-  - [Component & Provider Hierarchy](#component--provider-hierarchy)
-  - [Data Flow & Viewport Synchronization](#data-flow--viewport-synchronization)
-- [2. "Mission Control" UI/UX Design Language](#2-mission-control-uiux-design-language)
-  - [Strict Visual Rules](#strict-visual-rules)
-  - [Color Palette & Theme Tokens](#color-palette--theme-tokens)
-  - [Terminal HUD Components](#terminal-hud-components)
-- [3. Mapbox GL & WebGL Native Layer Pipeline](#3-mapbox-gl--webgl-native-layer-pipeline)
-  - [Layer Hierarchy](#layer-hierarchy)
-  - [Data-Driven Styling & Marker Ranking](#data-driven-styling--marker-ranking)
-  - [Dynamic Timeline Graph Layering](#dynamic-timeline-graph-layering)
-- [4. State Management Architecture](#4-state-management-architecture)
-  - [Zustand Global Map Store](#zustand-global-map-store)
-  - [TanStack Query v5 Data Fetching](#tanstack-query-v5-data-fetching)
-- [5. Codebase Anatomy](#5-codebase-anatomy)
-- [6. Configuration & Environment Variables](#6-configuration--environment-variables)
-- [7. Development & Nx Monorepo Workflow](#7-development--nx-monorepo-workflow)
+- [Architectural Philosophy ("The Why")](#architectural-philosophy-the-why)
+  - [The 80/20 Monorepo Boundary](#the-8020-monorepo-boundary)
+  - [Strict SPA Mode Rationale](#strict-spa-mode-rationale)
+  - [Unidirectional Telemetry (Zero Shadow State)](#unidirectional-telemetry-zero-shadow-state)
+  - [Pragmatic Accessibility (a11y) Strategy](#pragmatic-accessibility-a11y-strategy)
+  - [Tactical Design Constraints](#tactical-design-constraints)
+- [System Architecture & Visual Diagrams](#system-architecture--visual-diagrams)
+  - [1. Client Boot & Lifecycle Flow](#1-client-boot--lifecycle-flow)
+  - [2. Component Rendering & Provider Tree](#2-component-rendering--provider-tree)
+  - [3. Unidirectional Data Synchronization Loop](#3-unidirectional-data-synchronization-loop)
+- [Directory Structure](#directory-structure)
+- [Toolchain & Configuration Deep Dive](#toolchain--configuration-deep-dive)
+  - [React Router 8 Setup](#react-router-8-setup)
+  - [Vite & Vitest Toolchain](#vite--vitest-toolchain)
+  - [Tailwind CSS 4 Engine](#tailwind-css-4-engine)
+- [Environment Configuration](#environment-configuration)
+- [Cross-Package Integration Contracts](#cross-package-integration-contracts)
+- [Development & Verification Runbook](#development--verification-runbook)
+  - [Nx Commands](#nx-commands)
+  - [Docker Execution](#docker-execution)
 
 ---
 
-## 1. Application Role & Architecture
+## Architectural Philosophy ("The Why")
 
-### The 80/20 Monorepo Shell Pattern
+### The 80/20 Monorepo Boundary
+In accordance with the workspace's Nx architecture rules, `apps/hermes` functions strictly as an **ultra-thin routing and configuration shell**:
+- **App Responsibility (<20%)**: Declares routes, manages document-level HTML tags, binds environment variables via React Context, and mounts top-level layout providers.
+- **Library Responsibility (>80%)**: All heavy domain logic, WebGL canvas lifecycle management, Mapbox event handlers, timeline graph drawers, and telemetry stores reside in [`libs/map`](file:///home/pavan/proj/hermes/libs/map) and [`libs/shared/ui-components`](file:///home/pavan/proj/hermes/libs/shared/ui-components).
 
-In accordance with Hermes monorepo guidelines, `apps/hermes` serves strictly as a **lightweight routing and configuration shell**:
-
-- **App Shell (`apps/hermes`)**: Owns application bootstrapping, environment variable injection, global HTML root layout, route definitions, and root providers.
-- **Feature Libraries (`libs/feature-map`)**: Owns the Mapbox GL canvas, map lifecycle hooks, custom projection event listeners, timeline panels, and Zustand map state stores.
-- **Shared UI Libraries (`libs/shared/ui-components`)**: Owns decoupled tactical HUD widgets (boot sequence animations, military-style live clocks).
-- **Shared Types (`libs/shared/util-types`)**: Defines TypeScript interfaces representing backend DTO contracts.
+**The Rationale**: Monolithic frontend apps often tightly couple route definitions with third-party WebGL canvas APIs. By isolating Mapbox and HUD widgets into workspace libraries, components remain testable with isolated Vitest and Playwright harnesses, portable across potential future surfaces (such as secondary dashboards or mobile shells), and protected by strict Nx module boundaries (`type:app`, `scope:frontend`).
 
 ---
 
-### Component & Provider Hierarchy
+### Strict SPA Mode Rationale
+Hermes is deliberately configured in strict Single Page Application mode via `ssr: false` in [`react-router.config.ts`](file:///home/pavan/proj/hermes/react-router.config.ts).
 
-```mermaid
-flowchart TD
-    Root["root.tsx (HTML Shell, Font Preconnects, Global CSS)"] --> App["app.tsx (Application Root)"]
-    App --> QueryProvider["QueryClientProvider (TanStack Query v5)"]
-    QueryProvider --> ConfigProvider["MapConfigProvider (Base URL, API Version, Mapbox Token)"]
-    ConfigProvider --> Main["Main Layout Container (bg-black)"]
-    
-    Main --> BootSeq["BootSequence\n(Tactical Terminal Boot Animation)"]
-    Main --> MapView["MapView\n(Mapbox GL JS WebGL Engine)"]
-    Main --> LiveClock["LiveClock\n(UTC & Local Dual Clocks)"]
-
-    MapView --> EventPopup["EventPopup\n(Projected Screen Coordinate HUD)"]
-    MapView --> TlPanel["TlPanel\n(Historical Causality Drawer)"]
-```
+| Dimension | Server-Side Rendering (SSR) | Client-Side SPA (`ssr: false`) | Hermes Decision |
+| :--- | :--- | :--- | :--- |
+| **WebGL Context** | Fails; `window`, `document`, and WebGL hardware drivers do not exist in Node/V8 server streams. | Native; Browser directly allocates the `WebGLRenderingContext`. | **SPA**: Mapbox requires direct DOM attachment. |
+| **Hydration Complexity** | High risk of hydration mismatches, canvas recreation, or DOM thrashing. | Zero hydration friction; React 19 boots directly into the document root. | **SPA**: Eliminates blank canvas flashes and layout shifts. |
+| **Search Engine Indexing** | Renders HTML strings for web crawlers. | Emits lean static HTML shell (`index.html`). | **SPA**: Hermes is an operational real-time geospatial terminal, not an indexable blog. |
 
 ---
 
-### Data Flow & Viewport Synchronization
+### Unidirectional Telemetry (Zero Shadow State)
+Managing external WebGL instances inside React applications frequently suffers from state de-synchronization when developers store duplicate coordinates in both the Mapbox instance and React state.
 
-Data flows unidirectionally between user viewport interactions, the Zustand global store, TanStack Query, and native Mapbox GeoJSON sources:
+Hermes enforces strict **unidirectional state flow**:
+1. [`useMapStore`](file:///home/pavan/proj/hermes/libs/map/src/lib/store/store.ts) (Zustand) is the **single source of truth** for coordinates, viewport bounding boxes (`north`, `south`, `east`, `west`), and active selection (`selectedEventId`, `isTlMode`).
+2. The Mapbox GL JS map instance is treated purely as a **rendering projection sink**. It never maintains independent or divergent state.
+3. User interactions with the WebGL canvas (pan, zoom) dispatch bounding box coordinates directly into Zustand.
+4. [`useMapDataSync`](file:///home/pavan/proj/hermes/libs/map/src/lib/hooks/datasync.ts) (TanStack Query v5) observes Zustand's `viewport` and issues spatial bounding-box API requests (`GET /api/v1/events/bbox`) with automatic debouncing.
+5. GeoJSON transformations update Mapbox native layer sources without triggering cascading React re-renders.
+
+---
+
+### Pragmatic Accessibility (a11y) Strategy
+Hardware-accelerated WebGL renders thousands of event pins directly onto an HTML5 `<canvas>` element:
+- **Canvas Boundary**: We explicitly avoid generating thousands of hidden, off-screen DOM anchor tags to represent canvas coordinates. Doing so causes severe memory overhead, destroys 60 FPS canvas performance, and degrades screen reader usability.
+- **Overlay Accessibility**: All textual data and interactive controls are surfaced through standard semantic HTML DOM elements:
+  - Tactical HUD buttons and the boot console maintain explicit ARIA labels and keyboard triggers.
+  - Inspection cards ([`EventPopup`](file:///home/pavan/proj/hermes/libs/map/src/lib/ui/components/EventPopup.tsx)) and the timeline drawer ([`TlPanel`](file:///home/pavan/proj/hermes/libs/map/src/lib/ui/components/TlPanel.tsx)) provide semantic headers, accessible close triggers with keyboard escape handlers, and readable text hierarchies.
+
+---
+
+### Tactical Design Constraints
+The frontend shell enforces a distinct Mission Control aesthetic:
+- **Zero Border Radius**: Configured globally in [`tailwind.config.js`](file:///home/pavan/proj/hermes/apps/hermes/tailwind.config.js) via `corePlugins: { borderRadius: false }`. No rounded edges exist in the application.
+- **Strict Monospace Type**: All interface elements inherit `JetBrains Mono` or `Fira Code`.
+- **High-Contrast Dark Theme**: Deep space background (`#050505`, `#0a0f19`) paired with tactical neon accents (`#00f0ff` neon blue, `#1e3a8a` HUD border, `#fbbf24` warning indicator).
+
+---
+
+## System Architecture & Visual Diagrams
+
+### 1. Client Boot & Lifecycle Flow
+
+The application boot sequence orchestrates the tactical scramble text overlay, initializes the WebGL map context, and activates real-time polling:
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor User
-    participant Map as Mapbox Canvas (MapView)
-    participant Store as Zustand (useMapStore)
-    participant Query as TanStack Query (useMapDataSync)
-    participant API as Backend (/api/v1/events/bbox)
+    actor User as Operator / Browser
+    participant Shell as React 19 Shell (apps/hermes)
+    participant Boot as BootSequence (GSAP HUD)
+    participant Map as MapView (Mapbox GL JS)
+    participant Store as useMapStore (Zustand)
+    participant Query as TanStack Query
+    participant API as hermes-api (/bbox)
 
-    User->>Map: Pans / Zooms map viewport
-    Map->>Store: setViewport({ north, south, east, west })
-    Store-->>Query: Viewport state triggers debounced queryKey ['events', bounds]
-    Query->>API: GET /events/bbox?north=..&south=..&east=..&west=..
-    API-->>Query: Returns MapEventResponse[]
-    Query-->>Map: Client converts to GeoJSON FeatureCollection
-    Map->>Map: Update 'events-source' data via WebGL (zero DOM nodes)
-    User->>Map: Clicks unclustered event pin
-    Map->>Store: setSelectedId(id, [lng, lat])
-    Map->>Map: Smooth camera pan (easeTo)
-    Store-->>Map: EventPopup projects coordinates & decodes summary
+    User->>Shell: Load application URL
+    Shell->>Boot: Render initial tactical boot screen
+    Boot->>Boot: Scramble text animation ("HERMES")
+    Shell->>Map: Mount MapView container in background
+    Map->>Map: Initialize Mapbox GL instance with WebGL context
+    Map->>Store: Dispatch initial viewport bounds (setViewport)
+    Store->>Query: Viewport state change notification
+    Query->>API: GET /api/v1/events/bbox?north=...&south=...
+    API-->>Query: Return MapEventResponse[] list
+    Query->>Map: Convert to GeoJSON FeatureCollection & update WebGL source
+    Boot-->>Shell: onComplete() callback fires
+    Shell->>Boot: Unmount boot overlay (instant cut)
+    Shell->>User: Interactive Tactical Map Operational
 ```
 
 ---
 
-## 2. "Mission Control" UI/UX Design Language
+### 2. Component Rendering & Provider Tree
 
-Hermes adopts a **Mission Control** aesthetic inspired by tactical defense command centers and Bloomberg financial terminals.
+The structural hierarchy forms a clean pyramid of contextual providers and visual overlays:
 
-### Strict Visual Rules
+```mermaid
+graph TD
+    Root["root.tsx (Document Shell)"] --> Layout["Layout (HTML & Head Metadata)"]
+    Layout --> AppShell["app.tsx (Main Shell)"]
+    
+    subgraph Providers ["Context & State Injection"]
+        AppShell --> QCProvider["QueryClientProvider (TanStack Query)"]
+        QCProvider --> MCProvider["MapConfigProvider (Vite Env Context)"]
+    end
 
-1. **Zero Border Radius**: All cards, modals, buttons, badges, and popups feature completely sharp, square edges (`border-radius: 0px`). This is strictly enforced at the Tailwind compilation level in [`tailwind.config.js`](file:///home/pavan/proj/hermes/apps/hermes/tailwind.config.js#L25-L27) via `corePlugins: { borderRadius: false }`.
-2. **Glassmorphism**: Translucent floating containers use high background blur (`bg-hud-bg/95 backdrop-blur-md`) with glowing tactical borders (`border border-hud-border`).
-3. **Monospaced Typography**: All displays prioritize `"JetBrains Mono"` and `"Fira Code"` to preserve columnar data density and alignment.
-4. **Single-Page Application (SPA) Mode**: Configured with `ssr: false` in [`react-router.config.ts`](file:///home/pavan/proj/hermes/apps/hermes/react-router.config.ts#L4) to eliminate SSR hydration mismatches with browser-dependent WebGL canvases.
-
-### Color Palette & Theme Tokens
-
-Configured in [`tailwind.config.js`](file:///home/pavan/proj/hermes/apps/hermes/tailwind.config.js) and imported into [`styles.css`](file:///home/pavan/proj/hermes/apps/hermes/styles.css):
-
-| Token | Value | Description |
-| :--- | :--- | :--- |
-| `hud-bg` | `rgba(10, 15, 25, 0.85)` | Deep semi-transparent tactical navy/black |
-| `hud-border` | `#1e3a8a` | Classic dark military navy border |
-| `hud-glow` | `#3b82f6` | Radiant electric blue for active focus rings |
-| `neon-blue` | `#00f0ff` | High-contrast cyberpunk cyan for headings & telemetry |
-| `warning-yellow` | `#fbbf24` | Alert yellow for highlights, ranks, and status indicators |
-
----
-
-### Terminal HUD Components
-
-- **[`BootSequence`](file:///home/pavan/proj/hermes/libs/shared/ui-components/src/lib/BootSequence.tsx)**: Displays an ASCII command-center boot sequence with simulated satellite uplink initialization, memory scans, and telemetry checks before revealing the live interface.
-- **[`LiveClock`](file:///home/pavan/proj/hermes/libs/shared/ui-components/src/lib/LiveClock.tsx)**: Persistent upper-right tactical widget rendering synchronized UTC and Local timestamps alongside a blinking heartbeat monitor.
-- **[`EventPopup`](file:///home/pavan/proj/hermes/libs/feature-map/src/lib/ui/components/EventPopup.tsx)**: Floating HUD window that tracks geographic coordinates via `requestAnimationFrame` projection calculations (`map.project()`). Features an automatic cybernetic text-scrambler decode effect on summaries and direct links to original news sources.
-- **[`TlPanel`](file:///home/pavan/proj/hermes/libs/feature-map/src/lib/ui/components/TlPanel.tsx)**: Slide-out intelligence dossier rendering historical causal events, Wikipedia context, and interactive map camera hops to historical sub-event coordinates.
-
----
-
-## 3. Mapbox GL & WebGL Native Layer Pipeline
-
-All geospatial points and relationship lines are rendered directly within Mapbox's WebGL context via native layers. **HTML DOM markers are strictly forbidden** to ensure silky 60 FPS performance when displaying thousands of active events.
-
-### Layer Hierarchy
-
-| Layer ID | Type | Source | Purpose |
-| :--- | :--- | :--- | :--- |
-| `hermes-clusters` | `circle` | `events-source` | Grouped events with data-driven circle radius scaling (`[20, 10, 30, 50, 40]`) |
-| `hermes-cluster-count` | `symbol` | `events-source` | Numeric badge rendering `point_count_abbreviated` in JetBrains Mono |
-| `hermes-unclustered-point` | `circle` | `events-source` | Individual breaking news pins with category-based colors and rank-scaled radius |
-| `tl-edges-layer` | `line` | `tl-edges-source` | Dashed cyan vector lines (`#00f0ff`) connecting causal timeline nodes |
-| `tl-nodes-layer` | `circle` | `tl-nodes-source` | Sub-event historical nodes with category colors or cyan fallbacks |
-
----
-
-### Data-Driven Styling & Marker Ranking
-
-Unclustered markers utilize data-driven Mapbox expressions to dynamically size pins according to their editor ranking:
-
-```javascript
-'circle-color': ['get', 'category_color'],
-'circle-radius': ['match', ['get', 'rank'], 
-  1, 18,  // Top-ranked global story (largest pin)
-  2, 14,  // Second-ranked story
-  3, 10,  // Third-ranked story
-  6       // Standard event pin
-],
-'circle-stroke-width': 1,
-'circle-stroke-color': '#ffffff'
+    subgraph VisualTree ["Tactical UI & Map Layers"]
+        MCProvider --> MainContainer["main (relative, bg-black, overflow-hidden)"]
+        MainContainer --> Boot["BootSequence (Overlay, unmounts on boot)"]
+        MainContainer --> MapView["MapView (libs/map)"]
+        MainContainer --> LiveClock["LiveClock (Fixed HUD Widget)"]
+        
+        MapView --> WebGLCanvas["WebGL Mapbox Canvas"]
+        MapView --> EventPopup["EventPopup (Pinned Card on Selection)"]
+        MapView --> TlPanel["TlPanel (Sliding Lineage Drawer)"]
+    end
 ```
 
 ---
 
-### Dynamic Timeline Graph Layering
+### 3. Unidirectional Data Synchronization Loop
 
-When a user initiates timeline mode on an event, [`TlPanel`](file:///home/pavan/proj/hermes/libs/feature-map/src/lib/ui/components/TlPanel.tsx) injects historical coordinates and causal graph edges:
+```mermaid
+flowchart LR
+    subgraph Interaction ["Operator Actions"]
+        PanZoom["Camera Pan / Zoom"]
+        MarkerClick["Marker Click"]
+    end
 
-- **Nodes**: Rendered as circles at historical geographic coordinates.
-- **Edges**: Directional `LineString` features connecting causal sub-events to successor incidents.
-- **Terminal Stitching**: The active current event is dynamically appended as the final node (`"current-event"`), visually connecting centuries of historical context directly into today's breaking news.
+    subgraph StateSink ["Zustand Store (Single Source of Truth)"]
+        VpState["viewport: BoundingBox"]
+        SelState["selectedEventId: string"]
+    end
 
----
+    subgraph Synchronization ["TanStack Query Sync"]
+        BboxQuery["useMapDataSync()
+(Debounced Query Hook)"]
+    end
 
-## 4. State Management Architecture
+    subgraph Backend ["FastAPI Backend (hermes-api)"]
+        PostGIS["PostGIS Spatial Query
+ST_Within(geometry, BBOX)"]
+    end
 
-### Zustand Global Map Store
+    subgraph WebGLSink ["Mapbox GL Engine"]
+        GeoJSON["GeoJSON Source
+FeatureCollection"]
+        RenderLayers["WebGL Circle & Cluster Layers"]
+    end
 
-Centralized in [`libs/feature-map/src/lib/store/store.ts`](file:///home/pavan/proj/hermes/libs/feature-map/src/lib/store/store.ts):
-
-```typescript
-interface MapState {
-  selectedEventId: string | null;
-  selectedEventLngLat: [number, number] | null;
-  viewport: BoundingBox | null;
-  isTlMode: boolean;
-  tlTargetId: string | null;
-
-  setSelectedEventId: (id: string | null, lngLat?: [number, number] | null) => void;
-  setViewport: (viewport: BoundingBox) => void;
-  setTlMode: (active: boolean, targetId?: string | null) => void;
-}
+    PanZoom -->|Dispatches bounds| VpState
+    MarkerClick -->|Dispatches event ID| SelState
+    VpState -->|Triggers query key update| BboxQuery
+    BboxQuery -->|HTTP GET /api/v1/events/bbox| PostGIS
+    PostGIS -->|JSON Response| BboxQuery
+    BboxQuery -->|createGeoJson()| GeoJSON
+    GeoJSON -->|setData()| RenderLayers
 ```
 
-Both the Mapbox map instance and React HUD overlays react to and update this single source of truth. Neither component maintains detached shadow state.
-
 ---
 
-### TanStack Query v5 Data Fetching
-
-- **`useMapDataSync()`**: Observes `state.viewport`. Upon pan/zoom, triggers a bounding box fetch clamped to valid coordinate ranges (`[-90, 90]` latitude, `[-180, 180]` longitude). Cache is kept fresh with a 5-second `staleTime`.
-- **`useEventDetails(eventId)`**: Loads full article titles, source metadata, and detailed AI summaries when an event pin is selected (`staleTime: 60000`).
-- **`useTl(eventId)`**: Manages historical timeline requests. If the backend returns `status === 'GENERATING'`, the hook automatically polls at a 3-second cadence until graph synthesis completes.
-
----
-
-## 5. Codebase Anatomy
+## Directory Structure
 
 ```text
 apps/hermes/
-├── Dockerfile                     # Alpine Node 22 container for standalone frontend serving
-├── vite.config.mts                # Vite bundler config (@react-router/dev/vite, Tailwind v4)
-├── react-router.config.ts         # React Router 8 configuration (SPA mode: ssr = false)
-├── tailwind.config.js             # Theme tokens, font families, zero border radius rule
-├── postcss.config.js              # PostCSS plugins (@tailwindcss/postcss)
-├── styles.css                     # Tailwind @import, Mapbox GL CSS, custom scrollbars
-├── package.json                   # Project descriptor (@hermes/hermes)
-├── project.json                   # Nx project metadata & tags (scope:frontend, type:app)
-├── app/
-│   ├── root.tsx                   # Document shell (head, metadata, fonts, scripts)
-│   ├── app.tsx                    # Main application orchestration (Providers, MapView, HUD)
-│   ├── routes.tsx                 # Route declarations (index -> app.tsx, about -> about.tsx)
-│   ├── entry.client.tsx           # Client hydration entry point
-│   ├── entry.server.tsx           # Server streaming response handler (fallback for bots)
+├── app/                              # React Router 8 application root
+│   ├── routes/
+│   │   └── about.tsx                 # Secondary about route (/about)
+│   ├── app.tsx                       # Primary layout & provider assembly
+│   ├── entry.client.tsx              # Client hydration / bootstrap entry
+│   ├── entry.server.tsx              # Static stream handler (SPA mode fallback)
+│   ├── root.tsx                      # Root HTML, fonts, and meta links
+│   └── routes.tsx                    # Route configuration definitions
+├── public/                           # Static assets served as-is
+├── tests/                            # Unit & integration test suites
 │   └── routes/
-│       └── about.tsx              # Diagnostic/about route
-└── tests/
-    └── routes/
-        └── _index.spec.tsx        # React Router stub unit tests
-
-libs/
-├── feature-map/                   # Mapbox GL engine, timeline panel, event popup, map store
-│   └── src/lib/
-│       ├── ui/map-view.tsx        # Mapbox container, camera controls, WebGL layers
-│       ├── ui/components/
-│       │   ├── EventPopup.tsx     # Geographic coordinate-projected popup card
-│       │   └── TlPanel.tsx        # Historical causal timeline slide-out drawer
-│       ├── store/store.ts         # Zustand global map state store
-│       ├── hooks/
-│       │   ├── datasync.ts        # TanStack Query hook syncing viewport bounding box
-│       │   ├── eventDetails.ts    # Event detail query hook
-│       │   └── useTl.ts           # Timeline generation and polling hook
-│       └── config-context.tsx     # Map configuration React Context Provider
-└── shared/
-    ├── ui-components/             # Reusable HUD widgets
-    │   └── src/lib/
-    │       ├── BootSequence.tsx   # Tactical terminal startup sequence
-    │       └── LiveClock.tsx      # Dual UTC/Local synchronized digital clock
-    └── util-types/                # Shared TypeScript contracts
-        └── src/lib/api-types.ts   # MapEventResponse, EventDetailResponse, TlResponse
+│       └── _index.spec.tsx           # Route stub & component mounting test
+├── Dockerfile                        # Multi-stage Docker image (dev & prod)
+├── eslint.config.mjs                 # ESLint flat config extending root
+├── package.json                      # Project manifest (@hermes/hermes)
+├── postcss.config.js                 # PostCSS configuration
+├── project.json                      # Nx project configuration & targets
+├── react-router.config.ts            # React Router 8 build config (ssr: false)
+├── styles.css                        # Tailwind 4 imports & Mapbox CSS
+├── tailwind.config.js                # Custom theme, colors & zero-radius rules
+├── test-env.js                       # Environment testing helper
+├── tsconfig.app.json                 # TypeScript app build configuration
+├── tsconfig.json                     # TypeScript project configuration
+├── tsconfig.spec.json                # TypeScript test configuration
+└── vite.config.mts                   # Vite build, server & Vitest configuration
 ```
 
 ---
 
-## 6. Configuration & Environment Variables
+## Toolchain & Configuration Deep Dive
 
-The frontend expects environment variables prefixed with `VITE_` (read via `import.meta.env`):
+### React Router 8 Setup
+- **Strict SPA Configuration**: [`react-router.config.ts`](file:///home/pavan/proj/hermes/apps/hermes/react-router.config.ts) defines `ssr: false`, instructuring `@react-router/dev` to output a pure static client bundle without runtime server rendering.
+- **Route Manifest**: Defined in [`app/routes.tsx`](file:///home/pavan/proj/hermes/apps/hermes/app/routes.tsx), mapping `/` to [`app/app.tsx`](file:///home/pavan/proj/hermes/apps/hermes/app/app.tsx) and `/about` to [`app/routes/about.tsx`](file:///home/pavan/proj/hermes/apps/hermes/app/routes/about.tsx).
+- **Document Shell**: [`app/root.tsx`](file:///home/pavan/proj/hermes/apps/hermes/app/root.tsx) injects `JetBrains Mono` from Google Fonts and loads global styling from `styles.css`.
 
-| Variable | Type | Required | Description |
-| :--- | :--- | :--- | :--- |
-| `VITE_MAPBOX_TOKEN` | String | **Yes** | Public Mapbox GL access token with styles read permission |
-| `VITE_BASE_URL` | String | **Yes** | Backend API origin (e.g. `http://localhost:8000`) |
-| `VITE_API_VER` | String | **Yes** | API version slug (e.g. `v1`) |
-| `HOST` | String | No | Local network binding host (default: `localhost`, `0.0.0.0` in Docker) |
+### Vite & Vitest Toolchain
+The configuration in [`vite.config.mts`](file:///home/pavan/proj/hermes/apps/hermes/vite.config.mts) coordinates multiple specialized plugins:
+- **Tailwind Vite Plugin**: `@tailwindcss/vite` compiles styles seamlessly with instant HMR.
+- **Root Environment Loading**: `envDir: '../../'` points Vite to the monorepo root to load `.env`, ensuring consistent variable sharing across apps.
+- **Path Resolution**: `resolve: { tsconfigPaths: true }` resolves TypeScript paths without duplicate Vite alias definitions.
+- **Conditional Plugins**: `!process.env.VITEST && reactRouter()` ensures test execution remains lightweight by bypassing full router bundling during test passes.
+- **Vitest Runner**: Uses the `jsdom` environment with test discovery targeting `tests/**/*.spec.tsx`.
 
-Variables can be placed in `.env` at the monorepo root or supplied during Docker execution.
+### Tailwind CSS 4 Engine
+Tailwind CSS 4 is configured with tactical constraints:
+- **Library Scanning**: [`styles.css`](file:///home/pavan/proj/hermes/apps/hermes/styles.css) declares `@source "../../libs";`, ensuring utility classes used in `@hermes/map` and `@hermes/ui-components` are compiled into the client stylesheet.
+- **Zero-Border Enforcement**: [`tailwind.config.js`](file:///home/pavan/proj/hermes/apps/hermes/tailwind.config.js) explicitly sets:
+  ```javascript
+  corePlugins: {
+    borderRadius: false,
+  }
+  ```
+- **Monospace Font System**: Enforces `JetBrains Mono` and `Fira Code` across both `font-sans` and `font-mono`.
+- **Palette Tokens**: Custom HUD theme tokens:
+  - `hud-bg`: `rgba(10, 15, 25, 0.85)` (Translucent command panel background)
+  - `hud-border`: `#1e3a8a` (Deep military blue border)
+  - `hud-glow`: `#3b82f6` (Neon blue accent aura)
+  - `neon-blue`: `#00f0ff` (High-visibility tactical blue)
+  - `warning-yellow`: `#fbbf24` (Alert highlights)
 
 ---
 
-## 7. Development & Nx Monorepo Workflow
+## Environment Configuration
 
-All commands must be executed from the **monorepo root**:
+The application requires three build/runtime variables loaded from the repository root `.env` or injected during deployment:
 
+| Variable | Type | Default / Example | Purpose |
+| :--- | :--- | :--- | :--- |
+| `VITE_MAPBOX_TOKEN` | `string` | `pk.eyJ1...` | Mandatory public API token required to initialize Mapbox GL JS map tiles and WebGL render layers. |
+| `VITE_BASE_URL` | `string` | `http://localhost:8000` | HTTP root URL of the backend REST API (`hermes-api`). |
+| `VITE_API_VER` | `string` | `v1` | API version prefix used when constructing endpoints (e.g., `/api/v1/events/bbox`). |
+
+Variables are bundled at build time via `import.meta.env` and supplied to map hooks via [`MapConfigProvider`](file:///home/pavan/proj/hermes/libs/map/src/lib/config-context.tsx):
+
+```tsx
+const MAP_CONFIG = {
+  baseUrl: import.meta.env.VITE_BASE_URL,
+  apiVer: import.meta.env.VITE_API_VER,
+  mapboxToken: import.meta.env.VITE_MAPBOX_TOKEN,
+};
+```
+
+---
+
+## Cross-Package Integration Contracts
+
+`apps/hermes` depends directly on three workspace libraries and consumes one backend service:
+
+```
+@hermes/hermes (apps/hermes)
+  ├── Imports MapView, MapConfigProvider from @hermes/map
+  ├── Imports BootSequence, LiveClock from @hermes/ui-components
+  ├── Consumes TypeScript models from @hermes/util-types
+  └── Queries REST endpoints on hermes-api
+```
+
+### 1. `@hermes/map`
+- **`MapView`**: Core React component hosting the WebGL canvas, clustering engine, layer setup, and interaction callbacks.
+- **`MapConfigProvider`**: Context provider through which the shell injects `baseUrl`, `apiVer`, and `mapboxToken`.
+- **`useMapStore`**: Zustand store managing camera telemetry and selection state.
+
+### 2. `@hermes/ui-components`
+- **`BootSequence`**: Tactical initialization screen playing a scramble-text decode sequence on initial application load.
+- **`LiveClock`**: Floating monospace telemetry widget rendering current UTC system time (`SYS.TIME HH:MM:SS UTC`).
+
+### 3. `@hermes/util-types`
+Provides strict types for all network payloads, preventing schema divergence:
+- `MapEventResponse`: Lightweight bounding-box payload for map pins.
+- `EventDetailResponse`: Full event payload for inspection cards.
+- `TlResponse`: Historical timeline lineage graph containing nodes and edges.
+
+### 4. `hermes-api`
+Endpoints queried via Axios in `@hermes/map`:
+- `GET /api/v1/events/bbox`: Viewport bounding-box spatial query.
+- `GET /api/v1/events/{id}`: Event detail modal query.
+- `GET /api/v1/events/tl?event_id={id}`: Historical causality lineage query.
+
+---
+
+## Development & Verification Runbook
+
+All commands must be executed from the **workspace root**.
+
+### Nx Commands
+
+#### 1. Start Development Server
+Launches the Vite dev server with Hot Module Replacement on port `4200`:
 ```bash
-# 1. Start development server with hot-module reload (default port: 4200)
-npx nx dev hermes
+npx nx dev @hermes/hermes
+```
 
-# 2. Build production assets to dist/
-npx nx build hermes
+#### 2. Execute Production Build
+Generates compiled and minified assets into `apps/hermes/build/client` and `apps/hermes/dist`:
+```bash
+npx nx build @hermes/hermes
+```
 
-# 3. Preview production build locally (default port: 4300)
-npx nx preview hermes
+#### 3. Run Unit & Integration Tests
+Executes the Vitest test runner across all spec files:
+```bash
+npx nx test @hermes/hermes
+```
 
-# 4. Run unit and component test suites with Vitest
-npx nx test hermes
+#### 4. Run Code Linter
+Executes ESLint with strict React rules and monorepo boundaries:
+```bash
+npx nx lint @hermes/hermes
+```
 
-# 5. Run ESLint checks
-npx nx lint hermes
+#### 5. Run Type Check
+Compiles TypeScript declarations and validates type soundness:
+```bash
+npx nx typecheck @hermes/hermes
+```
 
-# 6. Run end-to-end integration tests with Playwright
-npx nx e2e hermes-e2e
+---
+
+### Docker Execution
+
+The application includes a multi-stage Docker build in [`apps/hermes/Dockerfile`](file:///home/pavan/proj/hermes/apps/hermes/Dockerfile).
+
+#### Development Container
+Mounts the source tree and serves via Vite dev server:
+```bash
+docker build --target development -t hermes-client:dev -f apps/hermes/Dockerfile .
+docker run -p 4200:4200 -e VITE_MAPBOX_TOKEN=your_token hermes-client:dev
+```
+
+#### Production Container
+Builds the static client distribution and serves using `react-router-serve`:
+```bash
+docker build --target production -t hermes-client:prod -f apps/hermes/Dockerfile .
+docker run -p 4200:4200 hermes-client:prod
 ```

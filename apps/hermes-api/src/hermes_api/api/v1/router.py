@@ -1,8 +1,8 @@
 from fastapi import APIRouter
-
 from hermes_api.api.v1.events import router as events_router
 from hermes_api.api.v1.tl import router as tl_router
 from hermes_api.schemas.errors import ErrorResponseSchema
+
 
 standard_errors = {
     400: {"model": ErrorResponseSchema, "description": "Business Logic Error"},

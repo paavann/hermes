@@ -32,7 +32,7 @@ Project Hermes is a real-time geospatial news aggregator designed to combat mode
 
 As an agent, you must design features that align with these core mechanics:
 
-- **Dual-Mode Interface**: Users can seamlessly transition between a two-dimensional regional map and a three-dimensional geopolitical globe, allowing them to visually digest information at both local and macro scales.
+- **Dual-Mode Interface (Roadmap Vision)**: The target product design envisions seamless transitions between a two-dimensional regional map and a three-dimensional geopolitical globe. *(Current Implementation: Runs on a 2D Mercator WebGL canvas with native clustering, panning, and dynamic viewport querying).*
 - **Smart Editor Algorithm**: The application must not overwhelm the user with raw data. Instead, it relies on a backend algorithm that ranks news based on **source consensus** and **time decay**. The initial load displays only the most critical global events.
 - **Dynamic Viewport Queries**: As users zoom into specific regions, the application queries the spatial database to populate hyper-local news within their bounding box.
 - **Visual Categorization**: Use color-coded pins to categorize events (e.g., economic shifts, conflicts). Pins automatically cluster at higher zoom levels via WebGL to prevent screen clutter.
@@ -43,7 +43,7 @@ As an agent, you must design features that align with these core mechanics:
 
 When building any feature, keep these critical user journeys in mind:
 
-1. **Globe Landing**: A first-time user opens the app, watches the tactical boot sequence, and immediately sees the day's most critical global events displayed as color-coded pins.
+1. **Map Landing**: A first-time user opens the app, watches the tactical boot sequence, and immediately sees the day's most critical global events displayed as color-coded pins on the world map.
 2. **Regional Zoom**: The user zooms into a specific region (e.g., the Middle East) and sees hyper-local news events dynamically populate within their viewport.
 3. **Event Inspection**: The user clicks an event pin, centers the camera smoothly, reads a concise AI-generated summary with a terminal scramble-text decode, and sees original news sources.
 4. **Historical Timeline Investigation**: The user opens the timeline panel to trace the historical roots of the event via a causal graph (MediaWiki extracts linked to the current incident).
@@ -80,11 +80,12 @@ RSS Feeds (Global Sources)
         │
         ▼
 ┌───────────────────┐
-│   hermes-api      │  ← Python/FastAPI backend
-│   (Ingestion +    │     - LiteLLM Multi-Model Router (Mistral + NVIDIA NIM fallback)
+│   hermes-worker   │  ← Python standalone CLI worker
+│   (Ingestion +    │     - Parallel RSS Ingestion (feedparser + httpx)
 │    Embeddings +   │     - 2048-dim Embeddings (nemotron-3-embed-1b)
+│    Batch Ext +    │     - AI Batch Extraction (LiteLLM Mistral/NIM)
 │    Nominatim +    │     - Grounded Geocoding (Nominatim + GeocodeCache)
-│    Timeline Svc)  │     - APScheduler Dynamic Cadence & Decay Jobs
+│    Lifecycle)     │     - Hourly Time Decay & Status Transitions
 └───────┬───────────┘
         │
         ▼
@@ -93,6 +94,13 @@ RSS Feeds (Global Sources)
 │   (PostgreSQL 16  │     - Point Geometry (SRID 4326) with GIST Index
 │    + PostGIS      │     - pgvector halfvec(2048) with HNSW Index
 │    + pgvector)    │     - JSONB Historical Timeline Nodes & Edges
+└───────┬───────────┘
+        ▲
+        │ (SQLAlchemy 2.0 Async / Event & Timeline Models)
+┌───────┴───────────┐
+│   hermes-api      │  ← Python/FastAPI stateless REST API
+│   (REST API +     │     - Viewport Bounding-Box & Event Query Endpoints
+│    Timeline Svc)  │     - On-Demand Historical Causality Synthesis (LiteLLM + Wikipedia)
 └───────┬───────────┘
         │
         ▼  (REST API: /api/v1/events, /api/v1/events/bbox, /api/v1/events/tl)
@@ -114,21 +122,25 @@ RSS Feeds (Global Sources)
 
 ### Infrastructure
 
-- **Database**: PostGIS runs via `docker-compose.yml` at the workspace root using a custom build based on `postgis/postgis` with `postgresql-$PG_MAJOR-pgvector` installed inline.
-- **Environment Variables**: Loaded from `.env` at the workspace root (shared variables like DB credentials, ports, Mapbox token) and `.env.local` inside `apps/hermes-api/` (backend keys like `LLM_API`, `LLM_MODEL`, `EMBED_API`, `EMBED_MODEL`). The frontend reads its variables via Vite's `import.meta.env` (e.g., `VITE_MAPBOX_TOKEN`, `VITE_BASE_URL`, `VITE_API_VER`).
+- **Database**: Local development runs via `docker-compose.yml` at the workspace root (PostGIS 16 + pgvector). Production runs on **Neon Serverless PostgreSQL** with `postgis` and `pgvector` extensions enabled.
+- **Worker (Cloud Orchestration)**: In production, `hermes-worker` is containerized (Amazon ECR) and executed as an ephemeral serverless task on **AWS ECS Fargate** (`0.25 vCPU`, `512 MiB`), automatically triggered 3x daily by **Amazon EventBridge** (`cron(0 0,8,16 * * ? *)`).
+- **Environment Variables**: Loaded from `.env` at the workspace root (shared defaults like DB credentials, ports, Mapbox token) and app-specific `.env.local` / `.env.production` files (e.g., `apps/hermes-api/` and `apps/hermes-worker/` for AI/embedding keys `LLM_API`, `LLM_MODEL`, `EMBED_API`, `EMBED_MODEL`; and `apps/hermes/` for Vite frontend variables `VITE_MAPBOX_TOKEN`, `VITE_BASE_URL`, `VITE_API_VER`).
 
 ---
 
 ## 5. Workspace Map
 
-This is an Nx monorepo. The workspace contains the following projects:
+This is an Nx monorepo. The workspace contains the following projects (configured for Node.js 22 LTS and Python 3.14+):
 
-| Project | Path | Role | Key Tech |
+| Project Name | Path | Role | Key Tech |
 | :--- | :--- | :--- | :--- |
-| **`hermes`** | `apps/hermes/` | React frontend shell — interactive map and HUD | React 19, React Router 8 (SPA mode), Vite, Mapbox GL JS v3, Zustand 5, TanStack Query v5, Tailwind CSS 4 |
-| **`hermes-api`** | `apps/hermes-api/` | Python backend — ingestion, AI, and REST API | FastAPI, SQLAlchemy 2.0 Async, PostGIS, pgvector (`halfvec`), LiteLLM, APScheduler, feedparser, uv |
-| **`hermes-e2e`** | `apps/hermes-e2e/` | End-to-end browser tests | Playwright |
-| **`@hermes/feature-map`** | `libs/feature-map/` | Mapbox GL WebGL implementation & timeline drawer | Mapbox GL JS, Zustand store, TanStack Query hooks, `MapView`, `EventPopup`, `TlPanel` |
+| **`@hermes/hermes`** | `apps/hermes/` | React frontend shell — interactive map and HUD | React 19, React Router 8 (SPA mode), Vite, Mapbox GL JS v3, Zustand 5, TanStack Query v5, Tailwind CSS 4 |
+| **`hermes-api`** | `apps/hermes-api/` | Python backend — stateless REST API & on-demand historical timeline synthesis | Python 3.14+, FastAPI, SQLAlchemy 2.0 Async, PostGIS, pgvector (`halfvec`), LiteLLM, uv |
+| **`hermes-worker`** | `apps/hermes-worker/` | Python CLI worker — autonomous RSS ingestion, AI batch extraction, geocoding shield & lifecycle decay. Ephemeral batch execution on AWS ECS Fargate + EventBridge | Python 3.14+, feedparser, LiteLLM, PostGIS, pgvector (`halfvec`), httpx, uv, Docker, AWS Fargate |
+| **`@hermes/hermes-e2e`** | `apps/hermes-e2e/` | End-to-end browser tests | Playwright, TypeScript |
+| **`@hermes/map`** | `libs/map/` | Mapbox GL WebGL implementation & timeline drawer | Mapbox GL JS, Zustand store, TanStack Query hooks, `MapView`, `EventPopup`, `TlPanel` |
+| **`hermes-ai`** | `libs/shared/hermes-ai/` | Shared AI extraction, LLM client, embeddings, geocoding shield, & rate limiter | Python 3.14+, LiteLLM, Pydantic, httpx, uv |
+| **`hermes-db`** | `libs/shared/hermes-db/` | Shared PostGIS + pgvector models, migrations & DB services | Python 3.14+, SQLAlchemy 2.0 Async, PostGIS, pgvector (`halfvec`), GeoAlchemy2, Alembic, uv |
 | **`@hermes/ui-components`** | `libs/shared/ui-components/`| Tactical Mission Control HUD widgets | React 19, Tailwind CSS 4, `BootSequence`, `LiveClock` |
 | **`@hermes/util-types`** | `libs/shared/util-types/` | Shared TypeScript API response interfaces | TypeScript interfaces (`MapEventResponse`, `EventDetailResponse`, `TlResponse`) |
 | **`@hermes/utils`** | `libs/shared/utils/` | Cross-cutting shared utility helpers | TypeScript |
@@ -136,8 +148,12 @@ This is an Nx monorepo. The workspace contains the following projects:
 Each app has its own `AGENTS.md` and `README.md` with detailed, app-specific architectural context:
 
 - **Frontend context**: See `apps/hermes/AGENTS.md` and `apps/hermes/README.md`
-- **Backend context**: See `apps/hermes-api/AGENTS.md` and `apps/hermes-api/README.md`
+- **Backend API context**: See `apps/hermes-api/AGENTS.md` and `apps/hermes-api/README.md`
+- **Worker context**: See `apps/hermes-worker/AGENTS.md` and `apps/hermes-worker/README.md`
+- **AI & Geocoding context**: See `libs/shared/hermes-ai/AGENTS.md` and `libs/shared/hermes-ai/README.md`
+- **Database context**: See `libs/shared/hermes-db/AGENTS.md` and `libs/shared/hermes-db/README.md`
 - **Strict coding rules**: See `.agents/rules/`
+
 
 ---
 
@@ -147,7 +163,7 @@ As an AI agent, you must act as a strict **Nx Monorepo Mentor** for the user. Co
 
 - **Root Execution Only**: ALL commands must be executed from the workspace root using `npx nx <target> <project>` (e.g., `npx nx serve hermes`, `npx nx serve hermes-api`). Never `cd` into child directories to run scripts.
 - **Strict Generators**: Never create new UI components, libraries, or Python modules by manually adding files to the tree. Always use Nx generators (e.g., `npx nx g @nx/react:component`, `npx nx g @nx/python:library`) so paths and configs remain synchronized.
-- **The 80/20 Rule (Apps vs Libs)**: `apps/` must remain thin and act primarily as routing and configuration shells. Most business logic, UI components, and API utilities must reside in shared libraries within the `libs/` directory (`libs/feature-map`, `libs/shared/ui-components`, `libs/shared/util-types`). Warn the user if they attempt to build monolithic logic directly inside `apps/`.
+- **The 80/20 Rule (Apps vs Libs)**: `apps/` must remain thin and act primarily as routing and configuration shells. Most business logic, UI components, and API utilities must reside in shared libraries within the `libs/` directory (`libs/map`, `libs/shared/ui-components`, `libs/shared/util-types`). Warn the user if they attempt to build monolithic logic directly inside `apps/`.
 - **Module Boundaries**: Configure and enforce strict architectural boundary tags in `project.json` (e.g., `type:app`, `scope:frontend`). Rely on ESLint (`@nx/enforce-module-boundaries`) to prevent circular dependencies or architectural violations.
 - **Shared Types**: Store TypeScript interfaces for API responses in a dedicated library (`libs/shared/util-types`) to keep contracts aligned between backend schemas and frontend consumers.
 

@@ -8,10 +8,12 @@ services:
             && apt-get install -y --no-install-recommends postgresql-$$PG_MAJOR-pgvector \
             && rm -rf /var/lib/apt/lists/*
     restart: always
+    env_file:
+      - .env.development
     environment:
-      POSTGRES_DB: ${DB_NAME}
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
     ports:
       - '${DB_PORT}:5432'
     volumes:
@@ -21,36 +23,56 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+      start_period: 15s
+      start_interval: 5s
 
   hermes-api:
     build:
-      context: ./apps/hermes-api
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: apps/hermes-api/Dockerfile
+      target: development
     ports:
       - '${API_PORT}:8000'
     volumes:
-      - ./apps/hermes-api/src:/app/src
-    environment:
-      DB_HOST: hermes-db
-      DB_PORT: 5432
-      DB_USER: ${DB_USER}
-      DB_PASSWORD: ${DB_PASSWORD}
-      DB_NAME: ${DB_NAME}
-      LLM_API: ${LLM_API}
-      LLM_MODEL: ${LLM_MODEL}
-      LLM_API_1: ${LLM_API_1}
-      LLM_MODEL_1: ${LLM_MODEL_1}
-      EMBED_API: ${EMBED_API}
-      EMBED_MODEL: ${EMBED_MODEL}
+      - ./apps/hermes-api/src:/app/apps/hermes-api/src
+      - ./libs/shared/hermes-db/src:/app/libs/shared/hermes-db/src
+      - ./libs/shared/hermes-ai/src:/app/libs/shared/hermes-ai/src
+    env_file:
+      - .env.development
+      - path: ./apps/hermes-api/.env.development
+        required: false
+      - path: ./apps/hermes-api/.env.local
+        required: false
     depends_on:
       hermes-db:
         condition: service_healthy
     restart: unless-stopped
 
+  hermes-worker:
+    build:
+      context: .
+      dockerfile: apps/hermes-worker/Dockerfile
+      target: development
+    volumes:
+      - ./apps/hermes-worker/src:/app/apps/hermes-worker/src
+      - ./libs/shared/hermes-db/src:/app/libs/shared/hermes-db/src
+      - ./libs/shared/hermes-ai/src:/app/libs/shared/hermes-ai/src
+    env_file:
+      - .env.development
+      - path: ./apps/hermes-worker/.env.development
+        required: true
+      - path: ./apps/hermes-worker/.env.local
+        required: false
+    depends_on:
+      hermes-db:
+        condition: service_healthy
+    profiles: ["worker"]
+
   hermes:
     build:
       context: .
       dockerfile: apps/hermes/Dockerfile
+      target: development
     ports:
       - '${FRONTEND_PORT}:4200'
     volumes:
@@ -58,12 +80,16 @@ services:
       - ./apps/hermes/styles.css:/app/apps/hermes/styles.css
       - ./apps/hermes/public:/app/apps/hermes/public
       - ./libs:/app/libs
+    env_file:
+      - .env.development
+      - path: ./apps/hermes/.env.development
+        required: false
+      - path: ./apps/hermes/.env.local
+        required: false
     environment:
       HOST: 0.0.0.0
-      VITE_MAPBOX_TOKEN: ${VITE_MAPBOX_TOKEN}
-      VITE_BASE_URL: ${VITE_BASE_URL}
-      VITE_API_VER: ${VITE_API_VER}
     restart: unless-stopped
+
 
 volumes:
   hermes_data:

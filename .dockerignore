@@ -7,5 +7,8 @@ node_modules
 **/.env
 **/.env.*
 **/test-output
-apps/hermes-e2e
-apps/hermes-api
+**/.pytest_cache
+**/.ruff_cache
+**/.coverage
+coverage
+reports

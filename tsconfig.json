@@ -19,7 +19,7 @@
       "path": "./libs/shared/util-types"
     },
     {
-      "path": "./libs/feature-map"
+      "path": "./libs/map"
     }
   ]
 }

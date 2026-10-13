@@ -89,7 +89,10 @@
       }
     }
   },
-  "tags": [],
+  "tags": [
+    "type:app",
+    "scope:api"
+  ],
   "release": {
     "version": {
       "versionActions": "@nxlv/python/release/version-actions"
