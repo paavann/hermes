@@ -4,9 +4,8 @@ import stylesheetUrl from '../styles.css?url'
 
 
 
-
 export const meta: MetaFunction = () => [
-  { title: 'hermes' },
+  { title: 'Hermes — Geospatial Intelligence' },
 ]
 
 export const links: LinksFunction = () => [

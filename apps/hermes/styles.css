@@ -10,10 +10,9 @@
   body {
     margin: 0;
     padding: 0;
-    width: 100dvw;
-    height: 100dvh;
-    overflow: hidden;
-    background-color: #050505;
+    width: 100%;
+    min-height: 100dvh;
+    background-color: #000000;
     color: #e2e8f0;
   }
 }
