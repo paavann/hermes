@@ -74,7 +74,7 @@ Hardware-accelerated WebGL renders thousands of event pins directly onto an HTML
 
 ### Tactical Design Constraints
 The frontend shell enforces a distinct Mission Control aesthetic:
-- **Zero Border Radius**: Configured globally in [`tailwind.config.js`](file:///home/pavan/proj/hermes/apps/hermes/tailwind.config.js) via `corePlugins: { borderRadius: false }`. No rounded edges exist in the application.
+- **Zero Border Radius**: Configured globally in [`styles.css`](file:///home/pavan/proj/hermes/apps/hermes/styles.css) via `@theme { --radius-*: initial; }`. No rounded edges exist in the application.
 - **Strict Monospace Type**: All interface elements inherit `JetBrains Mono` or `Fira Code`.
 - **High-Contrast Dark Theme**: Deep space background (`#050505`, `#0a0f19`) paired with tactical neon accents (`#00f0ff` neon blue, `#1e3a8a` HUD border, `#fbbf24` warning indicator).
 
@@ -202,11 +202,9 @@ apps/hermes/
 ├── Dockerfile                        # Multi-stage Docker image (dev & prod)
 ├── eslint.config.mjs                 # ESLint flat config extending root
 ├── package.json                      # Project manifest (@hermes/hermes)
-├── postcss.config.js                 # PostCSS configuration
 ├── project.json                      # Nx project configuration & targets
 ├── react-router.config.ts            # React Router 8 build config (ssr: false)
-├── styles.css                        # Tailwind 4 imports & Mapbox CSS
-├── tailwind.config.js                # Custom theme, colors & zero-radius rules
+├── styles.css                        # Tailwind 4 CSS-first theme, source & Mapbox CSS
 ├── test-env.js                       # Environment testing helper
 ├── tsconfig.app.json                 # TypeScript app build configuration
 ├── tsconfig.json                     # TypeScript project configuration
@@ -225,19 +223,28 @@ apps/hermes/
 
 ### Vite & Vitest Toolchain
 The configuration in [`vite.config.mts`](file:///home/pavan/proj/hermes/apps/hermes/vite.config.mts) coordinates multiple specialized plugins:
-- **Tailwind Vite Plugin**: `@tailwindcss/vite` compiles styles seamlessly with instant HMR.
+- **Tailwind Vite Plugin**: `@tailwindcss/vite` compiles styles seamlessly with instant HMR and internal Lightning CSS processing.
 - **Root Environment Loading**: `envDir: '../../'` points Vite to the monorepo root to load `.env`, ensuring consistent variable sharing across apps.
 - **Path Resolution**: `resolve: { tsconfigPaths: true }` resolves TypeScript paths without duplicate Vite alias definitions.
 - **Conditional Plugins**: `!process.env.VITEST && reactRouter()` ensures test execution remains lightweight by bypassing full router bundling during test passes.
 - **Vitest Runner**: Uses the `jsdom` environment with test discovery targeting `tests/**/*.spec.tsx`.
 
 ### Tailwind CSS 4 Engine
-Tailwind CSS 4 is configured with tactical constraints:
+Tailwind CSS 4 is configured natively in CSS with tactical constraints:
 - **Library Scanning**: [`styles.css`](file:///home/pavan/proj/hermes/apps/hermes/styles.css) declares `@source "../../libs";`, ensuring utility classes used in `@hermes/map` and `@hermes/ui-components` are compiled into the client stylesheet.
-- **Zero-Border Enforcement**: [`tailwind.config.js`](file:///home/pavan/proj/hermes/apps/hermes/tailwind.config.js) explicitly sets:
-  ```javascript
-  corePlugins: {
-    borderRadius: false,
+- **CSS-First Theme & Zero-Border Enforcement**: Defined directly in [`styles.css`](file:///home/pavan/proj/hermes/apps/hermes/styles.css) using native `@theme`:
+  ```css
+  @theme {
+    --font-sans: 'JetBrains Mono', 'Fira Code', monospace;
+    --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+
+    --color-hud-bg: rgba(10, 15, 25, 0.85);
+    --color-hud-border: #1e3a8a;
+    --color-hud-glow: #3b82f6;
+    --color-neon-blue: #00f0ff;
+    --color-warning-yellow: #fbbf24;
+
+    --radius-*: initial;
   }
   ```
 - **Monospace Font System**: Enforces `JetBrains Mono` and `Fira Code` across both `font-sans` and `font-mono`.

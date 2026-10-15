@@ -69,6 +69,6 @@ Because Mapbox renders pins onto a hardware-accelerated WebGL `<canvas>`, indivi
 ## 5. Design System: Mission Control Constraints
 
 The UI enforces a strict tactical command center aesthetic configured via Tailwind CSS 4:
-- **Zero Border Radius**: Globally enforced via `corePlugins: { borderRadius: false }` in [`tailwind.config.js`](file:///home/pavan/proj/hermes/apps/hermes/tailwind.config.js). Rounded corners (`rounded-*`) are strictly disallowed.
+- **Zero Border Radius**: Globally enforced via `--radius-*: initial;` inside `@theme` in [`styles.css`](file:///home/pavan/proj/hermes/apps/hermes/styles.css). Rounded corners (`rounded-*`) are strictly disallowed and purged from the utility scale.
 - **Monospace Typography**: `JetBrains Mono` and `Fira Code` are applied across all text elements (`font-mono`, `font-sans`).
 - **Tactical Palette**: Cyberpunk/tactical accents (`hud-bg`, `hud-border: #1e3a8a`, `hud-glow: #3b82f6`, `neon-blue: #00f0ff`, `warning-yellow: #fbbf24`).

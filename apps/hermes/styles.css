@@ -1,9 +1,20 @@
 @import 'tailwindcss';
-@source "../../libs";
-@config "./tailwind.config.js";
 
-/* required for mapbox to render correctly. */
+@source "../../libs";
 @import 'mapbox-gl/dist/mapbox-gl.css';
+
+@theme {
+  --font-sans: 'JetBrains Mono', 'Fira Code', monospace;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+
+  --color-hud-bg: rgba(10, 15, 25, 0.85);
+  --color-hud-border: #1e3a8a;
+  --color-hud-glow: #3b82f6;
+  --color-neon-blue: #00f0ff;
+  --color-warning-yellow: #fbbf24;
+
+  --radius-*: initial;
+}
 
 @layer base {
   html,

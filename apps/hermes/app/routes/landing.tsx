@@ -24,7 +24,6 @@ function useScramble(finalText: string, delay = 0) {
   const rafRef = useRef<number | null>(null)
 
   useEffect(() => {
-    let timeoutId: ReturnType<typeof setTimeout>
     let iteration = 0
     const len = finalText.length
 
@@ -47,7 +46,7 @@ function useScramble(finalText: string, delay = 0) {
       }
     }
 
-    timeoutId = setTimeout(() => {
+    const timeoutId = setTimeout(() => {
       rafRef.current = requestAnimationFrame(animate)
     }, delay)
 
