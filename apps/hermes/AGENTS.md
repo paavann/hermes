@@ -72,3 +72,12 @@ The UI enforces a strict tactical command center aesthetic configured via Tailwi
 - **Zero Border Radius**: Globally enforced via `--radius-*: initial;` inside `@theme` in [`styles.css`](file:///home/pavan/proj/hermes/apps/hermes/styles.css). Rounded corners (`rounded-*`) are strictly disallowed and purged from the utility scale.
 - **Monospace Typography**: `JetBrains Mono` and `Fira Code` are applied across all text elements (`font-mono`, `font-sans`).
 - **Tactical Palette**: Cyberpunk/tactical accents (`hud-bg`, `hud-border: #1e3a8a`, `hud-glow: #3b82f6`, `neon-blue: #00f0ff`, `warning-yellow: #fbbf24`).
+
+---
+
+## 6. Official Rules & Coding Standards
+
+All AI agents contributing React and TypeScript code to this module must strictly adhere to the project standards:
+- [`.agents/rules/react-standards.md`](file:///home/pavan/proj/hermes/.agents/rules/react-standards.md) — React 19, React Router v8, component architecture, hooks hygiene, 6-tier state hierarchy, and UI guidelines.
+- [`.agents/rules/ts-standards.md`](file:///home/pavan/proj/hermes/.agents/rules/ts-standards.md) — Compile-time TypeScript safety, import discipline, and naming conventions.
+- [`.agents/rules/mapbox-gis.md`](file:///home/pavan/proj/hermes/.agents/rules/mapbox-gis.md) — Mapbox GL WebGL performance and data-driven styling.

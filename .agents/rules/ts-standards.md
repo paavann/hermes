@@ -120,6 +120,8 @@ This document establishes the official engineering guidelines, type safety requi
 
 ## 6. React, State & Tactical GIS Architecture
 
+*(For the comprehensive React 19, React Router v8, hooks hygiene, and 6-tier state hierarchy rules, see [`.agents/rules/react-standards.md`](file:///home/pavan/proj/hermes/.agents/rules/react-standards.md)).*
+
 - **Explicit Component Props**: Every React component accepting props must define an explicit interface (e.g., `interface TlPanelProps { ... }`). Do not use inline anonymous object types for non-trivial props.
 - **The Mapbox Ref Rule**: NEVER store the Mapbox GL `Map` instance in React state (`useState`). Storing it in state triggers recursive re-renders and degrades WebGL rendering performance. ALWAYS hold the map instance in a `useRef<mapboxgl.Map | null>(null)`.
 - **Single Source of Truth (No Shadow State)**:
