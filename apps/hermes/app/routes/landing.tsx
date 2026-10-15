@@ -1,512 +1,381 @@
-import { useEffect, useRef, useState } from 'react'
-import { Link } from 'react-router'
-import type { MetaFunction } from 'react-router'
-import './landing.css'
-import satelliteImg from '../assets/satellite.jpg'
-import mapChartImg from '../assets/map-chart.jpg'
-import darkTextureImg from '../assets/dark-texture.jpg'
-
+import { useState, useEffect, useRef } from 'react';
+import { Link } from 'react-router';
+import type { MetaFunction } from 'react-router';
+import gsap from 'gsap';
+import { cn } from '@hermes/ui-components';
+import earthOrbitImg from '../assets/earth-orbit.jpg';
 
 export const meta: MetaFunction = () => [
-  { title: 'Hermes — Geospatial Intelligence' },
-  { name: 'description', content: 'Real-time geospatial news aggregation. Watch the world\'s events unfold on an interactive intelligence map.' },
-  { property: 'og:title', content: 'Hermes — Geospatial Intelligence' },
-  { property: 'og:description', content: 'Real-time geospatial news intelligence. Monitor global events as they unfold.' },
-]
+  { title: 'Hermes — Geospatial Intelligence Platform' },
+  {
+    name: 'description',
+    content:
+      "Provably grounded real-time geospatial intelligence. Observe the world's critical events unfold across space and causal time.",
+  },
+  { property: 'og:title', content: 'Hermes — Geospatial Intelligence Platform' },
+  {
+    property: 'og:description',
+    content: 'Autonomous geospatial news intelligence with vector consensus and causal lineage.',
+  },
+];
 
+// ─── Types ───────────────────────────────────────────────────────────────────
 
-// ─── Scramble Text Hook ──────────────────────────────────────────────────────
-
-const CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*<>/\\|[]{}~'
-
-function useScramble(finalText: string, delay = 0) {
-  const [display, setDisplay] = useState('')
-  const rafRef = useRef<number | null>(null)
-
-  useEffect(() => {
-    let iteration = 0
-    const len = finalText.length
-
-    function animate() {
-      setDisplay(
-        finalText
-          .split('')
-          .map((char, idx) => {
-            if (char === ' ') return ' '
-            if (idx < iteration) return finalText[idx]
-            return CHARS[Math.floor(Math.random() * CHARS.length)]
-          })
-          .join(''),
-      )
-      iteration += 0.5
-      if (iteration < len) {
-        rafRef.current = requestAnimationFrame(animate)
-      } else {
-        setDisplay(finalText)
-      }
-    }
-
-    const timeoutId = setTimeout(() => {
-      rafRef.current = requestAnimationFrame(animate)
-    }, delay)
-
-    return () => {
-      clearTimeout(timeoutId)
-      if (rafRef.current) cancelAnimationFrame(rafRef.current)
-    }
-  }, [finalText, delay])
-
-  return display
+interface NavItem {
+  readonly id: string;
+  readonly label: string;
+  readonly href: string;
 }
 
+const NAV_ITEMS: readonly NavItem[] = [
+  { id: 'home', label: 'Home', href: '#hero' },
+  { id: 'problem', label: 'The Problem', href: '#problem' },
+  { id: 'capabilities', label: 'Capabilities', href: '#capabilities' },
+  { id: 'access', label: 'Access', href: '#access' },
+] as const;
 
-// ─── Animated Counter Hook ────────────────────────────────────────────────────
+// ─── Launch Map GSAP Button ──────────────────────────────────────────────────
 
-function useCounter(target: number, duration = 2000, delay = 0) {
-  const [count, setCount] = useState(0)
-  const [started, setStarted] = useState(false)
-
-  useEffect(() => {
-    const timeout = setTimeout(() => setStarted(true), delay)
-    return () => clearTimeout(timeout)
-  }, [delay])
-
-  useEffect(() => {
-    if (!started) return
-    let startTime: number | null = null
-
-    function step(timestamp: number) {
-      if (!startTime) startTime = timestamp
-      const progress = Math.min((timestamp - startTime) / duration, 1)
-      setCount(Math.floor(progress * target))
-      if (progress < 1) requestAnimationFrame(step)
-    }
-
-    requestAnimationFrame(step)
-  }, [started, target, duration])
-
-  return count
+interface LaunchMapBtnProps {
+  readonly className?: string;
 }
 
+export function LaunchMapBtn({ className }: LaunchMapBtnProps): React.JSX.Element {
+  const text1Ref = useRef<HTMLSpanElement>(null);
+  const text2Ref = useRef<HTMLSpanElement>(null);
 
-// ─── Intersection Observer Hook ───────────────────────────────────────────────
+  const handleMouseEnter = (): void => {
+    if (!text1Ref.current || !text2Ref.current) return;
+    gsap.killTweensOf([text1Ref.current, text2Ref.current]);
+    gsap.to(text1Ref.current, {
+      yPercent: -100,
+      duration: 0.32,
+      ease: 'power3.out',
+    });
+    gsap.to(text2Ref.current, {
+      yPercent: -100,
+      duration: 0.32,
+      ease: 'power3.out',
+    });
+  };
 
-function useInView(threshold = 0.15) {
-  const ref = useRef<HTMLDivElement>(null)
-  const [inView, setInView] = useState(false)
-
-  useEffect(() => {
-    const el = ref.current
-    if (!el) return
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) setInView(true)
-      },
-      { threshold },
-    )
-    observer.observe(el)
-    return () => observer.disconnect()
-  }, [threshold])
-
-  return { ref, inView }
-}
-
-
-// ─── Nav ──────────────────────────────────────────────────────────────────────
-
-function Nav() {
-  const [scrolled, setScrolled] = useState(false)
-
-  useEffect(() => {
-    function onScroll() {
-      setScrolled(window.scrollY > 20)
-    }
-    window.addEventListener('scroll', onScroll, { passive: true })
-    return () => window.removeEventListener('scroll', onScroll)
-  }, [])
+  const handleMouseLeave = (): void => {
+    if (!text1Ref.current || !text2Ref.current) return;
+    gsap.killTweensOf([text1Ref.current, text2Ref.current]);
+    gsap.to(text1Ref.current, {
+      yPercent: 0,
+      duration: 0.28,
+      ease: 'power2.inOut',
+    });
+    gsap.to(text2Ref.current, {
+      yPercent: 0,
+      duration: 0.28,
+      ease: 'power2.inOut',
+    });
+  };
 
   return (
-    <nav
-      id="nav"
-      role="navigation"
-      aria-label="Primary navigation"
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        scrolled ? 'nav-scrolled' : ''
-      }`}
-      style={{
-        borderBottom: scrolled ? '1px solid rgba(0, 255, 200, 0.12)' : '1px solid transparent',
-        background: scrolled ? 'rgba(0, 0, 0, 0.92)' : 'transparent',
-        backdropFilter: scrolled ? 'blur(12px)' : 'none',
-      }}
+    <Link
+      to="/map"
+      id="nav-launch-map"
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+      className={cn(
+        'group relative inline-flex items-center justify-center overflow-hidden bg-ivory text-obsidian px-4 py-1.5 font-mono text-xs font-bold uppercase tracking-wider transition-colors duration-200 hover:bg-white',
+        className
+      )}
+      aria-label="Launch the intelligence map"
     >
-      <div className="nav-inner">
-        {/* Logo */}
-        <Link to="/" aria-label="Hermes home" className="nav-logo">
-          <span className="logo-mark" aria-hidden="true">▸</span>
-          <span className="logo-text">HERMES</span>
-        </Link>
+      <div className="relative h-4 overflow-hidden flex flex-col items-center justify-start">
+        <span ref={text1Ref} className="block leading-4">
+          LAUNCH MAP
+        </span>
+        <span ref={text2Ref} className="block leading-4 text-black font-extrabold">
+          LAUNCH MAP ↗
+        </span>
+      </div>
+    </Link>
+  );
+}
 
-        {/* Nav Divider */}
-        <div className="nav-divider" aria-hidden="true" />
+// ─── Navigation Component ───────────────────────────────────────────────────
 
-        {/* Label */}
-        <span className="nav-label" aria-hidden="true">■ LIVE INTEL</span>
+interface NavProps {
+  readonly activeSection?: string;
+}
 
-        {/* Spacer */}
-        <div style={{ flex: 1 }} />
+export function Nav({ activeSection = 'home' }: NavProps): React.JSX.Element {
+  const [scrolled, setScrolled] = useState<boolean>(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
+  const [hoveredItem, setHoveredItem] = useState<string | null>(null);
 
-        {/* CTA Buttons */}
-        <div className="nav-actions" role="group" aria-label="Primary actions">
+  useEffect(() => {
+    const handleScroll = (): void => {
+      setScrolled(window.scrollY > 20);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  return (
+    <header
+      id="site-header"
+      role="banner"
+      className="fixed top-0 left-0 right-0 z-40 h-[62px] font-mono pointer-events-none"
+    >
+      <div className="w-full h-full flex items-center">
+        {/* Left column (matches fixed vertical grid line, NO bottom border so line runs seamlessly) */}
+        <div className="w-[180px] md:w-[220px] shrink-0 h-full pl-5 md:pl-8 pr-4 flex items-center pointer-events-auto">
+          <Link
+            to="/"
+            aria-label="Hermes Home"
+            className="font-bold tracking-[0.25em] text-sm text-ivory hover:text-white transition-colors"
+          >
+            HERMES
+          </Link>
+        </div>
+
+        {/* Right column: Navigation links + Action buttons */}
+        <div
+          className={cn(
+            'flex-1 h-full pl-5 md:pl-8 pr-5 md:pr-8 flex items-center justify-between min-w-0 pointer-events-auto transition-colors duration-250',
+            scrolled
+              ? 'bg-obsidian/85 backdrop-blur-md border-b border-border-subtle shadow-[0_4px_30px_rgba(0,0,0,0.5)]'
+              : 'bg-transparent'
+          )}
+        >
+          {/* Desktop Nav Links */}
+          <nav aria-label="Primary navigation" className="hidden md:flex items-center gap-2">
+            {NAV_ITEMS.map((item) => {
+              const isActive = activeSection === item.id;
+              const isHovered = hoveredItem === item.id;
+              const showSquare = isActive || isHovered;
+
+              return (
+                <a
+                  key={item.id}
+                  href={item.href}
+                  onMouseEnter={() => setHoveredItem(item.id)}
+                  onMouseLeave={() => setHoveredItem(null)}
+                  className={cn(
+                    'group flex items-center gap-1.5 px-3 py-1.5 text-xs uppercase tracking-wider transition-colors',
+                    isActive
+                      ? 'text-ivory font-medium'
+                      : 'text-slate-muted hover:text-ivory'
+                  )}
+                >
+                  <span
+                    className={cn(
+                      'text-[9px] transition-colors',
+                      showSquare ? 'text-neon-blue' : 'text-slate-muted/60'
+                    )}
+                    aria-hidden="true"
+                  >
+                    {showSquare ? '■' : '/'}
+                  </span>
+                  <span>{item.label}</span>
+                </a>
+              );
+            })}
+          </nav>
+
+          {/* Right Actions */}
+          <div className="flex items-center gap-5 ml-auto">
+            {/* Login Link */}
+            <Link
+              to="/login"
+              className="text-xs uppercase tracking-wider text-slate-muted hover:text-ivory transition-colors"
+            >
+              LOGIN
+            </Link>
+
+            {/* Launch Map CTA with GSAP roll animation */}
+            <LaunchMapBtn />
+
+            {/* Mobile Menu Toggle Button */}
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen((prev) => !prev)}
+              className="md:hidden flex items-center gap-1.5 px-2.5 py-1 text-xs text-slate-muted hover:text-ivory border border-border-subtle bg-black/40 transition-colors"
+              aria-label="Toggle navigation menu"
+              aria-expanded={mobileMenuOpen}
+            >
+              <span className="text-neon-blue text-[9px]" aria-hidden="true">
+                {mobileMenuOpen ? '■' : '/'}
+              </span>
+              <span>{mobileMenuOpen ? 'CLOSE' : 'MENU'}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile Drawer */}
+      {mobileMenuOpen && (
+        <div className="md:hidden border-b border-border-subtle bg-obsidian/95 backdrop-blur-xl px-5 py-4 flex flex-col gap-2 pointer-events-auto">
+          {NAV_ITEMS.map((item) => (
+            <a
+              key={item.id}
+              href={item.href}
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center gap-2 py-2 text-xs uppercase tracking-wider text-slate-muted hover:text-ivory border-b border-white/5"
+            >
+              <span className="text-neon-blue text-[9px]">/</span>
+              <span>{item.label}</span>
+            </a>
+          ))}
           <Link
             to="/login"
-            id="nav-sign-in"
-            className="btn-ghost"
-            aria-label="Sign in to your account"
+            onClick={() => setMobileMenuOpen(false)}
+            className="flex items-center gap-2 py-2 text-xs uppercase tracking-wider text-slate-muted hover:text-ivory"
           >
-            SIGN IN
-          </Link>
-          <Link
-            to="/map"
-            id="nav-launch-map"
-            className="btn-primary"
-            aria-label="Launch the intelligence map"
-          >
-            LAUNCH MAP
+            <span className="text-neon-blue text-[9px]">/</span>
+            <span>LOGIN</span>
           </Link>
         </div>
-      </div>
-    </nav>
-  )
+      )}
+    </header>
+  );
 }
 
+// ─── Step 1 Scaffold Landing Page ───────────────────────────────────────────
 
-// ─── Hero Section ─────────────────────────────────────────────────────────────
-
-function Hero() {
-  const line1 = useScramble('Real-time geospatial', 400)
-  const line2 = useScramble('intelligence for a', 900)
-  const line3 = useScramble('shifting world.', 1400)
-  const sub = useScramble('Monitor global events as they unfold.', 2000)
-
+export default function Landing(): React.JSX.Element {
   return (
-    <section
-      id="hero"
-      aria-label="Hero section"
-      className="hero-section"
-      style={{
-        backgroundImage: `url(${darkTextureImg})`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-      }}
-    >
-      {/* Noise overlay */}
-      <div className="hero-overlay" aria-hidden="true" />
+    <div className="min-h-screen bg-obsidian text-slate-muted font-mono selection:bg-neon-blue/20 selection:text-neon-blue relative">
+      {/* Atalanta-inspired Persistent Left Margin Line (Desktop) */}
+      <div
+        className="hidden md:block fixed top-0 bottom-0 left-[180px] md:left-[220px] w-px bg-white/10 z-50 pointer-events-none"
+        aria-hidden="true"
+      />
 
-      {/* Scan line effect */}
-      <div className="scanline" aria-hidden="true" />
+      {/* Fixed Minimalist Navigation Bar */}
+      <Nav activeSection="home" />
 
-      {/* Corner decorations */}
-      <div className="corner corner-tl" aria-hidden="true" />
-      <div className="corner corner-tr" aria-hidden="true" />
-      <div className="corner corner-bl" aria-hidden="true" />
-      <div className="corner corner-br" aria-hidden="true" />
+      {/* Main Content Container */}
+      <main id="main-content" className="pt-[62px]">
+        {/* Section: Hero Frame */}
+        <section id="hero" className="relative w-full">
+          {/* Top Heading Area (aligned with the left line at 180px/220px) */}
+          <div className="w-full pl-5 md:pl-[240px] pr-5 md:pr-8 pt-14 md:pt-20 pb-12 md:pb-16 max-w-6xl">
+            <div className="text-xs uppercase tracking-[0.2em] text-slate-muted/70 mb-4 flex items-center gap-2">
+              <span className="text-neon-blue">■</span>
+              <span>Hermes Intelligence</span>
+            </div>
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-medium tracking-tight text-slate-muted leading-tight">
+              Global event observability for{' '}
+              <span className="text-ivory font-bold">
+                the world's most critical decisions.
+              </span>
+            </h1>
+          </div>
 
-      {/* Status bar */}
-      <div className="hero-status" aria-hidden="true">
-        <span className="status-dot" />
-        <span>SYS NOMINAL</span>
-        <span className="status-sep">|</span>
-        <span>FEED ACTIVE</span>
-        <span className="status-sep">|</span>
-        <span>UPTIME 99.97%</span>
-      </div>
+          {/* Full-Width Earth Orbital Frame peeking into the hero fold */}
+          <div className="relative w-full border-t border-b border-border-subtle bg-black overflow-hidden">
+            {/* Earth Media Layer (Spans full width, line at 220px passes right over it) */}
+            <div className="relative w-full aspect-[16/10] md:aspect-[21/10] min-h-[460px] md:min-h-[580px] lg:min-h-[640px] overflow-hidden">
+              <img
+                src={earthOrbitImg}
+                alt="Earth orbital satellite view"
+                className="w-full h-full object-cover object-top opacity-85"
+                loading="eager"
+              />
+              <div className="absolute inset-0 bg-gradient-to-r from-obsidian/90 via-obsidian/40 to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-t from-obsidian via-transparent to-obsidian/30" />
 
-      {/* Main content */}
-      <div className="hero-content">
-        <div className="hero-eyebrow" aria-hidden="true">
-          <span className="eyebrow-line" />
-          <span>HERMES INTELLIGENCE PLATFORM</span>
-          <span className="eyebrow-line" />
-        </div>
+              {/* Overlaid Hero Content (Personal surface-level copy) */}
+              <div className="absolute inset-0 flex flex-col justify-between pl-5 md:pl-[240px] pr-5 md:pr-8 py-10 md:py-16 max-w-4xl z-10 pointer-events-auto">
+                <div className="pt-2 md:pt-4">
+                  <p className="text-base sm:text-lg md:text-xl text-slate-muted leading-relaxed max-w-2xl md:max-w-3xl">
+                    I built Hermes to change how you experience the world. Instead of getting lost
+                    in overwhelming feeds and endless headlines, observe critical global events
+                    unfold in real time—with spatial context and quiet clarity.
+                  </p>
+                </div>
 
-        <h1 className="hero-headline" aria-label="Real-time geospatial intelligence for a shifting world.">
-          <span className="headline-line dim" aria-hidden="true">{line1}</span>
-          <br />
-          <span className="headline-line dim" aria-hidden="true">{line2}</span>
-          <br />
-          <span className="headline-line bright" aria-hidden="true">{line3}</span>
-        </h1>
+                {/* Bottom Telemetry Tag */}
+                <div className="text-[10px] text-slate-muted/70 uppercase tracking-widest font-mono flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 bg-neon-blue inline-block animate-pulse" />
+                  <span>SYS // ORBITAL OBSERVABILITY • SRID 4326</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
 
-        <p className="hero-sub" aria-label="Monitor global events as they unfold.">{sub}</p>
+        {/* Section: The Problem */}
+        <section
+          id="problem"
+          className="min-h-[60vh] border-b border-border-subtle flex"
+        >
+          {/* Left Sidebar: Section Title */}
+          <div className="w-[180px] md:w-[220px] shrink-0 p-5 md:p-8 hidden md:block">
+            <h2 className="text-xs uppercase tracking-widest text-ivory flex items-center gap-2 sticky top-24">
+              <span className="text-neon-blue">■</span>
+              <span>The Problem</span>
+            </h2>
+          </div>
 
-        <div className="hero-actions" role="group" aria-label="Hero call to action">
-          <Link
-            to="/map"
-            id="hero-launch-map"
-            className="btn-primary btn-large"
-            aria-label="Launch the intelligence map"
-          >
-            LAUNCH MAP
-          </Link>
-          <Link
-            to="/login"
-            id="hero-sign-in"
-            className="btn-ghost btn-large"
-            aria-label="Sign in to your account"
-          >
-            SIGN IN
-          </Link>
-        </div>
-      </div>
+          {/* Right Column: Content */}
+          <div className="flex-1 p-5 md:p-8 py-20 md:py-24 max-w-4xl">
+            <div className="space-y-8 text-lg sm:text-2xl text-slate-muted leading-relaxed">
+              <p>
+                The world moves in physical coordinates, yet news consumption remains trapped in
+                linear, text-heavy feeds designed for engagement rather than spatial comprehension.
+              </p>
+            </div>
+          </div>
+        </section>
 
-      {/* Scroll indicator */}
-      <div className="scroll-indicator" aria-hidden="true">
-        <span>SCROLL</span>
-        <div className="scroll-line" />
-      </div>
-    </section>
-  )
-}
+        {/* Section: Capabilities */}
+        <section
+          id="capabilities"
+          className="min-h-[60vh] border-b border-border-subtle flex"
+        >
+          <div className="w-[180px] md:w-[220px] shrink-0 p-5 md:p-8 hidden md:block">
+            <h2 className="text-xs uppercase tracking-widest text-ivory flex items-center gap-2 sticky top-24">
+              <span className="text-neon-blue">■</span>
+              <span>Capabilities</span>
+            </h2>
+          </div>
+          <div className="flex-1 p-5 md:p-8 py-20 md:py-24 max-w-4xl">
+            <p className="text-sm uppercase tracking-wider text-slate-muted/60">
+              [Core Capability Cards will be implemented in Step 5]
+            </p>
+          </div>
+        </section>
 
-
-// ─── Stats Section ────────────────────────────────────────────────────────────
-
-function StatItem({ value, suffix, label, delay }: { value: number; suffix: string; label: string; delay: number }) {
-  const { ref, inView } = useInView()
-  const count = useCounter(inView ? value : 0, 2000, delay)
-
-  return (
-    <div ref={ref} className="stat-item">
-      <div className="stat-value">
-        {count.toLocaleString()}
-        <span className="stat-suffix">{suffix}</span>
-      </div>
-      <div className="stat-label">{label}</div>
-    </div>
-  )
-}
-
-function Stats() {
-  return (
-    <section id="stats" aria-label="Platform statistics" className="stats-section">
-      <div className="stats-grid">
-        <StatItem value={10000} suffix="+" label="EVENTS TRACKED" delay={0} />
-        <StatItem value={120} suffix="+" label="NEWS SOURCES" delay={200} />
-        <StatItem value={195} suffix="" label="COUNTRIES COVERED" delay={400} />
-        <StatItem value={99} suffix=".97%" label="UPTIME SLA" delay={600} />
-      </div>
-    </section>
-  )
-}
-
-
-// ─── Feature Cards ────────────────────────────────────────────────────────────
-
-const FEATURES = [
-  {
-    id: 'feature-spatial',
-    icon: '◈',
-    title: 'SPATIAL INTELLIGENCE',
-    body: 'Events are geocoded with sub-city accuracy using a PostGIS spatial engine. Browse by viewport — zoom in and hyper-local events populate in real time.',
-  },
-  {
-    id: 'feature-consensus',
-    icon: '◉',
-    title: 'SOURCE CONSENSUS',
-    body: 'Our ranking engine cross-references 120+ independent feeds. When multiple credible sources confirm an event, its signal rises — noise gets buried.',
-  },
-  {
-    id: 'feature-timeline',
-    icon: '▦',
-    title: 'HISTORICAL LINEAGE',
-    body: 'Trace any active event back through history. The Timeline Engine synthesizes Wikipedia milestones into a causal chain that leads to today.',
-  },
-  {
-    id: 'feature-decay',
-    icon: '◌',
-    title: 'TIME DECAY ALGORITHM',
-    body: 'Stale news disappears organically. A -10% hourly decay ensures only relevant, current events occupy the map — no lingering noise.',
-  },
-]
-
-function FeatureCard({ id, icon, title, body, delay }: { id: string; icon: string; title: string; body: string; delay: number }) {
-  const { ref, inView } = useInView()
-
-  return (
-    <article
-      id={id}
-      ref={ref}
-      className="feature-card"
-      style={{
-        opacity: inView ? 1 : 0,
-        transform: inView ? 'translateY(0)' : 'translateY(24px)',
-        transition: `opacity 0.6s ease ${delay}ms, transform 0.6s ease ${delay}ms`,
-      }}
-    >
-      <div className="feature-icon" aria-hidden="true">{icon}</div>
-      <h3 className="feature-title">{title}</h3>
-      <p className="feature-body">{body}</p>
-    </article>
-  )
-}
-
-function Features() {
-  return (
-    <section id="features" aria-label="Platform features" className="features-section">
-      <div className="section-header">
-        <div className="section-eyebrow" aria-hidden="true">
-          <span className="eyebrow-line short" />
-          <span>CAPABILITIES</span>
-        </div>
-        <h2 className="section-title">How it works</h2>
-      </div>
-      <div className="features-grid">
-        {FEATURES.map((f, i) => (
-          <FeatureCard key={f.id} {...f} delay={i * 120} />
-        ))}
-      </div>
-    </section>
-  )
-}
-
-
-// ─── Image Strip ──────────────────────────────────────────────────────────────
-
-function ImageStrip() {
-  const { ref, inView } = useInView(0.1)
-
-  return (
-    <section
-      id="image-strip"
-      ref={ref}
-      aria-label="Visual showcase"
-      className="image-strip"
-      style={{
-        opacity: inView ? 1 : 0,
-        transition: 'opacity 0.8s ease',
-      }}
-    >
-      <figure className="strip-image strip-large">
-        <img
-          src={mapChartImg}
-          alt="Physical map charts on concrete surface showing geospatial data"
-          loading="lazy"
-          decoding="async"
-          width={800}
-          height={533}
-        />
-        <figcaption className="strip-caption">
-          <span className="caption-label">■</span> DATA LAYER
-        </figcaption>
-      </figure>
-      <figure className="strip-image strip-small">
-        <img
-          src={satelliteImg}
-          alt="Satellite aerial view of terrain with grid overlays"
-          loading="lazy"
-          decoding="async"
-          width={400}
-          height={400}
-        />
-        <figcaption className="strip-caption">
-          <span className="caption-label">■</span> SATELLITE VIEW
-        </figcaption>
-      </figure>
-    </section>
-  )
-}
-
-
-// ─── CTA Section ─────────────────────────────────────────────────────────────
-
-function CTA() {
-  const { ref, inView } = useInView()
-
-  return (
-    <section
-      id="cta"
-      ref={ref}
-      aria-label="Call to action"
-      className="cta-section"
-      style={{
-        opacity: inView ? 1 : 0,
-        transform: inView ? 'translateY(0)' : 'translateY(32px)',
-        transition: 'opacity 0.7s ease, transform 0.7s ease',
-      }}
-    >
-      <div className="cta-inner">
-        <div className="cta-eyebrow" aria-hidden="true">
-          <span className="eyebrow-line short" />
-          <span>READY TO DEPLOY</span>
-        </div>
-        <h2 className="cta-title">
-          See the world{' '}
-          <span className="cta-highlight">as it happens.</span>
-        </h2>
-        <p className="cta-sub">
-          No scrolling. No noise. Just the events that matter, precisely where they happen.
-        </p>
-        <div className="cta-actions" role="group" aria-label="Launch actions">
-          <Link
-            to="/map"
-            id="cta-launch-map"
-            className="btn-primary btn-large"
-            aria-label="Open the intelligence map"
-          >
-            OPEN MAP
-          </Link>
-          <Link
-            to="/login"
-            id="cta-sign-in"
-            className="btn-ghost btn-large"
-            aria-label="Create an account"
-          >
-            CREATE ACCOUNT
-          </Link>
-        </div>
-      </div>
-    </section>
-  )
-}
-
-
-// ─── Footer ───────────────────────────────────────────────────────────────────
-
-function Footer() {
-  return (
-    <footer id="footer" role="contentinfo" className="site-footer">
-      <div className="footer-inner">
-        <div className="footer-logo">
-          <span className="logo-mark" aria-hidden="true">▸</span>
-          <span className="logo-text">HERMES</span>
-        </div>
-        <p className="footer-copy">
-          © {new Date().getFullYear()} Hermes Intelligence Platform. All rights reserved.
-        </p>
-        <nav aria-label="Footer navigation" className="footer-nav">
-          <Link to="/map" id="footer-map" className="footer-link">Map</Link>
-          <Link to="/login" id="footer-login" className="footer-link">Sign In</Link>
-        </nav>
-      </div>
-    </footer>
-  )
-}
-
-
-// ─── Landing Page ─────────────────────────────────────────────────────────────
-
-export default function Landing() {
-  return (
-    <>
-      <Nav />
-      <main id="main-content">
-        <Hero />
-        <Stats />
-        <Features />
-        <ImageStrip />
-        <CTA />
+        {/* Section: Access */}
+        <section
+          id="access"
+          className="min-h-[50vh] border-b border-border-subtle flex"
+        >
+          <div className="w-[180px] md:w-[220px] shrink-0 p-5 md:p-8 hidden md:block">
+            <h2 className="text-xs uppercase tracking-widest text-ivory flex items-center gap-2 sticky top-24">
+              <span className="text-neon-blue">■</span>
+              <span>Access</span>
+            </h2>
+          </div>
+          <div className="flex-1 p-5 md:p-8 py-20 md:py-24 max-w-4xl">
+            <p className="text-sm uppercase tracking-wider text-slate-muted/60">
+              [Access & Terminal Form will be implemented in Step 6]
+            </p>
+          </div>
+        </section>
       </main>
-      <Footer />
-    </>
-  )
+
+      {/* Footer */}
+      <footer className="border-t border-border-subtle flex">
+        <div className="w-[180px] md:w-[220px] shrink-0 p-5 md:p-8 hidden md:block" />
+        <div className="flex-1 p-5 md:p-8 py-10 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-muted/60 gap-4">
+          <div>© {new Date().getFullYear()} HERMES GEOINT INC. ALL RIGHTS RESERVED.</div>
+          <div className="flex items-center gap-4">
+            <Link to="/map" className="hover:text-ivory transition-colors">MAP</Link>
+            <span className="text-white/10">/</span>
+            <a href="#hero" className="hover:text-ivory transition-colors">TOP ↑</a>
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
 }

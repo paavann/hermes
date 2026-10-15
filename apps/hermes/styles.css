@@ -13,6 +13,12 @@
   --color-neon-blue: #00f0ff;
   --color-warning-yellow: #fbbf24;
 
+  --color-obsidian: #0a0d14;
+  --color-ivory: #f4f4f0;
+  --color-slate-muted: #8b939c;
+  --color-border-subtle: rgba(244, 244, 240, 0.1);
+  --color-border-bright: rgba(244, 244, 240, 0.25);
+
   --radius-*: initial;
 }
 
