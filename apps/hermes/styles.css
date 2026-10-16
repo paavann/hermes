@@ -50,3 +50,36 @@
   background: #1e3a8a; /* hud-border */
   border-radius: 0px;
 }
+
+/* Pattern divider random fade-in / fade-out animations */
+@keyframes patternTilePulse {
+  0%, 100% {
+    opacity: 0.35;
+    border-color: rgba(255, 255, 255, 0.08);
+  }
+  50% {
+    opacity: 0.95;
+    border-color: rgba(255, 255, 255, 0.22);
+  }
+}
+
+.pattern-tile-pulse-1 {
+  animation: patternTilePulse 3.8s ease-in-out infinite;
+  animation-delay: 0s;
+}
+.pattern-tile-pulse-2 {
+  animation: patternTilePulse 2.9s ease-in-out infinite;
+  animation-delay: 1.4s;
+}
+.pattern-tile-pulse-3 {
+  animation: patternTilePulse 4.6s ease-in-out infinite;
+  animation-delay: 0.7s;
+}
+.pattern-tile-pulse-4 {
+  animation: patternTilePulse 3.2s ease-in-out infinite;
+  animation-delay: 2.1s;
+}
+.pattern-tile-pulse-5 {
+  animation: patternTilePulse 4.1s ease-in-out infinite;
+  animation-delay: 1.1s;
+}

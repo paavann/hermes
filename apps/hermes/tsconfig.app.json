@@ -10,9 +10,11 @@
     "allowJs": true,
     "forceConsistentCasingInFileNames": true,
     "rootDir": ".",
+    "rootDirs": [".", "./.react-router/types"],
     "tsBuildInfoFile": "dist/tsconfig.app.tsbuildinfo"
   },
   "include": [
+    ".react-router/types/**/*",
     "app/**/*.ts",
     "app/**/*.tsx",
     "app/**/*.js",
