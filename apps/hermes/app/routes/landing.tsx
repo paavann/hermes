@@ -34,7 +34,7 @@ const NAV_ITEMS: readonly NavItem[] = [
   { id: 'home', label: 'Home', href: '#hero' },
   { id: 'problem', label: 'The Problem', href: '#problem' },
   { id: 'capabilities', label: 'Capabilities', href: '#capabilities' },
-  { id: 'access', label: 'Access', href: '#access' },
+  { id: 'contact', label: 'Contact', href: '#contact' },
 ] as const;
 
 // ─── Launch Map GSAP Button ──────────────────────────────────────────────────
@@ -125,7 +125,7 @@ export function Nav({ activeSection = 'home' }: NavProps): React.JSX.Element {
     <header
       id="site-header"
       role="banner"
-      className="fixed top-0 left-0 right-0 z-40 h-[62px] font-mono pointer-events-none"
+      className="fixed top-0 left-0 right-0 z-50 h-[62px] font-mono pointer-events-none"
     >
       <div className="w-full h-full flex items-center">
         {/* Left column (matches fixed vertical grid line, NO bottom border so line runs seamlessly) */}
@@ -272,138 +272,188 @@ const PROBLEM_STATEMENTS: readonly ProblemStatement[] = [
   },
 ] as const;
 
-interface SquareTile {
+interface PatternTile {
   readonly id: string;
   readonly left: number;
   readonly top: number;
-  readonly size: number;
+  readonly width: number;
+  readonly height: number;
 }
 
 interface PatternLayout {
   readonly containerHeight: number;
-  readonly squares: readonly SquareTile[];
+  readonly tiles: readonly PatternTile[];
 }
 
-function computePatternLayout(width: number): PatternLayout {
+function computePatternLayout(width: number, randomize = true): PatternLayout {
   const isDesktop = width >= 768;
-  // Square 1 fits flush inside the left margin (220px on md+, proportional on mobile)
-  const s1 = isDesktop ? 220 : Math.round(width * 0.16);
-  const remainingWidth = Math.max(width - s1, 280);
 
-  // Irregular 1:1 square sizes that sum to 100% of the remaining width
-  const s2 = Math.round(remainingWidth * 0.14);
-  const s3 = Math.round(remainingWidth * 0.32);
-  const s4 = Math.round(remainingWidth * 0.17);
-  const s5 = remainingWidth - s2 - s3 - s4; // ~0.37 of remainingWidth, flush with right edge
+  // 3 rows across 4 columns (desktop) or 3 columns (mobile)
+  const colCount = isDesktop ? 4 : 3;
+  const rowCount = 3;
 
-  const verticalPad = isDesktop ? 36 : 20;
+  // Subtle width variation across columns while summing strictly to 100% of container width
+  const rawWeights = Array.from({ length: colCount }, () =>
+    randomize ? 0.98 + Math.random() * 0.04 : 1.0
+  );
+  const totalWeight = rawWeights.reduce((sum, w) => sum + w, 0);
+  const colWidths = rawWeights.map((w) => Math.round((w / totalWeight) * width));
 
-  // Corner-to-corner chain coordinates matching image_7d5924.png:
-  // - Square 4 sits at the top-right of Square 3 (Square 3 top-right == Square 4 bottom-left)
-  // - Square 3 sits above the baseline (Square 2 top-right == Square 3 bottom-left)
-  // - Square 2 sits below the baseline (Square 1 bottom-right == Square 2 top-left)
-  // - Square 1 sits inside the left margin above the baseline
-  // - Square 5 hangs from Square 4's bottom-right corner (Square 4 bottom-right == Square 5 top-left)
-  const yTop = verticalPad + s4;
-  const yBase = yTop + s3;
+  // Ensure the final column lands flush with the right edge
+  const sumExceptLast = colWidths.slice(0, -1).reduce((sum, w) => sum + w, 0);
+  colWidths[colWidths.length - 1] = Math.max(width - sumExceptLast, 40);
 
-  const x1 = 0;
-  const x2 = s1;
-  const x3 = x2 + s2;
-  const x4 = x3 + s3;
-  const x5 = x4 + s4;
+  // Compute column left positions (starting flush at 0)
+  const colLefts: number[] = [];
+  let currLeft = 0;
+  for (let c = 0; c < colCount; c += 1) {
+    colLefts.push(currLeft);
+    currLeft += colWidths[c];
+  }
 
-  const squares: readonly SquareTile[] = [
-    { id: 'sq-1', left: x1, top: yBase - s1, size: s1 },
-    { id: 'sq-2', left: x2, top: yBase, size: s2 },
-    { id: 'sq-3', left: x3, top: yTop, size: s3 },
-    { id: 'sq-4', left: x4, top: verticalPad, size: s4 },
-    { id: 'sq-5', left: x5, top: yTop, size: s5 },
+  // Row heights proportioned with an increase of 3-4vh total
+  const avgColWidth = width / colCount;
+  const vh = !randomize || typeof window === 'undefined' ? 900 : window.innerHeight;
+  const extraRowHeight = Math.round((vh * 0.035) / rowCount);
+  const baseRowHeight = Math.round(avgColWidth * 0.44) + extraRowHeight;
+  const rowHeights = [baseRowHeight, baseRowHeight, baseRowHeight];
+
+  const verticalPad = isDesktop ? 24 : 16;
+  const rowTops = [
+    verticalPad,
+    verticalPad + rowHeights[0],
+    verticalPad + rowHeights[0] + rowHeights[1],
   ];
 
-  const maxBottom = Math.max(yBase + s2, yTop + s5);
-  const containerHeight = maxBottom + verticalPad;
+  // For each column, randomly choose either 1 or 2 rectangles (never 0, never 3).
+  // Also guarantee geometric connectivity with the preceding column so rectangles touch.
+  const tiles: PatternTile[] = [];
+  let prevRows: number[] = [];
 
-  return { containerHeight, squares };
+  // Deterministic rows pattern for initial SSR render
+  const defaultColRows = [[0], [0, 1], [1], [1, 2]];
+
+  for (let c = 0; c < colCount; c += 1) {
+    if (!randomize) {
+      const chosenRows = defaultColRows[c % defaultColRows.length];
+      for (const r of chosenRows) {
+        tiles.push({
+          id: `tile-c${c}-r${r}-${colLefts[c]}-${rowTops[r]}`,
+          left: colLefts[c],
+          top: rowTops[r],
+          width: colWidths[c],
+          height: rowHeights[r],
+        });
+      }
+      continue;
+    }
+
+    // Strictly either 1 or 2 rectangles in each column
+    const countInCol = Math.random() < 0.5 ? 1 : 2;
+    let chosenRows: number[] = [];
+
+    if (c === 0) {
+      if (countInCol === 1) {
+        chosenRows = [Math.floor(Math.random() * rowCount)];
+      } else {
+        const pairs = [
+          [0, 1],
+          [1, 2],
+          [0, 2],
+        ];
+        chosenRows = pairs[Math.floor(Math.random() * pairs.length)];
+      }
+    } else {
+      if (countInCol === 1) {
+        // Filter choices that maintain edge/corner connectivity with prevRows (|r - p| <= 1)
+        const candidates = [0, 1, 2].filter((cand) =>
+          prevRows.some((p) => Math.abs(cand - p) <= 1)
+        );
+        chosenRows = [candidates[Math.floor(Math.random() * candidates.length)]];
+      } else {
+        const pairs = [
+          [0, 1],
+          [1, 2],
+          [0, 2],
+        ].filter((pair) =>
+          pair.some((r) => prevRows.some((p) => Math.abs(r - p) <= 1))
+        );
+        chosenRows = pairs[Math.floor(Math.random() * pairs.length)];
+      }
+    }
+
+    prevRows = chosenRows;
+
+    for (const r of chosenRows) {
+      tiles.push({
+        id: `tile-c${c}-r${r}-${colLefts[c]}-${rowTops[r]}`,
+        left: colLefts[c],
+        top: rowTops[r],
+        width: colWidths[c],
+        height: rowHeights[r],
+      });
+    }
+  }
+
+  const containerHeight = verticalPad * 2 + rowHeights[0] + rowHeights[1] + rowHeights[2];
+
+  return {
+    containerHeight,
+    tiles,
+  };
 }
 
 export function PatternDivider(): React.JSX.Element {
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const squareRefs = useRef<(HTMLDivElement | null)[]>([]);
-  const [layout, setLayout] = useState<PatternLayout>(() => computePatternLayout(1440));
+  const tileRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const [layout, setLayout] = useState<PatternLayout>(() => computePatternLayout(1440, false));
+  const [isInView, setIsInView] = useState<boolean>(false);
 
-  // Dynamically measure width so all 5 boxes stay strict 1:1 squares and span full width
+  // Keep full width on window resize
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
 
-    const updateSize = (): void => {
-      const width = el.clientWidth || window.innerWidth;
-      if (width > 0) {
-        setLayout(computePatternLayout(width));
+    let lastWidth = el.clientWidth || window.innerWidth;
+    setLayout(computePatternLayout(lastWidth));
+
+    const handleResize = (): void => {
+      const newWidth = el.clientWidth || window.innerWidth;
+      if (newWidth > 0 && Math.abs(newWidth - lastWidth) > 2) {
+        lastWidth = newWidth;
+        setLayout(computePatternLayout(newWidth));
       }
     };
 
-    updateSize();
-
     if (typeof ResizeObserver !== 'undefined') {
-      const resizeObserver = new ResizeObserver(() => {
-        updateSize();
-      });
+      const resizeObserver = new ResizeObserver(handleResize);
       resizeObserver.observe(el);
       return () => resizeObserver.disconnect();
     } else {
-      window.addEventListener('resize', updateSize);
-      return () => window.removeEventListener('resize', updateSize);
+      window.addEventListener('resize', handleResize);
+      return () => window.removeEventListener('resize', handleResize);
     }
   }, []);
 
-  // Smooth, random one-by-one GSAP appearance when scrolling into view
+  // Re-randomize the rectangle layout every time the user scrolls into view
   useEffect(() => {
     const el = containerRef.current;
-    const boxes = squareRefs.current.filter((node): node is HTMLDivElement => node !== null);
-    if (!el || boxes.length === 0) return;
-
-    gsap.set(boxes, { autoAlpha: 0, scale: 0.94 });
+    if (!el) return;
 
     if (typeof window === 'undefined' || typeof window.IntersectionObserver === 'undefined') {
-      gsap.to(boxes, {
-        autoAlpha: 1,
-        scale: 1,
-        duration: 0.55,
-        stagger: { each: 0.16, from: 'random' },
-        ease: 'power3.out',
-      });
+      setIsInView(true);
       return;
     }
 
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
-          gsap.killTweensOf(boxes);
-
           if (entry.isIntersecting) {
-            // Shuffle order so squares appear randomly one by one
-            const shuffled = [...boxes];
-            for (let i = shuffled.length - 1; i > 0; i -= 1) {
-              const j = Math.floor(Math.random() * (i + 1));
-              [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-            }
-
-            gsap.fromTo(
-              shuffled,
-              { autoAlpha: 0, scale: 0.94 },
-              {
-                autoAlpha: 1,
-                scale: 1,
-                duration: 0.6,
-                stagger: 0.18,
-                ease: 'power3.out',
-                overwrite: 'auto',
-              }
-            );
+            const width = el.clientWidth || window.innerWidth || 1440;
+            setLayout(computePatternLayout(width));
+            setIsInView(true);
           } else {
-            gsap.set(boxes, { autoAlpha: 0, scale: 0.94 });
+            setIsInView(false);
           }
         });
       },
@@ -411,38 +461,82 @@ export function PatternDivider(): React.JSX.Element {
     );
 
     observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  // Animate the rectangles in a random one-by-one order via GSAP (fade in & fade out)
+  useEffect(() => {
+    const boxes = tileRefs.current
+      .slice(0, layout.tiles.length)
+      .filter((node): node is HTMLDivElement => node !== null);
+
+    if (boxes.length === 0) return;
+
+    gsap.killTweensOf(boxes);
+
+    if (isInView) {
+      const shuffled = [...boxes];
+      for (let i = shuffled.length - 1; i > 0; i -= 1) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
+
+      gsap.fromTo(
+        shuffled,
+        { autoAlpha: 0, scale: 0.94 },
+        {
+          autoAlpha: 1,
+          scale: 1,
+          duration: 0.5,
+          stagger: 0.08,
+          ease: 'power3.out',
+          overwrite: 'auto',
+        }
+      );
+    } else {
+      const shuffled = [...boxes];
+      for (let i = shuffled.length - 1; i > 0; i -= 1) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
+
+      gsap.to(shuffled, {
+        autoAlpha: 0,
+        scale: 0.94,
+        duration: 0.35,
+        stagger: 0.04,
+        ease: 'power2.in',
+        overwrite: 'auto',
+      });
+    }
 
     return () => {
-      observer.disconnect();
       gsap.killTweensOf(boxes);
     };
-  }, []);
+  }, [layout, isInView]);
 
   return (
     <div
       ref={containerRef}
       aria-hidden="true"
       style={{ height: `${layout.containerHeight}px` }}
-      className="w-full overflow-hidden select-none bg-obsidian relative"
+      className="w-full overflow-hidden select-none bg-obsidian relative z-40"
     >
-      {/* Continuing vertical margin line at x=220px on desktop */}
-      <div className="absolute top-0 bottom-0 left-[220px] border-r border-white/10 hidden md:block z-10 pointer-events-none" />
-
-      {/* Full-Width Corner-Connected Irregular 1:1 Squares */}
+      {/* Full-Width Corner-Connected Muted Rectangles (Overlaps across the left margin) */}
       <div className="w-full h-full relative overflow-hidden">
-        {layout.squares.map((sq, idx) => (
+        {layout.tiles.map((tile, idx) => (
           <div
-            key={sq.id}
+            key={tile.id}
             ref={(node) => {
-              squareRefs.current[idx] = node;
+              tileRefs.current[idx] = node;
             }}
             style={{
-              left: `${sq.left}px`,
-              top: `${sq.top}px`,
-              width: `${sq.size}px`,
-              height: `${sq.size}px`,
+              left: `${tile.left}px`,
+              top: `${tile.top}px`,
+              width: `${tile.width}px`,
+              height: `${tile.height}px`,
             }}
-            className="absolute bg-white/[0.08] border border-white/[0.08] opacity-0 will-change-transform"
+            className="absolute bg-white/[0.035] border border-white/[0.04] opacity-0 will-change-transform"
           />
         ))}
       </div>
@@ -702,29 +796,199 @@ export function CapabilitiesSection(): React.JSX.Element {
   );
 }
 
-// ─── Section 4: Access & Early Dispatch Clearance ──────────────────────────
+// ─── Send Message GSAP Button ────────────────────────────────────────────────
 
-interface DispatchFormData {
-  readonly name: string;
-  readonly email: string;
-  readonly org: string;
-  readonly intent: string;
+interface SendMessageBtnProps {
+  readonly isSubmitting?: boolean;
+  readonly disabled?: boolean;
+  readonly className?: string;
 }
 
-export function AccessSection(): React.JSX.Element {
-  const [formData, setFormData] = useState<DispatchFormData>({
+export function SendMessageBtn({
+  isSubmitting = false,
+  disabled = false,
+  className,
+}: SendMessageBtnProps): React.JSX.Element {
+  const labelRef = useRef<HTMLSpanElement>(null);
+  const indicatorRef = useRef<HTMLSpanElement>(null);
+  const arrow1Ref = useRef<HTMLSpanElement>(null);
+  const arrow2Ref = useRef<HTMLSpanElement>(null);
+
+  useEffect(() => {
+    if (indicatorRef.current && arrow2Ref.current) {
+      gsap.set(indicatorRef.current, { x: -14, opacity: 0 });
+      gsap.set(arrow2Ref.current, { x: -28, opacity: 0 });
+    }
+    return () => {
+      gsap.killTweensOf([
+        labelRef.current,
+        indicatorRef.current,
+        arrow1Ref.current,
+        arrow2Ref.current,
+      ]);
+    };
+  }, []);
+
+  const handleMouseEnter = (): void => {
+    if (isSubmitting || disabled) return;
+    if (
+      !labelRef.current ||
+      !indicatorRef.current ||
+      !arrow1Ref.current ||
+      !arrow2Ref.current
+    )
+      return;
+
+    gsap.killTweensOf([
+      labelRef.current,
+      indicatorRef.current,
+      arrow1Ref.current,
+      arrow2Ref.current,
+    ]);
+
+    // Text slides forward slightly
+    gsap.to(labelRef.current, {
+      x: 10,
+      duration: 0.28,
+      ease: 'power3.out',
+    });
+
+    // Tactical indicator glides in from left
+    gsap.to(indicatorRef.current, {
+      x: 0,
+      opacity: 1,
+      duration: 0.28,
+      ease: 'power3.out',
+    });
+
+    // Projectile arrow: primary arrow shoots right
+    gsap.to(arrow1Ref.current, {
+      x: 28,
+      opacity: 0,
+      duration: 0.22,
+      ease: 'power2.in',
+    });
+
+    // Incoming arrow sweeps into position from left
+    gsap.fromTo(
+      arrow2Ref.current,
+      { x: -28, opacity: 0 },
+      { x: 0, opacity: 1, duration: 0.26, delay: 0.08, ease: 'power3.out' }
+    );
+  };
+
+  const handleMouseLeave = (): void => {
+    if (isSubmitting || disabled) return;
+    if (
+      !labelRef.current ||
+      !indicatorRef.current ||
+      !arrow1Ref.current ||
+      !arrow2Ref.current
+    )
+      return;
+
+    gsap.killTweensOf([
+      labelRef.current,
+      indicatorRef.current,
+      arrow1Ref.current,
+      arrow2Ref.current,
+    ]);
+
+    gsap.to(labelRef.current, {
+      x: 0,
+      duration: 0.24,
+      ease: 'power2.inOut',
+    });
+
+    gsap.to(indicatorRef.current, {
+      x: -14,
+      opacity: 0,
+      duration: 0.24,
+      ease: 'power2.inOut',
+    });
+
+    gsap.to(arrow1Ref.current, {
+      x: 0,
+      opacity: 1,
+      duration: 0.24,
+      ease: 'power2.inOut',
+    });
+
+    gsap.to(arrow2Ref.current, {
+      x: -28,
+      opacity: 0,
+      duration: 0.2,
+      ease: 'power2.inOut',
+    });
+  };
+
+  return (
+    <button
+      type="submit"
+      disabled={disabled || isSubmitting}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+      className={cn(
+        'group relative w-full bg-ivory text-black hover:bg-neon-blue hover:text-black transition-colors duration-200 py-4 px-6 text-xs uppercase tracking-widest font-bold font-mono flex items-center justify-between cursor-pointer rounded-none disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden',
+        isSubmitting && 'bg-neon-blue text-black',
+        className
+      )}
+      aria-label="Send message"
+    >
+      {/* Left side: text with slide indicator */}
+      <div className="relative flex items-center">
+        <span
+          ref={indicatorRef}
+          className="absolute -left-1 text-black font-black select-none pointer-events-none opacity-0 text-[10px]"
+          aria-hidden="true"
+        >
+          ■
+        </span>
+        <span ref={labelRef} className="block tracking-widest select-none">
+          {isSubmitting ? 'TRANSMITTING MESSAGE...' : 'SEND MESSAGE'}
+        </span>
+      </div>
+
+      {/* Right side: projectile arrow cycle */}
+      <div className="relative w-8 h-4 overflow-hidden flex items-center justify-end select-none pointer-events-none">
+        <span ref={arrow1Ref} className="block text-base leading-none">
+          →
+        </span>
+        <span
+          ref={arrow2Ref}
+          className="absolute right-0 block text-base leading-none opacity-0"
+          aria-hidden="true"
+        >
+          →
+        </span>
+      </div>
+    </button>
+  );
+}
+
+// ─── Section 4: Contact ────────────────────────────────────────────────────
+
+interface ContactFormData {
+  readonly name: string;
+  readonly email: string;
+  readonly subject: string;
+  readonly message: string;
+}
+
+export function ContactSection(): React.JSX.Element {
+  const [formData, setFormData] = useState<ContactFormData>({
     name: '',
     email: '',
-    org: '',
-    intent: '',
+    subject: '',
+    message: '',
   });
   const [status, setStatus] = useState<'idle' | 'submitting' | 'submitted'>('idle');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>): void => {
     e.preventDefault();
-    if (!formData.name.trim() || !formData.email.trim()) {
-      setErrorMsg('Full Name and Dispatch Address are required.');
+    if (!formData.name.trim() || !formData.email.trim() || !formData.message.trim()) {
+      setErrorMsg('Name, email, and message are required.');
       return;
     }
     setErrorMsg(null);
@@ -735,22 +999,25 @@ export function AccessSection(): React.JSX.Element {
   };
 
   const handleReset = (): void => {
-    setFormData({ name: '', email: '', org: '', intent: '' });
+    setFormData({ name: '', email: '', subject: '', message: '' });
     setStatus('idle');
     setErrorMsg(null);
   };
 
   return (
-    <section id="access" className="relative w-full border-b border-border-subtle bg-obsidian">
+    <section id="contact" className="relative w-full border-b border-border-subtle bg-obsidian">
+      {/* Anchor for backward compatibility if navigated from #access */}
+      <span id="access" className="absolute -top-20" aria-hidden="true" />
+
       {/* Left Column (Sticky Sidebar Track aligned with 180px/220px vertical line) */}
       <div className="hidden md:block absolute top-0 bottom-0 left-0 w-[180px] md:w-[220px] z-30 pointer-events-none">
         <div className="sticky top-28 p-5 md:p-8 pointer-events-auto">
           <h2 className="text-xs uppercase tracking-widest text-ivory flex items-center gap-2">
             <span className="text-neon-blue">■</span>
-            <span>Access</span>
+            <span>Contact</span>
           </h2>
           <div className="mt-4 text-[10px] text-slate-muted/50 tracking-widest font-mono">
-            03 // REQUEST DISPATCH
+            03 // GET IN TOUCH
           </div>
         </div>
       </div>
@@ -760,13 +1027,13 @@ export function AccessSection(): React.JSX.Element {
         {/* Mobile Section Header */}
         <div className="md:hidden mb-8 flex items-center gap-2 text-xs uppercase tracking-widest text-ivory">
           <span className="text-neon-blue">■</span>
-          <span>Access</span>
+          <span>Contact</span>
         </div>
 
         {/* Section Tag */}
         <div className="text-xs uppercase tracking-widest text-slate-muted/70 mb-8 md:mb-12 flex items-center gap-2">
           <span className="text-neon-blue">■</span>
-          <span>03 // ACCESS PROTOCOL</span>
+          <span>03 // CONTACT</span>
         </div>
 
         {/* Two-Column Grid */}
@@ -774,32 +1041,32 @@ export function AccessSection(): React.JSX.Element {
           {/* Left Column: Headline, Narrative & Security Badges */}
           <div className="space-y-8 max-w-xl">
             <h3 className="text-3xl sm:text-4xl md:text-5xl font-medium tracking-tight text-slate-muted leading-tight">
-              Request early dispatch.{' '}
+              Have questions or feedback?{' '}
               <span className="text-ivory font-bold block mt-2">
-                Observe the world in real time.
+                Get in touch with me.
               </span>
             </h3>
 
             <p className="text-base sm:text-lg text-slate-muted leading-relaxed">
-              We are granting early dispatch clearance to researchers, geospatial analysts,
-              investigative journalists, and operational planners. Experience global incident
-              intelligence without noise, algorithmic manipulation, or feed fatigue.
+              Whether you're interested in spatial data architecture, collaboration on Hermes,
+              research inquiries, or exploring the live maps—feel free to reach out. I read all
+              messages directly.
             </p>
 
-            <div className="pt-2 space-y-3 text-xs font-mono text-slate-muted/80">
+            {/* <div className="pt-2 space-y-3 text-xs font-mono text-slate-muted/80">
               <div className="flex items-center gap-3">
                 <span className="text-neon-blue">■</span>
-                <span>ENCRYPTED TELEMETRY STREAM // TLS 1.3</span>
+                <span>DIRECT CHANNEL // PERSONAL INBOX</span>
               </div>
               <div className="flex items-center gap-3">
                 <span className="text-neon-blue">■</span>
-                <span>AIR-GAPPED OBSERVABILITY // ZERO TRACKERS</span>
+                <span>ENCRYPTED TRANSMISSION // TLS 1.3</span>
               </div>
               <div className="flex items-center gap-3">
                 <span className="text-neon-blue">■</span>
-                <span>PROVABLE GEOLOCATION // GROUNDED ACCURACY</span>
+                <span>RESPONSE TIME // TYPICALLY 24-48H</span>
               </div>
-            </div>
+            </div> */}
           </div>
 
           {/* Right Column: Brutalist Tactical Form */}
@@ -808,16 +1075,14 @@ export function AccessSection(): React.JSX.Element {
               <div className="border border-neon-blue/40 bg-neon-blue/5 p-6 md:p-8 space-y-5">
                 <div className="flex items-center gap-2 text-xs uppercase tracking-widest text-neon-blue">
                   <span className="w-2 h-2 bg-neon-blue inline-block animate-pulse" />
-                  <span>200 OK // DISPATCH LOGGED</span>
+                  <span>200 OK // MESSAGE RECEIVED</span>
                 </div>
                 <p className="text-sm text-ivory leading-relaxed">
-                  Your dispatch clearance request for{' '}
-                  <strong className="text-neon-blue font-mono">{formData.email}</strong> has
-                  been logged to the operational queue. Our team will verify and dispatch your
-                  credentials.
+                  Thank you for reaching out! Your message has been received. I'll get back to you shortly at{' '}
+                  <strong className="text-neon-blue font-mono">{formData.email}</strong>.
                 </p>
                 <div className="pt-2 text-[10px] text-slate-muted/60 font-mono tracking-widest uppercase">
-                  STATUS // PENDING REVIEW • ENCRYPTED TLS 1.3
+                  STATUS // DELIVERED • ENCRYPTED TLS 1.3
                 </div>
                 <div className="pt-4 border-t border-neon-blue/20">
                   <button
@@ -825,7 +1090,7 @@ export function AccessSection(): React.JSX.Element {
                     onClick={handleReset}
                     className="text-xs uppercase tracking-widest text-slate-muted hover:text-ivory transition-colors underline underline-offset-4 cursor-pointer"
                   >
-                    Transmit another request →
+                    Send another message →
                   </button>
                 </div>
               </div>
@@ -833,13 +1098,13 @@ export function AccessSection(): React.JSX.Element {
               <form onSubmit={handleSubmit} className="space-y-5" noValidate>
                 <div>
                   <label
-                    htmlFor="access-name"
+                    htmlFor="contact-name"
                     className="text-[10px] uppercase tracking-widest text-slate-muted/70 font-mono mb-2 block"
                   >
-                    FULL NAME *
+                    NAME *
                   </label>
                   <input
-                    id="access-name"
+                    id="contact-name"
                     name="name"
                     type="text"
                     required
@@ -847,20 +1112,20 @@ export function AccessSection(): React.JSX.Element {
                     onChange={(e) =>
                       setFormData((prev) => ({ ...prev, name: e.target.value }))
                     }
-                    placeholder="e.g. Elena Rostova"
+                    placeholder="Your name"
                     className="w-full bg-black/60 border border-white/10 px-4 py-3 text-sm text-ivory placeholder:text-slate-muted/30 focus:border-neon-blue focus:outline-none transition-colors font-mono rounded-none"
                   />
                 </div>
 
                 <div>
                   <label
-                    htmlFor="access-email"
+                    htmlFor="contact-email"
                     className="text-[10px] uppercase tracking-widest text-slate-muted/70 font-mono mb-2 block"
                   >
-                    DISPATCH ADDRESS (EMAIL) *
+                    EMAIL ADDRESS *
                   </label>
                   <input
-                    id="access-email"
+                    id="contact-email"
                     name="email"
                     type="email"
                     required
@@ -868,48 +1133,49 @@ export function AccessSection(): React.JSX.Element {
                     onChange={(e) =>
                       setFormData((prev) => ({ ...prev, email: e.target.value }))
                     }
-                    placeholder="elena@organization.org"
+                    placeholder="name@example.com"
                     className="w-full bg-black/60 border border-white/10 px-4 py-3 text-sm text-ivory placeholder:text-slate-muted/30 focus:border-neon-blue focus:outline-none transition-colors font-mono rounded-none"
                   />
                 </div>
 
                 <div>
                   <label
-                    htmlFor="access-org"
+                    htmlFor="contact-subject"
                     className="text-[10px] uppercase tracking-widest text-slate-muted/70 font-mono mb-2 block"
                   >
-                    ORGANIZATION / INSTITUTION
+                    SUBJECT
                   </label>
                   <input
-                    id="access-org"
-                    name="org"
+                    id="contact-subject"
+                    name="subject"
                     type="text"
-                    value={formData.org}
+                    value={formData.subject}
                     onChange={(e) =>
-                      setFormData((prev) => ({ ...prev, org: e.target.value }))
+                      setFormData((prev) => ({ ...prev, subject: e.target.value }))
                     }
-                    placeholder="e.g. Global Risk Institute"
+                    placeholder="e.g. Collaboration, Question, Feedback..."
                     className="w-full bg-black/60 border border-white/10 px-4 py-3 text-sm text-ivory placeholder:text-slate-muted/30 focus:border-neon-blue focus:outline-none transition-colors font-mono rounded-none"
                   />
                 </div>
 
                 <div>
                   <label
-                    htmlFor="access-intent"
+                    htmlFor="contact-message"
                     className="text-[10px] uppercase tracking-widest text-slate-muted/70 font-mono mb-2 block"
                   >
-                    OPERATIONAL INTENT
+                    MESSAGE *
                   </label>
-                  <input
-                    id="access-intent"
-                    name="intent"
-                    type="text"
-                    value={formData.intent}
+                  <textarea
+                    id="contact-message"
+                    name="message"
+                    rows={4}
+                    required
+                    value={formData.message}
                     onChange={(e) =>
-                      setFormData((prev) => ({ ...prev, intent: e.target.value }))
+                      setFormData((prev) => ({ ...prev, message: e.target.value }))
                     }
-                    placeholder="e.g. Geopolitics, Supply Chain, Infrastructure..."
-                    className="w-full bg-black/60 border border-white/10 px-4 py-3 text-sm text-ivory placeholder:text-slate-muted/30 focus:border-neon-blue focus:outline-none transition-colors font-mono rounded-none"
+                    placeholder="Write your message here..."
+                    className="w-full bg-black/60 border border-white/10 px-4 py-3 text-sm text-ivory placeholder:text-slate-muted/30 focus:border-neon-blue focus:outline-none transition-colors font-mono rounded-none resize-none"
                   />
                 </div>
 
@@ -919,21 +1185,7 @@ export function AccessSection(): React.JSX.Element {
                   </div>
                 )}
 
-                <button
-                  type="submit"
-                  disabled={status === 'submitting'}
-                  className={cn(
-                    'w-full bg-ivory text-black hover:bg-neon-blue hover:text-black transition-colors py-4 px-6 text-xs uppercase tracking-widest font-bold font-mono flex items-center justify-between cursor-pointer rounded-none disabled:opacity-50 disabled:cursor-not-allowed',
-                    status === 'submitting' && 'bg-neon-blue text-black'
-                  )}
-                >
-                  <span>
-                    {status === 'submitting'
-                      ? '[ ENCRYPTING & TRANSMITTING... ]'
-                      : '[ TRANSMIT DISPATCH REQUEST ]'}
-                  </span>
-                  <span className="text-sm font-normal">→</span>
-                </button>
+                <SendMessageBtn isSubmitting={status === 'submitting'} />
               </form>
             )}
           </div>
@@ -943,11 +1195,14 @@ export function AccessSection(): React.JSX.Element {
   );
 }
 
+// Alias for backward compatibility
+export const AccessSection = ContactSection;
+
 // ─── Section 5: Editorial Brutalist Footer ───────────────────────────────────
 
 export function Footer(): React.JSX.Element {
   return (
-    <footer className="relative w-full border-t border-border-subtle bg-obsidian text-slate-muted font-mono z-20 overflow-hidden">
+    <footer className="relative w-full border-t border-border-subtle bg-obsidian text-slate-muted font-mono z-40 overflow-hidden">
       {/* Background Modular Grid Pattern Tiles (Extending behind entire footer & wordmark) */}
       <div
         className="absolute inset-0 z-0 pointer-events-none select-none opacity-40 overflow-hidden"
@@ -971,22 +1226,22 @@ export function Footer(): React.JSX.Element {
       {/* Main Sitemap & Info Grid */}
       <div className="relative z-10 flex flex-col md:flex-row w-full">
         {/* Left Column (Aligned with 180px/220px desktop sidebar) */}
-        <div className="hidden md:block w-[180px] md:w-[220px] shrink-0 p-5 md:p-8 border-r border-white/5">
+        <div className="hidden md:block w-[180px] md:w-[220px] shrink-0 p-5 md:p-8 border-r border-white/10">
           <div className="space-y-6">
             <div className="flex items-center gap-2 text-[10px] tracking-widest uppercase text-slate-muted/80">
               <span className="w-1.5 h-1.5 bg-emerald-400 inline-block animate-pulse" />
-              <span>SYS NOMINAL</span>
+              <span>INFO</span>
             </div>
             <div className="text-[10px] tracking-wider text-slate-muted/50 leading-relaxed font-mono">
-              HERMES SPATIAL INTEL
+              HERMES
               <br />
-              PROVABLE GEOLOCATION
+              SPATIAL INTEL
               <br />
               SRID 4326
             </div>
             <div className="pt-4 flex flex-col gap-2 text-[11px] text-slate-muted/70 tracking-widest uppercase font-mono">
               <a
-                href="https://github.com"
+                href="https://github.com/paavann/hermes"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="hover:text-ivory transition-colors flex items-center gap-1.5"
@@ -1096,8 +1351,8 @@ export function Footer(): React.JSX.Element {
               </div>
               <ul className="space-y-2.5 text-xs text-slate-muted font-mono">
                 <li>
-                  <a href="#access" className="hover:text-ivory transition-colors">
-                    Request Dispatch
+                  <a href="#contact" className="hover:text-ivory transition-colors">
+                    Contact
                   </a>
                 </li>
                 <li className="text-slate-muted/70">Privacy Protocol</li>
@@ -1124,25 +1379,25 @@ export function Footer(): React.JSX.Element {
         </div>
       </div>
 
-      {/* Monumental Watermark matching user screenshot: H with brutalist pixel staircase + 'ermes' in JetBrains Mono */}
-      <div className="relative z-10 w-full border-t border-white/[0.04] pt-8 md:pt-14 pb-4 md:pb-8 pl-5 md:pl-[110px] pr-5 md:pr-12 overflow-hidden select-none pointer-events-none">
-        <div className="text-slate-muted/20">
+      {/* Monumental Watermark: H with straight vertical stems + alternating up-down connected squares crossbar + 'ermes' */}
+      <div className="relative z-10 bg-transparent w-full border-t border-white/[0.04] pt-10 md:pt-16 pb-8 md:pb-16 flex items-center justify-center overflow-hidden select-none pointer-events-none">
+        <div className="w-[82vw] max-w-[85vw] flex items-center justify-center text-slate-muted/20">
           <svg
-            viewBox="0 0 1420 400"
+            viewBox="0 0 1455 400"
             fill="currentColor"
-            className="w-full h-auto max-h-[32vh] overflow-visible"
+            className="w-full h-auto overflow-visible"
             aria-label="Hermes"
             role="img"
           >
-            {/* First Letter H: Left stem brutalist pixel staircase (y=100 to y=375 matches font cap-height) */}
-            <rect x="144" y="100" width="38" height="55" />
-            <rect x="108" y="155" width="38" height="55" />
-            <rect x="72" y="210" width="38" height="55" />
-            <rect x="36" y="265" width="38" height="55" />
-            <rect x="0" y="320" width="38" height="55" />
+            {/* First Letter H: Left straight vertical stem */}
+            <rect x="45" y="100" width="38" height="275" />
 
-            {/* Horizontal Crossbar connecting left staircase to right stem */}
-            <rect x="90" y="228" width="165" height="38" />
+            {/* Horizontal Crossbar: Alternating up-down-up-down-up squares with touching edges */}
+            <rect x="83" y="218" width="31" height="36" />
+            <rect x="114" y="240" width="31" height="36" />
+            <rect x="145" y="218" width="31" height="36" />
+            <rect x="176" y="240" width="31" height="36" />
+            <rect x="207" y="218" width="29" height="36" />
 
             {/* Right vertical stem */}
             <rect x="236" y="100" width="38" height="275" />
@@ -1172,7 +1427,7 @@ export default function Landing(): React.JSX.Element {
     <div className="min-h-screen bg-obsidian text-slate-muted font-mono selection:bg-neon-blue/20 selection:text-neon-blue relative">
       {/* Atalanta-inspired Persistent Left Margin Line (Desktop) */}
       <div
-        className="hidden md:block fixed top-0 bottom-0 left-[180px] md:left-[220px] w-px bg-white/10 z-50 pointer-events-none"
+        className="hidden md:block fixed top-0 bottom-0 left-[180px] md:left-[220px] w-px bg-white/10 z-30 pointer-events-none"
         aria-hidden="true"
       />
 
