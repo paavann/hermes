@@ -238,7 +238,168 @@ export function Nav({ activeSection = 'home' }: NavProps): React.JSX.Element {
   );
 }
 
-// ─── Step 1 Scaffold Landing Page ───────────────────────────────────────────
+// ─── Section 2: Problem Statements & Scrollytelling ─────────────────────────
+
+interface ProblemStatement {
+  readonly id: string;
+  readonly text: string;
+}
+
+const PROBLEM_STATEMENTS: readonly ProblemStatement[] = [
+  {
+    id: 'statement-1',
+    text: 'The world moves in physical coordinates, yet our understanding of it remains trapped in linear text feeds designed for engagement rather than truth.',
+  },
+  {
+    id: 'statement-2',
+    text: 'Headlines tell you that something happened. They fail to show where it happened, how close it is to what matters, or what chain of events led there.',
+  },
+  {
+    id: 'statement-3',
+    text: 'Consuming hundreds of fragmented alerts creates noise and cognitive fatigue, not intelligence.',
+  },
+  {
+    id: 'statement-4',
+    text: 'To understand critical global shifts, we must observe them spatially—connecting geographic proximity, consensus, and causal history in a single unified view.',
+  },
+] as const;
+
+export function PatternDivider(): React.JSX.Element {
+  return (
+    <div
+      aria-hidden="true"
+      className="w-full border-t border-border-subtle h-[200px] md:h-[280px] overflow-hidden select-none bg-obsidian"
+    >
+      <div className="w-full h-full grid grid-cols-2 md:grid-cols-[180px_1fr_1.2fr_1fr_1.2fr] md:[grid-template-columns:220px_1fr_1.2fr_1fr_1.2fr] grid-rows-3">
+        {/* Row 0 */}
+        <div className="border-r border-b border-white/[0.04] bg-transparent hidden md:block" />
+        <div className="border-r border-b border-white/[0.04] bg-transparent hidden md:block" />
+        <div className="border-r border-b border-white/[0.04] bg-transparent hidden md:block" />
+        <div className="border-r border-b border-white/[0.06] bg-white/[0.03] hidden md:flex items-start justify-end p-2.5 text-[9px] text-slate-muted/50 font-mono tracking-wider">
+          [ 02 // SRID 4326 ]
+        </div>
+        <div className="border-b border-white/[0.04] bg-transparent hidden md:block" />
+
+        {/* Row 1 (Center row) */}
+        <div className="border-r border-b border-white/[0.06] bg-white/[0.03] flex items-end p-2.5 text-[9px] text-slate-muted/50 font-mono tracking-wider">
+          <span className="hidden md:inline">SYS // GRID-01</span>
+        </div>
+        <div className="border-r border-b border-white/[0.04] bg-transparent" />
+        <div className="border-r border-b border-white/[0.06] bg-white/[0.03] hidden md:block" />
+        <div className="border-r border-b border-white/[0.04] bg-transparent hidden md:block" />
+        <div className="border-b border-white/[0.06] bg-white/[0.03] hidden md:flex items-center justify-center text-[9px] text-slate-muted/50 font-mono tracking-wider">
+          [ SPATIAL CONSENSUS ]
+        </div>
+
+        {/* Row 2 (Bottom row) */}
+        <div className="border-r border-white/[0.04] bg-transparent hidden md:block" />
+        <div className="border-r border-white/[0.06] bg-white/[0.03] flex items-center justify-start p-2.5 text-[9px] text-slate-muted/50 font-mono tracking-wider">
+          <span>■ 01-A</span>
+        </div>
+        <div className="border-r border-white/[0.04] bg-transparent hidden md:block" />
+        <div className="border-r border-white/[0.04] bg-transparent hidden md:block" />
+        <div className="bg-transparent hidden md:block" />
+      </div>
+    </div>
+  );
+}
+
+export function ProblemSection(): React.JSX.Element {
+  const [activeIdx, setActiveIdx] = useState<number>(0);
+  const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
+
+  useEffect(() => {
+    const observers: IntersectionObserver[] = [];
+
+    itemRefs.current.forEach((el, index) => {
+      if (!el) return;
+
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              setActiveIdx(index);
+            }
+          });
+        },
+        {
+          rootMargin: '-20% 0px -20% 0px',
+          threshold: 0.35,
+        }
+      );
+
+      observer.observe(el);
+      observers.push(observer);
+    });
+
+    return () => {
+      observers.forEach((obs) => obs.disconnect());
+    };
+  }, []);
+
+  return (
+    <section id="problem" className="relative w-full border-b border-border-subtle flex flex-col">
+      <div className="flex flex-col md:flex-row w-full">
+        {/* Left Column (Sticky Sidebar aligned with 180px/220px vertical line) */}
+        <div className="w-[180px] md:w-[220px] shrink-0 p-5 md:p-8 hidden md:block">
+          <div className="sticky top-28">
+            <h2 className="text-xs uppercase tracking-widest text-ivory flex items-center gap-2">
+              <span className="text-neon-blue">■</span>
+              <span>The Problem</span>
+            </h2>
+            <div className="mt-4 text-[10px] text-slate-muted/50 tracking-widest font-mono">
+              01 // THE PARADOX
+            </div>
+          </div>
+        </div>
+
+        {/* Right Column (Sequential Large Typography Statements) */}
+        <div className="flex-1 p-5 md:pl-10 md:pr-12 pt-24 md:pt-36 pb-28 md:pb-44 max-w-5xl">
+          {/* Mobile Section Title */}
+          <div className="md:hidden mb-12">
+            <h2 className="text-xs uppercase tracking-widest text-ivory flex items-center gap-2">
+              <span className="text-neon-blue">■</span>
+              <span>The Problem</span>
+            </h2>
+          </div>
+
+          <div className="space-y-28 md:space-y-40">
+            {PROBLEM_STATEMENTS.map((item, index) => {
+              const isActive = activeIdx === index;
+              const isAdjacent = Math.abs(activeIdx - index) === 1;
+
+              return (
+                <div
+                  key={item.id}
+                  ref={(el) => {
+                    itemRefs.current[index] = el;
+                  }}
+                  className={cn(
+                    'transition-all duration-500 ease-out select-none cursor-default',
+                    isActive
+                      ? 'text-ivory font-medium opacity-100 translate-x-1'
+                      : isAdjacent
+                        ? 'text-slate-muted/70 opacity-60'
+                        : 'text-slate-muted/30 opacity-30'
+                  )}
+                >
+                  <p className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl leading-snug md:leading-[1.3] tracking-tight">
+                    {item.text}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* Atalanta-inspired Modular Geometric Pattern Divider */}
+      <PatternDivider />
+    </section>
+  );
+}
+
+// ─── Landing Page Shell ──────────────────────────────────────────────────────
 
 export default function Landing(): React.JSX.Element {
   return (
@@ -257,7 +418,7 @@ export default function Landing(): React.JSX.Element {
         {/* Section: Hero Frame */}
         <section id="hero" className="relative w-full">
           {/* Top Heading Area (aligned with the left line at 180px/220px) */}
-          <div className="w-full pl-5 md:pl-[240px] pr-5 md:pr-8 pt-14 md:pt-20 pb-12 md:pb-16 max-w-6xl">
+          <div className="w-full pl-5 md:pl-[240px] pr-5 md:pr-8 pt-14 md:pt-20 pb-8 md:pb-16 max-w-6xl h-[65vh]">
             <div className="text-xs uppercase tracking-[0.2em] text-slate-muted/70 mb-4 flex items-center gap-2">
               <span className="text-neon-blue">■</span>
               <span>Hermes Intelligence</span>
@@ -304,28 +465,7 @@ export default function Landing(): React.JSX.Element {
         </section>
 
         {/* Section: The Problem */}
-        <section
-          id="problem"
-          className="min-h-[60vh] border-b border-border-subtle flex"
-        >
-          {/* Left Sidebar: Section Title */}
-          <div className="w-[180px] md:w-[220px] shrink-0 p-5 md:p-8 hidden md:block">
-            <h2 className="text-xs uppercase tracking-widest text-ivory flex items-center gap-2 sticky top-24">
-              <span className="text-neon-blue">■</span>
-              <span>The Problem</span>
-            </h2>
-          </div>
-
-          {/* Right Column: Content */}
-          <div className="flex-1 p-5 md:p-8 py-20 md:py-24 max-w-4xl">
-            <div className="space-y-8 text-lg sm:text-2xl text-slate-muted leading-relaxed">
-              <p>
-                The world moves in physical coordinates, yet news consumption remains trapped in
-                linear, text-heavy feeds designed for engagement rather than spatial comprehension.
-              </p>
-            </div>
-          </div>
-        </section>
+        <ProblemSection />
 
         {/* Section: Capabilities */}
         <section
