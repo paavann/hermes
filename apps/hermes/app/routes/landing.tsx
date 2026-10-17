@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router';
 import type { MetaFunction } from 'react-router';
+import { Show, UserButton } from '@clerk/react-router';
 import gsap from 'gsap';
 import { cn } from '@hermes/ui-components';
 import earthOrbitImg from '../assets/earth-orbit.jpg';
@@ -107,19 +108,68 @@ interface NavProps {
   readonly activeSection?: string;
 }
 
-export function Nav({ activeSection = 'home' }: NavProps): React.JSX.Element {
+export function Nav({ activeSection: controlledActiveSection }: NavProps): React.JSX.Element {
   const [scrolled, setScrolled] = useState<boolean>(false);
+  const [detectedActiveSection, setDetectedActiveSection] = useState<string>('home');
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
 
+  const activeSection = controlledActiveSection ?? detectedActiveSection;
+
   useEffect(() => {
+    let ticking = false;
+
     const handleScroll = (): void => {
-      setScrolled(window.scrollY > 20);
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          const scrollY = window.scrollY;
+          setScrolled(scrollY > 20);
+
+          if (controlledActiveSection === undefined) {
+            if (scrollY < 80) {
+              setDetectedActiveSection('home');
+              ticking = false;
+              return;
+            }
+
+            const isBottom =
+              window.innerHeight + scrollY >=
+              document.documentElement.scrollHeight - 50;
+
+            if (isBottom) {
+              setDetectedActiveSection('contact');
+              ticking = false;
+              return;
+            }
+
+            const threshold = 180;
+            let current = 'home';
+
+            for (const item of NAV_ITEMS) {
+              const targetId = item.href.replace('#', '');
+              const el = document.getElementById(targetId);
+              if (el) {
+                const rect = el.getBoundingClientRect();
+                if (rect.top <= threshold) {
+                  current = item.id;
+                }
+              }
+            }
+
+            setDetectedActiveSection(current);
+          }
+
+          ticking = false;
+        });
+        ticking = true;
+      }
     };
+
+    handleScroll();
 
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+  }, [controlledActiveSection]);
 
   return (
     <header
@@ -164,6 +214,11 @@ export function Nav({ activeSection = 'home' }: NavProps): React.JSX.Element {
                 <a
                   key={item.id}
                   href={item.href}
+                  onClick={() => {
+                    if (controlledActiveSection === undefined) {
+                      setDetectedActiveSection(item.id);
+                    }
+                  }}
                   onMouseEnter={() => setHoveredItem(item.id)}
                   onMouseLeave={() => setHoveredItem(null)}
                   className={cn(
@@ -190,13 +245,29 @@ export function Nav({ activeSection = 'home' }: NavProps): React.JSX.Element {
 
           {/* Right Actions */}
           <div className="flex items-center gap-5 ml-auto">
-            {/* Login Link */}
-            <Link
-              to="/login"
-              className="text-xs uppercase tracking-wider text-slate-muted hover:text-ivory transition-colors"
-            >
-              LOGIN
-            </Link>
+            {/* Auth Status & Login Trigger */}
+            <Show when="signed-out">
+              <Link
+                to="/login"
+                className="text-xs uppercase tracking-wider text-slate-muted hover:text-ivory transition-colors"
+              >
+                LOGIN
+              </Link>
+            </Show>
+
+            <Show when="signed-in">
+              <UserButton
+                appearance={{
+                  variables: {
+                    colorPrimary: '#00f0ff',
+                    colorBackground: '#0a0d14',
+                    colorText: '#f4f4f0',
+                    fontFamily: '"JetBrains Mono", monospace',
+                    borderRadius: '0px',
+                  },
+                }}
+              />
+            </Show>
 
             {/* Launch Map CTA with GSAP roll animation */}
             <LaunchMapBtn />
@@ -221,25 +292,64 @@ export function Nav({ activeSection = 'home' }: NavProps): React.JSX.Element {
       {/* Mobile Drawer */}
       {mobileMenuOpen && (
         <div className="md:hidden border-b border-border-subtle bg-obsidian/95 backdrop-blur-xl px-5 py-4 flex flex-col gap-2 pointer-events-auto">
-          {NAV_ITEMS.map((item) => (
-            <a
-              key={item.id}
-              href={item.href}
+          {NAV_ITEMS.map((item) => {
+            const isActive = activeSection === item.id;
+            return (
+              <a
+                key={item.id}
+                href={item.href}
+                onClick={() => {
+                  if (controlledActiveSection === undefined) {
+                    setDetectedActiveSection(item.id);
+                  }
+                  setMobileMenuOpen(false);
+                }}
+                className={cn(
+                  'flex items-center gap-2 py-2 text-xs uppercase tracking-wider border-b border-white/5 transition-colors',
+                  isActive ? 'text-ivory font-medium' : 'text-slate-muted hover:text-ivory'
+                )}
+              >
+                <span
+                  className={cn(
+                    'text-[9px] transition-colors',
+                    isActive ? 'text-neon-blue' : 'text-slate-muted/60'
+                  )}
+                  aria-hidden="true"
+                >
+                  {isActive ? '■' : '/'}
+                </span>
+                <span>{item.label}</span>
+              </a>
+            );
+          })}
+          <Show when="signed-out">
+            <Link
+              to="/login"
               onClick={() => setMobileMenuOpen(false)}
-              className="flex items-center gap-2 py-2 text-xs uppercase tracking-wider text-slate-muted hover:text-ivory border-b border-white/5"
+              className="flex items-center gap-2 py-2 text-xs uppercase tracking-wider text-slate-muted hover:text-ivory"
             >
               <span className="text-neon-blue text-[9px]">/</span>
-              <span>{item.label}</span>
-            </a>
-          ))}
-          <Link
-            to="/login"
-            onClick={() => setMobileMenuOpen(false)}
-            className="flex items-center gap-2 py-2 text-xs uppercase tracking-wider text-slate-muted hover:text-ivory"
-          >
-            <span className="text-neon-blue text-[9px]">/</span>
-            <span>LOGIN</span>
-          </Link>
+              <span>LOGIN</span>
+            </Link>
+          </Show>
+          <Show when="signed-in">
+            <div className="flex items-center justify-between py-2 border-t border-white/5">
+              <span className="text-xs uppercase tracking-wider text-slate-muted font-mono">
+                OPERATOR PROFILE
+              </span>
+              <UserButton
+                appearance={{
+                  variables: {
+                    colorPrimary: '#00f0ff',
+                    colorBackground: '#0a0d14',
+                    colorText: '#f4f4f0',
+                    fontFamily: '"JetBrains Mono", monospace',
+                    borderRadius: '0px',
+                  },
+                }}
+              />
+            </div>
+          </Show>
         </div>
       )}
     </header>
@@ -545,7 +655,7 @@ export function ProblemSection(): React.JSX.Element {
   }, []);
 
   return (
-    <section id="problem" className="relative w-full flex flex-col">
+    <section id="problem" className="relative w-full flex flex-col scroll-mt-16">
       <div className="flex flex-col md:flex-row w-full">
         {/* Left Column (Sticky Sidebar aligned with 180px/220px vertical line) */}
         <div className="w-[180px] md:w-[220px] shrink-0 p-5 md:p-8 hidden md:block">
@@ -664,7 +774,7 @@ const CAPABILITY_CARDS: readonly CapabilityCard[] = [
 
 export function CapabilitiesSection(): React.JSX.Element {
   return (
-    <section id="capabilities" className="relative w-full border-b border-border-subtle bg-obsidian">
+    <section id="capabilities" className="relative w-full border-b border-border-subtle bg-obsidian scroll-mt-16">
       {/* Left Column (Sticky Sidebar Track aligned with 180px/220px vertical line) */}
       <div className="hidden md:block absolute top-0 bottom-0 left-0 w-[180px] md:w-[220px] z-30 pointer-events-none">
         <div className="sticky top-28 p-5 md:p-8 pointer-events-auto">
@@ -968,7 +1078,7 @@ export function ContactSection(): React.JSX.Element {
   };
 
   return (
-    <section id="contact" className="relative w-full border-b border-border-subtle bg-obsidian">
+    <section id="contact" className="relative w-full border-b border-border-subtle bg-obsidian scroll-mt-16">
       {/* Anchor for backward compatibility if navigated from #access */}
       <span id="access" className="absolute -top-20" aria-hidden="true" />
 
@@ -1411,12 +1521,12 @@ export default function Landing(): React.JSX.Element {
       />
 
       {/* Fixed Minimalist Navigation Bar */}
-      <Nav activeSection="home" />
+      <Nav />
 
       {/* Main Content Container */}
       <main id="main-content" className="pt-[62px]">
         {/* Section: Hero Frame */}
-        <section id="hero" className="relative w-full">
+        <section id="hero" className="relative w-full scroll-mt-16">
           {/* Top Heading Area (aligned with the left line at 180px/220px) */}
           <div className="w-full pl-5 md:pl-[240px] pr-5 md:pr-8 pt-14 md:pt-20 pb-8 md:pb-16 max-w-6xl h-[65vh]">
             <div className="text-xs uppercase tracking-[0.2em] text-slate-muted/70 mb-4 flex items-center gap-2">

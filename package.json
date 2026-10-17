@@ -1,6 +1,6 @@
 {
   "name": "@hermes/source",
-  "version": "0.0.0",
+  "version": "0.4.0",
   "license": "MIT",
   "scripts": {
     "sync": "nx run workspace:sync",
@@ -14,7 +14,7 @@
   "private": true,
   "dependencies": {
     "@base-ui/react": "^1.9.0",
-    "@clerk/react-router": "^3.6.34",
+    "@clerk/react-router": "^3.6.35",
     "@fontsource-variable/jetbrains-mono": "^5.3.0",
     "@phosphor-icons/react": "^2.1.10",
     "@react-router/node": "^8.3.1",

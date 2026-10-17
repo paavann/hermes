@@ -1,8 +1,22 @@
-import { Links, Meta, Outlet, Scripts, ScrollRestoration, type MetaFunction, type LinksFunction } from 'react-router'
+import React from 'react'
+import { clerkMiddleware, rootAuthLoader } from '@clerk/react-router/server' 
+import { ClerkProvider } from '@clerk/react-router'
+import type { MetaFunction, LinksFunction, MiddlewareFunction, LoaderFunctionArgs } from 'react-router'
+import { Links, Meta, Outlet, Scripts, ScrollRestoration, isRouteErrorResponse } from 'react-router'
 import stylesheetUrl from '../styles.css?url'
 
 
+interface RootErrorBoundaryProps {
+  error: unknown
+}
 
+interface AppProps {
+  loaderData?: Awaited<ReturnType<typeof loader>>
+}
+
+
+export const middleware: MiddlewareFunction<Response>[] = [clerkMiddleware()]
+export const loader = (args: LoaderFunctionArgs) => rootAuthLoader(args)
 
 export const meta: MetaFunction = () => [
   { title: 'Hermes — Geospatial Intelligence' },
@@ -36,6 +50,38 @@ export function Layout({ children }: { children: React.ReactNode }) {
   )
 }
 
-export default function App() {
-  return <Outlet />
+export default function App({ loaderData }: AppProps) {
+  return (
+    <ClerkProvider loaderData={loaderData}>
+      <Outlet />
+    </ClerkProvider>
+  )
+}
+
+
+
+export function ErrorBoundary({error}: RootErrorBoundaryProps): React.JSX.Element {
+  let message = "Oops!"
+  let details = "An unexpected error occurred."
+  let stack: string | undefined
+
+  if (isRouteErrorResponse(error)) {
+    message = error.status === 404 ? '404' : 'Error'
+    details = error.status === 404 ? 'The requested page could not be found.' : error.statusText || details
+  } else if (import.meta.env.DEV && error && error instanceof Error) {
+    details = error.message
+    stack = error.stack
+  }
+
+  return (
+    <main className="pt-16 p-4 container mx-auto">
+      <h1>{message}</h1>
+      <p>{details}</p>
+      {stack && (
+        <pre className="w-full p-4 overflow-x-auto">
+          <code>{stack}</code>
+        </pre>
+      )}
+    </main>
+  )
 }

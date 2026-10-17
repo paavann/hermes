@@ -1,6 +1,15 @@
 import { createRoutesStub } from 'react-router';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { vi } from 'vitest';
 import Landing from '../../app/routes/landing';
+
+vi.mock('@clerk/react-router', () => ({
+  Show: ({ when, children }: { when: string; children: React.ReactNode }) =>
+    when === 'signed-out' ? <>{children}</> : null,
+  UserButton: () => <div data-testid="user-button">USER_BUTTON</div>,
+  SignInButton: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  SignUpButton: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
 
 describe('Landing Page Route', () => {
   const ReactRouterStub = createRoutesStub([
