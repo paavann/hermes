@@ -325,64 +325,27 @@ function computePatternLayout(width: number, randomize = true): PatternLayout {
     verticalPad + rowHeights[0] + rowHeights[1],
   ];
 
-  // For each column, randomly choose either 1 or 2 rectangles (never 0, never 3).
-  // Also guarantee geometric connectivity with the preceding column so rectangles touch.
+  // STRICT CORNER-ONLY RULE:
+  // 1. No consecutive boxes in any column: a column can only contain [0], [1], [2], or [0, 2] (never [0, 1] or [1, 2]).
+  // 2. No consecutive boxes in any row: adjacent columns can never share the same row index,
+  //    and every box must connect via corner (|r - p| === 1) to the adjacent column.
+  //    On a 3-row grid, this means columns strictly alternate between [1] and {[0], [2], [0, 2]}.
+  const outerChoices: readonly (readonly number[])[] = [[0], [2], [0, 2]];
   const tiles: PatternTile[] = [];
-  let prevRows: number[] = [];
 
-  // Deterministic rows pattern for initial SSR render
-  const defaultColRows = [[0], [0, 1], [1], [1, 2]];
+  // Deterministic corner-only pattern for initial SSR render
+  const defaultColRows: readonly (readonly number[])[] = [[0, 2], [1], [0], [1]];
+
+  let useMiddleRow = randomize ? Math.random() < 0.5 : false;
 
   for (let c = 0; c < colCount; c += 1) {
-    if (!randomize) {
-      const chosenRows = defaultColRows[c % defaultColRows.length];
-      for (const r of chosenRows) {
-        tiles.push({
-          id: `tile-c${c}-r${r}-${colLefts[c]}-${rowTops[r]}`,
-          left: colLefts[c],
-          top: rowTops[r],
-          width: colWidths[c],
-          height: rowHeights[r],
-        });
-      }
-      continue;
-    }
+    const chosenRows = !randomize
+      ? defaultColRows[c % defaultColRows.length]
+      : useMiddleRow
+        ? [1]
+        : outerChoices[Math.floor(Math.random() * outerChoices.length)];
 
-    // Strictly either 1 or 2 rectangles in each column
-    const countInCol = Math.random() < 0.5 ? 1 : 2;
-    let chosenRows: number[] = [];
-
-    if (c === 0) {
-      if (countInCol === 1) {
-        chosenRows = [Math.floor(Math.random() * rowCount)];
-      } else {
-        const pairs = [
-          [0, 1],
-          [1, 2],
-          [0, 2],
-        ];
-        chosenRows = pairs[Math.floor(Math.random() * pairs.length)];
-      }
-    } else {
-      if (countInCol === 1) {
-        // Filter choices that maintain edge/corner connectivity with prevRows (|r - p| <= 1)
-        const candidates = [0, 1, 2].filter((cand) =>
-          prevRows.some((p) => Math.abs(cand - p) <= 1)
-        );
-        chosenRows = [candidates[Math.floor(Math.random() * candidates.length)]];
-      } else {
-        const pairs = [
-          [0, 1],
-          [1, 2],
-          [0, 2],
-        ].filter((pair) =>
-          pair.some((r) => prevRows.some((p) => Math.abs(r - p) <= 1))
-        );
-        chosenRows = pairs[Math.floor(Math.random() * pairs.length)];
-      }
-    }
-
-    prevRows = chosenRows;
+    useMiddleRow = !useMiddleRow;
 
     for (const r of chosenRows) {
       tiles.push({
@@ -1203,22 +1166,38 @@ export const AccessSection = ContactSection;
 export function Footer(): React.JSX.Element {
   return (
     <footer className="relative w-full border-t border-border-subtle bg-obsidian text-slate-muted font-mono z-40 overflow-hidden">
-      {/* Background Modular Grid Pattern Tiles (Extending behind entire footer & wordmark) */}
+      {/* Background Modular Grid Pattern Tiles (Matching image_0abc5e.png colour & layout, flowing into upper footer) */}
       <div
-        className="absolute inset-0 z-0 pointer-events-none select-none opacity-40 overflow-hidden"
+        className="absolute inset-0 z-0 pointer-events-none select-none overflow-hidden"
         aria-hidden="true"
       >
-        <svg viewBox="0 0 1728 900" fill="none" className="w-full h-full object-cover">
-          <g opacity="0.05">
-            <rect x="854" y="550" width="285" height="150" fill="white" />
-            <rect x="1450" y="480" width="220" height="320" fill="white" />
-            <rect x="20" y="650" width="265" height="200" fill="white" />
-            <rect x="1180" y="220" width="285" height="280" fill="white" />
-            <rect x="560" y="320" width="180" height="160" fill="white" />
-            <rect x="520" y="680" width="240" height="200" fill="white" />
-            <rect x="854" y="700" width="233" height="180" fill="white" />
-            <rect x="320" y="460" width="160" height="220" fill="white" />
-            <rect x="1140" y="620" width="220" height="260" fill="white" />
+        <svg
+          viewBox="0 0 1728 900"
+          preserveAspectRatio="none"
+          fill="none"
+          className="w-full h-full"
+        >
+          <g fill="#ffffff" opacity="0.035">
+            {/* Bottom-left box under the first letter */}
+            <rect x="18" y="730" width="202" height="170" />
+            {/* Lower-middle box stepping up to the right of the 220px line */}
+            <rect x="220" y="560" width="195" height="170" />
+            {/* Upper-middle tall box rising above the monumental wordmark */}
+            <rect x="415" y="340" width="145" height="220" />
+            {/* Top-left-center box flowing up into the Platform / Domains section */}
+            <rect x="560" y="200" width="145" height="140" />
+            {/* Wide middle box behind the center letters */}
+            <rect x="560" y="560" width="285" height="170" />
+            {/* Bottom-center box */}
+            <rect x="845" y="730" width="215" height="170" />
+            {/* Lower-middle right-of-center box */}
+            <rect x="1060" y="560" width="190" height="170" />
+            {/* Large upper-right box flowing up into the Intelligence / Protocol section */}
+            <rect x="1250" y="250" width="290" height="310" />
+            {/* Right-side tall box behind the final letter */}
+            <rect x="1540" y="560" width="148" height="340" />
+            {/* Top-right edge accent box */}
+            <rect x="1688" y="160" width="40" height="90" />
           </g>
         </svg>
       </div>
@@ -1380,12 +1359,12 @@ export function Footer(): React.JSX.Element {
       </div>
 
       {/* Monumental Watermark: H with straight vertical stems + alternating up-down connected squares crossbar + 'ermes' */}
-      <div className="relative z-10 bg-transparent w-full border-t border-white/[0.04] pt-10 md:pt-16 pb-8 md:pb-16 flex items-center justify-center overflow-hidden select-none pointer-events-none">
-        <div className="w-[82vw] max-w-[85vw] flex items-center justify-center text-slate-muted/20">
+      <div className="relative z-10 bg-transparent w-full border-t border-white/[0.04] pt-14 md:pt-24 pb-2 md:pb-3 px-3 md:px-0 ml-10 flex items-end justify-center overflow-hidden select-none pointer-events-none">
+        <div className="w-full flex items-end justify-center text-[#8F8C7C]">
           <svg
-            viewBox="0 0 1455 400"
+            viewBox="45 96 1370 284"
             fill="currentColor"
-            className="w-full h-auto overflow-visible"
+            className="w-full h-auto block"
             aria-label="Hermes"
             role="img"
           >
