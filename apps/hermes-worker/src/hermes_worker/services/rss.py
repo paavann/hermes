@@ -2,27 +2,11 @@ import logging
 from datetime import datetime
 import feedparser
 import httpx
-from pydantic import BaseModel, computed_field
 from hermes_worker.core.config import settings
+from hermes_worker.services.fetchers.base import ParsedArticle
 
 
 logger = logging.getLogger(__name__)
-MAX_WORDS: int = 500
-
-
-class ParsedArticle(BaseModel):
-    title: str
-    url: str
-    description: str
-    content: str | None = None
-    published_at: datetime | None = None
-
-    @computed_field
-    @property
-    def text_for_ai(self) -> str:
-        if self.content:
-            return _truncate_to_words(self.content, MAX_WORDS)
-        return self.description
 
 
 def _parse_date(entry: dict) -> datetime | None:
@@ -30,16 +14,9 @@ def _parse_date(entry: dict) -> datetime | None:
     if parsed_time:
         try:
             return datetime(*parsed_time[:6])
-        except ValueError, TypeError:
+        except (ValueError, TypeError):
             return None
     return None
-
-
-def _truncate_to_words(text: str, max_words: int) -> str:
-    words = text.split()
-    if len(words) <= max_words:
-        return text
-    return " ".join(words[:max_words]) + "..."
 
 
 def _extract_content(entry: dict) -> str | None:

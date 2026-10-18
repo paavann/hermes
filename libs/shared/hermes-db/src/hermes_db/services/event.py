@@ -1,4 +1,5 @@
 import logging
+import math
 import uuid
 from collections.abc import Sequence
 from datetime import UTC, datetime, timedelta
@@ -11,19 +12,157 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from hermes_db.core.config import settings
-from hermes_db.enums import CredibilityTier, EventScope, EventStatus
+from hermes_db.enums import (
+    CredibilityTier,
+    EventScope,
+    EventStatus,
+    GeopoliticalBloc,
+    ImpactLevel,
+)
+from hermes_db.models.article import Article
 from hermes_db.models.event import Event
+from hermes_db.models.source import Source
 from hermes_db.services.article import ArticleService
 
 
 logger = logging.getLogger(__name__)
 
-CREDIBILITY_WEIGHTS = {
+CREDIBILITY_WEIGHTS: dict[CredibilityTier, float] = {
     CredibilityTier.TIER_1: 3.0,
     CredibilityTier.TIER_2: 2.0,
     CredibilityTier.TIER_3: 1.0,
     CredibilityTier.TIER_4: 0.5,
 }
+
+IMPACT_MULTIPLIERS: dict[ImpactLevel, float] = {
+    ImpactLevel.CRITICAL: 2.0,
+    ImpactLevel.MAJOR: 1.5,
+    ImpactLevel.MODERATE: 1.0,
+    ImpactLevel.MINOR: 0.8,
+}
+
+HALF_LIFE_HOURS: float = 18.0
+HOURLY_DECAY_FACTOR: float = 2.0 ** (-1.0 / HALF_LIFE_HOURS)
+
+SOURCE_BLOC_MAP: dict[str, GeopoliticalBloc] = {
+    # Wire agencies
+    "reuters-wire": GeopoliticalBloc.GLOBAL_WIRE,
+    "reuters": GeopoliticalBloc.GLOBAL_WIRE,
+    "ap-wire": GeopoliticalBloc.GLOBAL_WIRE,
+    "associated-press": GeopoliticalBloc.GLOBAL_WIRE,
+    "afp-wire": GeopoliticalBloc.GLOBAL_WIRE,
+    "agence-france-presse": GeopoliticalBloc.GLOBAL_WIRE,
+    # Europe
+    "bbc-world": GeopoliticalBloc.EUROPE,
+    "bbc": GeopoliticalBloc.EUROPE,
+    "guardian-world": GeopoliticalBloc.EUROPE,
+    "the-guardian": GeopoliticalBloc.EUROPE,
+    "dw-world": GeopoliticalBloc.EUROPE,
+    "deutsche-welle": GeopoliticalBloc.EUROPE,
+    "france24-world": GeopoliticalBloc.EUROPE,
+    "france-24": GeopoliticalBloc.EUROPE,
+    "euronews-world": GeopoliticalBloc.EUROPE,
+    "euronews": GeopoliticalBloc.EUROPE,
+    "politico-europe": GeopoliticalBloc.EUROPE,
+    # North America
+    "pbs-newshour": GeopoliticalBloc.NORTH_AMERICA,
+    "nyt-world": GeopoliticalBloc.NORTH_AMERICA,
+    "new-york-times": GeopoliticalBloc.NORTH_AMERICA,
+    "npr-world": GeopoliticalBloc.NORTH_AMERICA,
+    "npr": GeopoliticalBloc.NORTH_AMERICA,
+    "cbc-world": GeopoliticalBloc.NORTH_AMERICA,
+    "cbc": GeopoliticalBloc.NORTH_AMERICA,
+    "wsj-world": GeopoliticalBloc.NORTH_AMERICA,
+    "wall-street-journal": GeopoliticalBloc.NORTH_AMERICA,
+    "wapo-world": GeopoliticalBloc.NORTH_AMERICA,
+    "washington-post": GeopoliticalBloc.NORTH_AMERICA,
+    "cnn-world": GeopoliticalBloc.NORTH_AMERICA,
+    "cnn": GeopoliticalBloc.NORTH_AMERICA,
+    "abc-international": GeopoliticalBloc.NORTH_AMERICA,
+    "abc-news": GeopoliticalBloc.NORTH_AMERICA,
+    # Asia-Pacific
+    "nhk-world": GeopoliticalBloc.ASIA_PACIFIC,
+    "nhk": GeopoliticalBloc.ASIA_PACIFIC,
+    # Middle East & Africa
+    "aljazeera": GeopoliticalBloc.MIDDLE_EAST_AFRICA,
+    "al-jazeera": GeopoliticalBloc.MIDDLE_EAST_AFRICA,
+}
+
+
+def calculate_shannon_diversity(
+    blocs: Sequence[GeopoliticalBloc | str],
+) -> float:
+    """Calculate Shannon diversity entropy multiplier over reporting blocs.
+
+    Args:
+        blocs: Sequence of geopolitical bloc identifiers for reporting outlets.
+
+    Returns:
+        float: Diversity multiplier D = 1.0 + min(H, 1.0) * 0.5, where H is Shannon entropy.
+    """
+    if not blocs or len(blocs) <= 1:
+        return 1.0
+
+    counts: dict[str, int] = {}
+    for bloc in blocs:
+        key = bloc.value if isinstance(bloc, GeopoliticalBloc) else str(bloc)
+        counts[key] = counts.get(key, 0) + 1
+
+    total = len(blocs)
+    h = 0.0
+    for count in counts.values():
+        p = count / total
+        if p > 0:
+            h -= p * math.log(p)
+
+    multiplier = 1.0 + min(h, 1.0) * 0.5
+    return round(multiplier, 4)
+
+
+def calculate_velocity(
+    article_count: int,
+    first_reported_at: datetime,
+    last_reported_at: datetime,
+) -> float:
+    """Calculate coverage velocity in articles per hour.
+
+    Args:
+        article_count: Total articles for the event.
+        first_reported_at: Timestamp of the first article.
+        last_reported_at: Timestamp of the latest article.
+
+    Returns:
+        float: Coverage velocity in articles per hour (baseline 1.0).
+    """
+    if article_count <= 1:
+        return 1.0
+
+    t1 = (
+        first_reported_at.replace(tzinfo=None)
+        if first_reported_at.tzinfo
+        else first_reported_at
+    )
+    t2 = (
+        last_reported_at.replace(tzinfo=None)
+        if last_reported_at.tzinfo
+        else last_reported_at
+    )
+    delta_hours = max((t2 - t1).total_seconds() / 3600.0, 0.0)
+    return round(article_count / max(delta_hours, 1.0), 2)
+
+
+def calculate_velocity_multiplier(velocity: float) -> float:
+    """Calculate positive velocity boost multiplier for trending score.
+
+    Args:
+        velocity: Coverage velocity in articles per hour.
+
+    Returns:
+        float: Multiplier >= 1.0. Baseline is 1.0 when velocity <= 1.0.
+    """
+    if velocity <= 1.0:
+        return 1.0
+    return round(1.0 + min((velocity - 1.0) * 0.2, 1.0), 4)
 
 
 class EventExtractionData(Protocol):
@@ -41,6 +180,9 @@ class EventExtractionData(Protocol):
 
     @property
     def location_name(self) -> str | None: ...
+
+    @property
+    def impact_level(self) -> str | None: ...
 
 
 class GeocodingData(Protocol):
@@ -74,17 +216,27 @@ class EventService:
             )
 
         now = datetime.now(UTC).replace(tzinfo=None)
-        initial_score = CREDIBILITY_WEIGHTS.get(source_credibility, 1.0)
+        raw_impact = getattr(extraction, "impact_level", ImpactLevel.MODERATE)
+        impact = (
+            ImpactLevel(raw_impact)
+            if isinstance(raw_impact, str)
+            else (raw_impact or ImpactLevel.MODERATE)
+        )
+        impact_mult = IMPACT_MULTIPLIERS.get(impact, 1.0)
+        base_score = CREDIBILITY_WEIGHTS.get(source_credibility, 1.0)
+        initial_score = base_score * impact_mult
 
         event = Event(
             ai_headline=extraction.headline,
             ai_summary=extraction.summary,
             category=extraction.category,
             category_color=extraction.category_color,
+            impact_level=impact,
             location=location_wkt,
             location_name=extraction.location_name,
             embedding=embedding,
             trending_score=initial_score,
+            velocity=1.0,
             article_count=1,
             first_reported_at=now,
             last_updated_at=now,
@@ -141,9 +293,54 @@ class EventService:
             return None
 
         event.article_count += 1
-        added_score = CREDIBILITY_WEIGHTS.get(source_credibility, 1.0)
+        now = datetime.now(UTC).replace(tzinfo=None)
+        event.last_updated_at = now
+
+        # query sources for syndication count and geopolitical bloc diversity.
+        stmt = (
+            select(Source.id, Source.slug)
+            .join(Article, Article.source_id == Source.id)
+            .where(Article.event_id == event.id)
+        )
+        result = await self._session.execute(stmt)
+        source_rows = result.all()
+
+        n = sum(1 for sid, _ in source_rows if sid == source_id)
+        if n <= 0:
+            n = 1
+        syndication_factor = 1.0 / math.sqrt(n)
+
+        blocs = [
+            SOURCE_BLOC_MAP.get(slug, GeopoliticalBloc.GLOBAL_WIRE)
+            for _, slug in source_rows
+            if slug
+        ]
+        diversity = calculate_shannon_diversity(blocs)
+
+        first_reported = getattr(event, "first_reported_at", None)
+        if isinstance(first_reported, datetime):
+            event.velocity = calculate_velocity(
+                event.article_count, first_reported, now
+            )
+        else:
+            event.velocity = 1.0
+
+        vel_mult = calculate_velocity_multiplier(event.velocity)
+
+        raw_impact = getattr(event, "impact_level", ImpactLevel.MODERATE)
+        impact = (
+            ImpactLevel(raw_impact)
+            if isinstance(raw_impact, str)
+            else (raw_impact or ImpactLevel.MODERATE)
+        )
+        impact_mult = IMPACT_MULTIPLIERS.get(impact, 1.0)
+
+        base_credibility = CREDIBILITY_WEIGHTS.get(source_credibility, 1.0)
+        added_score = (
+            base_credibility * syndication_factor * impact_mult * diversity * vel_mult
+        )
         event.trending_score += added_score
-        event.last_updated_at = datetime.now(UTC).replace(tzinfo=None)
+
         if event.status == EventStatus.STALE:
             event.status = EventStatus.ACTIVE
             logger.info("reactivated stale event: '%s'.", event.ai_headline)
@@ -280,11 +477,11 @@ class EventService:
         stale_cutoff = now - timedelta(hours=settings.EVENT_STALE_HRS)
         archive_cutoff = now - timedelta(hours=settings.EVENT_ARCHIVE_HRS)
 
-        # decay event scores by 10%.
+        # decay event scores using continuous exponential half-life (18h half-life).
         decay_stmt = (
             update(Event)
             .where(Event.status == EventStatus.ACTIVE)
-            .values(trending_score=Event.trending_score * 0.9)
+            .values(trending_score=Event.trending_score * HOURLY_DECAY_FACTOR)
         )
         await self._session.execute(decay_stmt)
         staled_count = await self._transition_event_status(

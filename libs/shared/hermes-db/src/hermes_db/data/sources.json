@@ -1,9 +1,50 @@
 [
   {
+    "slug": "reuters-wire",
+    "name": "Reuters",
+    "url": "https://www.reuters.com",
+    "feed_url": null,
+    "source_type": "GDELT",
+    "credibility": "TIER_1"
+  },
+  {
+    "slug": "ap-wire",
+    "name": "Associated Press",
+    "url": "https://apnews.com",
+    "feed_url": null,
+    "source_type": "GDELT",
+    "credibility": "TIER_1"
+  },
+  {
+    "slug": "afp-wire",
+    "name": "Agence France-Presse",
+    "url": "https://www.afp.com",
+    "feed_url": null,
+    "source_type": "GDELT",
+    "credibility": "TIER_1"
+  },
+  {
     "slug": "bbc-world",
     "name": "BBC World News",
     "url": "https://www.bbc.com/news/world",
     "feed_url": "https://feeds.bbci.co.uk/news/world/rss.xml",
+    "source_type": "RSS",
+    "credibility": "TIER_1"
+  },
+  {
+    "slug": "pbs-newshour",
+    "name": "PBS NewsHour",
+    "url": "https://www.pbs.org/newshour",
+    "feed_url": "https://www.pbs.org/newshour/feeds/rss/world",
+    "source_type": "RSS",
+    "credibility": "TIER_1"
+  },
+  {
+    "slug": "nhk-world",
+    "name": "NHK World-Japan",
+    "url": "https://www3.nhk.or.jp/nhkworld",
+    "feed_url": "https://www3.nhk.or.jp/nhkworld/en/news/stories/rss.xml",
+    "source_type": "RSS",
     "credibility": "TIER_1"
   },
   {
@@ -11,6 +52,7 @@
     "name": "The Guardian World",
     "url": "https://www.theguardian.com/world",
     "feed_url": "https://www.theguardian.com/world/rss",
+    "source_type": "RSS",
     "credibility": "TIER_1"
   },
   {
@@ -18,6 +60,7 @@
     "name": "The New York Times World",
     "url": "https://www.nytimes.com/section/world",
     "feed_url": "https://rss.nytimes.com/services/xml/rss/nyt/World.xml",
+    "source_type": "RSS",
     "credibility": "TIER_1"
   },
   {
@@ -25,6 +68,7 @@
     "name": "Deutsche Welle World",
     "url": "https://www.dw.com",
     "feed_url": "https://rss.dw.com/xml/rss-en-world",
+    "source_type": "RSS",
     "credibility": "TIER_1"
   },
   {
@@ -32,6 +76,7 @@
     "name": "NPR World News",
     "url": "https://www.npr.org/sections/world",
     "feed_url": "https://feeds.npr.org/1004/rss.xml",
+    "source_type": "RSS",
     "credibility": "TIER_1"
   },
   {
@@ -39,6 +84,7 @@
     "name": "CBC News World",
     "url": "https://www.cbc.ca/news/world",
     "feed_url": "https://www.cbc.ca/webfeed/rss/rss-world",
+    "source_type": "RSS",
     "credibility": "TIER_1"
   },
   {
@@ -46,6 +92,7 @@
     "name": "The Wall Street Journal World",
     "url": "https://www.wsj.com/world",
     "feed_url": "https://feeds.a.dj.com/rss/RSSWorldNews.xml",
+    "source_type": "RSS",
     "credibility": "TIER_1"
   },
   {
@@ -53,6 +100,7 @@
     "name": "The Washington Post World",
     "url": "https://www.washingtonpost.com/world",
     "feed_url": "https://feeds.washingtonpost.com/rss/world",
+    "source_type": "RSS",
     "credibility": "TIER_1"
   },
   {
@@ -60,6 +108,7 @@
     "name": "Al Jazeera English",
     "url": "https://www.aljazeera.com",
     "feed_url": "https://www.aljazeera.com/xml/rss/all.xml",
+    "source_type": "RSS",
     "credibility": "TIER_2"
   },
   {
@@ -67,6 +116,7 @@
     "name": "France 24 World",
     "url": "https://www.france24.com/en",
     "feed_url": "https://www.france24.com/en/world/rss",
+    "source_type": "RSS",
     "credibility": "TIER_2"
   },
   {
@@ -74,6 +124,7 @@
     "name": "CNN World",
     "url": "https://www.cnn.com/world",
     "feed_url": "http://rss.cnn.com/rss/edition_world.rss",
+    "source_type": "RSS",
     "credibility": "TIER_2"
   },
   {
@@ -81,6 +132,7 @@
     "name": "ABC News International",
     "url": "https://abcnews.go.com/International",
     "feed_url": "https://abcnews.go.com/abcnews/internationalheadlines",
+    "source_type": "RSS",
     "credibility": "TIER_2"
   },
   {
@@ -88,6 +140,7 @@
     "name": "Euronews World",
     "url": "https://www.euronews.com",
     "feed_url": "https://www.euronews.com/rss?level=program&name=world",
+    "source_type": "RSS",
     "credibility": "TIER_2"
   },
   {
@@ -95,6 +148,7 @@
     "name": "POLITICO Europe",
     "url": "https://www.politico.eu",
     "feed_url": "https://www.politico.eu/feed/",
+    "source_type": "RSS",
     "credibility": "TIER_2"
   }
 ]

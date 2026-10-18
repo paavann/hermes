@@ -2,21 +2,23 @@
 
 import asyncio
 import uuid
+from collections.abc import Generator
 from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from hermes_ai.models.events import ExtractedEvent
-from hermes_db.enums import CredibilityTier
+from hermes_db.enums import CredibilityTier, SourceType
 from hermes_db.services import DueSource
-from hermes_worker.services.rss import ParsedArticle
+from hermes_worker.services.fetchers.base import BaseArticleFetcher, ParsedArticle
 from hermes_worker.services.sync import SyncService
 
 
 @pytest.fixture
-def dummy_due_source():
+def dummy_due_source() -> DueSource:
     return DueSource(
         id=uuid.uuid4(),
         name="Test News Feed",
         feed_url="https://example.com/rss",
+        source_type=SourceType.RSS,
         credibility=CredibilityTier.TIER_2,
         fetch_interval_minutes=15,
         last_fetched_at=None,
@@ -25,7 +27,7 @@ def dummy_due_source():
 
 class TestSyncService:
     @pytest.fixture(autouse=True)
-    def mock_ai_service_class(self):
+    def mock_ai_service_class(self) -> Generator[MagicMock]:
         with patch("hermes_worker.services.sync.AiService") as mock_cls:
             mock_inst = MagicMock()
             mock_inst.gen_embeddings = AsyncMock(return_value=[[0.1] * 2048])
@@ -33,8 +35,9 @@ class TestSyncService:
             mock_cls.return_value = mock_inst
             yield mock_inst
 
-    def test_sync_all_sources_no_due_sources(self):
-        async def run():
+
+    def test_sync_all_sources_no_due_sources(self) -> None:
+        async def run() -> None:
             mock_session = AsyncMock()
             mock_session_ctx = MagicMock()
             mock_session_ctx.__aenter__.return_value = mock_session
@@ -58,23 +61,26 @@ class TestSyncService:
 
         asyncio.run(run())
 
-    def test_sync_source_empty_feed(self, dummy_due_source):
-        async def run():
-            with patch(
-                "hermes_worker.services.sync.fetch_feed", new_callable=AsyncMock
-            ) as mock_fetch:
-                mock_fetch.return_value = []
 
-                svc = SyncService()
-                stats = await svc._sync_source(dummy_due_source)
+    def test_sync_source_empty_feed(self, dummy_due_source: DueSource) -> None:
+        async def run() -> None:
+            mock_fetcher = AsyncMock(spec=BaseArticleFetcher)
+            mock_fetcher.fetch_articles = AsyncMock(return_value=[])
 
-                assert stats["articles_fetched"] == 0
-                assert stats["articles_processed"] == 0
+            svc = SyncService(rss_fetcher=mock_fetcher)
+            stats = await svc._sync_source(dummy_due_source)
+
+            assert stats["articles_fetched"] == 0
+            assert stats["articles_processed"] == 0
+            mock_fetcher.fetch_articles.assert_awaited_once_with(dummy_due_source)
 
         asyncio.run(run())
 
-    def test_sync_source_skips_duplicates(self, dummy_due_source):
-        async def run():
+
+    def test_sync_source_skips_duplicates(
+        self, dummy_due_source: DueSource
+    ) -> None:
+        async def run() -> None:
             articles = [
                 ParsedArticle(
                     title="A1", url="https://example.com/1", description="D1"
@@ -89,21 +95,20 @@ class TestSyncService:
             mock_session_ctx.__aenter__.return_value = mock_session
             mock_session_ctx.__aexit__.return_value = None
 
+            mock_fetcher = AsyncMock(spec=BaseArticleFetcher)
+            mock_fetcher.fetch_articles = AsyncMock(return_value=articles)
+
             with (
-                patch(
-                    "hermes_worker.services.sync.fetch_feed", new_callable=AsyncMock
-                ) as mock_fetch,
                 patch(
                     "hermes_worker.services.sync.AsyncSessionLocal",
                     return_value=mock_session_ctx,
                 ),
                 patch("hermes_worker.services.sync.EventService") as mock_event_cls,
             ):
-                mock_fetch.return_value = articles
                 mock_evt = mock_event_cls.return_value
                 mock_evt.article_url_exists = AsyncMock(return_value=True)
 
-                svc = SyncService()
+                svc = SyncService(rss_fetcher=mock_fetcher)
                 stats = await svc._sync_source(dummy_due_source)
 
                 assert stats["articles_fetched"] == 2
@@ -112,12 +117,15 @@ class TestSyncService:
 
         asyncio.run(run())
 
+
     def test_sync_source_creates_event_when_no_match(
-        self, dummy_due_source, mock_ai_service_class
-    ):
-        async def run():
+        self, dummy_due_source: DueSource, mock_ai_service_class: MagicMock
+    ) -> None:
+        async def run() -> None:
             article = ParsedArticle(
-                title="New Discovery", url="https://example.com/new", description="Desc"
+                title="New Discovery",
+                url="https://example.com/new",
+                description="Desc",
             )
             extraction = ExtractedEvent(
                 article_index=0,
@@ -133,17 +141,16 @@ class TestSyncService:
             mock_session_ctx.__aenter__.return_value = mock_session
             mock_session_ctx.__aexit__.return_value = None
 
+            mock_fetcher = AsyncMock(spec=BaseArticleFetcher)
+            mock_fetcher.fetch_articles = AsyncMock(return_value=[article])
+
             with (
-                patch(
-                    "hermes_worker.services.sync.fetch_feed", new_callable=AsyncMock
-                ) as mock_fetch,
                 patch(
                     "hermes_worker.services.sync.AsyncSessionLocal",
                     return_value=mock_session_ctx,
                 ),
                 patch("hermes_worker.services.sync.EventService") as mock_event_cls,
             ):
-                mock_fetch.return_value = [article]
                 mock_evt = mock_event_cls.return_value
                 mock_evt.article_url_exists = AsyncMock(return_value=False)
                 mock_evt.get_active_events_by_embeddings = AsyncMock(return_value=[])
@@ -156,7 +163,7 @@ class TestSyncService:
                     return_value=[extraction]
                 )
 
-                svc = SyncService()
+                svc = SyncService(rss_fetcher=mock_fetcher)
                 stats = await svc._sync_source(dummy_due_source)
 
                 assert stats["articles_fetched"] == 1
@@ -166,12 +173,15 @@ class TestSyncService:
 
         asyncio.run(run())
 
+
     def test_sync_source_links_to_matched_event(
-        self, dummy_due_source, mock_ai_service_class
-    ):
-        async def run():
+        self, dummy_due_source: DueSource, mock_ai_service_class: MagicMock
+    ) -> None:
+        async def run() -> None:
             article = ParsedArticle(
-                title="Second Report", url="https://example.com/sec", description="Desc"
+                title="Second Report",
+                url="https://example.com/sec",
+                description="Desc",
             )
             existing_event_id = uuid.uuid4()
             extraction = ExtractedEvent(
@@ -188,17 +198,16 @@ class TestSyncService:
             mock_session_ctx.__aenter__.return_value = mock_session
             mock_session_ctx.__aexit__.return_value = None
 
+            mock_fetcher = AsyncMock(spec=BaseArticleFetcher)
+            mock_fetcher.fetch_articles = AsyncMock(return_value=[article])
+
             with (
-                patch(
-                    "hermes_worker.services.sync.fetch_feed", new_callable=AsyncMock
-                ) as mock_fetch,
                 patch(
                     "hermes_worker.services.sync.AsyncSessionLocal",
                     return_value=mock_session_ctx,
                 ),
                 patch("hermes_worker.services.sync.EventService") as mock_event_cls,
             ):
-                mock_fetch.return_value = [article]
                 mock_evt = mock_event_cls.return_value
                 mock_evt.article_url_exists = AsyncMock(return_value=False)
                 mock_evt.get_active_events_by_embeddings = AsyncMock(return_value=[])
@@ -211,12 +220,54 @@ class TestSyncService:
                     return_value=[extraction]
                 )
 
-                svc = SyncService()
+                svc = SyncService(rss_fetcher=mock_fetcher)
                 stats = await svc._sync_source(dummy_due_source)
 
                 assert stats["articles_fetched"] == 1
                 assert stats["events_matched"] == 1
                 assert stats["articles_processed"] == 1
                 mock_evt.add_article_to_event.assert_awaited_once()
+
+        asyncio.run(run())
+
+
+    def test_sync_source_dispatches_to_gdelt(self) -> None:
+        async def run() -> None:
+            gdelt_source = DueSource(
+                id=uuid.uuid4(),
+                name="Reuters",
+                feed_url=None,
+                source_type=SourceType.GDELT,
+                credibility=CredibilityTier.TIER_1,
+                url="https://www.reuters.com",
+            )
+            mock_gdelt = AsyncMock(spec=BaseArticleFetcher)
+            mock_gdelt.fetch_articles = AsyncMock(return_value=[])
+
+            svc = SyncService(gdelt_fetcher=mock_gdelt)
+            await svc._sync_source(gdelt_source)
+
+            mock_gdelt.fetch_articles.assert_awaited_once_with(gdelt_source)
+
+        asyncio.run(run())
+
+
+    def test_sync_source_dispatches_to_sitemap(self) -> None:
+        async def run() -> None:
+            scrape_source = DueSource(
+                id=uuid.uuid4(),
+                name="Sitemap News",
+                feed_url="https://example.com/sitemap.xml",
+                source_type=SourceType.SCRAPE,
+                credibility=CredibilityTier.TIER_2,
+                url="https://example.com",
+            )
+            mock_sitemap = AsyncMock(spec=BaseArticleFetcher)
+            mock_sitemap.fetch_articles = AsyncMock(return_value=[])
+
+            svc = SyncService(sitemap_fetcher=mock_sitemap)
+            await svc._sync_source(scrape_source)
+
+            mock_sitemap.fetch_articles.assert_awaited_once_with(scrape_source)
 
         asyncio.run(run())

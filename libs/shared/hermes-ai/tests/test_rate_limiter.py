@@ -5,7 +5,10 @@ from unittest.mock import AsyncMock, patch
 from hermes_ai.client import HermesAiClient
 from hermes_ai.core.config import AiConfig
 from hermes_ai.models.events import ArticleInput
-from hermes_ai.utils.rate_limiter import TbRateLimiter
+from hermes_ai.utils.rate_limiter import (
+    CircuitBreakerOpenError,
+    TbRateLimiter,
+)
 
 
 def test_rate_limiter_property() -> None:
@@ -103,5 +106,32 @@ def test_client_rate_limiter_wiring() -> None:
             embeddings = await client.gen_embeddings(["sample"])
             assert mock_embed_acquire.called
             assert embeddings == [[0.1, 0.2]]
+
+    asyncio.run(_run())
+
+
+def test_rate_limiter_max_burst() -> None:
+    limiter = TbRateLimiter(req_per_min=12, max_burst=1.0)
+    assert limiter.max_burst == 1.0
+    assert limiter._tokens == 1.0
+
+
+def test_rate_limiter_circuit_breaker() -> None:
+    async def _run() -> None:
+        limiter = TbRateLimiter(req_per_min=60, circuit_cooldown_seconds=10.0)
+        assert not limiter.is_circuit_open()
+
+        limiter.trip_circuit_breaker()
+        assert limiter.is_circuit_open()
+
+        try:
+            await limiter.acquire()
+            raise AssertionError("acquire() did not raise CircuitBreakerOpenError")
+        except CircuitBreakerOpenError:
+            pass
+
+        limiter.reset_circuit_breaker()
+        assert not limiter.is_circuit_open()
+        await limiter.acquire()
 
     asyncio.run(_run())

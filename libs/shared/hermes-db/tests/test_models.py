@@ -20,6 +20,7 @@ from hermes_db.enums import (
     EventScope,
     EventStatus,
     EventTlStatus,
+    ImpactLevel,
     SourceType,
 )
 from hermes_db.models.article import Article
@@ -96,7 +97,9 @@ class TestEventModel:
             "category_color",
             "status",
             "scope",
+            "impact_level",
             "trending_score",
+            "velocity",
             "article_count",
         }
         assert required.issubset(cols)
@@ -138,6 +141,18 @@ class TestEventModel:
         col = inspect(Event).columns["trending_score"]
         assert col.default is not None
         assert col.default.arg == 0.0
+
+    def test_velocity_default(self):
+        """velocity column default must be 1.0."""
+        col = inspect(Event).columns["velocity"]
+        assert col.default is not None
+        assert col.default.arg == 1.0
+
+    def test_impact_level_default(self):
+        """impact_level column default must be ImpactLevel.MODERATE."""
+        col = inspect(Event).columns["impact_level"]
+        assert col.default is not None
+        assert col.default.arg == ImpactLevel.MODERATE
 
     def test_article_count_default(self):
         """article_count column default must be 0."""

@@ -1,3 +1,5 @@
+from typing import Literal
+
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from hermes_ai.core.constants import PREDEFINED_CATEGORIES
@@ -62,6 +64,17 @@ class ExtractedEvent(BaseModel):
         """,
     )
 
+    impact_level: Literal["CRITICAL", "MAJOR", "MODERATE", "MINOR"] = Field(
+        default="MODERATE",
+        description="""
+            Real-world impact severity triage.
+            - CRITICAL: Armed conflict, catastrophic natural disaster, sovereign collapse.
+            - MAJOR: Significant elections, macro policy shifts, major economic shocks.
+            - MODERATE: Standard regional governance, bilateral trade agreements, corporate mergers.
+            - MINOR: Local human-interest stories, entertainment, lifestyle, celebrity news.
+        """,
+    )
+
     matched_event_id: str | None = Field(
         default=None,
         description="""
@@ -88,6 +101,16 @@ class ExtractedEvent(BaseModel):
     @classmethod
     def coerce_strings(cls, v: object) -> str:
         return coerce_to_str(v)
+
+
+    @field_validator("impact_level", mode="before")
+    @classmethod
+    def coerce_impact_level(cls, v: object) -> str:
+        if isinstance(v, str):
+            val = v.strip().upper()
+            if val in ("CRITICAL", "MAJOR", "MODERATE", "MINOR"):
+                return val
+        return "MODERATE"
 
 
 class ExtractionResponse(BaseModel):

@@ -12,6 +12,11 @@ Rules:
 5. For categories, prefer the predefined list. Only create a custom category if none fit.
 6. For event matching, only match if the articles are about the EXACT same incident.
 7. Output ONLY the data instance object with the 'events' array. Never output schema definitions, '$defs', or property descriptors.
+8. For 'impact_level', triage real-world severity into one of: 'CRITICAL', 'MAJOR', 'MODERATE', 'MINOR'.
+   - CRITICAL: Armed conflict, catastrophic natural disaster, sovereign collapse, nuclear/existential threats.
+   - MAJOR: National elections, major policy shifts, large economic shocks, substantial civil unrest.
+   - MODERATE: Standard regional governance, bilateral trade agreements, significant corporate mergers.
+   - MINOR: Local human-interest stories, entertainment, sports, lifestyle, routine municipal affairs.
 """
 
 

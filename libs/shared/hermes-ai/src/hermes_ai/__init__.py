@@ -32,7 +32,10 @@ from hermes_ai.utils.prompts import (
     TL_SYSTEM_PROMPT,
     TL_TRIAGE_SYSTEM_PROMPT,
 )
-from hermes_ai.utils.rate_limiter import TbRateLimiter
+from hermes_ai.utils.rate_limiter import (
+    CircuitBreakerOpenError,
+    TbRateLimiter,
+)
 
 
 __all__ = [
@@ -40,6 +43,7 @@ __all__ = [
     "ARTICLE_SYSTEM_PROMPT",
     "AiConfig",
     "ArticleInput",
+    "CircuitBreakerOpenError",
     "DEFAULT_CATEGORY_COLOR",
     "ExtractedEvent",
     "ExtractionResponse",
