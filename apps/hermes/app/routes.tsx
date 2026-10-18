@@ -4,6 +4,5 @@ export default [
   index('./routes/landing.tsx'),
   route('map', './routes/map.tsx'),
   route('about', './routes/about.tsx'),
-  route('login/*', './routes/login.tsx'),
-  route('sign-up/*', './routes/sign-up.tsx'),
+  route('auth/*', './routes/auth.tsx'),
 ] satisfies RouteConfig

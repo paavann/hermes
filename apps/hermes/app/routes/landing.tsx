@@ -248,7 +248,7 @@ export function Nav({ activeSection: controlledActiveSection }: NavProps): React
             {/* Auth Status & Login Trigger */}
             <Show when="signed-out">
               <Link
-                to="/login"
+                to="/auth"
                 className="text-xs uppercase tracking-wider text-slate-muted hover:text-ivory transition-colors"
               >
                 LOGIN
@@ -1380,7 +1380,7 @@ export function Footer(): React.JSX.Element {
                   </a>
                 </li>
                 <li>
-                  <Link to="/login" className="hover:text-ivory transition-colors">
+                  <Link to="/auth" className="hover:text-ivory transition-colors">
                     Operator Login
                   </Link>
                 </li>

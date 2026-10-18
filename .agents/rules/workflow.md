@@ -20,6 +20,7 @@ Whenever the user assigns a new task (e.g., building a feature, major refactorin
 3. **Phase N: Execution & Verification Loop**
    - Address **only one execution step at a time**.
    - Implement the code/changes required for the current step.
+   - **Do NOT run lint or test suites (`npx nx lint`, `npx nx test`) on individual steps.** Defer all linting and automated test runs until all steps in the plan are finished.
    - **Stop and wait.** Ask the user to test and verify the changes.
    - Do NOT proceed to the next step until the user explicitly confirms they are satisfied with the current step.
    - If the user reports bugs, errors, or feedback, stay on the current step. Debug and fix the issues, then wait for verification again. Repeat this loop until the user is completely satisfied.
@@ -28,4 +29,8 @@ Whenever the user assigns a new task (e.g., building a feature, major refactorin
    - Once a step is verified and approved by the user, move on to the next execution step in the plan and repeat the Execution & Verification Loop.
    - Continue until all steps of the original task are complete.
 
-5. **Documentation Maintenance**: After the full completion of a task, you MUST automatically review and suggest any necessary updates to `AGENTS.md` and `README.md` files across the repository to ensure they never become outdated.
+5. **Phase Final: Full Lint & Test Verification**
+   - Only when **all steps are completed**, run `npx nx lint <project>` and `npx nx test <project>` locally to verify the entire implementation.
+   - Resolve any lint errors or test failures before concluding the task.
+
+6. **Documentation Maintenance**: After the full completion of a task, you MUST automatically review and suggest any necessary updates to `AGENTS.md` and `README.md` files across the repository to ensure they never become outdated.
