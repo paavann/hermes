@@ -1,0 +1,1078 @@
+ Image hermes-hermes-db Building 
+#1 [internal] load local bake definitions
+#1 reading from stdin 666B done
+#1 DONE 0.0s
+
+#2 [internal] load build definition from Dockerfile
+#2 transferring dockerfile: 198B done
+#2 DONE 0.2s
+
+#3 [internal] load metadata for docker.io/postgis/postgis:latest
+#3 DONE 0.5s
+
+#4 [internal] load .dockerignore
+#4 transferring context: 190B done
+#4 DONE 0.1s
+
+#5 [1/2] FROM docker.io/postgis/postgis:latest@sha256:77e89c11c4779c394ebeeaac1099dafb77b728abc8cd45dcaf6c4695503a0c37
+#5 resolve docker.io/postgis/postgis:latest@sha256:77e89c11c4779c394ebeeaac1099dafb77b728abc8cd45dcaf6c4695503a0c37
+#5 resolve docker.io/postgis/postgis:latest@sha256:77e89c11c4779c394ebeeaac1099dafb77b728abc8cd45dcaf6c4695503a0c37 0.7s done
+#5 DONE 0.8s
+
+#6 [2/2] RUN apt-get update     && apt-get install -y --no-install-recommends postgresql-17-pgvector     && rm -rf /var/lib/apt/lists/*
+#6 CACHED
+
+#7 exporting to image
+#7 exporting layers
+#7 exporting layers 0.1s done
+#7 exporting manifest sha256:6ac9e5dc388d4384d86bfbc4a30d082b29a11023c7ff1b40584069d77bbb5eb6 0.1s done
+#7 exporting config sha256:bed67a2c200bab3913a5ece679bd1f6c949b31f4b8cecf064576f76643acf5aa
+#7 exporting config sha256:bed67a2c200bab3913a5ece679bd1f6c949b31f4b8cecf064576f76643acf5aa 0.2s done
+#7 exporting attestation manifest sha256:152a162891b182342a8b3dbc818ee53b3d472b391675d38be9d0a7de936fddc5
+#7 exporting attestation manifest sha256:152a162891b182342a8b3dbc818ee53b3d472b391675d38be9d0a7de936fddc5 1.2s done
+#7 exporting manifest list sha256:8ed56e82923b6b4b993af29627726fc5c6792ac14bc06a82b3d30e1c59d77cd3
+#7 exporting manifest list sha256:8ed56e82923b6b4b993af29627726fc5c6792ac14bc06a82b3d30e1c59d77cd3 0.6s done
+#7 naming to docker.io/library/hermes-hermes-db:latest
+#7 naming to docker.io/library/hermes-hermes-db:latest 0.1s done
+#7 unpacking to docker.io/library/hermes-hermes-db:latest
+#7 unpacking to docker.io/library/hermes-hermes-db:latest 0.3s done
+#7 DONE 3.3s
+
+#8 resolving provenance for metadata file
+#8 DONE 0.0s
+ Image hermes-hermes-db Built 
+ Container hermes-hermes-db-1 Recreate 
+ Container hermes-hermes-db-1 Recreated 
+ Container hermes-hermes-db-1 Starting 
+ Container hermes-hermes-db-1 Started 
+ Image hermes-hermes-worker Building 
+#1 [internal] load local bake definitions
+#1 reading from stdin 1.13kB done
+#1 DONE 0.0s
+
+#2 [internal] load build definition from Dockerfile
+#2 transferring dockerfile: 1.73kB done
+#2 DONE 0.2s
+
+#3 [internal] load metadata for ghcr.io/astral-sh/uv:latest
+#3 DONE 1.8s
+
+#4 [internal] load metadata for docker.io/library/python:3.14-slim
+#4 DONE 2.9s
+
+#5 [internal] load .dockerignore
+#5 transferring context: 190B done
+#5 DONE 0.2s
+
+#6 [internal] load build context
+#6 DONE 0.0s
+
+#7 [base 1/8] FROM docker.io/library/python:3.14-slim@sha256:a2b82f3c48559aa0a8446d9af49826b6e2b2016f4cd2afabfe6013ec53729170
+#7 resolve docker.io/library/python:3.14-slim@sha256:a2b82f3c48559aa0a8446d9af49826b6e2b2016f4cd2afabfe6013ec53729170
+#7 resolve docker.io/library/python:3.14-slim@sha256:a2b82f3c48559aa0a8446d9af49826b6e2b2016f4cd2afabfe6013ec53729170 0.8s done
+#7 DONE 0.8s
+
+#8 FROM ghcr.io/astral-sh/uv:latest@sha256:4a1f3666816dafadd20ceb71eac9a7d56d7ef30279f7d64048519ab901ada336
+#8 resolve ghcr.io/astral-sh/uv:latest@sha256:4a1f3666816dafadd20ceb71eac9a7d56d7ef30279f7d64048519ab901ada336
+#8 resolve ghcr.io/astral-sh/uv:latest@sha256:4a1f3666816dafadd20ceb71eac9a7d56d7ef30279f7d64048519ab901ada336 0.8s done
+#8 DONE 0.9s
+
+#7 [base 1/8] FROM docker.io/library/python:3.14-slim@sha256:a2b82f3c48559aa0a8446d9af49826b6e2b2016f4cd2afabfe6013ec53729170
+#7 DONE 0.8s
+
+#6 [internal] load build context
+#6 transferring context: 14.29kB 0.0s done
+#6 DONE 0.4s
+
+#9 [base 4/8] COPY pyproject.toml uv.lock ./
+#9 CACHED
+
+#10 [base 5/8] COPY libs/shared/hermes-db/pyproject.toml libs/shared/hermes-db/
+#10 CACHED
+
+#11 [base 3/8] WORKDIR /app
+#11 CACHED
+
+#12 [base 6/8] COPY libs/shared/hermes-ai/pyproject.toml libs/shared/hermes-ai/
+#12 CACHED
+
+#13 [base 7/8] COPY apps/hermes-api/pyproject.toml ./apps/hermes-api/
+#13 CACHED
+
+#14 [base 8/8] COPY apps/hermes-worker/pyproject.toml ./apps/hermes-worker/
+#14 CACHED
+
+#15 [base 2/8] COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
+#15 CACHED
+
+#16 [development 1/6] RUN --mount=type=cache,target=/root/.cache/uv     uv sync --package hermes-worker --frozen --no-install-workspace
+#16 CACHED
+
+#17 [development 2/6] COPY libs/shared/hermes-db ./libs/shared/hermes-db
+#17 DONE 2.0s
+
+#18 [development 3/6] COPY libs/shared/hermes-ai ./libs/shared/hermes-ai
+#18 DONE 1.3s
+
+#19 [development 4/6] COPY apps/hermes-worker ./apps/hermes-worker
+#19 DONE 1.3s
+
+#20 [development 5/6] RUN --mount=type=cache,target=/root/.cache/uv     uv sync --package hermes-worker --frozen
+#20 2.490    Building hermes-db @ file:///app/libs/shared/hermes-db
+#20 2.491    Building hermes-ai @ file:///app/libs/shared/hermes-ai
+#20 2.492    Building hermes-worker @ file:///app/apps/hermes-worker
+#20 4.804       Built hermes-ai @ file:///app/libs/shared/hermes-ai
+#20 4.813       Built hermes-db @ file:///app/libs/shared/hermes-db
+#20 4.826       Built hermes-worker @ file:///app/apps/hermes-worker
+#20 4.830 Prepared 3 packages in 2.36s
+#20 4.844 Installed 3 packages in 13ms
+#20 4.844  + hermes-ai==1.0.0 (from file:///app/libs/shared/hermes-ai)
+#20 4.844  + hermes-db==1.0.0 (from file:///app/libs/shared/hermes-db)
+#20 4.844  + hermes-worker==1.0.0 (from file:///app/apps/hermes-worker)
+#20 DONE 5.8s
+
+#21 [development 6/6] WORKDIR /app/apps/hermes-worker
+#21 DONE 1.3s
+
+#22 exporting to image
+#22 exporting layers
+#22 exporting layers 4.7s done
+#22 exporting manifest sha256:0d3d14a3f291b687048ac95223be99b2ed59751fb30325c99c57dc2ca53cffeb
+#22 exporting manifest sha256:0d3d14a3f291b687048ac95223be99b2ed59751fb30325c99c57dc2ca53cffeb 0.2s done
+#22 exporting config sha256:f34591539f0a7328f2bb7371d41832c5995a5e2547817681fe4ee97baad252c4
+#22 exporting config sha256:f34591539f0a7328f2bb7371d41832c5995a5e2547817681fe4ee97baad252c4 0.2s done
+#22 exporting attestation manifest sha256:7cd3b7ceaae75b532e1c92eca75a43727f2e16a9cbb45a226a81ed0e7c71fa16
+#22 exporting attestation manifest sha256:7cd3b7ceaae75b532e1c92eca75a43727f2e16a9cbb45a226a81ed0e7c71fa16 0.5s done
+#22 exporting manifest list sha256:41c2b4c19390662c599c605962ebc1fe59579f826ac54b867ed1c6347fc906ba
+#22 exporting manifest list sha256:41c2b4c19390662c599c605962ebc1fe59579f826ac54b867ed1c6347fc906ba 0.2s done
+#22 naming to docker.io/library/hermes-hermes-worker:latest
+#22 naming to docker.io/library/hermes-hermes-worker:latest 0.1s done
+#22 unpacking to docker.io/library/hermes-hermes-worker:latest
+#22 unpacking to docker.io/library/hermes-hermes-worker:latest 1.7s done
+#22 DONE 7.9s
+
+#23 resolving provenance for metadata file
+#23 DONE 0.0s
+ Image hermes-hermes-worker Built 
+ Container hermes-hermes-db-1 Waiting 
+ Container hermes-hermes-db-1 Healthy 
+ Container hermes-hermes-worker-run-c326da7f658a Creating 
+ Container hermes-hermes-worker-run-c326da7f658a Created 
+   Building hermes-ai @ file:///app/libs/shared/hermes-ai
+   Building hermes-worker @ file:///app/apps/hermes-worker
+   Building hermes-db @ file:///app/libs/shared/hermes-db
+      Built hermes-db @ file:///app/libs/shared/hermes-db
+      Built hermes-ai @ file:///app/libs/shared/hermes-ai
+      Built hermes-worker @ file:///app/apps/hermes-worker
+Uninstalled 3 packages in 6ms
+Installed 3 packages in 15ms
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+2026-10-19 12:03:12,639 | INFO | hermes_worker:13 | initializing database connection for hermes-worker...
+2026-10-19 12:03:12,792 | INFO | hermes_db.session:62 | successfully connected to the database.
+2026-10-19 12:03:12,923 | INFO | hermes_db.services.source:198 | source sync complete: 0 inserted, 0 updated, 0 disabled.
+2026-10-19 12:03:12,924 | INFO | hermes_worker:15 | database connection initialized.
+2026-10-19 12:03:12,925 | INFO | hermes_worker.services.lifecycle:10 | starting event lifecycle transitions...
+2026-10-19 12:03:12,967 | INFO | hermes_worker.services.lifecycle:15 | event lifecycle complete: {'staled': 0, 'archived': 0}.
+2026-10-19 12:03:12,967 | INFO | hermes_worker:30 | lifecycle transitions finished: {'staled': 0, 'archived': 0}.
+12:03:13 - LiteLLM Router:INFO: router.py:1403 - Routing strategy: simple-shuffle
+2026-10-19 12:03:13,120 | INFO | LiteLLM Router:1403 | Routing strategy: simple-shuffle
+2026-10-19 12:03:13,135 | INFO | hermes_ai.services.llm:69 | llm service initialized. primary=mistral/ministral-8b-latest, fallback=nvidia_nim/openai/gpt-oss-20b via litellm router.
+2026-10-19 12:03:13,135 | INFO | hermes_ai.client:28 | hermes ai client initialized.
+2026-10-19 12:03:13,146 | INFO | hermes_worker.services.sync:202 | starting sync for 19 sources.
+2026-10-19 12:03:13,147 | INFO | hermes_worker.services.sync:65 | syncing source: The Wall Street Journal World (type: RSS, url: https://feeds.a.dj.com/rss/RSSWorldNews.xml).
+2026-10-19 12:03:13,401 | INFO | hermes_worker.services.sync:65 | syncing source: NPR World News (type: RSS, url: https://feeds.npr.org/1004/rss.xml).
+2026-10-19 12:03:13,429 | INFO | hermes_worker.services.sync:65 | syncing source: Deutsche Welle World (type: RSS, url: https://rss.dw.com/xml/rss-en-world).
+2026-10-19 12:03:13,457 | INFO | hermes_worker.services.sync:65 | syncing source: ABC News International (type: RSS, url: https://abcnews.go.com/abcnews/internationalheadlines).
+2026-10-19 12:03:13,485 | INFO | hermes_worker.services.sync:65 | syncing source: CBC News World (type: RSS, url: https://www.cbc.ca/webfeed/rss/rss-world).
+2026-10-19 12:03:13,842 | INFO | hermes_worker.services.fetchers.rss:88 | fetched 10 articles from https://feeds.npr.org/1004/rss.xml.
+2026-10-19 12:03:16,865 | INFO | hermes_worker.services.fetchers.rss:88 | fetched 12 articles from https://rss.dw.com/xml/rss-en-world.
+2026-10-19 12:03:17,367 | INFO | hermes_worker.services.fetchers.rss:88 | fetched 20 articles from https://feeds.a.dj.com/rss/RSSWorldNews.xml.
+2026-10-19 12:03:17,416 | INFO | hermes_worker.services.sync:88 | source 'The Wall Street Journal World': all 20 articles already processed.
+2026-10-19 12:03:17,452 | INFO | hermes_worker.services.sync:65 | syncing source: BBC World News (type: RSS, url: https://feeds.bbci.co.uk/news/world/rss.xml).
+2026-10-19 12:03:17,858 | INFO | hermes_worker.services.fetchers.rss:88 | fetched 24 articles from https://feeds.bbci.co.uk/news/world/rss.xml.
+2026-10-19 12:03:18,737 | INFO | hermes_worker.services.fetchers.rss:88 | fetched 25 articles from https://abcnews.go.com/abcnews/internationalheadlines.
+12:03:19 - LiteLLM:INFO: utils.py:4382 - 
+LiteLLM completion() model= ministral-8b-latest; provider = mistral
+2026-10-19 12:03:19,761 | INFO | LiteLLM:4382 | 
+LiteLLM completion() model= ministral-8b-latest; provider = mistral
+12:03:19 - LiteLLM:INFO: utils.py:4382 - 
+LiteLLM completion() model= ministral-8b-latest; provider = mistral
+2026-10-19 12:03:19,804 | INFO | LiteLLM:4382 | 
+LiteLLM completion() model= ministral-8b-latest; provider = mistral
+12:03:20 - LiteLLM:INFO: utils.py:4382 - 
+LiteLLM completion() model= ministral-8b-latest; provider = mistral
+2026-10-19 12:03:20,310 | INFO | LiteLLM:4382 | 
+LiteLLM completion() model= ministral-8b-latest; provider = mistral
+12:03:21 - LiteLLM:INFO: utils.py:4382 - 
+LiteLLM completion() model= ministral-8b-latest; provider = mistral
+2026-10-19 12:03:21,154 | INFO | LiteLLM:4382 | 
+LiteLLM completion() model= ministral-8b-latest; provider = mistral
+12:03:32 - LiteLLM Router:INFO: router.py:3671 - litellm.acompletion(model=mistral/ministral-8b-latest)[32m 200 OK[0m
+2026-10-19 12:03:32,022 | INFO | LiteLLM Router:3671 | litellm.acompletion(model=mistral/ministral-8b-latest)[32m 200 OK[0m
+2026-10-19 12:03:32,026 | INFO | hermes_ai.extractors.events:158 | extracted: Alberta heads to polls to decide whether to hold v... | category = POLITICS.
+2026-10-19 12:03:32,027 | INFO | hermes_ai.extractors.events:158 | extracted: Kenya pastor accused of ordering parents to starve... | category = HEALTH.
+2026-10-19 12:03:32,027 | INFO | hermes_ai.extractors.events:158 | extracted: Funding shortages force World Food Programme to cu... | category = DISASTER.
+2026-10-19 12:03:32,027 | INFO | hermes_ai.extractors.events:158 | extracted: Trump says suspension of Russia sanctions is to ke... | category = POLITICS.
+2026-10-19 12:03:32,027 | INFO | hermes_ai.extractors.events:158 | extracted: Personal attacks fire up debate before Brazil's ru... | category = POLITICS.
+2026-10-19 12:03:32,027 | INFO | hermes_ai.extractors.events:158 | extracted: Italian PM Meloni to hold emergency meeting after ... | category = CONFLICT.
+2026-10-19 12:03:32,027 | INFO | hermes_ai.extractors.events:158 | extracted: Bangladesh says it was not informed of its citizen... | category = POLITICS.
+2026-10-19 12:03:32,027 | INFO | hermes_ai.extractors.events:158 | extracted: Possible wreckage of Amelia Earhart's plane likely... | category = HISTORY.
+2026-10-19 12:03:32,027 | INFO | hermes_ai.extractors.events:158 | extracted: Deadly fire at Canada military base moved a kilome... | category = DISASTER.
+2026-10-19 12:03:32,028 | INFO | hermes_ai.extractors.events:158 | extracted: Bollywood actor Tiger Shroff survives shooting att... | category = ENTERTAINMENT.
+2026-10-19 12:03:32,271 | INFO | hermes_db.services.event:124 | created event 'Alberta votes on potential separation from Canada' with 1 article.
+2026-10-19 12:03:32,394 | INFO | hermes_db.services.event:124 | created event 'Pastor accused of child murder in Kenya faces verdict' with 1 article.
+2026-10-19 12:03:32,484 | INFO | hermes_db.services.event:124 | created event 'UN cuts Gaza aid due to funding shortages' with 1 article.
+2026-10-19 12:03:32,573 | INFO | hermes_db.services.event:124 | created event 'US suspends Russia sanctions to support peace talks' with 1 article.
+2026-10-19 12:03:32,618 | INFO | hermes_db.services.event:124 | created event 'Personal attacks escalate ahead of Brazil's runoff vote' with 1 article.
+12:03:32 - LiteLLM Router:INFO: router.py:3671 - litellm.acompletion(model=mistral/ministral-8b-latest)[32m 200 OK[0m
+2026-10-19 12:03:32,664 | INFO | LiteLLM Router:3671 | litellm.acompletion(model=mistral/ministral-8b-latest)[32m 200 OK[0m
+2026-10-19 12:03:32,666 | INFO | hermes_ai.extractors.events:158 | extracted: From delivery driver to global fame: A Korean writ... | category = ENTERTAINMENT.
+2026-10-19 12:03:32,666 | INFO | hermes_ai.extractors.events:158 | extracted: Australian MP seriously hurt in suspected car atta... | category = POLITICS.
+2026-10-19 12:03:32,666 | INFO | hermes_ai.extractors.events:158 | extracted: Deepfakes, bots and distrust: How AI is shaping Is... | category = TECHNOLOGY.
+2026-10-19 12:03:32,666 | INFO | hermes_ai.extractors.events:158 | extracted: What Earth's sixth mass extinction event means for... | category = ENVIRONMENT.
+2026-10-19 12:03:32,666 | INFO | hermes_ai.extractors.events:158 | extracted: France: Young voters blase about Glucksmann's Soci... | category = POLITICS.
+2026-10-19 12:03:32,666 | INFO | hermes_ai.extractors.events:158 | extracted: How reliant is Ukraine on the US-controlled Starli... | category = TECHNOLOGY.
+2026-10-19 12:03:32,667 | INFO | hermes_ai.extractors.events:158 | extracted: Populist Czech PM Babis goes empty-handed in Senat... | category = POLITICS.
+2026-10-19 12:03:32,667 | INFO | hermes_ai.extractors.events:158 | extracted: Ilhan Omar: The US Democrat targeted by Donald Tru... | category = POLITICS.
+2026-10-19 12:03:32,667 | INFO | hermes_ai.extractors.events:158 | extracted: China's influence in the gaming industry is growin... | category = TECHNOLOGY.
+2026-10-19 12:03:32,667 | INFO | hermes_ai.extractors.events:158 | extracted: Russia wants blackout in Ukraine as winter comes —... | category = CONFLICT.
+2026-10-19 12:03:32,688 | INFO | hermes_db.services.event:124 | created event 'Violent clashes lead to emergency meeting in Italy' with 1 article.
+2026-10-19 12:03:32,720 | INFO | hermes_db.services.event:124 | created event 'Korean writer's debut novel gains global success' with 1 article.
+2026-10-19 12:03:32,742 | INFO | hermes_db.services.event:124 | created event 'Saudi Arabia executes two Bangladeshis' with 1 article.
+2026-10-19 12:03:32,779 | INFO | hermes_db.services.event:124 | created event 'Australian MP injured in suspected car attack' with 1 article.
+12:03:32 - LiteLLM Router:INFO: router.py:3671 - litellm.acompletion(model=mistral/ministral-8b-latest)[32m 200 OK[0m
+2026-10-19 12:03:32,807 | INFO | LiteLLM Router:3671 | litellm.acompletion(model=mistral/ministral-8b-latest)[32m 200 OK[0m
+2026-10-19 12:03:32,809 | INFO | hermes_ai.extractors.events:158 | extracted: Australian prime minister says lawmaker critically... | category = CONFLICT.
+2026-10-19 12:03:32,809 | INFO | hermes_ai.extractors.events:158 | extracted: 2026 midterms could be the most expensive on recor... | category = POLITICS.
+2026-10-19 12:03:32,810 | INFO | hermes_ai.extractors.events:158 | extracted: Ukraine and Russia exchange strikes, as relations ... | category = CONFLICT.
+2026-10-19 12:03:32,810 | INFO | hermes_ai.extractors.events:158 | extracted: Solar power is changing agriculture in Pakistan, b... | category = ENVIRONMENT.
+2026-10-19 12:03:32,810 | INFO | hermes_ai.extractors.events:158 | extracted: Trump endorses embattled Israeli Prime Minister Be... | category = POLITICS.
+2026-10-19 12:03:32,810 | INFO | hermes_ai.extractors.events:158 | extracted: Political rivals implicated under Pakistan's anti-... | category = POLITICS.
+2026-10-19 12:03:32,810 | INFO | hermes_ai.extractors.events:158 | extracted: 'Life is absolutely brutal in Gaza,' says World Fo... | category = DISASTER.
+2026-10-19 12:03:32,810 | INFO | hermes_ai.extractors.events:158 | extracted: Ukraine and the U.S. are at odds over Starshield. ... | category = TECHNOLOGY.
+2026-10-19 12:03:32,810 | INFO | hermes_ai.extractors.events:158 | extracted: Pope Leo says he will gradually resume duties afte... | category = HEALTH.
+2026-10-19 12:03:32,811 | INFO | hermes_ai.extractors.events:158 | extracted: Carney says 4 service members killed and dozens in... | category = DISASTER.
+2026-10-19 12:03:32,812 | INFO | hermes_db.services.event:124 | created event 'Researchers debunk Amelia Earhart wreckage theory' with 1 article.
+2026-10-19 12:03:32,856 | INFO | hermes_db.services.event:124 | created event 'AI influences Israel's election via deepfakes and bots' with 1 article.
+2026-10-19 12:03:32,881 | INFO | hermes_db.services.event:124 | created event 'Deadly fire at Canada military base spreads rapidly' with 1 article.
+2026-10-19 12:03:32,888 | INFO | hermes_db.services.event:124 | created event 'Australian lawmaker critically injured in apparent attack' with 1 article.
+2026-10-19 12:03:32,934 | INFO | hermes_db.services.event:124 | created event 'Global biodiversity loss discussed in Armenia' with 1 article.
+2026-10-19 12:03:32,944 | INFO | hermes_db.services.event:124 | created event 'Bollywood actor survives shooting attempt in Mumbai' with 1 article.
+2026-10-19 12:03:32,957 | INFO | hermes_db.services.event:124 | created event '2026 midterms set record spending; France condemns protests' with 1 article.
+2026-10-19 12:03:32,992 | INFO | hermes_db.services.event:124 | created event 'French young voters skeptical of Glucksmann's strategy' with 1 article.
+2026-10-19 12:03:33,005 | INFO | hermes_db.services.event:124 | created event 'Ukraine and Russia escalate strikes amid diplomatic tensions' with 1 article.
+2026-10-19 12:03:33,046 | INFO | hermes_db.services.event:124 | created event 'Ukraine's reliance on US Starlink internet service' with 1 article.
+2026-10-19 12:03:33,061 | INFO | hermes_db.services.event:124 | created event 'Solar power transforms agriculture but raises concerns in Pakistan' with 1 article.
+2026-10-19 12:03:33,116 | INFO | hermes_db.services.event:124 | created event 'Czech PM Babis faces defeat in Senate elections' with 1 article.
+2026-10-19 12:03:33,133 | INFO | hermes_db.services.event:124 | created event 'Trump endorses Netanyahu for reelection' with 1 article.
+2026-10-19 12:03:33,173 | INFO | hermes_db.services.event:124 | created event 'US Democrat Ilhan Omar targeted by Trump' with 1 article.
+2026-10-19 12:03:33,187 | INFO | hermes_db.services.event:124 | created event 'Pakistan implicates opposition figures under anti-terror law' with 1 article.
+2026-10-19 12:03:33,228 | INFO | hermes_db.services.event:124 | created event 'China's growing influence in global gaming industry' with 1 article.
+2026-10-19 12:03:33,273 | INFO | hermes_db.services.event:124 | created event 'Food shortages worsen in Gaza despite ceasefire' with 1 article.
+2026-10-19 12:03:33,284 | INFO | hermes_db.services.event:124 | created event 'Russia seeks to cut Ukraine's electricity ahead of winter' with 1 article.
+2026-10-19 12:03:33,319 | INFO | hermes_db.services.event:124 | created event 'Ukraine and U.S. clash over Starshield satellite service' with 1 article.
+2026-10-19 12:03:33,362 | INFO | hermes_db.services.event:124 | created event 'Pope Leo XIV resumes duties after cancer surgery' with 1 article.
+2026-10-19 12:03:33,396 | INFO | hermes_db.services.event:124 | created event 'Fire at Canadian military base kills 4, injures dozens' with 1 article.
+2026-10-19 12:03:33,396 | INFO | hermes_worker.services.sync:174 | finished source 'NPR World News': 10 processed, 0 skipped (duplicates), 0 failed.
+2026-10-19 12:03:33,419 | INFO | hermes_worker.services.sync:65 | syncing source: The New York Times World (type: RSS, url: https://rss.nytimes.com/services/xml/rss/nyt/World.xml).
+2026-10-19 12:03:34,230 | INFO | hermes_worker.services.fetchers.rss:88 | fetched 53 articles from https://rss.nytimes.com/services/xml/rss/nyt/World.xml.
+12:03:34 - LiteLLM:INFO: utils.py:4382 - 
+LiteLLM completion() model= ministral-8b-latest; provider = mistral
+2026-10-19 12:03:34,287 | INFO | LiteLLM:4382 | 
+LiteLLM completion() model= ministral-8b-latest; provider = mistral
+12:03:34 - LiteLLM Router:INFO: router.py:3671 - litellm.acompletion(model=mistral/ministral-8b-latest)[32m 200 OK[0m
+2026-10-19 12:03:34,764 | INFO | LiteLLM Router:3671 | litellm.acompletion(model=mistral/ministral-8b-latest)[32m 200 OK[0m
+2026-10-19 12:03:34,766 | INFO | hermes_ai.extractors.events:158 | extracted: France's PM calls for localized curfews in cities ... | category = POLITICS.
+2026-10-19 12:03:34,766 | INFO | hermes_ai.extractors.events:158 | extracted: Philippines summons Chinese ambassador to protest ... | category = POLITICS.
+2026-10-19 12:03:34,766 | INFO | hermes_ai.extractors.events:158 | extracted: Australian prime minister says lawmaker critically... | category = POLITICS.
+2026-10-19 12:03:34,766 | INFO | hermes_ai.extractors.events:158 | extracted: Russian missiles and drones hit Kyiv overnight, ki... | category = CONFLICT.
+2026-10-19 12:03:34,766 | INFO | hermes_ai.extractors.events:158 | extracted: Hungarian journalists feel the pressure lifting af... | category = POLITICS.
+2026-10-19 12:03:34,766 | INFO | hermes_ai.extractors.events:158 | extracted: Corruption is top worry for Brazilian voters ahead... | category = POLITICS.
+2026-10-19 12:03:34,766 | INFO | hermes_ai.extractors.events:158 | extracted: Albertans vote on path to independence as Carney f... | category = POLITICS.
+2026-10-19 12:03:34,766 | INFO | hermes_ai.extractors.events:158 | extracted: Brazil's Lula and Flávio Bolsonaro trade barbs in ... | category = POLITICS.
+2026-10-19 12:03:34,767 | INFO | hermes_ai.extractors.events:158 | extracted: South Africa and Mozambique to honor Samora Machel... | category = HISTORY.
+2026-10-19 12:03:34,767 | INFO | hermes_ai.extractors.events:158 | extracted: China's economy accelerated in the July-September ... | category = ECONOMY.
+2026-10-19 12:03:34,878 | INFO | hermes_db.services.event:124 | created event 'France imposes localized curfews to curb rioting' with 1 article.
+2026-10-19 12:03:34,942 | INFO | hermes_db.services.event:124 | created event 'Philippines protests Chinese diplomatic remarks' with 1 article.
+12:03:34 - LiteLLM:INFO: utils.py:4382 - 
+LiteLLM completion() model= ministral-8b-latest; provider = mistral
+2026-10-19 12:03:34,964 | INFO | LiteLLM:4382 | 
+LiteLLM completion() model= ministral-8b-latest; provider = mistral
+2026-10-19 12:03:34,987 | INFO | hermes_db.services.event:124 | created event 'Australian lawmaker critically injured in apparent attack' with 1 article.
+2026-10-19 12:03:35,030 | INFO | hermes_db.services.event:124 | created event 'Russian missiles and drones strike Kyiv, damaging energy infrastructure' with 1 article.
+2026-10-19 12:03:35,075 | INFO | hermes_db.services.event:124 | created event 'Hungarian journalists report easing media pressure after Orbán’s defeat' with 1 article.
+2026-10-19 12:03:35,108 | INFO | hermes_db.services.event:124 | created event 'Brazilian voters prioritize corruption ahead of runoff election' with 1 article.
+2026-10-19 12:03:35,153 | INFO | hermes_db.services.event:124 | created event 'Alberta votes on potential independence process' with 1 article.
+2026-10-19 12:03:35,198 | INFO | hermes_db.services.event:124 | created event 'Brazil presidential candidates debate ahead of runoff' with 1 article.
+12:03:35 - LiteLLM:INFO: utils.py:4382 - 
+LiteLLM completion() model= ministral-8b-latest; provider = mistral
+2026-10-19 12:03:35,714 | INFO | LiteLLM:4382 | 
+LiteLLM completion() model= ministral-8b-latest; provider = mistral
+2026-10-19 12:03:36,155 | INFO | hermes_ai.services.geocoding:256 | geocoded 'South Africa and Mozambique' -> (-25.4655255, 30.9788488).
+2026-10-19 12:03:36,253 | INFO | hermes_db.services.event:124 | created event 'Countries honor Samora Machel 40 years after his death' with 1 article.
+2026-10-19 12:03:36,320 | INFO | hermes_db.services.event:124 | created event 'China’s economy grows 4.5% in July-September quarter' with 1 article.
+12:03:37 - LiteLLM Router:INFO: router.py:3671 - litellm.acompletion(model=mistral/ministral-8b-latest)[32m 200 OK[0m
+2026-10-19 12:03:37,549 | INFO | LiteLLM Router:3671 | litellm.acompletion(model=mistral/ministral-8b-latest)[32m 200 OK[0m
+2026-10-19 12:03:37,552 | INFO | hermes_ai.extractors.events:158 | extracted: France: Protesters clash with police in nationwide... | category = POLITICS.
+2026-10-19 12:03:37,552 | INFO | hermes_ai.extractors.events:158 | extracted: Oregon school shooting: Police praise 'heroism' of... | category = CONFLICT.
+2026-10-19 12:03:37,668 | INFO | hermes_db.services.event:124 | created event 'France protests escalate with police clashes, 1,000+ arrests' with 1 article.
+12:03:37 - LiteLLM:INFO: utils.py:4382 - 
+LiteLLM completion() model= ministral-8b-latest; provider = mistral
+2026-10-19 12:03:37,789 | INFO | LiteLLM:4382 | 
+LiteLLM completion() model= ministral-8b-latest; provider = mistral
+2026-10-19 12:03:37,801 | INFO | hermes_db.services.event:124 | created event 'School shooting in Oregon leaves 4 dead; bystanders praised' with 1 article.
+2026-10-19 12:03:37,802 | INFO | hermes_worker.services.sync:174 | finished source 'Deutsche Welle World': 12 processed, 0 skipped (duplicates), 0 failed.
+2026-10-19 12:03:37,821 | INFO | hermes_worker.services.sync:65 | syncing source: CNN World (type: RSS, url: http://rss.cnn.com/rss/edition_world.rss).
+2026-10-19 12:03:40,090 | INFO | hermes_worker.services.fetchers.rss:88 | fetched 29 articles from http://rss.cnn.com/rss/edition_world.rss.
+2026-10-19 12:03:40,175 | INFO | hermes_worker.services.sync:88 | source 'CNN World': all 29 articles already processed.
+2026-10-19 12:03:40,221 | INFO | hermes_worker.services.sync:65 | syncing source: Al Jazeera English (type: RSS, url: https://www.aljazeera.com/xml/rss/all.xml).
+2026-10-19 12:03:40,578 | INFO | hermes_worker.services.fetchers.rss:88 | fetched 25 articles from https://www.aljazeera.com/xml/rss/all.xml.
+12:03:41 - LiteLLM:INFO: utils.py:4382 - 
+LiteLLM completion() model= ministral-8b-latest; provider = mistral
+2026-10-19 12:03:41,979 | INFO | LiteLLM:4382 | 
+LiteLLM completion() model= ministral-8b-latest; provider = mistral
+2026-10-19 12:03:43,788 | WARNING | hermes_worker.services.fetchers.rss:51 | timeout fetching RSS feed https://www.cbc.ca/webfeed/rss/rss-world (> 30s). skipping source.
+2026-10-19 12:03:43,790 | INFO | hermes_worker.services.sync:76 | no articles found in CBC News World.
+2026-10-19 12:03:43,831 | INFO | hermes_worker.services.sync:65 | syncing source: The Guardian World (type: RSS, url: https://www.theguardian.com/world/rss).
+2026-10-19 12:03:44,364 | INFO | hermes_worker.services.fetchers.rss:88 | fetched 45 articles from https://www.theguardian.com/world/rss.
+12:03:45 - LiteLLM:INFO: utils.py:4382 - 
+LiteLLM completion() model= ministral-8b-latest; provider = mistral
+2026-10-19 12:03:45,770 | INFO | LiteLLM:4382 | 
+LiteLLM completion() model= ministral-8b-latest; provider = mistral
+12:03:46 - LiteLLM Router:INFO: router.py:3671 - litellm.acompletion(model=mistral/ministral-8b-latest)[32m 200 OK[0m
+2026-10-19 12:03:46,056 | INFO | LiteLLM Router:3671 | litellm.acompletion(model=mistral/ministral-8b-latest)[32m 200 OK[0m
+2026-10-19 12:03:46,059 | INFO | hermes_ai.extractors.events:158 | extracted: How a Trillion-Dollar Industry Launders Illegal Go... | category = ECONOMY.
+2026-10-19 12:03:46,059 | INFO | hermes_ai.extractors.events:158 | extracted: France’s Far Right Seizes the Moment as Rioting St... | category = POLITICS.
+2026-10-19 12:03:46,060 | INFO | hermes_ai.extractors.events:158 | extracted: For Israelis and Jews in the U.A.E., an Eroding Se... | category = POLITICS.
+2026-10-19 12:03:46,060 | INFO | hermes_ai.extractors.events:158 | extracted: Ukraine Uses F-16s to Shoot Down Russia’s Jet-Powe... | category = CONFLICT.
+2026-10-19 12:03:46,060 | INFO | hermes_ai.extractors.events:158 | extracted: Australian Lawmaker Helen Haines Injured After Att... | category = CONFLICT.
+2026-10-19 12:03:46,061 | INFO | hermes_ai.extractors.events:158 | extracted: María Corina Machado on Venezuela’s Future and Her... | category = POLITICS.
+2026-10-19 12:03:46,061 | INFO | hermes_ai.extractors.events:158 | extracted: As Alberta Holds a Referendum on Separatism, Premi... | category = POLITICS.
+2026-10-19 12:03:46,061 | INFO | hermes_ai.extractors.events:158 | extracted: Five Salvadoran Soldiers Missing in Haiti After Am... | category = CONFLICT.
+2026-10-19 12:03:46,061 | INFO | hermes_ai.extractors.events:158 | extracted: To Find Criminals and Child Exploitation in Gold M... | category = ECONOMY.
+2026-10-19 12:03:46,061 | INFO | hermes_ai.extractors.events:158 | extracted: The French City of Limoges Wasn’t Known for Unrest... | category = CONFLICT.
+2026-10-19 12:03:46,119 | INFO | hermes_db.services.event:124 | created event 'Global gold industry launders illegal gold worth trillions' with 1 article.
+2026-10-19 12:03:46,164 | INFO | hermes_db.services.event:124 | created event 'France far-right gains momentum amid Bordeaux riots' with 1 article.
+2026-10-19 12:03:46,209 | INFO | hermes_db.services.event:124 | created event 'Israelis in UAE face growing security concerns' with 1 article.
+2026-10-19 12:03:46,276 | INFO | hermes_db.services.event:124 | created event 'Ukraine uses F-16s to target Russian drones' with 1 article.
+2026-10-19 12:03:46,409 | INFO | hermes_db.services.event:210 | added article to event 'Australian lawmaker critically injured in apparent attack' (now 2 articles).
+2026-10-19 12:03:46,454 | INFO | hermes_db.services.event:124 | created event 'Machado discusses Venezuela’s future and U.S. relations' with 1 article.
+2026-10-19 12:03:46,499 | INFO | hermes_db.services.event:124 | created event 'Alberta separatist referendum strains provincial politics' with 1 article.
+2026-10-19 12:03:46,543 | INFO | hermes_db.services.event:124 | created event 'Five Salvadoran soldiers missing after Haiti ambush' with 1 article.
+2026-10-19 12:03:46,588 | INFO | hermes_db.services.event:124 | created event 'Global investigation reveals child labor and crime in unlicensed gold mines' with 1 article.
+2026-10-19 12:03:46,632 | INFO | hermes_db.services.event:124 | created event 'Rioters set fire to Limoges city hall during unrest' with 1 article.
+12:03:48 - LiteLLM:INFO: utils.py:4382 - 
+LiteLLM completion() model= ministral-8b-latest; provider = mistral
+2026-10-19 12:03:48,028 | INFO | LiteLLM:4382 | 
+LiteLLM completion() model= ministral-8b-latest; provider = mistral
+12:03:49 - LiteLLM Router:INFO: router.py:3671 - litellm.acompletion(model=mistral/ministral-8b-latest)[32m 200 OK[0m
+2026-10-19 12:03:49,370 | INFO | LiteLLM Router:3671 | litellm.acompletion(model=mistral/ministral-8b-latest)[32m 200 OK[0m
+2026-10-19 12:03:49,372 | INFO | hermes_ai.extractors.events:158 | extracted: Bomb threat forces Israel to Austria flight into e... | category = DISASTER.
+2026-10-19 12:03:49,372 | INFO | hermes_ai.extractors.events:158 | extracted: EU tariffs aimed at China hitting Ukraine, steel b... | category = ECONOMY.
+2026-10-19 12:03:49,372 | INFO | hermes_ai.extractors.events:158 | extracted: Musk and Anthropic pledge public share giveaways... | category = TECHNOLOGY.
+2026-10-19 12:03:49,372 | INFO | hermes_ai.extractors.events:158 | extracted: Australian Greens senator denies claims of miscond... | category = POLITICS.
+2026-10-19 12:03:49,372 | INFO | hermes_ai.extractors.events:158 | extracted: Katya Adler: France's government under pressure af... | category = POLITICS.
+2026-10-19 12:03:49,372 | INFO | hermes_ai.extractors.events:158 | extracted: Inside the shadowy world of anti-Putin sabotage fr... | category = CONFLICT.
+2026-10-19 12:03:49,372 | INFO | hermes_ai.extractors.events:158 | extracted: A wave of homemade, synthetic drugs sweeps US and ... | category = HEALTH.
+2026-10-19 12:03:49,372 | INFO | hermes_ai.extractors.events:158 | extracted: Photos show luxury boat with 50m pool and water sl... | category = ENTERTAINMENT.
+2026-10-19 12:03:49,373 | INFO | hermes_ai.extractors.events:158 | extracted: The uncertain future of Canada's 30 rescued beluga... | category = ENVIRONMENT.
+2026-10-19 12:03:49,373 | INFO | hermes_ai.extractors.events:158 | extracted: Inside Chicago's battle against the synthetic drug... | category = HEALTH.
+2026-10-19 12:03:50,062 | INFO | hermes_ai.services.geocoding:256 | geocoded 'Bulgaria' -> (42.6073975, 25.4856617).
+2026-10-19 12:03:50,154 | INFO | hermes_db.services.event:124 | created event 'Israel-Austria flight emergency landing due to bomb threat' with 1 article.
+2026-10-19 12:03:50,199 | INFO | hermes_db.services.event:124 | created event 'EU tariffs on China impact Ukraine steel industry' with 1 article.
+2026-10-19 12:03:50,244 | INFO | hermes_db.services.event:124 | created event 'Musk and Anthropic announce public share giveaways' with 1 article.
+2026-10-19 12:03:50,277 | INFO | hermes_db.services.event:124 | created event 'Australian Greens senator denies misconduct allegations' with 1 article.
+2026-10-19 12:03:50,322 | INFO | hermes_db.services.event:124 | created event 'France faces political pressure after weekend violence' with 1 article.
+2026-10-19 12:03:50,355 | INFO | hermes_db.services.event:210 | added article to event 'Ukraine and Russia escalate strikes amid diplomatic tensions' (now 2 articles).
+2026-10-19 12:03:50,411 | INFO | hermes_db.services.event:124 | created event 'Synthetic drugs crisis deepens across the US' with 1 article.
+2026-10-19 12:03:50,456 | INFO | hermes_db.services.event:124 | created event 'Luxury retreat reveals Kim Jong Un’s lavish lifestyle' with 1 article.
+2026-10-19 12:03:50,500 | INFO | hermes_db.services.event:124 | created event 'Uncertain future for Canada's rescued belugas' with 1 article.
+2026-10-19 12:03:50,534 | INFO | hermes_db.services.event:124 | created event 'Chicago battles synthetic drugs crisis' with 1 article.
+12:03:51 - LiteLLM:INFO: utils.py:4382 - 
+LiteLLM completion() model= ministral-8b-latest; provider = mistral
+2026-10-19 12:03:51,492 | INFO | LiteLLM:4382 | 
+LiteLLM completion() model= ministral-8b-latest; provider = mistral
+12:03:52 - LiteLLM Router:INFO: router.py:3671 - litellm.acompletion(model=mistral/ministral-8b-latest)[32m 200 OK[0m
+2026-10-19 12:03:52,180 | INFO | LiteLLM Router:3671 | litellm.acompletion(model=mistral/ministral-8b-latest)[32m 200 OK[0m
+2026-10-19 12:03:52,183 | INFO | hermes_ai.extractors.events:158 | extracted: Massachusetts GOP lieutenant governor candidate su... | category = POLITICS.
+2026-10-19 12:03:52,184 | INFO | hermes_ai.extractors.events:158 | extracted: Kenya’s Ebola cases hit 8, with no community trans... | category = HEALTH.
+2026-10-19 12:03:52,184 | INFO | hermes_ai.extractors.events:158 | extracted: Flight from Tel Aviv to Vienna makes emergency lan... | category = TRANSPORTATION.
+2026-10-19 12:03:52,185 | INFO | hermes_ai.extractors.events:158 | extracted: Egypt's top security body agrees to help Saudi Ara... | category = CONFLICT.
+2026-10-19 12:03:52,185 | INFO | hermes_ai.extractors.events:158 | extracted: Congo’s fast-moving Ebola outbreak spreads to eigh... | category = HEALTH.
+2026-10-19 12:03:52,185 | INFO | hermes_ai.extractors.events:158 | extracted: Photographer attacked by settlers in the West Bank... | category = CONFLICT.
+2026-10-19 12:03:52,185 | INFO | hermes_ai.extractors.events:158 | extracted: Catholic priest killed by falling cross during liv... | category = RELIGION.
+2026-10-19 12:03:52,186 | INFO | hermes_ai.extractors.events:158 | extracted: German authorities investigate a hole cut into a f... | category = SECURITY.
+2026-10-19 12:03:52,186 | INFO | hermes_ai.extractors.events:158 | extracted: Macron condemns those who 'sought to bring down th... | category = POLITICS.
+2026-10-19 12:03:52,186 | INFO | hermes_ai.extractors.events:158 | extracted: Paris police report 855 arrests after violent clas... | category = CONFLICT.
+12:03:52 - LiteLLM Router:INFO: router.py:3671 - litellm.acompletion(model=mistral/ministral-8b-latest)[32m 200 OK[0m
+2026-10-19 12:03:52,270 | INFO | LiteLLM Router:3671 | litellm.acompletion(model=mistral/ministral-8b-latest)[32m 200 OK[0m
+2026-10-19 12:03:52,273 | INFO | hermes_ai.extractors.events:158 | extracted: On Iran, Israel’s opposition is even more hawkish ... | category = POLITICS.
+2026-10-19 12:03:52,273 | INFO | hermes_ai.extractors.events:158 | extracted: Indonesia battles worst forest fires and toxic haz... | category = ENVIRONMENT.
+2026-10-19 12:03:52,274 | INFO | hermes_ai.extractors.events:158 | extracted: Museum protesters in Colombia accuse gov’t of eras... | category = POLITICS.
+2026-10-19 12:03:52,274 | INFO | hermes_ai.extractors.events:158 | extracted: Iran support for Houthis probed as Yemen war re-er... | category = CONFLICT.
+2026-10-19 12:03:52,275 | INFO | hermes_ai.extractors.events:158 | extracted: Israeli police arrest 10 after settler attacks on ... | category = CONFLICT.
+2026-10-19 12:03:52,275 | INFO | hermes_ai.extractors.events:158 | extracted: Australian MP Helen Haines critically injured in ‘... | category = CONFLICT.
+2026-10-19 12:03:52,276 | INFO | hermes_ai.extractors.events:158 | extracted: What’s wrong with schools in France?... | category = POLITICS.
+2026-10-19 12:03:52,276 | INFO | hermes_ai.extractors.events:158 | extracted: WFP cuts aid to ‌500,000 Palestinians in Gaza amid... | category = DISASTER.
+2026-10-19 12:03:52,277 | INFO | hermes_ai.extractors.events:158 | extracted: Mexican protesters demanding clean water storm sta... | category = POLITICS.
+2026-10-19 12:03:52,277 | INFO | hermes_ai.extractors.events:158 | extracted: Qatar warns global energy shockwaves from Iran war... | category = ECONOMY.
+2026-10-19 12:03:52,445 | INFO | hermes_db.services.event:124 | created event 'Massachusetts GOP lieutenant governor candidate suspends campaign after drunk driving arrest' with 1 article.
+2026-10-19 12:03:52,467 | INFO | hermes_db.services.event:124 | created event 'Israeli opposition more hawkish than Netanyahu on Iran' with 1 article.
+2026-10-19 12:03:52,512 | INFO | hermes_db.services.event:124 | created event 'Kenya reports 8 Ebola cases with no community transmission' with 1 article.
+2026-10-19 12:03:52,529 | INFO | hermes_db.services.event:124 | created event 'Indonesia faces worst forest fires and toxic haze in 11 years' with 1 article.
+2026-10-19 12:03:52,572 | INFO | hermes_db.services.event:124 | created event 'Flight from Tel Aviv to Vienna makes emergency landing in Bulgaria due to bomb threat' with 1 article.
+2026-10-19 12:03:52,620 | INFO | hermes_db.services.event:124 | created event 'Protests at Colombia’s National Museum turn violent' with 1 article.
+2026-10-19 12:03:52,683 | INFO | hermes_db.services.event:124 | created event 'Iran-backed Houthis target Saudi cities amid Yemen war' with 1 article.
+2026-10-19 12:03:52,752 | INFO | hermes_db.services.event:124 | created event 'Israeli police arrest 10 over settler attacks on diplomats' with 1 article.
+2026-10-19 12:03:52,796 | INFO | hermes_db.services.event:210 | added article to event 'Australian lawmaker critically injured in apparent attack' (now 3 articles).
+2026-10-19 12:03:52,837 | INFO | hermes_db.services.event:124 | created event 'French students protest school conditions for four weeks' with 1 article.
+2026-10-19 12:03:52,893 | INFO | hermes_db.services.event:124 | created event 'WFP reduces aid to 500,000 Palestinians due to funding shortages' with 1 article.
+2026-10-19 12:03:52,937 | INFO | hermes_db.services.event:124 | created event 'Mexican protesters demand clean water, storm state congress' with 1 article.
+2026-10-19 12:03:52,982 | INFO | hermes_db.services.event:124 | created event 'Qatar warns of unpeaked global energy shockwaves from Iran war' with 1 article.
+2026-10-19 12:03:53,442 | WARNING | hermes_ai.services.geocoding:245 | no geocoding results found for 'Saudi Arabia and Yemen'.
+2026-10-19 12:03:53,527 | INFO | hermes_db.services.event:124 | created event 'Egypt agrees to support Saudi Arabia against Houthi attacks in Yemen' with 1 article.
+2026-10-19 12:03:53,572 | INFO | hermes_db.services.event:124 | created event 'Ebola outbreak spreads to eighth province in Congo' with 1 article.
+2026-10-19 12:03:53,616 | INFO | hermes_db.services.event:124 | created event 'Photographer attacked by settlers in West Bank criticizes Netanyahu’s response' with 1 article.
+2026-10-19 12:03:53,661 | INFO | hermes_db.services.event:124 | created event 'Priest dies during livestreamed Mass after being struck by falling cross in Ecuador' with 1 article.
+2026-10-19 12:03:53,706 | INFO | hermes_db.services.event:124 | created event 'German authorities investigate fence breach at Leipzig airport' with 1 article.
+2026-10-19 12:03:53,750 | INFO | hermes_db.services.event:124 | created event 'Macron condemns violence targeting French Republic' with 1 article.
+2026-10-19 12:03:53,795 | INFO | hermes_db.services.event:210 | added article to event 'France protests escalate with police clashes, 1,000+ arrests' (now 2 articles).
+12:03:54 - LiteLLM:INFO: utils.py:4382 - 
+LiteLLM completion() model= ministral-8b-latest; provider = mistral
+2026-10-19 12:03:54,280 | INFO | LiteLLM:4382 | 
+LiteLLM completion() model= ministral-8b-latest; provider = mistral
+12:03:54 - LiteLLM:INFO: utils.py:4382 - 
+LiteLLM completion() model= ministral-8b-latest; provider = mistral
+2026-10-19 12:03:54,750 | INFO | LiteLLM:4382 | 
+LiteLLM completion() model= ministral-8b-latest; provider = mistral
+12:03:56 - LiteLLM Router:INFO: router.py:3671 - litellm.acompletion(model=mistral/ministral-8b-latest)[32m 200 OK[0m
+2026-10-19 12:03:56,651 | INFO | LiteLLM Router:3671 | litellm.acompletion(model=mistral/ministral-8b-latest)[32m 200 OK[0m
+2026-10-19 12:03:56,653 | INFO | hermes_ai.extractors.events:158 | extracted: Hilarious quips and ‘100,000-volt’ energy: the hyp... | category = ENTERTAINMENT.
+2026-10-19 12:03:56,653 | INFO | hermes_ai.extractors.events:158 | extracted: An extraordinary life: descendant welcomes biograp... | category = HISTORY.
+2026-10-19 12:03:56,654 | INFO | hermes_ai.extractors.events:158 | extracted: LGBTQ+ people go into hiding in Senegal as hundred... | category = POLITICS.
+2026-10-19 12:03:56,654 | INFO | hermes_ai.extractors.events:158 | extracted: Zimbabwean author Simbarashe Kundizeza denies usin... | category = TECHNOLOGY.
+2026-10-19 12:03:56,654 | INFO | hermes_ai.extractors.events:158 | extracted: Guinea-Bissau denies it has approved controversial... | category = HEALTH.
+2026-10-19 12:03:56,654 | INFO | hermes_ai.extractors.events:158 | extracted: Hurricane Trudy menaces Mexico’s Pacific coast and... | category = DISASTER.
+2026-10-19 12:03:56,654 | INFO | hermes_ai.extractors.events:158 | extracted: ‘This is not poker’: Alberta goes to polls in refe... | category = POLITICS.
+2026-10-19 12:03:56,654 | INFO | hermes_ai.extractors.events:158 | extracted: Four people killed in ‘violent, fast-moving’ fire ... | category = DISASTER.
+2026-10-19 12:03:56,654 | INFO | hermes_ai.extractors.events:158 | extracted: ‘4,000 people minding our own business’: four deca... | category = POLITICS.
+2026-10-19 12:03:56,654 | INFO | hermes_ai.extractors.events:158 | extracted: Mexican judge sentences three men to 158 years in ... | category = CONFLICT.
+12:03:56 - LiteLLM Router:INFO: router.py:3671 - litellm.acompletion(model=mistral/ministral-8b-latest)[32m 200 OK[0m
+2026-10-19 12:03:56,660 | INFO | LiteLLM Router:3671 | litellm.acompletion(model=mistral/ministral-8b-latest)[32m 200 OK[0m
+2026-10-19 12:03:56,662 | INFO | hermes_ai.extractors.events:158 | extracted: Pope Leo XIV thanks wellwishers in first event aft... | category = HEALTH.
+2026-10-19 12:03:56,662 | INFO | hermes_ai.extractors.events:158 | extracted: Watch: Shops looted and restaurants gutted in Pari... | category = CONFLICT.
+2026-10-19 12:03:56,663 | INFO | hermes_ai.extractors.events:158 | extracted: How day of protests unfolded as disorder breaks ou... | category = CONFLICT.
+2026-10-19 12:03:56,663 | INFO | hermes_ai.extractors.events:158 | extracted: Watch: Will Ukraine get the support needed as tens... | category = POLITICS.
+2026-10-19 12:03:56,752 | INFO | hermes_db.services.event:210 | added article to event 'Pope Leo XIV resumes duties after cancer surgery' (now 2 articles).
+2026-10-19 12:03:56,768 | INFO | hermes_db.services.event:124 | created event 'Afrohype artists redefine Afrobeats with high-energy performances' with 1 article.
+2026-10-19 12:03:56,830 | INFO | hermes_db.services.event:124 | created event 'Paris riots escalate with widespread looting' with 1 article.
+2026-10-19 12:03:56,843 | INFO | hermes_db.services.event:124 | created event 'Biography of Queen Victoria’s protegee Sarah Forbes Bonetta published' with 1 article.
+2026-10-19 12:03:56,875 | INFO | hermes_db.services.event:124 | created event 'France faces widespread unrest and violence' with 1 article.
+2026-10-19 12:03:56,908 | INFO | hermes_db.services.event:124 | created event 'Senegal arrests hundreds in crackdown on LGBTQ+ community' with 1 article.
+2026-10-19 12:03:56,944 | INFO | hermes_db.services.event:124 | created event 'Ukraine seeks EU support amid rising US tensions' with 1 article.
+2026-10-19 12:03:56,944 | INFO | hermes_worker.services.sync:174 | finished source 'BBC World News': 24 processed, 0 skipped (duplicates), 0 failed.
+2026-10-19 12:03:56,975 | INFO | hermes_db.services.event:124 | created event 'Zimbabwean author denies AI use for Caine Prize-winning story' with 1 article.
+2026-10-19 12:03:56,977 | INFO | hermes_worker.services.sync:65 | syncing source: POLITICO Europe (type: RSS, url: https://www.politico.eu/feed/).
+2026-10-19 12:03:57,064 | INFO | hermes_db.services.event:124 | created event 'Guinea-Bissau denies approval for controversial hepatitis B newborn trial' with 1 article.
+2026-10-19 12:03:57,109 | INFO | hermes_db.services.event:124 | created event 'Hurricane Trudy impacts Mexico’s Pacific coast; Greece hit by deadly floods' with 1 article.
+2026-10-19 12:03:57,165 | INFO | hermes_db.services.event:124 | created event 'Alberta referendum exposes provincial divisions over independence' with 1 article.
+2026-10-19 12:03:57,209 | INFO | hermes_db.services.event:210 | added article to event 'Fire at Canadian military base kills 4, injures dozens' (now 2 articles).
+2026-10-19 12:03:57,265 | INFO | hermes_db.services.event:124 | created event 'Falkland Islands face renewed tensions with Argentina' with 1 article.
+2026-10-19 12:03:57,321 | INFO | hermes_db.services.event:124 | created event 'Three men sentenced for murders of Australian and US surfers in Mexico' with 1 article.
+2026-10-19 12:03:57,876 | INFO | hermes_worker.services.fetchers.rss:88 | fetched 10 articles from https://www.politico.eu/feed/.
+12:03:58 - LiteLLM Router:INFO: router.py:3671 - litellm.acompletion(model=mistral/ministral-8b-latest)[32m 200 OK[0m
+2026-10-19 12:03:58,915 | INFO | LiteLLM Router:3671 | litellm.acompletion(model=mistral/ministral-8b-latest)[32m 200 OK[0m
+2026-10-19 12:03:58,918 | INFO | hermes_ai.extractors.events:158 | extracted: Carney Says Fire at Canadian Forces Base Wainwrigh... | category = DISASTER.
+2026-10-19 12:03:58,918 | INFO | hermes_ai.extractors.events:158 | extracted: France in Shock After Protests Turn Into Riots, Da... | category = POLITICS.
+2026-10-19 12:03:58,918 | INFO | hermes_ai.extractors.events:158 | extracted: U.S. Officials Condemn West Bank Attacks as Netany... | category = CONFLICT.
+2026-10-19 12:03:58,918 | INFO | hermes_ai.extractors.events:158 | extracted: France Officials Acknowledge ‘Failure’ Around Riot... | category = POLITICS.
+2026-10-19 12:03:58,918 | INFO | hermes_ai.extractors.events:158 | extracted: What to Know About the Search for Amelia Earhart’s... | category = HISTORY.
+2026-10-19 12:03:58,918 | INFO | hermes_ai.extractors.events:158 | extracted: Can This International Force Stop Haiti’s Gangs?... | category = CONFLICT.
+2026-10-19 12:03:58,918 | INFO | hermes_ai.extractors.events:158 | extracted: How Did Life Arise? Three Turning Points in Early ... | category = SCIENCE.
+2026-10-19 12:03:58,918 | INFO | hermes_ai.extractors.events:158 | extracted: Coast Guard Halts Search for Survivors of Capsized... | category = DISASTER.
+2026-10-19 12:03:58,918 | INFO | hermes_ai.extractors.events:158 | extracted: Planet Earth and Brazil’s Election... | category = ENVIRONMENT.
+2026-10-19 12:03:58,919 | INFO | hermes_ai.extractors.events:158 | extracted: Albania’s Leader, Edi Rama, Denounces Violent Prot... | category = POLITICS.
+2026-10-19 12:03:58,944 | WARNING | hermes_db.services.event:139 | event not found for event id: 63685e63-cf87-4e34-9bc7-ad85e8bd05fb.
+2026-10-19 12:03:59,024 | INFO | hermes_db.services.event:124 | created event 'Fire at Canadian Forces Base Wainwright kills 4, injures dozens' with 1 article.
+2026-10-19 12:03:59,081 | INFO | hermes_db.services.event:124 | created event 'France protests turn violent, damaging buildings and shops' with 1 article.
+12:03:59 - LiteLLM:INFO: utils.py:4382 - 
+LiteLLM completion() model= ministral-8b-latest; provider = mistral
+2026-10-19 12:03:59,140 | INFO | LiteLLM:4382 | 
+LiteLLM completion() model= ministral-8b-latest; provider = mistral
+2026-10-19 12:03:59,154 | INFO | hermes_db.services.event:124 | created event 'West Bank attacks condemned by U.S. officials amid Netanyahu’s skepticism' with 1 article.
+2026-10-19 12:03:59,199 | INFO | hermes_db.services.event:124 | created event 'France officials acknowledge failure in managing nationwide riots' with 1 article.
+2026-10-19 12:03:59,244 | INFO | hermes_db.services.event:124 | created event 'Search continues for Amelia Earhart’s lost plane' with 1 article.
+2026-10-19 12:03:59,277 | INFO | hermes_db.services.event:124 | created event 'U.N. military force attempts to regain control from Haiti gangs' with 1 article.
+2026-10-19 12:03:59,321 | INFO | hermes_db.services.event:124 | created event 'Key turning points in early Earth’s evolution' with 1 article.
+2026-10-19 12:03:59,366 | INFO | hermes_db.services.event:124 | created event 'Coast Guard halts search for survivors after boat capsizes off Mexico' with 1 article.
+2026-10-19 12:03:59,411 | INFO | hermes_db.services.event:124 | created event 'Brazil’s election impacts Amazon deforestation' with 1 article.
+2026-10-19 12:03:59,455 | INFO | hermes_db.services.event:124 | created event 'Albania condemns violent protests in Tirana' with 1 article.
+12:04:00 - LiteLLM Router:INFO: router.py:3671 - litellm.acompletion(model=mistral/ministral-8b-latest)[32m 200 OK[0m
+2026-10-19 12:04:00,564 | INFO | LiteLLM Router:3671 | litellm.acompletion(model=mistral/ministral-8b-latest)[32m 200 OK[0m
+2026-10-19 12:04:00,566 | INFO | hermes_ai.extractors.events:158 | extracted: Ukraine launches more than 1,000 drones at Russia ... | category = CONFLICT.
+2026-10-19 12:04:00,566 | INFO | hermes_ai.extractors.events:158 | extracted: Airstrike kills at least 9 in rebel-held Yemen, an... | category = CONFLICT.
+2026-10-19 12:04:00,566 | INFO | hermes_ai.extractors.events:158 | extracted: Hurricane Trudy lashes Mexico’s Pacific coast with... | category = DISASTER.
+2026-10-19 12:04:00,566 | INFO | hermes_ai.extractors.events:158 | extracted: Equatorial Guinea is expanding an ambitious malari... | category = HEALTH.
+2026-10-19 12:04:00,566 | INFO | hermes_ai.extractors.events:158 | extracted: Israel-Lebanon agreement shines light on long-lost... | category = HISTORY.
+2026-10-19 12:04:00,743 | INFO | hermes_db.services.event:210 | added article to event 'Ukraine and Russia escalate strikes amid diplomatic tensions' (now 3 articles).
+12:04:00 - LiteLLM:INFO: utils.py:4382 - 
+LiteLLM completion() model= ministral-8b-latest; provider = mistral
+2026-10-19 12:04:00,824 | INFO | LiteLLM:4382 | 
+LiteLLM completion() model= ministral-8b-latest; provider = mistral
+12:04:00 - LiteLLM:INFO: utils.py:4382 - 
+LiteLLM completion() model= ministral-8b-latest; provider = mistral
+2026-10-19 12:04:00,861 | INFO | LiteLLM:4382 | 
+LiteLLM completion() model= ministral-8b-latest; provider = mistral
+2026-10-19 12:04:00,878 | INFO | hermes_db.services.event:124 | created event 'Airstrike kills 9 in Yemen’s rebel-held areas' with 1 article.
+2026-10-19 12:04:00,922 | INFO | hermes_db.services.event:124 | created event 'Hurricane Trudy impacts Mexico’s Pacific coast' with 1 article.
+2026-10-19 12:04:00,968 | INFO | hermes_db.services.event:124 | created event 'Equatorial Guinea expands malaria elimination efforts' with 1 article.
+2026-10-19 12:04:01,012 | INFO | hermes_db.services.event:124 | created event 'Israel-Lebanon agreement highlights lost Jewish community' with 1 article.
+2026-10-19 12:04:01,012 | INFO | hermes_worker.services.sync:174 | finished source 'ABC News International': 25 processed, 0 skipped (duplicates), 0 failed.
+2026-10-19 12:04:01,023 | INFO | hermes_worker.services.sync:65 | syncing source: The Washington Post World (type: RSS, url: https://feeds.washingtonpost.com/rss/world).
+12:04:10 - LiteLLM Router:INFO: router.py:3671 - litellm.acompletion(model=mistral/ministral-8b-latest)[32m 200 OK[0m
+2026-10-19 12:04:10,727 | INFO | LiteLLM Router:3671 | litellm.acompletion(model=mistral/ministral-8b-latest)[32m 200 OK[0m
+2026-10-19 12:04:10,728 | INFO | hermes_ai.extractors.events:158 | extracted: China’s economy grows faster than forecast after A... | category = ECONOMY.
+2026-10-19 12:04:10,728 | INFO | hermes_ai.extractors.events:158 | extracted: Three deaths from float crushes raise safety conce... | category = DISASTER.
+2026-10-19 12:04:10,728 | INFO | hermes_ai.extractors.events:158 | extracted: Amelia Earhart researchers leave remote atoll empt... | category = HISTORY.
+2026-10-19 12:04:10,728 | INFO | hermes_ai.extractors.events:158 | extracted: No 10 leaves option open to impose Chinese EV tari... | category = ECONOMY.
+2026-10-19 12:04:10,728 | INFO | hermes_ai.extractors.events:158 | extracted: Museum releases historical photos of island where ... | category = HISTORY.
+2026-10-19 12:04:10,729 | INFO | hermes_ai.extractors.events:158 | extracted: ‘Deeply appalled’: politicians condemn alleged att... | category = CONFLICT.
+2026-10-19 12:04:10,729 | INFO | hermes_ai.extractors.events:158 | extracted: Premier ‘deeply appalled’ after Indi MP Haines inj... | category = CONFLICT.
+2026-10-19 12:04:10,729 | INFO | hermes_ai.extractors.events:158 | extracted: Pregnant women face workplace hostility and ‘sham ... | category = HEALTH.
+2026-10-19 12:04:10,729 | INFO | hermes_ai.extractors.events:158 | extracted: Mother assessed as posing no immediate risk to oth... | category = HEALTH.
+2026-10-19 12:04:10,729 | INFO | hermes_ai.extractors.events:158 | extracted: Kings Cross strip club owner fails to overturn ban... | category = ENTERTAINMENT.
+2026-10-19 12:04:10,732 | WARNING | hermes_worker.services.fetchers.rss:56 | failed to fetch RSS feed https://feeds.washingtonpost.com/rss/world: Server error '502 Bad Gateway' for url 'https://feeds.washingtonpost.com/rss/world'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/502.
+2026-10-19 12:04:10,732 | INFO | hermes_worker.services.sync:76 | no articles found in The Washington Post World.
+2026-10-19 12:04:10,777 | INFO | hermes_worker.services.sync:65 | syncing source: France 24 World (type: RSS, url: https://www.france24.com/en/world/rss).
+2026-10-19 12:04:10,809 | INFO | hermes_db.services.event:210 | added article to event 'China’s economy grows 4.5% in July-September quarter' (now 2 articles).
+2026-10-19 12:04:10,855 | INFO | hermes_db.services.event:124 | created event 'Three deaths in Japanese festival float accidents raise safety concerns' with 1 article.
+2026-10-19 12:04:10,900 | INFO | hermes_db.services.event:124 | created event 'Amelia Earhart expedition finds no plane debris on remote atoll' with 1 article.
+2026-10-19 12:04:10,944 | INFO | hermes_db.services.event:124 | created event 'UK considers Chinese EV tariffs under EU trade scheme' with 1 article.
+2026-10-19 12:04:10,990 | INFO | hermes_db.services.event:124 | created event 'New Zealand releases historical photos of Amelia Earhart’s potential crash site' with 1 article.
+2026-10-19 12:04:11,035 | INFO | hermes_db.services.event:124 | created event 'Independent MP Helen Haines critically injured in alleged attack' with 1 article.
+2026-10-19 12:04:11,080 | INFO | hermes_db.services.event:124 | created event 'Update: MP Helen Haines injured in alleged attack' with 1 article.
+2026-10-19 12:04:11,124 | INFO | hermes_db.services.event:124 | created event 'Pregnant women face workplace discrimination in Australia' with 1 article.
+2026-10-19 12:04:11,169 | INFO | hermes_db.services.event:124 | created event 'Mother’s risk assessment overlooked prior child neglect history' with 1 article.
+2026-10-19 12:04:12,003 | INFO | hermes_ai.services.geocoding:256 | geocoded 'Kings Cross, Sydney, Australia' -> (-33.8744874, 151.2222308).
+2026-10-19 12:04:12,080 | INFO | hermes_db.services.event:124 | created event 'Strip club owner barred from his own venues in Sydney' with 1 article.
+2026-10-19 12:04:12,138 | INFO | hermes_worker.services.fetchers.rss:88 | fetched 24 articles from https://www.france24.com/en/world/rss.
+12:04:12 - LiteLLM Router:INFO: router.py:3671 - litellm.acompletion(model=mistral/ministral-8b-latest)[32m 200 OK[0m
+2026-10-19 12:04:12,250 | INFO | LiteLLM Router:3671 | litellm.acompletion(model=mistral/ministral-8b-latest)[32m 200 OK[0m
+2026-10-19 12:04:12,252 | INFO | hermes_ai.extractors.events:158 | extracted: Egypt’s Defense Chiefs Pledge to Support Saudi Ara... | category = CONFLICT.
+2026-10-19 12:04:12,252 | INFO | hermes_ai.extractors.events:158 | extracted: Zelensky Says Trump Risks ‘Historic Mistake’ If He... | category = POLITICS.
+2026-10-19 12:04:12,252 | INFO | hermes_ai.extractors.events:158 | extracted: Pope Leo Addresses the Faithful a Day After Leavin... | category = HEALTH.
+2026-10-19 12:04:12,252 | INFO | hermes_ai.extractors.events:158 | extracted: In India, the Scion of a Political Dynasty Tries t... | category = POLITICS.
+2026-10-19 12:04:12,252 | INFO | hermes_ai.extractors.events:158 | extracted: Singing, Dancing and Getting Dumped by A.I. on Kor... | category = TECHNOLOGY.
+2026-10-19 12:04:12,253 | INFO | hermes_ai.extractors.events:158 | extracted: Deadly ‘Incident’ at Canadian Forces Base Wainwrig... | category = DISASTER.
+2026-10-19 12:04:12,253 | INFO | hermes_ai.extractors.events:158 | extracted: At Least 19 Dead After Stampede at Indian Religiou... | category = DISASTER.
+2026-10-19 12:04:12,253 | INFO | hermes_ai.extractors.events:158 | extracted: Mexican Judge Sentences 3 Men to 159 Years Each in... | category = CONFLICT.
+2026-10-19 12:04:12,253 | INFO | hermes_ai.extractors.events:158 | extracted: Kenya Confirms Four New Ebola Cases... | category = HEALTH.
+2026-10-19 12:04:12,253 | INFO | hermes_ai.extractors.events:158 | extracted: Israeli Settlers Attack Palestinians and European ... | category = CONFLICT.
+2026-10-19 12:04:12,292 | INFO | hermes_db.services.event:210 | added article to event 'Egypt agrees to support Saudi Arabia against Houthi attacks in Yemen' (now 2 articles).
+2026-10-19 12:04:12,336 | INFO | hermes_db.services.event:124 | created event 'Zelensky warns Trump of 'historic mistake' over Russia support' with 1 article.
+2026-10-19 12:04:12,392 | INFO | hermes_db.services.event:124 | created event 'Pope Leo XIV resumes duties after hospital stay' with 1 article.
+2026-10-19 12:04:12,437 | INFO | hermes_db.services.event:124 | created event 'Rahul Gandhi seeks political momentum in India' with 1 article.
+2026-10-19 12:04:12,481 | INFO | hermes_db.services.event:124 | created event 'Celebrities date AI avatars on Korean reality show' with 1 article.
+2026-10-19 12:04:12,514 | INFO | hermes_db.services.event:210 | added article to event 'Fire at Canadian military base kills 4, injures dozens' (now 3 articles).
+2026-10-19 12:04:12,570 | INFO | hermes_db.services.event:124 | created event 'Stampede at Hindu religious event kills at least 19' with 1 article.
+2026-10-19 12:04:12,637 | INFO | hermes_db.services.event:124 | created event 'Mexican judge sentences three men to 159 years each in surfer killings' with 1 article.
+2026-10-19 12:04:12,681 | INFO | hermes_db.services.event:210 | added article to event 'Kenya reports 8 Ebola cases with no community transmission' (now 2 articles).
+2026-10-19 12:04:12,738 | INFO | hermes_db.services.event:124 | created event 'Israeli settlers attack Palestinians and European officials in West Bank' with 1 article.
+12:04:13 - LiteLLM Router:INFO: router.py:3671 - litellm.acompletion(model=mistral/ministral-8b-latest)[32m 200 OK[0m
+2026-10-19 12:04:13,037 | INFO | LiteLLM Router:3671 | litellm.acompletion(model=mistral/ministral-8b-latest)[32m 200 OK[0m
+2026-10-19 12:04:13,040 | INFO | hermes_ai.extractors.events:158 | extracted: How a grass fire at a Canadian military base kille... | category = DISASTER.
+2026-10-19 12:04:13,041 | INFO | hermes_ai.extractors.events:158 | extracted: Rubio says there was no US pause in intelligence s... | category = TECHNOLOGY.
+2026-10-19 12:04:13,042 | INFO | hermes_ai.extractors.events:158 | extracted: NFL’s Azeez Al-Shaair honours Palestinian children... | category = ENTERTAINMENT.
+2026-10-19 12:04:13,042 | INFO | hermes_ai.extractors.events:158 | extracted: Hezbollah funding plan indicates a new challenge t... | category = POLITICS.
+2026-10-19 12:04:13,042 | INFO | hermes_ai.extractors.events:158 | extracted: France’s Macron declines minister’s resignation af... | category = POLITICS.
+2026-10-19 12:04:13,043 | INFO | hermes_ai.extractors.events:158 | extracted: Mali’s military and armed groups committing abuses... | category = CONFLICT.
+2026-10-19 12:04:13,043 | INFO | hermes_ai.extractors.events:158 | extracted: Elderly man forcibly detained at Elbit Systems pro... | category = POLITICS.
+2026-10-19 12:04:13,043 | INFO | hermes_ai.extractors.events:158 | extracted: France protests live: PM wants some cities to impo... | category = POLITICS.
+2026-10-19 12:04:13,043 | INFO | hermes_ai.extractors.events:158 | extracted: Losing Cuba, the global trickster... | category = HISTORY.
+2026-10-19 12:04:13,043 | INFO | hermes_ai.extractors.events:158 | extracted: In pro-Palestine hub of Athens, Israeli buyers inc... | category = ENVIRONMENT.
+2026-10-19 12:04:13,756 | INFO | hermes_db.services.event:210 | added article to event 'Fire at Canadian military base kills 4, injures dozens' (now 4 articles).
+2026-10-19 12:04:14,272 | INFO | hermes_db.services.event:210 | added article to event 'Ukraine and U.S. clash over Starshield satellite service' (now 2 articles).
+12:04:14 - LiteLLM:INFO: utils.py:4382 - 
+LiteLLM completion() model= ministral-8b-latest; provider = mistral
+2026-10-19 12:04:14,433 | INFO | LiteLLM:4382 | 
+LiteLLM completion() model= ministral-8b-latest; provider = mistral
+12:04:14 - LiteLLM:INFO: utils.py:4382 - 
+LiteLLM completion() model= ministral-8b-latest; provider = mistral
+2026-10-19 12:04:14,441 | INFO | LiteLLM:4382 | 
+LiteLLM completion() model= ministral-8b-latest; provider = mistral
+12:04:14 - LiteLLM:INFO: utils.py:4382 - 
+LiteLLM completion() model= ministral-8b-latest; provider = mistral
+2026-10-19 12:04:14,477 | INFO | LiteLLM:4382 | 
+LiteLLM completion() model= ministral-8b-latest; provider = mistral
+2026-10-19 12:04:14,488 | INFO | hermes_db.services.event:124 | created event 'NFL player honors Palestinian children amid conflict' with 1 article.
+12:04:14 - LiteLLM Router:INFO: router.py:3671 - litellm.acompletion(model=mistral/ministral-8b-latest)[32m 200 OK[0m
+2026-10-19 12:04:14,521 | INFO | LiteLLM Router:3671 | litellm.acompletion(model=mistral/ministral-8b-latest)[32m 200 OK[0m
+2026-10-19 12:04:14,523 | INFO | hermes_ai.extractors.events:158 | extracted: Serbian prosecutor probing Trump Tower in Belgrade... | category = POLITICS.
+2026-10-19 12:04:14,523 | INFO | hermes_ai.extractors.events:158 | extracted: EU eyes Rome for 2027 summit ahead of Italian elec... | category = POLITICS.
+2026-10-19 12:04:14,524 | INFO | hermes_ai.extractors.events:158 | extracted: France riots: Presidential hopeful Attal pitches s... | category = POLITICS.
+2026-10-19 12:04:14,524 | INFO | hermes_ai.extractors.events:158 | extracted: Where’s Burnham really on welfare reform?... | category = ECONOMY.
+2026-10-19 12:04:14,524 | INFO | hermes_ai.extractors.events:158 | extracted: Trump’s Russia rethink — and Europe’s response... | category = POLITICS.
+2026-10-19 12:04:14,524 | INFO | hermes_ai.extractors.events:158 | extracted: Wie die Hauptstadt für die Bundesregierung zur Bel... | category = POLITICS.
+2026-10-19 12:04:14,524 | INFO | hermes_ai.extractors.events:158 | extracted: Deutschland braucht wieder mehr Spielraum für Wach... | category = ECONOMY.
+2026-10-19 12:04:14,524 | INFO | hermes_ai.extractors.events:158 | extracted: 5 fights that will shape NATO’s next Russia war pl... | category = POLITICS.
+2026-10-19 12:04:14,524 | INFO | hermes_ai.extractors.events:158 | extracted: Cyberattack on French supermarkets tells us more a... | category = TECHNOLOGY.
+2026-10-19 12:04:14,524 | INFO | hermes_ai.extractors.events:158 | extracted: The EU heads into a perfect political storm... | category = POLITICS.
+2026-10-19 12:04:14,548 | INFO | hermes_db.services.event:124 | created event 'Iran funds Hezbollah, straining Lebanon-US relations' with 1 article.
+2026-10-19 12:04:14,564 | WARNING | hermes_db.services.event:139 | event not found for event id: b5a3644d-556e-4f65-8389-26c39fffd5b0.
+2026-10-19 12:04:14,582 | INFO | hermes_db.services.event:124 | created event 'Serbian prosecutor targeted with spyware amid Trump Tower controversy' with 1 article.
+2026-10-19 12:04:14,617 | INFO | hermes_db.services.event:124 | created event 'Macron rejects minister resignation after violent protests' with 1 article.
+2026-10-19 12:04:14,634 | INFO | hermes_db.services.event:124 | created event 'EU considers Rome for 2027 summit ahead of Italian elections' with 1 article.
+2026-10-19 12:04:14,683 | INFO | hermes_db.services.event:124 | created event 'Civilian abuses by Mali military and armed groups' with 1 article.
+2026-10-19 12:04:14,695 | INFO | hermes_db.services.event:124 | created event 'French candidate proposes localized social media blackouts during riots' with 1 article.
+2026-10-19 12:04:14,739 | INFO | hermes_db.services.event:124 | created event 'Elderly man detained during Elbit protest in Germany' with 1 article.
+2026-10-19 12:04:14,750 | INFO | hermes_db.services.event:124 | created event 'UK politician questioned on welfare reform stance' with 1 article.
+2026-10-19 12:04:14,783 | INFO | hermes_db.services.event:210 | added article to event 'France imposes localized curfews to curb rioting' (now 2 articles).
+2026-10-19 12:04:14,807 | INFO | hermes_db.services.event:124 | created event 'Trump’s Russia policy shift and European response' with 1 article.
+2026-10-19 12:04:14,850 | INFO | hermes_db.services.event:124 | created event 'Reflections on the Cuban Revolution’s legacy' with 1 article.
+2026-10-19 12:04:14,866 | INFO | hermes_db.services.event:124 | created event 'German capital faces strain amid political challenges' with 1 article.
+2026-10-19 12:04:14,906 | INFO | hermes_db.services.event:124 | created event 'Rising tensions in Athens over short-term rentals' with 1 article.
+2026-10-19 12:04:14,931 | INFO | hermes_db.services.event:124 | created event 'Germany’s economic stagnation and need for growth reforms' with 1 article.
+2026-10-19 12:04:14,984 | INFO | hermes_db.services.event:124 | created event 'NATO debates future defense strategies amid U.S. force reductions' with 1 article.
+2026-10-19 12:04:15,029 | INFO | hermes_db.services.event:124 | created event 'Cyberattack disrupts French supermarket refrigeration systems' with 1 article.
+2026-10-19 12:04:15,062 | INFO | hermes_db.services.event:124 | created event 'EU faces political paralysis ahead of multiple national elections' with 1 article.
+2026-10-19 12:04:15,064 | INFO | hermes_worker.services.sync:174 | finished source 'POLITICO Europe': 10 processed, 0 skipped (duplicates), 0 failed.
+2026-10-19 12:04:15,076 | INFO | hermes_worker.services.sync:65 | syncing source: Euronews World (type: RSS, url: https://www.euronews.com/rss?level=program&name=world).
+2026-10-19 12:04:15,603 | INFO | hermes_worker.services.fetchers.rss:88 | fetched 50 articles from https://www.euronews.com/rss?level=program&name=world.
+12:04:16 - LiteLLM:INFO: utils.py:4382 - 
+LiteLLM completion() model= ministral-8b-latest; provider = mistral
+2026-10-19 12:04:16,026 | INFO | LiteLLM:4382 | 
+LiteLLM completion() model= ministral-8b-latest; provider = mistral
+12:04:17 - LiteLLM:INFO: utils.py:4382 - 
+LiteLLM completion() model= ministral-8b-latest; provider = mistral
+2026-10-19 12:04:17,140 | INFO | LiteLLM:4382 | 
+LiteLLM completion() model= ministral-8b-latest; provider = mistral
+12:04:24 - LiteLLM Router:INFO: router.py:3671 - litellm.acompletion(model=mistral/ministral-8b-latest)[32m 200 OK[0m
+2026-10-19 12:04:24,109 | INFO | LiteLLM Router:3671 | litellm.acompletion(model=mistral/ministral-8b-latest)[32m 200 OK[0m
+2026-10-19 12:04:24,110 | INFO | hermes_ai.extractors.events:158 | extracted: No ‘turmoil’ at the White House... | category = POLITICS.
+2026-10-19 12:04:24,111 | INFO | hermes_ai.extractors.events:158 | extracted: Mbappe scores two, Guler one, as Real Madrid find ... | category = SPORTS.
+2026-10-19 12:04:24,111 | INFO | hermes_ai.extractors.events:158 | extracted: The kingmakers who could determine Israel’s electi... | category = POLITICS.
+2026-10-19 12:04:24,111 | INFO | hermes_ai.extractors.events:158 | extracted: China’s economy grows 4.5 percent in Q3, beating f... | category = ECONOMY.
+2026-10-19 12:04:24,111 | INFO | hermes_ai.extractors.events:158 | extracted: US President Donald Trump endorses Netanyahu for I... | category = POLITICS.
+2026-10-19 12:04:24,173 | INFO | hermes_db.services.event:124 | created event 'Media exaggerates Trump administration turmoil claims' with 1 article.
+2026-10-19 12:04:24,217 | INFO | hermes_db.services.event:124 | created event 'Real Madrid wins 4-1 over Sevilla ahead of El Clasico' with 1 article.
+2026-10-19 12:04:24,262 | INFO | hermes_db.services.event:124 | created event 'Israel’s Arab and ultra-Orthodox parties pivotal in upcoming election' with 1 article.
+2026-10-19 12:04:24,296 | INFO | hermes_db.services.event:124 | created event 'China’s Q3 GDP growth exceeds forecasts at 4.5%' with 1 article.
+2026-10-19 12:04:24,296 | WARNING | hermes_worker.services.sync:136 | ignoring malformed matched_event_id '4c428ac1-c4d4-4bb4-bcd9-b2e68b24edb2c' for article 'US President Donald Trump endorses Netanyahu for Israeli election'.
+2026-10-19 12:04:24,340 | INFO | hermes_db.services.event:124 | created event 'Trump endorses Netanyahu for Israeli election' with 1 article.
+2026-10-19 12:04:24,340 | INFO | hermes_worker.services.sync:174 | finished source 'Al Jazeera English': 25 processed, 0 skipped (duplicates), 0 failed.
+2026-10-19 12:04:24,352 | INFO | hermes_worker.services.sync:65 | syncing source: Reuters (type: GDELT, url: https://www.reuters.com).
+12:04:26 - LiteLLM Router:INFO: router.py:3671 - litellm.acompletion(model=mistral/ministral-8b-latest)[32m 200 OK[0m
+2026-10-19 12:04:26,092 | INFO | LiteLLM Router:3671 | litellm.acompletion(model=mistral/ministral-8b-latest)[32m 200 OK[0m
+2026-10-19 12:04:26,093 | INFO | hermes_ai.extractors.events:158 | extracted: Unrest Mars Day of Protest in France, as Student M... | category = CONFLICT.
+2026-10-19 12:04:26,093 | INFO | hermes_ai.extractors.events:158 | extracted: Egypt’s President Says He Will Leave Office in 203... | category = POLITICS.
+2026-10-19 12:04:26,094 | INFO | hermes_ai.extractors.events:158 | extracted: U.S. Floats Lifeline to Russia: Allowing More Gas ... | category = ECONOMY.
+2026-10-19 12:04:26,094 | INFO | hermes_ai.extractors.events:158 | extracted: Dispute Between Trump Allies Centers on Millions T... | category = POLITICS.
+2026-10-19 12:04:26,094 | INFO | hermes_ai.extractors.events:158 | extracted: What to Know About the Violent Protests in Albania... | category = CONFLICT.
+2026-10-19 12:04:26,094 | INFO | hermes_ai.extractors.events:158 | extracted: Indian Gen Z Protest Leader Is Released on Bail Af... | category = POLITICS.
+2026-10-19 12:04:26,094 | INFO | hermes_ai.extractors.events:158 | extracted: Yemen Fighting Rages as Civilian Toll From Houthi-... | category = CONFLICT.
+2026-10-19 12:04:26,094 | INFO | hermes_ai.extractors.events:158 | extracted: A Calgary Crowd Rallies for Canada as Alberta’s Vo... | category = POLITICS.
+2026-10-19 12:04:26,094 | INFO | hermes_ai.extractors.events:158 | extracted: Pope Leo Leaves Hospital, Days After Lung Cancer S... | category = HEALTH.
+2026-10-19 12:04:26,094 | INFO | hermes_ai.extractors.events:158 | extracted: He Was a Top Voice on Palestinian Liberation. Film... | category = ENTERTAINMENT.
+2026-10-19 12:04:26,151 | INFO | hermes_db.services.event:210 | added article to event 'France faces widespread unrest and violence' (now 2 articles).
+2026-10-19 12:04:26,196 | INFO | hermes_db.services.event:124 | created event 'Egyptian president announces potential 2030 exit amid term limit questions' with 1 article.
+2026-10-19 12:04:26,240 | INFO | hermes_db.services.event:124 | created event 'U.S. considers allowing more Russian gas exports to Europe' with 1 article.
+2026-10-19 12:04:26,273 | INFO | hermes_db.services.event:124 | created event 'Dispute over millions transferred from Congo involves Trump allies' with 1 article.
+2026-10-19 12:04:26,283 | WARNING | hermes_db.services.event:139 | event not found for event id: 787021de-4b62-4399-bc5e-a741c14f1a70.
+2026-10-19 12:04:26,330 | INFO | hermes_db.services.event:124 | created event 'Violent protests erupt in Albania’s capital' with 1 article.
+2026-10-19 12:04:26,374 | INFO | hermes_db.services.event:124 | created event 'Gen Z protest leader in India granted bail' with 1 article.
+2026-10-19 12:04:26,407 | INFO | hermes_db.services.event:210 | added article to event 'Airstrike kills 9 in Yemen’s rebel-held areas' (now 2 articles).
+2026-10-19 12:04:26,452 | INFO | hermes_db.services.event:124 | created event 'Alberta residents rally ahead of secession vote' with 1 article.
+2026-10-19 12:04:26,497 | INFO | hermes_db.services.event:124 | created event 'Pope Leo recovers and leaves hospital post-surgery' with 1 article.
+2026-10-19 12:04:26,541 | INFO | hermes_db.services.event:124 | created event 'Documentary honors legacy of Palestinian liberation voice Edward Said' with 1 article.
+12:04:27 - LiteLLM:INFO: utils.py:4382 - 
+LiteLLM completion() model= ministral-8b-latest; provider = mistral
+2026-10-19 12:04:27,786 | INFO | LiteLLM:4382 | 
+LiteLLM completion() model= ministral-8b-latest; provider = mistral
+12:04:28 - LiteLLM Router:INFO: router.py:3671 - litellm.acompletion(model=mistral/ministral-8b-latest)[32m 200 OK[0m
+2026-10-19 12:04:28,964 | INFO | LiteLLM Router:3671 | litellm.acompletion(model=mistral/ministral-8b-latest)[32m 200 OK[0m
+2026-10-19 12:04:28,966 | INFO | hermes_ai.extractors.events:158 | extracted: French PM blames ‘ultra-left’ for exploiting prote... | category = CONFLICT.
+2026-10-19 12:04:28,966 | INFO | hermes_ai.extractors.events:158 | extracted: French police ‘lost control’ during riots, concede... | category = CONFLICT.
+2026-10-19 12:04:28,966 | INFO | hermes_ai.extractors.events:158 | extracted: US gave us no warning of Russian strikes on Kyiv p... | category = CONFLICT.
+2026-10-19 12:04:28,967 | INFO | hermes_ai.extractors.events:158 | extracted: France hit by debt sell-off as protests unnerve in... | category = ECONOMY.
+2026-10-19 12:04:28,967 | INFO | hermes_ai.extractors.events:158 | extracted: Monday briefing: What you need to know about a wee... | category = CONFLICT.
+2026-10-19 12:04:28,967 | INFO | hermes_ai.extractors.events:158 | extracted: Cuts force World Food Programme to end support for... | category = DISASTER.
+2026-10-19 12:04:28,967 | INFO | hermes_ai.extractors.events:158 | extracted: Guardian reporter filmed masked militants seconds ... | category = CONFLICT.
+2026-10-19 12:04:28,967 | INFO | hermes_ai.extractors.events:158 | extracted: Flydubai captain describes blocking axe blows as c... | category = CONFLICT.
+2026-10-19 12:04:28,967 | INFO | hermes_ai.extractors.events:158 | extracted: US ambassador to Israel calls West Bank settler at... | category = CONFLICT.
+2026-10-19 12:04:28,967 | INFO | hermes_ai.extractors.events:158 | extracted: Israeli settlers attack European diplomats in West... | category = CONFLICT.
+2026-10-19 12:04:29,041 | INFO | hermes_db.services.event:124 | created event 'France implements partial curfews amid violent protests' with 1 article.
+2026-10-19 12:04:29,086 | INFO | hermes_db.services.event:124 | created event 'France admits police 'lost control' during violent protests' with 1 article.
+2026-10-19 12:04:29,131 | INFO | hermes_db.services.event:124 | created event 'Ukraine receives no warning of Russian missile strikes on Kyiv power plants' with 1 article.
+2026-10-19 12:04:29,175 | INFO | hermes_db.services.event:124 | created event 'France faces bond sell-off amid violent protests' with 1 article.
+2026-10-19 12:04:29,208 | INFO | hermes_db.services.event:124 | created event 'France grapples with nationwide riots and public anger' with 1 article.
+2026-10-19 12:04:29,253 | INFO | hermes_db.services.event:124 | created event 'WFP cuts aid to half a million Palestinians in Gaza amid worsening hunger crisis' with 1 article.
+2026-10-19 12:04:29,298 | INFO | hermes_db.services.event:124 | created event 'Israeli settlers attack European diplomats and French mayor in West Bank' with 1 article.
+2026-10-19 12:04:29,331 | INFO | hermes_db.services.event:124 | created event 'Flydubai captain blocks co-pilot’s attempted cockpit attack' with 1 article.
+2026-10-19 12:04:29,376 | INFO | hermes_db.services.event:124 | created event 'US condemns settler attack on American photojournalist in West Bank' with 1 article.
+2026-10-19 12:04:29,409 | INFO | hermes_db.services.event:124 | created event 'Israeli settlers attack European diplomats and French officials in West Bank' with 1 article.
+12:04:30 - LiteLLM Router:INFO: router.py:3671 - litellm.acompletion(model=mistral/ministral-8b-latest)[32m 200 OK[0m
+2026-10-19 12:04:30,558 | INFO | LiteLLM Router:3671 | litellm.acompletion(model=mistral/ministral-8b-latest)[32m 200 OK[0m
+2026-10-19 12:04:30,560 | INFO | hermes_ai.extractors.events:158 | extracted: Les Misérables: Macron's 'sense of detachment' ami... | category = POLITICS.
+2026-10-19 12:04:30,560 | INFO | hermes_ai.extractors.events:158 | extracted: Marseille cleans up after looting and vandalism in... | category = CONFLICT.
+2026-10-19 12:04:30,561 | INFO | hermes_ai.extractors.events:158 | extracted: 'Lame-duck president' Macron notes 'failures' afte... | category = POLITICS.
+2026-10-19 12:04:30,561 | INFO | hermes_ai.extractors.events:158 | extracted: French retailers reel after weekend of riots, loot... | category = ECONOMY.
+2026-10-19 12:04:30,561 | INFO | hermes_ai.extractors.events:158 | extracted: Massive clean-up operation sweeps across France af... | category = CONFLICT.
+2026-10-19 12:04:30,561 | INFO | hermes_ai.extractors.events:158 | extracted: 'Shame', 'anger', 'chaos': Papers react to polaris... | category = POLITICS.
+2026-10-19 12:04:30,561 | INFO | hermes_ai.extractors.events:158 | extracted: French interior minister admits police 'lost contr... | category = POLITICS.
+2026-10-19 12:04:30,561 | INFO | hermes_ai.extractors.events:158 | extracted: Protests continue sixth day in a row in Albania's ... | category = POLITICS.
+2026-10-19 12:04:30,561 | INFO | hermes_ai.extractors.events:158 | extracted: French shops demolished after weekend riots across... | category = CONFLICT.
+2026-10-19 12:04:30,561 | INFO | hermes_ai.extractors.events:158 | extracted: 🔴 Live: France's Yellow Vest movement calls for ne... | category = POLITICS.
+2026-10-19 12:04:30,669 | INFO | hermes_db.services.event:124 | created event 'France protests: Macron criticized amid rising unrest' with 1 article.
+12:04:30 - LiteLLM Router:INFO: router.py:3671 - litellm.acompletion(model=mistral/ministral-8b-latest)[32m 200 OK[0m
+2026-10-19 12:04:30,753 | INFO | LiteLLM Router:3671 | litellm.acompletion(model=mistral/ministral-8b-latest)[32m 200 OK[0m
+2026-10-19 12:04:30,755 | INFO | hermes_ai.extractors.events:158 | extracted: Russia woos Asian tourists in attempt to counter E... | category = ECONOMY.
+2026-10-19 12:04:30,756 | INFO | hermes_ai.extractors.events:158 | extracted: Australian MP Helen Haines 'critically' hurt in ca... | category = CONFLICT.
+2026-10-19 12:04:30,756 | INFO | hermes_ai.extractors.events:158 | extracted: Lula and Bolsonaro trade insults in TV debate ahea... | category = POLITICS.
+2026-10-19 12:04:30,756 | INFO | hermes_ai.extractors.events:158 | extracted: Gulf states top disaster resilience as Lebanon and... | category = ENVIRONMENT.
+2026-10-19 12:04:30,756 | INFO | hermes_ai.extractors.events:158 | extracted: US is coming to Central Asia with deals to stay, R... | category = ECONOMY.
+2026-10-19 12:04:30,756 | INFO | hermes_ai.extractors.events:158 | extracted: Albertans vote on path to independence as Carney f... | category = POLITICS.
+2026-10-19 12:04:30,756 | INFO | hermes_ai.extractors.events:158 | extracted: Trump endorses Netanyahu nine days before Israeli ... | category = POLITICS.
+2026-10-19 12:04:30,756 | INFO | hermes_ai.extractors.events:158 | extracted: Rubio arrives in Samarkand as Washington seeks clo... | category = POLITICS.
+2026-10-19 12:04:30,756 | INFO | hermes_ai.extractors.events:158 | extracted: Four Canadian service members killed, dozens injur... | category = DISASTER.
+2026-10-19 12:04:30,756 | INFO | hermes_ai.extractors.events:158 | extracted: Hungarian PM Péter Magyar says Zelenskyy unlikely ... | category = POLITICS.
+2026-10-19 12:04:30,778 | INFO | hermes_db.services.event:210 | added article to event 'France faces widespread unrest and violence' (now 3 articles).
+12:04:30 - LiteLLM:INFO: utils.py:4382 - 
+LiteLLM completion() model= ministral-8b-latest; provider = mistral
+2026-10-19 12:04:30,842 | INFO | LiteLLM:4382 | 
+LiteLLM completion() model= ministral-8b-latest; provider = mistral
+2026-10-19 12:04:30,866 | INFO | hermes_db.services.event:124 | created event 'Russia targets Asian tourism to replace lost European visitors' with 1 article.
+2026-10-19 12:04:30,878 | INFO | hermes_db.services.event:210 | added article to event 'France faces widespread unrest and violence' (now 4 articles).
+2026-10-19 12:04:30,903 | INFO | hermes_db.services.event:210 | added article to event 'Australian lawmaker critically injured in apparent attack' (now 4 articles).
+2026-10-19 12:04:30,932 | INFO | hermes_db.services.event:210 | added article to event 'France faces widespread unrest and violence' (now 5 articles).
+2026-10-19 12:04:30,946 | INFO | hermes_db.services.event:210 | added article to event 'Brazil presidential candidates debate ahead of runoff' (now 2 articles).
+2026-10-19 12:04:30,976 | INFO | hermes_db.services.event:210 | added article to event 'France faces widespread unrest and violence' (now 6 articles).
+2026-10-19 12:04:31,010 | INFO | hermes_db.services.event:124 | created event 'Gulf states lead in disaster resilience; Lebanon and Iraq lag' with 1 article.
+2026-10-19 12:04:31,022 | INFO | hermes_db.services.event:210 | added article to event 'France faces widespread unrest and violence' (now 7 articles).
+2026-10-19 12:04:31,077 | INFO | hermes_db.services.event:210 | added article to event 'France faces widespread unrest and violence' (now 8 articles).
+2026-10-19 12:04:31,090 | INFO | hermes_db.services.event:124 | created event 'US expands ties with Central Asia via Samarkand trade deals' with 1 article.
+2026-10-19 12:04:31,123 | INFO | hermes_db.services.event:124 | created event 'Sixth day of protests in Albania’s capital over corruption' with 1 article.
+2026-10-19 12:04:31,136 | INFO | hermes_db.services.event:210 | added article to event 'Alberta votes on potential independence process' (now 2 articles).
+2026-10-19 12:04:31,167 | INFO | hermes_db.services.event:210 | added article to event 'France faces widespread unrest and violence' (now 9 articles).
+2026-10-19 12:04:31,183 | INFO | hermes_db.services.event:210 | added article to event 'Trump endorses Netanyahu for reelection' (now 2 articles).
+2026-10-19 12:04:31,235 | INFO | hermes_db.services.event:210 | added article to event 'France faces widespread unrest and violence' (now 10 articles).
+2026-10-19 12:04:31,247 | INFO | hermes_db.services.event:124 | created event 'US strengthens Central Asia ties during Samarkand summit' with 1 article.
+2026-10-19 12:04:31,290 | INFO | hermes_db.services.event:210 | added article to event 'Fire at Canadian military base kills 4, injures dozens' (now 5 articles).
+2026-10-19 12:04:31,335 | INFO | hermes_db.services.event:124 | created event 'Zelenskyy visit to Budapest called unlikely' with 1 article.
+12:04:33 - LiteLLM:INFO: utils.py:4382 - 
+LiteLLM completion() model= ministral-8b-latest; provider = mistral
+2026-10-19 12:04:33,040 | INFO | LiteLLM:4382 | 
+LiteLLM completion() model= ministral-8b-latest; provider = mistral
+12:04:33 - LiteLLM:INFO: utils.py:4382 - 
+LiteLLM completion() model= ministral-8b-latest; provider = mistral
+2026-10-19 12:04:33,075 | INFO | LiteLLM:4382 | 
+LiteLLM completion() model= ministral-8b-latest; provider = mistral
+12:04:41 - LiteLLM Router:INFO: router.py:3671 - litellm.acompletion(model=mistral/ministral-8b-latest)[32m 200 OK[0m
+2026-10-19 12:04:41,109 | INFO | LiteLLM Router:3671 | litellm.acompletion(model=mistral/ministral-8b-latest)[32m 200 OK[0m
+2026-10-19 12:04:41,111 | INFO | hermes_ai.extractors.events:158 | extracted: Uncertainty Over Pope’s Health Fuels Familiar Deba... | category = HEALTH.
+2026-10-19 12:04:41,111 | INFO | hermes_ai.extractors.events:158 | extracted: Japan’s ‘Dancing Salaryman’ Can’t Stop Grooving... | category = ENTERTAINMENT.
+2026-10-19 12:04:41,111 | INFO | hermes_ai.extractors.events:158 | extracted: Dancing Salaryman Pokes Fun at Japan’s Buttoned-Do... | category = ENTERTAINMENT.
+2026-10-19 12:04:41,111 | INFO | hermes_ai.extractors.events:158 | extracted: A Wayward Shark Becomes a Celebrity in South Korea... | category = ENTERTAINMENT.
+2026-10-19 12:04:41,111 | INFO | hermes_ai.extractors.events:158 | extracted: The World’s Oldest Shipwreck? Maybe, but ‘We’re Al... | category = SCIENCE.
+2026-10-19 12:04:41,112 | INFO | hermes_ai.extractors.events:158 | extracted: Israeli Settlers Attack Palestinians and Washingto... | category = CONFLICT.
+2026-10-19 12:04:41,112 | INFO | hermes_ai.extractors.events:158 | extracted: Pope Asks Putin for a Cease-Fire for a Ukrainian C... | category = POLITICS.
+2026-10-19 12:04:41,112 | INFO | hermes_ai.extractors.events:158 | extracted: 16 People Rescued in Pacific Ocean Off Mexico, U.S... | category = SPORTS.
+2026-10-19 12:04:41,112 | INFO | hermes_ai.extractors.events:158 | extracted: The Rupturing Trump-Zelensky Relationship Stands t... | category = POLITICS.
+2026-10-19 12:04:41,112 | INFO | hermes_ai.extractors.events:158 | extracted: Houthi Attacks on Saudi Arabia Put In Doubt Kingdo... | category = CONFLICT.
+2026-10-19 12:04:41,220 | INFO | hermes_worker.services.fetchers.gdelt:161 | fetched 1 articles from GDELT for Reuters.
+2026-10-19 12:04:41,222 | INFO | hermes_db.services.event:124 | created event 'Pope Leo XIV health uncertainty sparks Vatican debate' with 1 article.
+2026-10-19 12:04:41,278 | INFO | hermes_db.services.event:124 | created event 'Japan’s internet-famous dancing salaryman gains global fame' with 1 article.
+2026-10-19 12:04:41,323 | INFO | hermes_db.services.event:124 | created event 'Dancing salaryman challenges Japan’s conservative culture' with 1 article.
+2026-10-19 12:04:41,367 | INFO | hermes_db.services.event:124 | created event 'Stuck shark becomes celebrity in South Korea' with 1 article.
+2026-10-19 12:04:41,401 | INFO | hermes_db.services.event:124 | created event 'Potential discovery of world’s oldest shipwreck sparks debate' with 1 article.
+2026-10-19 12:04:41,436 | INFO | hermes_db.services.event:210 | added article to event 'Israeli settlers attack Palestinians and European officials in West Bank' (now 2 articles).
+2026-10-19 12:04:41,441 | WARNING | hermes_worker.services.sync:136 | ignoring malformed matched_event_id 'e78052a9-5bb9-4629bf2-d3764be5fa46' for article 'Pope Asks Putin for a Cease-Fire for a Ukrainian City Under Siege'.
+2026-10-19 12:04:41,479 | INFO | hermes_db.services.event:124 | created event 'Pope Leo XIV requests ceasefire for Ukrainian city' with 1 article.
+12:04:41 - LiteLLM:INFO: utils.py:4382 - 
+LiteLLM completion() model= ministral-8b-latest; provider = mistral
+2026-10-19 12:04:41,675 | INFO | LiteLLM:4382 | 
+LiteLLM completion() model= ministral-8b-latest; provider = mistral
+2026-10-19 12:04:42,279 | WARNING | hermes_ai.services.geocoding:245 | no geocoding results found for 'Pacific Ocean off Mexico'.
+2026-10-19 12:04:42,359 | INFO | hermes_db.services.event:124 | created event '16 people rescued in Pacific Ocean off Mexico' with 1 article.
+2026-10-19 12:04:42,390 | INFO | hermes_db.services.event:124 | created event 'Tensions between Trump and Zelensky threaten Ukraine and allies' with 1 article.
+2026-10-19 12:04:42,435 | INFO | hermes_db.services.event:124 | created event 'Houthi attacks disrupt Saudi events and travel' with 1 article.
+12:04:43 - LiteLLM:INFO: utils.py:4382 - 
+LiteLLM completion() model= ministral-8b-latest; provider = mistral
+2026-10-19 12:04:43,232 | INFO | LiteLLM:4382 | 
+LiteLLM completion() model= ministral-8b-latest; provider = mistral
+12:04:43 - LiteLLM Router:INFO: router.py:3671 - litellm.acompletion(model=mistral/ministral-8b-latest)[32m 200 OK[0m
+2026-10-19 12:04:43,253 | INFO | LiteLLM Router:3671 | litellm.acompletion(model=mistral/ministral-8b-latest)[32m 200 OK[0m
+2026-10-19 12:04:43,256 | INFO | hermes_ai.extractors.events:158 | extracted: CoCounsel Audit & Accounting : AI tools for audit ... | category = TECHNOLOGY.
+2026-10-19 12:04:43,335 | INFO | hermes_db.services.event:124 | created event 'AI tools for audit professionals' with 1 article.
+2026-10-19 12:04:43,336 | INFO | hermes_worker.services.sync:174 | finished source 'Reuters': 1 processed, 0 skipped (duplicates), 0 failed.
+2026-10-19 12:04:43,347 | INFO | hermes_worker.services.sync:65 | syncing source: Associated Press (type: GDELT, url: https://apnews.com).
+12:04:44 - LiteLLM Router:INFO: router.py:3671 - litellm.acompletion(model=mistral/ministral-8b-latest)[32m 200 OK[0m
+2026-10-19 12:04:44,811 | INFO | LiteLLM Router:3671 | litellm.acompletion(model=mistral/ministral-8b-latest)[32m 200 OK[0m
+2026-10-19 12:04:44,813 | INFO | hermes_ai.extractors.events:158 | extracted: India’s Cockroach Janta party leader arrested amid... | category = POLITICS.
+2026-10-19 12:04:44,813 | INFO | hermes_ai.extractors.events:158 | extracted: Flash floods destroy villages in central Nepal... | category = DISASTER.
+2026-10-19 12:04:44,813 | INFO | hermes_ai.extractors.events:158 | extracted: Pakistan school roof collapse kills at least 34 ch... | category = DISASTER.
+2026-10-19 12:04:44,813 | INFO | hermes_ai.extractors.events:158 | extracted: India’s cockroach protesters defy Modi’s crackdown... | category = POLITICS.
+2026-10-19 12:04:44,813 | INFO | hermes_ai.extractors.events:158 | extracted: Leaders of India’s Cockroach party jailed for viol... | category = POLITICS.
+2026-10-19 12:04:44,813 | INFO | hermes_ai.extractors.events:158 | extracted: Scottish Labour becomes second biggest party at Ho... | category = POLITICS.
+2026-10-19 12:04:44,814 | INFO | hermes_ai.extractors.events:158 | extracted: AI firm Anthropic to commit 5% of shares to fund f... | category = TECHNOLOGY.
+2026-10-19 12:04:44,814 | INFO | hermes_ai.extractors.events:158 | extracted: Four arrested after police officer shot in foot in... | category = CONFLICT.
+2026-10-19 12:04:44,814 | INFO | hermes_ai.extractors.events:158 | extracted: More than half of UK first-time buyers paying more... | category = ECONOMY.
+2026-10-19 12:04:44,814 | INFO | hermes_ai.extractors.events:158 | extracted: UK government promises disabled air passengers bet... | category = HEALTH.
+2026-10-19 12:04:44,880 | INFO | hermes_db.services.event:124 | created event 'Cockroach Janta party leader arrested ahead of Delhi protests' with 1 article.
+2026-10-19 12:04:45,682 | INFO | hermes_ai.services.geocoding:256 | geocoded 'Gorkha, Nepal' -> (28.2708368, 84.8407583).
+2026-10-19 12:04:45,769 | INFO | hermes_db.services.event:124 | created event 'Flash floods destroy villages in Nepal’s Gorkha district' with 1 article.
+2026-10-19 12:04:45,802 | INFO | hermes_db.services.event:124 | created event 'School roof collapse kills 34 in Peshawar, Pakistan' with 1 article.
+2026-10-19 12:04:45,847 | INFO | hermes_db.services.event:124 | created event 'Cockroach movement protests face crackdown in India' with 1 article.
+2026-10-19 12:04:45,880 | INFO | hermes_db.services.event:210 | added article to event 'France faces bond sell-off amid violent protests' (now 2 articles).
+2026-10-19 12:04:45,925 | INFO | hermes_db.services.event:124 | created event 'Scottish Labour gains seats in Holyrood elections' with 1 article.
+2026-10-19 12:04:45,969 | INFO | hermes_db.services.event:124 | created event 'Anthropic commits $48bn to public good fund' with 1 article.
+2026-10-19 12:04:46,876 | INFO | hermes_ai.services.geocoding:256 | geocoded 'Nottingham' -> (52.9534193, -1.1496461).
+2026-10-19 12:04:46,947 | INFO | hermes_db.services.event:124 | created event 'Four arrested after police officer shot in Nottingham' with 1 article.
+12:04:47 - LiteLLM Router:INFO: router.py:3671 - litellm.acompletion(model=mistral/ministral-8b-latest)[32m 200 OK[0m
+2026-10-19 12:04:47,137 | INFO | LiteLLM Router:3671 | litellm.acompletion(model=mistral/ministral-8b-latest)[32m 200 OK[0m
+2026-10-19 12:04:47,139 | INFO | hermes_ai.extractors.events:158 | extracted: Super tanker ablaze after striking mine in Strait ... | category = CONFLICT.
+2026-10-19 12:04:47,140 | INFO | hermes_ai.extractors.events:158 | extracted: North Korea says it tested new AI-powered torpedo ... | category = TECHNOLOGY.
+2026-10-19 12:04:47,140 | INFO | hermes_ai.extractors.events:158 | extracted: Trump signs executive order waiving new Russia san... | category = POLITICS.
+2026-10-19 12:04:47,140 | INFO | hermes_ai.extractors.events:158 | extracted: Trump's new press secretary leaves after less than... | category = POLITICS.
+2026-10-19 12:04:47,140 | INFO | hermes_ai.extractors.events:158 | extracted: Japan's first female PM says makeup and housework ... | category = POLITICS.
+2026-10-19 12:04:47,140 | INFO | hermes_ai.extractors.events:158 | extracted: Palestinians in Gaza dread another winter with now... | category = DISASTER.
+2026-10-19 12:04:47,140 | INFO | hermes_ai.extractors.events:158 | extracted: Ukrainian drones force closure of all four Moscow ... | category = CONFLICT.
+2026-10-19 12:04:47,140 | INFO | hermes_ai.extractors.events:158 | extracted: Putin seizes five more European firms, continuing ... | category = ECONOMY.
+2026-10-19 12:04:47,141 | INFO | hermes_ai.extractors.events:158 | extracted: Military signals building: Is the US-Iran war abou... | category = CONFLICT.
+2026-10-19 12:04:47,141 | INFO | hermes_ai.extractors.events:158 | extracted: At least 12 dead after migrant boat sinks off Gamb... | category = DISASTER.
+2026-10-19 12:04:47,181 | INFO | hermes_db.services.event:124 | created event 'Super tanker collision and fire in Strait of Hormuz' with 1 article.
+2026-10-19 12:04:47,226 | INFO | hermes_db.services.event:124 | created event 'North Korea tests AI-powered torpedo system' with 1 article.
+2026-10-19 12:04:47,233 | WARNING | hermes_worker.services.sync:136 | ignoring malformed matched_event_id 'c0c40db2-f1b4-496d-6e91-b4bce767' for article 'Trump signs executive order waiving new Russia sanctions package'.
+2026-10-19 12:04:47,281 | INFO | hermes_db.services.event:124 | created event 'US waives Russia sanctions package' with 1 article.
+2026-10-19 12:04:47,326 | INFO | hermes_db.services.event:124 | created event 'Trump’s press secretary resigns amid controversy' with 1 article.
+2026-10-19 12:04:47,370 | INFO | hermes_db.services.event:124 | created event 'Japan’s first female PM discusses work-life balance' with 1 article.
+2026-10-19 12:04:47,415 | INFO | hermes_db.services.event:124 | created event 'Palestinians in Gaza face displacement crisis' with 1 article.
+12:04:47 - LiteLLM Router:INFO: router.py:3671 - litellm.acompletion(model=mistral/ministral-8b-latest)[32m 200 OK[0m
+2026-10-19 12:04:47,446 | INFO | LiteLLM Router:3671 | litellm.acompletion(model=mistral/ministral-8b-latest)[32m 200 OK[0m
+2026-10-19 12:04:47,450 | INFO | hermes_ai.extractors.events:158 | extracted: Deadly School Roof Collapse in Pakistan Raises Que... | category = DISASTER.
+2026-10-19 12:04:47,450 | INFO | hermes_ai.extractors.events:158 | extracted: Japan Mistakenly Issues Warning for Strongest Ever... | category = TECHNOLOGY.
+2026-10-19 12:04:47,450 | INFO | hermes_ai.extractors.events:158 | extracted: The Arab Kingmaker in Israel’s Election Who Wants ... | category = POLITICS.
+2026-10-19 12:04:47,472 | INFO | hermes_db.services.event:124 | created event 'Ukrainian drones shut down Moscow airports' with 1 article.
+2026-10-19 12:04:47,517 | INFO | hermes_db.services.event:124 | created event 'School roof collapse kills in Pakistan' with 1 article.
+2026-10-19 12:04:47,530 | INFO | hermes_db.services.event:124 | created event 'Russia seizes five more European firms' with 1 article.
+2026-10-19 12:04:47,571 | INFO | hermes_db.services.event:124 | created event 'Japan mistakenly issues false 9.9-magnitude earthquake alert' with 1 article.
+2026-10-19 12:04:47,587 | INFO | hermes_db.services.event:124 | created event 'US military activity in Arabian Sea raises tensions with Iran' with 1 article.
+2026-10-19 12:04:47,628 | INFO | hermes_db.services.event:124 | created event 'Raam leader advocates Israel-Jewish partnership' with 1 article.
+2026-10-19 12:04:47,628 | INFO | hermes_worker.services.sync:174 | finished source 'The New York Times World': 53 processed, 0 skipped (duplicates), 0 failed.
+2026-10-19 12:04:47,650 | INFO | hermes_worker.services.sync:65 | syncing source: Agence France-Presse (type: GDELT, url: https://www.afp.com).
+2026-10-19 12:04:47,660 | INFO | hermes_db.services.event:124 | created event 'Migrant boat sinks off Gambia, at least 12 dead' with 1 article.
+2026-10-19 12:04:47,786 | INFO | hermes_ai.services.geocoding:256 | geocoded 'UK' -> (54.7023545, -3.2765753).
+2026-10-19 12:04:47,860 | INFO | hermes_db.services.event:124 | created event 'UK first-time buyers pay more in mortgages than rent' with 1 article.
+2026-10-19 12:04:47,916 | INFO | hermes_db.services.event:124 | created event 'UK government improves safeguards for disabled air passengers' with 1 article.
+12:04:49 - LiteLLM:INFO: utils.py:4382 - 
+LiteLLM completion() model= ministral-8b-latest; provider = mistral
+2026-10-19 12:04:49,151 | INFO | LiteLLM:4382 | 
+LiteLLM completion() model= ministral-8b-latest; provider = mistral
+12:04:49 - LiteLLM:INFO: utils.py:4382 - 
+LiteLLM completion() model= ministral-8b-latest; provider = mistral
+2026-10-19 12:04:49,229 | INFO | LiteLLM:4382 | 
+LiteLLM completion() model= ministral-8b-latest; provider = mistral
+12:04:52 - LiteLLM Router:INFO: router.py:3671 - litellm.acompletion(model=mistral/ministral-8b-latest)[32m 200 OK[0m
+2026-10-19 12:04:52,448 | INFO | LiteLLM Router:3671 | litellm.acompletion(model=mistral/ministral-8b-latest)[32m 200 OK[0m
+2026-10-19 12:04:52,451 | INFO | hermes_ai.extractors.events:158 | extracted: 🔴 Live: Student protesters block access to Louvre ... | category = CONFLICT.
+2026-10-19 12:04:52,451 | INFO | hermes_ai.extractors.events:158 | extracted: Ligue 1: Lyon top standings after hard-fought win ... | category = SPORTS.
+2026-10-19 12:04:52,451 | INFO | hermes_ai.extractors.events:158 | extracted: World Food Programme to end aid for half a million... | category = DISASTER.
+2026-10-19 12:04:52,451 | INFO | hermes_ai.extractors.events:158 | extracted: French student protests: 'There's been lack of inv... | category = POLITICS.
+2026-10-19 12:04:52,451 | INFO | hermes_ai.extractors.events:158 | extracted: 'Quite horrifying': Afghan economic crisis leaves ... | category = POLITICS.
+2026-10-19 12:04:52,452 | INFO | hermes_ai.extractors.events:158 | extracted: Russia pounds Kyiv as Rubio urges Ukraine's Zelens... | category = CONFLICT.
+2026-10-19 12:04:52,452 | INFO | hermes_ai.extractors.events:158 | extracted: ‘Not a problem of short-term solutions’: French st... | category = POLITICS.
+2026-10-19 12:04:52,452 | INFO | hermes_ai.extractors.events:158 | extracted: 🔴 Live: Macron rejects French interior minister's ... | category = POLITICS.
+2026-10-19 12:04:52,452 | INFO | hermes_ai.extractors.events:158 | extracted: Live: French PM Lecornu calls for 'partial curfews... | category = CONFLICT.
+2026-10-19 12:04:52,452 | INFO | hermes_ai.extractors.events:158 | extracted: ISS mission: 'It's really exciting to see this ren... | category = TECHNOLOGY.
+2026-10-19 12:04:52,461 | WARNING | hermes_worker.services.sync:136 | ignoring malformed matched_event_id '9fad32b9-c4cf-4b00-9c-b8a3ead117b1' for article '🔴 Live: Student protesters block access to Louvre museum as France reels from weekend of unrest'.
+2026-10-19 12:04:52,489 | INFO | hermes_db.services.event:116 | duplicate article url for new event 'France faces nationwide riots and violent protests', rolling back.
+2026-10-19 12:04:52,549 | INFO | hermes_db.services.event:124 | created event 'Lyon wins Ligue 1 match against Nice' with 1 article.
+2026-10-19 12:04:52,594 | INFO | hermes_db.services.event:210 | added article to event 'WFP cuts aid to half a million Palestinians in Gaza amid worsening hunger crisis' (now 2 articles).
+2026-10-19 12:04:52,638 | INFO | hermes_db.services.event:124 | created event 'French student protests highlight systemic education neglect' with 1 article.
+2026-10-19 12:04:52,684 | INFO | hermes_db.services.event:124 | created event 'EU engages with Taliban amid Afghan economic crisis' with 1 article.
+2026-10-19 12:04:52,739 | INFO | hermes_db.services.event:124 | created event 'Russia strikes Kyiv as U.S. urges Ukraine to end war' with 1 article.
+2026-10-19 12:04:52,795 | INFO | hermes_db.services.event:124 | created event 'French students demand structural education reforms' with 1 article.
+2026-10-19 12:04:52,812 | INFO | hermes_db.services.event:150 | duplicate article url for event 'Macron rejects minister resignation after violent protests', skipping score update.
+2026-10-19 12:04:52,850 | INFO | hermes_db.services.event:116 | duplicate article url for new event 'Macron rejects resignation of French interior minister amid unrest', rolling back.
+2026-10-19 12:04:52,866 | INFO | hermes_db.services.event:150 | duplicate article url for event 'France implements partial curfews amid violent protests', skipping score update.
+2026-10-19 12:04:52,901 | INFO | hermes_db.services.event:116 | duplicate article url for new event 'France imposes partial curfews amid violent protests', rolling back.
+2026-10-19 12:04:52,952 | INFO | hermes_db.services.event:124 | created event 'French women in space: Progress and persistent barriers' with 1 article.
+12:04:53 - LiteLLM:INFO: utils.py:4382 - 
+LiteLLM completion() model= ministral-8b-latest; provider = mistral
+2026-10-19 12:04:53,821 | INFO | LiteLLM:4382 | 
+LiteLLM completion() model= ministral-8b-latest; provider = mistral
+2026-10-19 12:04:54,874 | WARNING | hermes_ai.utils.rate_limiter:61 | rate limiter circuit breaker tripped for 120.0s.
+2026-10-19 12:04:54,875 | WARNING | hermes_worker.services.fetchers.gdelt:95 | gdelt returned status 429 for source 'Associated Press'. circuit breaker tripped.
+2026-10-19 12:04:54,875 | INFO | hermes_worker.services.sync:76 | no articles found in Associated Press.
+2026-10-19 12:04:54,895 | INFO | hermes_worker.services.sync:65 | syncing source: PBS NewsHour (type: RSS, url: https://www.pbs.org/newshour/feeds/rss/world).
+2026-10-19 12:04:55,830 | INFO | hermes_worker.services.fetchers.rss:88 | fetched 20 articles from https://www.pbs.org/newshour/feeds/rss/world.
+12:04:57 - LiteLLM:INFO: utils.py:4382 - 
+LiteLLM completion() model= ministral-8b-latest; provider = mistral
+2026-10-19 12:04:57,240 | INFO | LiteLLM:4382 | 
+LiteLLM completion() model= ministral-8b-latest; provider = mistral
+12:04:57 - LiteLLM Router:INFO: router.py:3671 - litellm.acompletion(model=mistral/ministral-8b-latest)[32m 200 OK[0m
+2026-10-19 12:04:57,317 | INFO | LiteLLM Router:3671 | litellm.acompletion(model=mistral/ministral-8b-latest)[32m 200 OK[0m
+2026-10-19 12:04:57,319 | INFO | hermes_ai.extractors.events:158 | extracted: Trump brands federal judge a ‘crazed lunatic’ amid... | category = CONFLICT.
+2026-10-19 12:04:57,319 | INFO | hermes_ai.extractors.events:158 | extracted: First Thing: US ambassador in rare diplomatic brea... | category = CONFLICT.
+2026-10-19 12:04:57,319 | INFO | hermes_ai.extractors.events:158 | extracted: HelloFresh workers claim physical abuse and denied... | category = ECONOMY.
+2026-10-19 12:04:57,319 | INFO | hermes_ai.extractors.events:158 | extracted: US teens can access ‘nudify’ apps despite Apple an... | category = TECHNOLOGY.
+2026-10-19 12:04:57,320 | INFO | hermes_ai.extractors.events:158 | extracted: Vatican upholds excommunication of US deacon who r... | category = POLITICS.
+2026-10-19 12:04:57,385 | INFO | hermes_db.services.event:210 | added article to event 'US condemns settler attack on American photojournalist in West Bank' (now 2 articles).
+2026-10-19 12:04:57,418 | INFO | hermes_db.services.event:210 | added article to event 'US condemns settler attack on American photojournalist in West Bank' (now 3 articles).
+2026-10-19 12:04:57,483 | INFO | hermes_db.services.event:124 | created event 'HelloFresh workers allege abuse and denied bathroom breaks in lawsuit' with 1 article.
+2026-10-19 12:04:57,530 | INFO | hermes_db.services.event:124 | created event 'US teens access 'nudify' apps despite parental controls' with 1 article.
+2026-10-19 12:04:57,574 | INFO | hermes_db.services.event:124 | created event 'Vatican upholds excommunication of US deacon after son’s molestation' with 1 article.
+2026-10-19 12:04:57,575 | INFO | hermes_worker.services.sync:174 | finished source 'The Guardian World': 45 processed, 0 skipped (duplicates), 0 failed.
+2026-10-19 12:04:57,586 | INFO | hermes_worker.services.sync:65 | syncing source: NHK World-Japan (type: RSS, url: https://www3.nhk.or.jp/nhkworld/en/news/stories/rss.xml).
+2026-10-19 12:04:58,397 | WARNING | hermes_worker.services.fetchers.rss:56 | failed to fetch RSS feed https://www3.nhk.or.jp/nhkworld/en/news/stories/rss.xml: Client error '404 Not Found' for url 'https://www3.nhk.or.jp/nhkworld/en/news/stories/rss.xml'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/404.
+2026-10-19 12:04:58,397 | INFO | hermes_worker.services.sync:76 | no articles found in NHK World-Japan.
+12:05:00 - LiteLLM Router:INFO: router.py:3671 - litellm.acompletion(model=mistral/ministral-8b-latest)[32m 200 OK[0m
+2026-10-19 12:05:00,750 | INFO | LiteLLM Router:3671 | litellm.acompletion(model=mistral/ministral-8b-latest)[32m 200 OK[0m
+2026-10-19 12:05:00,752 | INFO | hermes_ai.extractors.events:158 | extracted: Families of 34 children killed in Pakistan school ... | category = DISASTER.
+2026-10-19 12:05:00,753 | INFO | hermes_ai.extractors.events:158 | extracted: Germany set to hike tobacco tax: Cigarette packs c... | category = ECONOMY.
+2026-10-19 12:05:00,753 | INFO | hermes_ai.extractors.events:158 | extracted: Syria arrests 'Butcher of Baniyas' accused of 2013... | category = CONFLICT.
+2026-10-19 12:05:00,753 | INFO | hermes_ai.extractors.events:158 | extracted: Houthi missile attack targets Yemeni presidential ... | category = CONFLICT.
+2026-10-19 12:05:00,753 | INFO | hermes_ai.extractors.events:158 | extracted: New White House press secretary Katie Zacharia say... | category = POLITICS.
+2026-10-19 12:05:00,753 | INFO | hermes_ai.extractors.events:158 | extracted: Candlelight vigil honours victims of Oregon school... | category = CONFLICT.
+2026-10-19 12:05:00,753 | INFO | hermes_ai.extractors.events:158 | extracted: Three children and one teacher killed in Oregon el... | category = CONFLICT.
+2026-10-19 12:05:00,753 | INFO | hermes_ai.extractors.events:158 | extracted: US extends sanctions waiver for Russian oil giant ... | category = POLITICS.
+2026-10-19 12:05:00,754 | INFO | hermes_ai.extractors.events:158 | extracted: Europeans ‘far more united’ on tougher China trade... | category = ECONOMY.
+2026-10-19 12:05:00,754 | INFO | hermes_ai.extractors.events:158 | extracted: Azerbaijan hosts rare summit of both converging an... | category = POLITICS.
+2026-10-19 12:05:00,818 | INFO | hermes_db.services.event:210 | added article to event 'School roof collapse kills 34 in Peshawar, Pakistan' (now 2 articles).
+2026-10-19 12:05:00,863 | INFO | hermes_db.services.event:124 | created event 'Germany to raise tobacco tax, targeting €12B revenue by 2030' with 1 article.
+2026-10-19 12:05:00,908 | INFO | hermes_db.services.event:124 | created event 'Syria arrests alleged 'Butcher of Baniyas' for 2013 massacres' with 1 article.
+2026-10-19 12:05:00,952 | INFO | hermes_db.services.event:124 | created event 'Houthi missile attack kills 5 in Yemen’s Aden presidential palace' with 1 article.
+2026-10-19 12:05:00,997 | INFO | hermes_db.services.event:124 | created event 'US White House press secretary faces scrutiny over legal credentials' with 1 article.
+2026-10-19 12:05:01,914 | INFO | hermes_ai.services.geocoding:256 | geocoded 'Bend, Oregon, United States' -> (44.0581728, -121.3153096).
+2026-10-19 12:05:01,997 | INFO | hermes_db.services.event:124 | created event 'Candlelight vigil honors Oregon school shooting victims' with 1 article.
+2026-10-19 12:05:02,030 | INFO | hermes_db.services.event:210 | added article to event 'School shooting in Oregon leaves 4 dead; bystanders praised' (now 2 articles).
+2026-10-19 12:05:02,075 | INFO | hermes_db.services.event:124 | created event 'US extends sanctions waiver for Russian oil giant Lukoil' with 1 article.
+2026-10-19 12:05:02,121 | INFO | hermes_db.services.event:124 | created event 'Europe united on tougher China trade stance post-German shift' with 1 article.
+2026-10-19 12:05:02,148 | WARNING | hermes_ai.utils.rate_limiter:61 | rate limiter circuit breaker tripped for 120.0s.
+2026-10-19 12:05:02,149 | WARNING | hermes_worker.services.fetchers.gdelt:95 | gdelt returned status 429 for source 'Agence France-Presse'. circuit breaker tripped.
+2026-10-19 12:05:02,149 | INFO | hermes_worker.services.sync:76 | no articles found in Agence France-Presse.
+2026-10-19 12:05:02,166 | INFO | hermes_db.services.event:124 | created event 'Azerbaijan hosts summit of Middle East and Asian leaders' with 1 article.
+12:05:03 - LiteLLM:INFO: utils.py:4382 - 
+LiteLLM completion() model= ministral-8b-latest; provider = mistral
+2026-10-19 12:05:03,464 | INFO | LiteLLM:4382 | 
+LiteLLM completion() model= ministral-8b-latest; provider = mistral
+12:05:13 - LiteLLM Router:INFO: router.py:3671 - litellm.acompletion(model=mistral/ministral-8b-latest)[32m 200 OK[0m
+2026-10-19 12:05:13,169 | INFO | LiteLLM Router:3671 | litellm.acompletion(model=mistral/ministral-8b-latest)[32m 200 OK[0m
+2026-10-19 12:05:13,172 | INFO | hermes_ai.extractors.events:158 | extracted: Australian lawmaker critically injured by car is '... | category = CONFLICT.
+2026-10-19 12:05:13,172 | INFO | hermes_ai.extractors.events:158 | extracted: Criminal networks threaten the Amazon. Indigenous ... | category = ENVIRONMENT.
+2026-10-19 12:05:13,172 | INFO | hermes_ai.extractors.events:158 | extracted: Egypt's top security body agrees to help Saudi Ara... | category = CONFLICT.
+2026-10-19 12:05:13,172 | INFO | hermes_ai.extractors.events:158 | extracted: Macron condemns those who 'sought to bring down th... | category = POLITICS.
+2026-10-19 12:05:13,172 | INFO | hermes_ai.extractors.events:158 | extracted: Photographer attacked by settlers in the West Bank... | category = CONFLICT.
+2026-10-19 12:05:13,172 | INFO | hermes_ai.extractors.events:158 | extracted: Pope Leo tells faithful in St. Peter's Square he w... | category = HEALTH.
+2026-10-19 12:05:13,173 | INFO | hermes_ai.extractors.events:158 | extracted: Trump endorses embattled Israeli Prime Minister Be... | category = POLITICS.
+2026-10-19 12:05:13,173 | INFO | hermes_ai.extractors.events:158 | extracted: Carney says 4 service members killed and dozens in... | category = DISASTER.
+2026-10-19 12:05:13,173 | INFO | hermes_ai.extractors.events:158 | extracted: Houthi strikes on Saudi Arabia show the Yemeni reb... | category = CONFLICT.
+2026-10-19 12:05:13,173 | INFO | hermes_ai.extractors.events:158 | extracted: Zelenskyy urges support for new U.S. sanctions on ... | category = POLITICS.
+2026-10-19 12:05:13,243 | INFO | hermes_db.services.event:210 | added article to event 'Independent MP Helen Haines critically injured in alleged attack' (now 2 articles).
+2026-10-19 12:05:13,287 | INFO | hermes_db.services.event:124 | created event 'Indigenous leaders urge UN action against Amazon crime networks' with 1 article.
+2026-10-19 12:05:13,320 | INFO | hermes_db.services.event:210 | added article to event 'Egypt agrees to support Saudi Arabia against Houthi attacks in Yemen' (now 3 articles).
+2026-10-19 12:05:13,354 | INFO | hermes_db.services.event:210 | added article to event 'Macron condemns violence targeting French Republic' (now 2 articles).
+2026-10-19 12:05:13,388 | INFO | hermes_db.services.event:210 | added article to event 'Photographer attacked by settlers in West Bank criticizes Netanyahu’s response' (now 2 articles).
+2026-10-19 12:05:13,420 | INFO | hermes_db.services.event:210 | added article to event 'Pope Leo XIV resumes duties after cancer surgery' (now 3 articles).
+2026-10-19 12:05:13,454 | INFO | hermes_db.services.event:210 | added article to event 'Trump endorses Netanyahu for reelection' (now 3 articles).
+2026-10-19 12:05:13,487 | INFO | hermes_db.services.event:210 | added article to event 'Fire at Canadian military base kills 4, injures dozens' (now 6 articles).
+2026-10-19 12:05:13,520 | INFO | hermes_db.services.event:210 | added article to event 'Egypt agrees to support Saudi Arabia against Houthi attacks in Yemen' (now 4 articles).
+2026-10-19 12:05:13,555 | INFO | hermes_db.services.event:124 | created event 'Zelenskyy urges U.S. to reinstate sanctions on Russia' with 1 article.
+12:05:14 - LiteLLM Router:INFO: router.py:3671 - litellm.acompletion(model=mistral/ministral-8b-latest)[32m 200 OK[0m
+2026-10-19 12:05:14,678 | INFO | LiteLLM Router:3671 | litellm.acompletion(model=mistral/ministral-8b-latest)[32m 200 OK[0m
+2026-10-19 12:05:14,681 | INFO | hermes_ai.extractors.events:158 | extracted: Another tanker catches fire near Hormuz after two ... | category = CONFLICT.
+2026-10-19 12:05:14,681 | INFO | hermes_ai.extractors.events:158 | extracted: Azerbaijan engineers rare summit with in-conflict ... | category = POLITICS.
+2026-10-19 12:05:14,681 | INFO | hermes_ai.extractors.events:158 | extracted: Russia detains Swedish citizen as Moscow eyes futu... | category = POLITICS.
+2026-10-19 12:05:14,681 | INFO | hermes_ai.extractors.events:158 | extracted: Trump defends Putin diesel deal: ‘I’m a dealmaker’... | category = POLITICS.
+2026-10-19 12:05:14,681 | INFO | hermes_ai.extractors.events:158 | extracted: School roof collapse kills teacher and at least 32... | category = DISASTER.
+2026-10-19 12:05:14,681 | INFO | hermes_ai.extractors.events:158 | extracted: New four-lane bridge between China and North Korea... | category = POLITICS.
+2026-10-19 12:05:14,681 | INFO | hermes_ai.extractors.events:158 | extracted: Russia and Ukraine trade blame over Trump’s ‘energ... | category = CONFLICT.
+2026-10-19 12:05:14,681 | INFO | hermes_ai.extractors.events:158 | extracted: Russia’s internet shutdowns push state firms back ... | category = TECHNOLOGY.
+2026-10-19 12:05:14,681 | INFO | hermes_ai.extractors.events:158 | extracted: Kazakhstan seeks Antwerp-Bruges partnership to boo... | category = ECONOMY.
+2026-10-19 12:05:14,682 | INFO | hermes_ai.extractors.events:158 | extracted: Japan summons Russian ambassador to protest journa... | category = POLITICS.
+2026-10-19 12:05:14,798 | INFO | hermes_db.services.event:124 | created event 'Tanker fire and cargo ship attacks near Hormuz Strait' with 1 article.
+2026-10-19 12:05:14,853 | INFO | hermes_db.services.event:210 | added article to event 'Azerbaijan hosts summit of Middle East and Asian leaders' (now 2 articles).
+2026-10-19 12:05:14,931 | INFO | hermes_db.services.event:124 | created event 'Russia detains Swedish citizen and Japanese journalist' with 1 article.
+12:05:14 - LiteLLM:INFO: utils.py:4382 - 
+LiteLLM completion() model= ministral-8b-latest; provider = mistral
+2026-10-19 12:05:14,956 | INFO | LiteLLM:4382 | 
+LiteLLM completion() model= ministral-8b-latest; provider = mistral
+2026-10-19 12:05:14,977 | INFO | hermes_db.services.event:124 | created event 'Trump defends Putin diesel deal negotiations' with 1 article.
+2026-10-19 12:05:14,985 | WARNING | hermes_db.services.event:139 | event not found for event id: d1493e1d-3e64-47c1-a406-1f8a5c20ae06.
+2026-10-19 12:05:15,032 | INFO | hermes_db.services.event:124 | created event 'School roof collapse kills teacher and 32+ children in Pakistan' with 1 article.
+2026-10-19 12:05:15,088 | INFO | hermes_db.services.event:124 | created event 'New bridge opens between China and North Korea' with 1 article.
+2026-10-19 12:05:15,094 | WARNING | hermes_worker.services.sync:136 | ignoring malformed matched_event_id 'a501055a-3124-47b-aeca-066fbc27a2da' for article 'Russia and Ukraine trade blame over Trump’s ‘energy ceasefire’ after deadly Kyiv strike'.
+2026-10-19 12:05:15,133 | INFO | hermes_db.services.event:124 | created event 'Russia and Ukraine clash over Kyiv power plant strike' with 1 article.
+2026-10-19 12:05:15,178 | INFO | hermes_db.services.event:124 | created event 'Russia’s internet shutdowns drive state firms to landline phones' with 1 article.
+2026-10-19 12:05:15,233 | INFO | hermes_db.services.event:124 | created event 'Kazakhstan seeks Antwerp-Bruges trade partnership' with 1 article.
+2026-10-19 12:05:15,278 | INFO | hermes_db.services.event:124 | created event 'Japan protests arrest of journalist on Sakhalin' with 1 article.
+12:05:16 - LiteLLM:INFO: utils.py:4382 - 
+LiteLLM completion() model= ministral-8b-latest; provider = mistral
+2026-10-19 12:05:16,703 | INFO | LiteLLM:4382 | 
+LiteLLM completion() model= ministral-8b-latest; provider = mistral
+12:05:26 - LiteLLM Router:INFO: router.py:3671 - litellm.acompletion(model=mistral/ministral-8b-latest)[32m 200 OK[0m
+2026-10-19 12:05:26,766 | INFO | LiteLLM Router:3671 | litellm.acompletion(model=mistral/ministral-8b-latest)[32m 200 OK[0m
+2026-10-19 12:05:26,769 | INFO | hermes_ai.extractors.events:158 | extracted: How Alberta separatism went from fringe cause to r... | category = POLITICS.
+2026-10-19 12:05:26,769 | INFO | hermes_ai.extractors.events:158 | extracted: Masked settlers attack European diplomats in the o... | category = CONFLICT.
+2026-10-19 12:05:26,769 | INFO | hermes_ai.extractors.events:158 | extracted: Pope returns to Vatican days after surgery; surgeo... | category = HEALTH.
+2026-10-19 12:05:26,769 | INFO | hermes_ai.extractors.events:158 | extracted: Fundraising to protect key natural sites falls sho... | category = ENVIRONMENT.
+2026-10-19 12:05:26,769 | INFO | hermes_ai.extractors.events:158 | extracted: Israeli settlers attack Palestinians during West B... | category = CONFLICT.
+2026-10-19 12:05:26,769 | INFO | hermes_ai.extractors.events:158 | extracted: The mystery of Havana Syndrome and claims of a gov... | category = TECHNOLOGY.
+2026-10-19 12:05:26,769 | INFO | hermes_ai.extractors.events:158 | extracted: The mystery of Havana Syndrome and claims of a gov... | category = TECHNOLOGY.
+2026-10-19 12:05:26,769 | INFO | hermes_ai.extractors.events:158 | extracted: China says it will curb tech exports, including AI... | category = TECHNOLOGY.
+2026-10-19 12:05:26,769 | INFO | hermes_ai.extractors.events:158 | extracted: Arab-led parties could decide the Israeli election... | category = POLITICS.
+2026-10-19 12:05:26,770 | INFO | hermes_ai.extractors.events:158 | extracted: Prime Minister Mark Carney says U.S. is trying to ... | category = POLITICS.
+2026-10-19 12:05:26,832 | INFO | hermes_db.services.event:210 | added article to event 'Alberta referendum exposes provincial divisions over independence' (now 2 articles).
+2026-10-19 12:05:26,865 | INFO | hermes_db.services.event:210 | added article to event 'Israeli settlers attack European diplomats and French officials in West Bank' (now 2 articles).
+2026-10-19 12:05:26,899 | INFO | hermes_db.services.event:124 | created event 'Pope recovers from surgery, resumes Vatican activities' with 1 article.
+2026-10-19 12:05:26,932 | INFO | hermes_db.services.event:124 | created event 'Fundraising falls short for UN biodiversity summit' with 1 article.
+2026-10-19 12:05:26,966 | INFO | hermes_db.services.event:210 | added article to event 'US condemns settler attack on American photojournalist in West Bank' (now 4 articles).
+2026-10-19 12:05:27,010 | INFO | hermes_db.services.event:124 | created event 'Havana Syndrome: Mystery or government cover-up?' with 1 article.
+2026-10-19 12:05:27,044 | INFO | hermes_db.services.event:210 | added article to event 'Cyberattack disrupts French supermarket refrigeration systems' (now 2 articles).
+2026-10-19 12:05:27,089 | INFO | hermes_db.services.event:124 | created event 'China restricts tech exports due to national security' with 1 article.
+2026-10-19 12:05:27,133 | INFO | hermes_db.services.event:124 | created event 'Arab-led parties could influence Israeli election outcome' with 1 article.
+2026-10-19 12:05:27,166 | INFO | hermes_db.services.event:210 | added article to event 'Alberta separatist referendum strains provincial politics' (now 2 articles).
+2026-10-19 12:05:27,167 | INFO | hermes_worker.services.sync:174 | finished source 'PBS NewsHour': 20 processed, 0 skipped (duplicates), 0 failed.
+12:05:29 - LiteLLM Router:INFO: router.py:3671 - litellm.acompletion(model=mistral/ministral-8b-latest)[32m 200 OK[0m
+2026-10-19 12:05:29,605 | INFO | LiteLLM Router:3671 | litellm.acompletion(model=mistral/ministral-8b-latest)[32m 200 OK[0m
+2026-10-19 12:05:29,607 | INFO | hermes_ai.extractors.events:158 | extracted: Iran executes man accused of armed attacks during ... | category = CONFLICT.
+2026-10-19 12:05:29,608 | INFO | hermes_ai.extractors.events:158 | extracted: Duane Davis gets minimum 40 years in prison for or... | category = ENTERTAINMENT.
+2026-10-19 12:05:29,608 | INFO | hermes_ai.extractors.events:158 | extracted: Trump faces backlash after posting 'sick' video of... | category = POLITICS.
+2026-10-19 12:05:29,608 | INFO | hermes_ai.extractors.events:158 | extracted: Africa records world's fastest gains in disaster r... | category = ENVIRONMENT.
+2026-10-19 12:05:29,608 | INFO | hermes_ai.extractors.events:158 | extracted: Turkish police take pro-opposition channel Halk TV... | category = POLITICS.
+2026-10-19 12:05:29,608 | INFO | hermes_ai.extractors.events:158 | extracted: Trump blasts 'not nice' Houthis as attack hits Sau... | category = CONFLICT.
+2026-10-19 12:05:29,608 | INFO | hermes_ai.extractors.events:158 | extracted: Cornell University suspends frat parties over gang... | category = POLITICS.
+2026-10-19 12:05:29,608 | INFO | hermes_ai.extractors.events:158 | extracted: Ronaldo waves Saudi flag scarf after missile alert... | category = SPORTS.
+2026-10-19 12:05:29,608 | INFO | hermes_ai.extractors.events:158 | extracted: Qatar’s emir vows that country will emerge stronge... | category = ECONOMY.
+2026-10-19 12:05:29,608 | INFO | hermes_ai.extractors.events:158 | extracted: Russia funnels nearly half its budget into defence... | category = POLITICS.
+2026-10-19 12:05:29,700 | INFO | hermes_db.services.event:124 | created event 'Iran executes man for armed attacks during US-Israeli strikes' with 1 article.
+2026-10-19 12:05:29,744 | INFO | hermes_db.services.event:124 | created event 'Murderer of Tupac Shakur sentenced to 40 years in prison' with 1 article.
+2026-10-19 12:05:29,790 | INFO | hermes_db.services.event:124 | created event 'Trump criticized for posting video of UK man killed by tiger' with 1 article.
+2026-10-19 12:05:29,833 | INFO | hermes_db.services.event:124 | created event 'Africa shows fastest disaster resilience gains globally' with 1 article.
+2026-10-19 12:05:29,878 | INFO | hermes_db.services.event:124 | created event 'Turkish police shut down pro-opposition TV channel in Istanbul raid' with 1 article.
+2026-10-19 12:05:29,911 | INFO | hermes_db.services.event:210 | added article to event 'Houthi attacks disrupt Saudi events and travel' (now 2 articles).
+2026-10-19 12:05:31,356 | INFO | hermes_ai.services.geocoding:256 | geocoded 'Cornell University, New York, USA' -> (42.452916, -76.4800635).
+2026-10-19 12:05:31,456 | INFO | hermes_db.services.event:124 | created event 'Cornell suspends frat parties over gang rape allegations' with 1 article.
+2026-10-19 12:05:31,489 | INFO | hermes_db.services.event:210 | added article to event 'Houthi attacks disrupt Saudi events and travel' (now 3 articles).
+2026-10-19 12:05:31,534 | INFO | hermes_db.services.event:124 | created event 'Qatar’s emir outlines national strategies to strengthen economy' with 1 article.
+2026-10-19 12:05:31,579 | INFO | hermes_db.services.event:124 | created event 'Russia allocates half its budget to defence, cuts social spending' with 1 article.
+2026-10-19 12:05:31,579 | INFO | hermes_worker.services.sync:174 | finished source 'Euronews World': 50 processed, 0 skipped (duplicates), 0 failed.
+12:05:35 - LiteLLM Router:INFO: router.py:3671 - litellm.acompletion(model=mistral/ministral-8b-latest)[32m 200 OK[0m
+2026-10-19 12:05:35,628 | INFO | LiteLLM Router:3671 | litellm.acompletion(model=mistral/ministral-8b-latest)[32m 200 OK[0m
+2026-10-19 12:05:35,629 | INFO | hermes_ai.extractors.events:158 | extracted: Brazil's Lula, Bolsonaro clash in bitter debate ah... | category = POLITICS.
+2026-10-19 12:05:35,629 | INFO | hermes_ai.extractors.events:158 | extracted: Louvre's $100 million crown jewels still missing o... | category = ENTERTAINMENT.
+2026-10-19 12:05:35,629 | INFO | hermes_ai.extractors.events:158 | extracted: Canadian military base fire kills at least four, i... | category = DISASTER.
+2026-10-19 12:05:35,629 | INFO | hermes_ai.extractors.events:158 | extracted: Zelensky holds US talks as Trump accuses him of no... | category = POLITICS.
+2026-10-19 12:05:35,700 | INFO | hermes_db.services.event:210 | added article to event 'Brazil presidential candidates debate ahead of runoff' (now 3 articles).
+2026-10-19 12:05:35,745 | INFO | hermes_db.services.event:124 | created event 'Louvre crown jewels heist remains unsolved after one year' with 1 article.
+2026-10-19 12:05:35,778 | INFO | hermes_db.services.event:210 | added article to event 'Fire at Canadian military base kills 4, injures dozens' (now 7 articles).
+2026-10-19 12:05:35,823 | INFO | hermes_db.services.event:124 | created event 'Zelensky holds US talks amid tensions with Trump' with 1 article.
+2026-10-19 12:05:35,824 | INFO | hermes_worker.services.sync:174 | finished source 'France 24 World': 24 processed, 0 skipped (duplicates), 0 failed.
+2026-10-19 12:05:35,834 | INFO | hermes_worker.services.sync:226 | sync complete: 19 sources, 299 articles processed, 242 new events, 54 matched to existing.
+2026-10-19 12:05:35,835 | INFO | hermes_worker:33 | sync finished: {'sources_processed': 19, 'articles_fetched': 348, 'articles_skipped_duplicate': 0, 'articles_processed': 299, 'articles_failed': 0, 'events_created': 242, 'events_matched': 54}.
+2026-10-19 12:05:35,835 | INFO | hermes_worker:19 | closing database connections...
+2026-10-19 12:05:35,870 | INFO | hermes_db.session:77 | database connection closed.
