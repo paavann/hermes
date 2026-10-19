@@ -127,8 +127,9 @@ def test_rate_limiter_circuit_breaker() -> None:
         try:
             await limiter.acquire()
             raise AssertionError("acquire() did not raise CircuitBreakerOpenError")
-        except CircuitBreakerOpenError:
-            pass
+        except CircuitBreakerOpenError as exc:
+            assert exc.cooldown_remaining is not None
+            assert exc.cooldown_remaining > 0.0
 
         limiter.reset_circuit_breaker()
         assert not limiter.is_circuit_open()

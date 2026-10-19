@@ -16,14 +16,6 @@ _DEFAULT_GDELT_LIMITER = TbRateLimiter(req_per_min=12, max_burst=1.0)
 
 
 def _parse_gdelt_date(date_str: str) -> datetime | None:
-    """Parse GDELT date format string into a datetime object.
-
-    Args:
-        date_str: Formatted date string from GDELT DOC API.
-
-    Returns:
-        Parsed datetime or None if format is unrecognized.
-    """
     if not date_str:
         return None
     for fmt in ("%Y%m%dT%H%M%SZ", "%Y%m%d%H%M%S", "%Y-%m-%dT%H:%M:%SZ"):
@@ -38,14 +30,6 @@ def _parse_gdelt_date(date_str: str) -> datetime | None:
 
 
 def _extract_domain(url: str | None) -> str:
-    """Extract clean domain name from URL.
-
-    Args:
-        url: Full URL string.
-
-    Returns:
-        Stripped domain name.
-    """
     if not url:
         return ""
     parsed = urlparse(url)
@@ -56,32 +40,16 @@ def _extract_domain(url: str | None) -> str:
 
 
 class GDELTFetcher(BaseArticleFetcher):
-    """Fetcher for wire articles via GDELT 2.0 DOC API."""
-
     def __init__(
         self,
         rate_limiter: TbRateLimiter | None = None,
         client: httpx.AsyncClient | None = None,
     ) -> None:
-        """Initialize GDELTFetcher.
-
-        Args:
-            rate_limiter: Optional token bucket rate limiter with burst control.
-            client: Optional httpx.AsyncClient instance.
-        """
         self._limiter = rate_limiter or _DEFAULT_GDELT_LIMITER
         self._client = client
 
 
     async def fetch_articles(self, source: DueSource) -> list[ParsedArticle]:
-        """Fetch and parse wire articles from GDELT 2.0 API.
-
-        Args:
-            source: DueSource configuration.
-
-        Returns:
-            List of parsed articles.
-        """
         if self._limiter.is_circuit_open():
             logger.warning(
                 "gdelt circuit breaker is open. skipping source '%s'.",
@@ -98,7 +66,6 @@ class GDELTFetcher(BaseArticleFetcher):
             return []
 
         await self._limiter.acquire()
-
         params = {
             "query": f"domain:{domain}",
             "mode": "artlist",
@@ -106,7 +73,6 @@ class GDELTFetcher(BaseArticleFetcher):
             "format": "json",
             "sort": "datedesc",
         }
-
         try:
             if self._client:
                 res = await self._client.get(
@@ -132,7 +98,6 @@ class GDELTFetcher(BaseArticleFetcher):
                     source.name,
                 )
                 return []
-
             res.raise_for_status()
         except httpx.TimeoutException:
             logger.warning(
@@ -168,6 +133,7 @@ class GDELTFetcher(BaseArticleFetcher):
         for item in raw_articles:
             if not isinstance(item, dict):
                 continue
+
             title_val = item.get("title")
             url_val = item.get("url")
             title = str(title_val).strip() if title_val else ""
@@ -178,7 +144,6 @@ class GDELTFetcher(BaseArticleFetcher):
             seendate_val = item.get("seendate")
             seendate = str(seendate_val).strip() if seendate_val else ""
             pub_at = _parse_gdelt_date(seendate)
-
             country_val = item.get("sourcecountry")
             source_country = str(country_val).strip() if country_val else None
 

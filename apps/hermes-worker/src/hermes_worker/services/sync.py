@@ -28,21 +28,12 @@ logger = logging.getLogger(__name__)
 
 
 class SyncService:
-    """Orchestrates multi-source news ingestion and event generation."""
-
     def __init__(
         self,
         rss_fetcher: BaseArticleFetcher | None = None,
         gdelt_fetcher: BaseArticleFetcher | None = None,
         sitemap_fetcher: BaseArticleFetcher | None = None,
     ) -> None:
-        """Initialize SyncService with provider fetchers.
-
-        Args:
-            rss_fetcher: Optional fetcher for RSS sources.
-            gdelt_fetcher: Optional fetcher for GDELT sources.
-            sitemap_fetcher: Optional fetcher for sitemap scrape sources.
-        """
         self._ai = AiService()
         self._rss_fetcher = rss_fetcher or RSSFetcher()
         self._gdelt_fetcher = gdelt_fetcher or GDELTFetcher()
@@ -50,14 +41,6 @@ class SyncService:
 
 
     def _get_fetcher(self, source_type: SourceType) -> BaseArticleFetcher:
-        """Resolve appropriate article fetcher for source type.
-
-        Args:
-            source_type: Ingestion provider type enum.
-
-        Returns:
-            Article fetcher implementing BaseArticleFetcher protocol.
-        """
         if source_type == SourceType.GDELT:
             return self._gdelt_fetcher
         if source_type == SourceType.SCRAPE:

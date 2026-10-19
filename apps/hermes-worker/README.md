@@ -189,7 +189,7 @@ flowchart TD
 ## 5. The 5 Core Pipeline Stages
 
 ### Stage 1: High-Concurrency RSS Fetching
-* Handled by [`fetch_feed`](file:///home/pavan/proj/hermes/apps/hermes-worker/src/hermes_worker/services/rss.py).
+* Handled by [`fetch_feed`](file:///home/pavan/proj/hermes/apps/hermes-worker/src/hermes_worker/services/fetchers/rss.py).
 * Asynchronously queries configured news feeds using `httpx.AsyncClient` with a 30-second timeout, custom User-Agent, and redirect following.
 * Parses XML payloads using `feedparser`, extracting headlines, permalinks, summaries, publication timestamps, and full HTML/encoded article bodies.
 * Truncates long content to 500 words to conserve LLM context windows while preserving crucial lead paragraphs.

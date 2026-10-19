@@ -12,15 +12,6 @@ logger = logging.getLogger(__name__)
 
 
 def _parse_sitemap_urls(xml_content: str, max_urls: int = 20) -> list[str]:
-    """Parse URLs from an XML sitemap document.
-
-    Args:
-        xml_content: Raw sitemap XML string.
-        max_urls: Maximum number of URLs to extract.
-
-    Returns:
-        List of extracted URL strings.
-    """
     try:
         root = ET.fromstring(xml_content)
     except ET.ParseError:
@@ -38,15 +29,6 @@ def _parse_sitemap_urls(xml_content: str, max_urls: int = 20) -> list[str]:
 
 
 def _extract_article_from_html(html: str, url: str) -> ParsedArticle | None:
-    """Extract clean article content and metadata from HTML using trafilatura.
-
-    Args:
-        html: Raw HTML content string.
-        url: Canonical article URL.
-
-    Returns:
-        ParsedArticle or None if content extraction fails.
-    """
     text = trafilatura.extract(html)
     if not text:
         return None
@@ -77,32 +59,16 @@ def _extract_article_from_html(html: str, url: str) -> ParsedArticle | None:
 
 
 class SitemapFetcher(BaseArticleFetcher):
-    """Fallback fetcher that extracts articles from XML sitemaps using trafilatura."""
-
     def __init__(
         self,
         client: httpx.AsyncClient | None = None,
         max_articles: int = 20,
     ) -> None:
-        """Initialize SitemapFetcher.
-
-        Args:
-            client: Optional httpx.AsyncClient instance.
-            max_articles: Maximum number of articles to extract per sitemap.
-        """
         self._client = client
         self._max_articles = max_articles
 
 
     async def fetch_articles(self, source: DueSource) -> list[ParsedArticle]:
-        """Fetch URLs from sitemap and extract article text.
-
-        Args:
-            source: DueSource configuration.
-
-        Returns:
-            List of parsed articles.
-        """
         sitemap_url = source.feed_url
         if not sitemap_url:
             base_url = (source.url or "").rstrip("/")
