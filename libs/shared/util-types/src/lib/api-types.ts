@@ -3,6 +3,7 @@ export interface ArticleResponse {
   title: string;
   url: string;
   published_at: string | null;
+  source_name?: string | null;
 }
 
 export interface MapEventResponse {

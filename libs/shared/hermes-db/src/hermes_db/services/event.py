@@ -1,8 +1,8 @@
 import logging
+import math
 import uuid
 from collections.abc import Sequence
 from datetime import UTC, datetime, timedelta
-from typing import Protocol
 
 from geoalchemy2.functions import ST_X, ST_Y, ST_MakeEnvelope, ST_Within
 from sqlalchemy import select, update
@@ -11,44 +11,46 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from hermes_db.core.config import settings
-from hermes_db.enums import CredibilityTier, EventScope, EventStatus
+from hermes_db.enums import (
+    CredibilityTier,
+    EventScope,
+    EventStatus,
+    GeopoliticalBloc,
+    ImpactLevel,
+)
+from hermes_db.models.article import Article
 from hermes_db.models.event import Event
+from hermes_db.models.source import Source
+from hermes_db.protocols import EventExtractionData, GeocodingData
 from hermes_db.services.article import ArticleService
+from hermes_db.services.ranking import (
+    CREDIBILITY_WEIGHTS,
+    HALF_LIFE_HOURS,
+    HOURLY_DECAY_FACTOR,
+    IMPACT_MULTIPLIERS,
+    SOURCE_BLOC_MAP,
+    calculate_shannon_diversity,
+    calculate_velocity,
+    calculate_velocity_multiplier,
+)
+
+
+__all__ = [
+    "CREDIBILITY_WEIGHTS",
+    "HALF_LIFE_HOURS",
+    "HOURLY_DECAY_FACTOR",
+    "IMPACT_MULTIPLIERS",
+    "SOURCE_BLOC_MAP",
+    "EventExtractionData",
+    "EventService",
+    "GeocodingData",
+    "calculate_shannon_diversity",
+    "calculate_velocity",
+    "calculate_velocity_multiplier",
+]
 
 
 logger = logging.getLogger(__name__)
-
-CREDIBILITY_WEIGHTS = {
-    CredibilityTier.TIER_1: 3.0,
-    CredibilityTier.TIER_2: 2.0,
-    CredibilityTier.TIER_3: 1.0,
-    CredibilityTier.TIER_4: 0.5,
-}
-
-
-class EventExtractionData(Protocol):
-    @property
-    def headline(self) -> str: ...
-
-    @property
-    def summary(self) -> str: ...
-
-    @property
-    def category(self) -> str: ...
-
-    @property
-    def category_color(self) -> str | None: ...
-
-    @property
-    def location_name(self) -> str | None: ...
-
-
-class GeocodingData(Protocol):
-    @property
-    def latitude(self) -> float: ...
-
-    @property
-    def longitude(self) -> float: ...
 
 
 class EventService:
@@ -74,17 +76,27 @@ class EventService:
             )
 
         now = datetime.now(UTC).replace(tzinfo=None)
-        initial_score = CREDIBILITY_WEIGHTS.get(source_credibility, 1.0)
+        raw_impact = getattr(extraction, "impact_level", ImpactLevel.MODERATE)
+        impact = (
+            ImpactLevel(raw_impact)
+            if isinstance(raw_impact, str)
+            else (raw_impact or ImpactLevel.MODERATE)
+        )
+        impact_mult = IMPACT_MULTIPLIERS.get(impact, 1.0)
+        base_score = CREDIBILITY_WEIGHTS.get(source_credibility, 1.0)
+        initial_score = base_score * impact_mult
 
         event = Event(
             ai_headline=extraction.headline,
             ai_summary=extraction.summary,
             category=extraction.category,
             category_color=extraction.category_color,
+            impact_level=impact,
             location=location_wkt,
             location_name=extraction.location_name,
             embedding=embedding,
             trending_score=initial_score,
+            velocity=1.0,
             article_count=1,
             first_reported_at=now,
             last_updated_at=now,
@@ -111,6 +123,7 @@ class EventService:
 
         logger.info("created event '%s' with 1 article.", event.ai_headline)
         return event
+
 
     async def add_article_to_event(
         self,
@@ -141,9 +154,54 @@ class EventService:
             return None
 
         event.article_count += 1
-        added_score = CREDIBILITY_WEIGHTS.get(source_credibility, 1.0)
+        now = datetime.now(UTC).replace(tzinfo=None)
+        event.last_updated_at = now
+
+        # query sources for syndication count and geopolitical bloc diversity.
+        stmt = (
+            select(Source.id, Source.slug)
+            .join(Article, Article.source_id == Source.id)
+            .where(Article.event_id == event.id)
+        )
+        result = await self._session.execute(stmt)
+        source_rows = result.all()
+
+        n = sum(1 for sid, _ in source_rows if sid == source_id)
+        if n <= 0:
+            n = 1
+        syndication_factor = 1.0 / math.sqrt(n)
+
+        blocs = [
+            SOURCE_BLOC_MAP.get(slug, GeopoliticalBloc.GLOBAL_WIRE)
+            for _, slug in source_rows
+            if slug
+        ]
+        diversity = calculate_shannon_diversity(blocs)
+
+        first_reported = getattr(event, "first_reported_at", None)
+        if isinstance(first_reported, datetime):
+            event.velocity = calculate_velocity(
+                event.article_count, first_reported, now
+            )
+        else:
+            event.velocity = 1.0
+
+        vel_mult = calculate_velocity_multiplier(event.velocity)
+
+        raw_impact = getattr(event, "impact_level", ImpactLevel.MODERATE)
+        impact = (
+            ImpactLevel(raw_impact)
+            if isinstance(raw_impact, str)
+            else (raw_impact or ImpactLevel.MODERATE)
+        )
+        impact_mult = IMPACT_MULTIPLIERS.get(impact, 1.0)
+
+        base_credibility = CREDIBILITY_WEIGHTS.get(source_credibility, 1.0)
+        added_score = (
+            base_credibility * syndication_factor * impact_mult * diversity * vel_mult
+        )
         event.trending_score += added_score
-        event.last_updated_at = datetime.now(UTC).replace(tzinfo=None)
+
         if event.status == EventStatus.STALE:
             event.status = EventStatus.ACTIVE
             logger.info("reactivated stale event: '%s'.", event.ai_headline)
@@ -155,6 +213,7 @@ class EventService:
             event.article_count,
         )
         return event
+
 
     async def get_events(
         self,
@@ -171,6 +230,7 @@ class EventService:
         stmt = stmt.order_by(Event.trending_score.desc()).limit(limit)
         result = await self._session.execute(stmt)
         return list(result.scalars().all())
+
 
     async def get_events_by_bbox(
         self, north: float, south: float, east: float, west: float
@@ -191,14 +251,16 @@ class EventService:
         result = await self._session.execute(stmt)
         return result.all()
 
+
     async def get_event_by_id(self, event_id: uuid.UUID) -> Event | None:
         stmt = (
             select(Event)
-            .options(selectinload(Event.articles))
+            .options(selectinload(Event.articles).joinedload(Article.source))
             .where(Event.id == event_id)
         )
         result = await self._session.execute(stmt)
         return result.scalar_one_or_none()
+
 
     async def get_active_events(self) -> list[dict[str, str]]:
         stmt = (
@@ -222,6 +284,7 @@ class EventService:
             }
             for event_id, headline, location_name, category in result.all()
         ]
+
 
     async def get_active_events_by_embeddings(
         self, embeddings: Sequence[Sequence[float] | None]
@@ -258,8 +321,10 @@ class EventService:
 
         return list(unique_events.values())
 
+
     async def article_url_exists(self, url: str) -> bool:
         return await self._article_service.article_url_exists(url)
+
 
     async def _transition_event_status(
         self, from_status: EventStatus, to_status: EventStatus, cutoff: datetime
@@ -275,16 +340,17 @@ class EventService:
             return result.rowcount
         return 0
 
+
     async def run_lifecycle_transitions(self) -> dict[str, int]:
         now = datetime.now(UTC).replace(tzinfo=None)
         stale_cutoff = now - timedelta(hours=settings.EVENT_STALE_HRS)
         archive_cutoff = now - timedelta(hours=settings.EVENT_ARCHIVE_HRS)
 
-        # decay event scores by 10%.
+        # decay event scores using continuous exponential half-life (18h half-life).
         decay_stmt = (
             update(Event)
             .where(Event.status == EventStatus.ACTIVE)
-            .values(trending_score=Event.trending_score * 0.9)
+            .values(trending_score=Event.trending_score * HOURLY_DECAY_FACTOR)
         )
         await self._session.execute(decay_stmt)
         staled_count = await self._transition_event_status(

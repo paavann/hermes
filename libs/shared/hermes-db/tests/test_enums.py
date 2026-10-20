@@ -13,6 +13,7 @@ from hermes_db.enums import (
     EventScope,
     EventStatus,
     EventTlStatus,
+    ImpactLevel,
     SourceType,
 )
 
@@ -97,11 +98,34 @@ class TestEventTlStatus:
 
 class TestSourceType:
     def test_all_members_present(self):
-        expected = {"RSS", "API", "SCRAPE"}
+        expected = {"RSS", "API", "SCRAPE", "GDELT"}
         assert {m.value for m in SourceType} == expected
 
     def test_rss_is_default_string(self):
         assert SourceType.RSS == "RSS"
+
+
+# ---------------------------------------------------------------------------
+# ImpactLevel
+# ---------------------------------------------------------------------------
+
+
+class TestImpactLevel:
+    def test_all_members_present(self):
+        expected = {"CRITICAL", "MAJOR", "MODERATE", "MINOR"}
+        assert {m.value for m in ImpactLevel} == expected
+
+    @pytest.mark.parametrize(
+        ("impact", "expected"),
+        [
+            (ImpactLevel.CRITICAL, "CRITICAL"),
+            (ImpactLevel.MAJOR, "MAJOR"),
+            (ImpactLevel.MODERATE, "MODERATE"),
+            (ImpactLevel.MINOR, "MINOR"),
+        ],
+    )
+    def test_string_equality(self, impact: ImpactLevel, expected: str):
+        assert impact == expected
 
 
 # ---------------------------------------------------------------------------

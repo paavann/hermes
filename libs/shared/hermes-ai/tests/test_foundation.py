@@ -144,5 +144,37 @@ def test_constants_and_prompts() -> None:
     assert DEFAULT_CATEGORY_COLOR == "#6B7280"
     assert ARTICLE_BATCH_SIZE == 10
     assert "news analyst" in ARTICLE_SYSTEM_PROMPT
+    assert "impact_level" in ARTICLE_SYSTEM_PROMPT
     assert "geopolitical historian" in TL_SYSTEM_PROMPT
     assert "geopolitical researcher" in TL_TRIAGE_SYSTEM_PROMPT
+
+
+def test_extracted_event_impact_level() -> None:
+    event_default = ExtractedEvent(
+        article_index=0,
+        has_location=False,
+        headline="Default event",
+        summary="Event with default impact.",
+        category="WORLD",
+    )
+    assert event_default.impact_level == "MODERATE"
+
+    event_critical = ExtractedEvent(
+        article_index=0,
+        has_location=False,
+        headline="War breaks out",
+        summary="Major war begins.",
+        category="CONFLICT",
+        impact_level="critical",
+    )
+    assert event_critical.impact_level == "CRITICAL"
+
+    event_minor = ExtractedEvent(
+        article_index=0,
+        has_location=False,
+        headline="Festival in town",
+        summary="Local cultural festival held.",
+        category="CULTURE",
+        impact_level="MINOR",
+    )
+    assert event_minor.impact_level == "MINOR"

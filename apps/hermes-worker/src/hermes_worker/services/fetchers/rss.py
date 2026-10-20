@@ -1,55 +1,38 @@
 import logging
+from collections.abc import Mapping
 from datetime import datetime
 import feedparser
 import httpx
-from pydantic import BaseModel, computed_field
+from hermes_db.services.source import DueSource
 from hermes_worker.core.config import settings
+from hermes_worker.services.fetchers.base import BaseArticleFetcher, ParsedArticle
 
 
 logger = logging.getLogger(__name__)
-MAX_WORDS: int = 500
 
 
-class ParsedArticle(BaseModel):
-    title: str
-    url: str
-    description: str
-    content: str | None = None
-    published_at: datetime | None = None
-
-    @computed_field
-    @property
-    def text_for_ai(self) -> str:
-        if self.content:
-            return _truncate_to_words(self.content, MAX_WORDS)
-        return self.description
-
-
-def _parse_date(entry: dict) -> datetime | None:
+def _parse_date(entry: Mapping[str, object]) -> datetime | None:
     parsed_time = entry.get("published_parsed")
-    if parsed_time:
+    if parsed_time and isinstance(parsed_time, (tuple, list)):
         try:
             return datetime(*parsed_time[:6])
-        except ValueError, TypeError:
+        except (ValueError, TypeError):
             return None
     return None
 
 
-def _truncate_to_words(text: str, max_words: int) -> str:
-    words = text.split()
-    if len(words) <= max_words:
-        return text
-    return " ".join(words[:max_words]) + "..."
-
-
-def _extract_content(entry: dict) -> str | None:
+def _extract_content(entry: Mapping[str, object]) -> str | None:
     content_list = entry.get("content", [])
-    if content_list:
-        return content_list[0].get("value", "").strip() or None
+    if isinstance(content_list, list) and content_list:
+        first = content_list[0]
+        if isinstance(first, dict):
+            val = first.get("value", "")
+            if isinstance(val, str) and val.strip():
+                return val.strip()
 
     encoded = entry.get("content_encoded", "")
-    if encoded:
-        return encoded.strip() or None
+    if isinstance(encoded, str) and encoded.strip():
+        return encoded.strip()
 
     return None
 
@@ -66,7 +49,7 @@ async def fetch_feed(feed_url: str) -> list[ParsedArticle]:
             res.raise_for_status()
     except httpx.TimeoutException:
         logger.warning(
-            "timeout fetching RSS feed %s (> 30s). Skipping source.", feed_url
+            "timeout fetching RSS feed %s (> 30s). skipping source.", feed_url
         )
         return []
     except httpx.HTTPError as exc:
@@ -102,5 +85,17 @@ async def fetch_feed(feed_url: str) -> list[ParsedArticle]:
             )
         )
 
-    logger.info("fetched %d articles from %s", len(articles), feed_url)
+    logger.info("fetched %d articles from %s.", len(articles), feed_url)
     return articles
+
+
+class RSSFetcher(BaseArticleFetcher):
+    async def fetch_articles(self, source: DueSource) -> list[ParsedArticle]:
+        if not source.feed_url:
+            logger.warning(
+                "source '%s' has no feed_url configured for RSS fetching.",
+                source.name,
+            )
+            return []
+
+        return await fetch_feed(source.feed_url)

@@ -2,6 +2,52 @@ import { useEffect, useState, useRef } from 'react';
 import { useMapStore } from '../../store/store';
 import { useEventDetails } from '../../hooks/eventDetails';
 
+function getOutletTag(
+  sourceName: string | null | undefined,
+  title: string,
+  domain: string,
+): string {
+  const name = sourceName?.toLowerCase() ?? '';
+  if (name.includes('reuters')) return 'reuters';
+  if (name.includes('associated press') || name.includes('ap wire')) return 'ap';
+  if (name.includes('france-presse') || name.includes('afp')) return 'afp';
+  if (name.includes('united press') || name.includes('upi')) return 'upi';
+  if (name.includes('bbc')) return 'bbc';
+  if (name.includes('new york times') || name.includes('nyt')) return 'nyt';
+  if (name.includes('washington post') || name.includes('wapo')) return 'wapo';
+  if (name.includes('guardian')) return 'guardian';
+  if (name.includes('politico')) return 'politico';
+  if (name.includes('al jazeera')) return 'aljazeera';
+  if (name.includes('deutsche welle') || name.includes('dw')) return 'dw';
+  if (name.includes('nhk')) return 'nhk';
+  if (name.includes('cbc')) return 'cbc';
+  if (name.includes('cnn')) return 'cnn';
+  if (name.includes('npr')) return 'npr';
+  if (name.includes('wsj') || name.includes('wall street journal')) return 'wsj';
+  if (name.includes('pbs')) return 'pbs';
+  if (name.includes('euronews')) return 'euronews';
+
+  const titleLower = title.toLowerCase();
+  if (titleLower.endsWith('- reuters') || titleLower.endsWith(' - reuters')) return 'reuters';
+  if (titleLower.endsWith('- the associated press') || titleLower.endsWith('- ap news') || titleLower.endsWith('- ap')) return 'ap';
+  if (titleLower.endsWith('- agence france-presse') || titleLower.endsWith('- afp')) return 'afp';
+  if (titleLower.endsWith('- upi')) return 'upi';
+  if (titleLower.endsWith('- bbc')) return 'bbc';
+
+  if (domain.includes('reuters.com')) return 'reuters';
+  if (domain.includes('apnews.com')) return 'ap';
+  if (domain.includes('bbc.com') || domain.includes('bbc.co.uk')) return 'bbc';
+  if (domain.includes('nytimes.com')) return 'nyt';
+  if (domain.includes('washingtonpost.com')) return 'wapo';
+  if (domain.includes('theguardian.com')) return 'guardian';
+
+  if (sourceName) {
+    return sourceName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+  }
+
+  return domain.split('.')[0] || 'source';
+}
+
 export function EventPopup({ map }: { map: mapboxgl.Map | null }) {
   const selectedEventId = useMapStore((s) => s.selectedEventId);
   const selectedEventLngLat = useMapStore((s) => s.selectedEventLngLat);
@@ -188,14 +234,28 @@ export function EventPopup({ map }: { map: mapboxgl.Map | null }) {
                       .replace(/[^a-z0-9]+/g, '-')
                       .replace(/(^-|-$)/g, '');
 
+                    const outlet = getOutletTag(
+                      article.source_name,
+                      article.title,
+                      domain,
+                    );
+
                     return (
-                      <li key={article.id} className="flex items-center gap-2">
-                        <span className="text-neon-blue text-[8px]">■</span>
+                      <li
+                        key={article.id}
+                        className="flex items-center gap-1.5 min-w-0"
+                      >
+                        <span className="text-neon-blue text-[8px] shrink-0">
+                          ■
+                        </span>
+                        <span className="text-neon-blue text-[10px] font-mono shrink-0">
+                          [{outlet}]
+                        </span>
                         <a
                           href={article.url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-gray-400 hover:text-neon-blue text-[10px] hover:underline cursor-pointer block truncate tracking-wider"
+                          className="text-gray-400 hover:text-neon-blue text-[10px] hover:underline cursor-pointer truncate tracking-wider"
                         >
                           <span className="text-neon-blue">{domain}</span>/
                           {formattedTitle}

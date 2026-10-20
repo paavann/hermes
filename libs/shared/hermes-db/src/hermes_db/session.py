@@ -68,7 +68,7 @@ async def init_db(db_url: URL | str | None = None) -> None:
         async with AsyncSessionLocal() as session:
             await sync_sources_from_config(session=session)
     except Exception:
-        logger.error("failed to sync sources from config.")
+        logger.exception("failed to sync sources from config.")
 
 
 async def close_db() -> None:

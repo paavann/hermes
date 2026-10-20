@@ -238,12 +238,6 @@ export function MapView() {
       <div ref={mapContainer} className="fixed inset-0 w-screen h-screen z-0" />
       {isMapReady && !isTimelineMode && <EventPopup map={map.current} />}
       {isMapReady && isTimelineMode && <TlPanel map={map.current} />}
-
-      {isFetching && !isTimelineMode && (
-        <div className="fixed top-4 right-4 bg-hud-bg border border-hud-border text-neon-blue px-4 py-1.5 text-xs font-mono tracking-[0.15em] z-10 backdrop-blur-md uppercase shadow-[0_0_15px_rgba(59,130,246,0.3)] animate-pulse">
-          SCANNING...
-        </div>
-      )}
     </>
   );
 }

@@ -7,7 +7,7 @@ from sqlalchemy import Float, Index, Integer, String, Text, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from hermes_db.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
-from hermes_db.enums import EventScope, EventStatus
+from hermes_db.enums import EventScope, EventStatus, ImpactLevel
 
 
 if TYPE_CHECKING:
@@ -25,6 +25,7 @@ class Event(Base, TimestampMixin, UUIDPrimaryKeyMixin):
 
     status: Mapped[EventStatus] = mapped_column(default=EventStatus.ACTIVE)
     scope: Mapped[EventScope] = mapped_column(default=EventScope.COUNTRY)
+    impact_level: Mapped[ImpactLevel] = mapped_column(default=ImpactLevel.MODERATE)
 
     location: Mapped[str | None] = mapped_column(
         Geometry(
@@ -38,6 +39,7 @@ class Event(Base, TimestampMixin, UUIDPrimaryKeyMixin):
     country_code: Mapped[str | None] = mapped_column(String(2), nullable=True)
 
     trending_score: Mapped[float] = mapped_column(Float, default=0.0)
+    velocity: Mapped[float] = mapped_column(Float, default=1.0)
     article_count: Mapped[int] = mapped_column(Integer, default=0)
 
     first_reported_at: Mapped[datetime] = mapped_column(

@@ -11,18 +11,29 @@ We patch ``ArticleService.create_article`` via ``AsyncMock`` so that event
 tests remain isolated from article-creation details.
 """
 
-from datetime import UTC, datetime
+import math
+from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from conftest import make_async_session, make_event, make_uuid, run
 from sqlalchemy.engine import CursorResult
 
-from hermes_db.enums import CredibilityTier, EventStatus
+from hermes_db.enums import (
+    CredibilityTier,
+    EventStatus,
+    GeopoliticalBloc,
+    ImpactLevel,
+)
 from hermes_db.models.event import Event
 from hermes_db.services.event import (
     CREDIBILITY_WEIGHTS,
+    HALF_LIFE_HOURS,
+    HOURLY_DECAY_FACTOR,
     EventService,
+    calculate_shannon_diversity,
+    calculate_velocity,
+    calculate_velocity_multiplier,
 )
 
 
@@ -41,12 +52,14 @@ class _Extraction:
         category: str = "Politics",
         category_color: str | None = "#FF0000",
         location_name: str | None = "London, UK",
+        impact_level: str | None = "MODERATE",
     ) -> None:
         self.headline = headline
         self.summary = summary
         self.category = category
         self.category_color = category_color
         self.location_name = location_name
+        self.impact_level = impact_level
 
 
 class _Geocoding:
@@ -662,3 +675,243 @@ class TestRunLifecycleTransitions:
         svc, _ = self._make_svc_with_rowcounts(stale_count=0, archived_count=0)
         result = run(svc.run_lifecycle_transitions())
         assert result == {"staled": 0, "archived": 0}
+
+
+# ---------------------------------------------------------------------------
+# Shannon diversity entropy
+# ---------------------------------------------------------------------------
+
+
+class TestCalculateShannonDiversity:
+    def test_empty_or_single_bloc_returns_one(self) -> None:
+        assert calculate_shannon_diversity([]) == 1.0
+        assert calculate_shannon_diversity([GeopoliticalBloc.NORTH_AMERICA]) == 1.0
+
+
+    def test_homogeneous_blocs_returns_one(self) -> None:
+        blocs = [
+            GeopoliticalBloc.NORTH_AMERICA,
+            GeopoliticalBloc.NORTH_AMERICA,
+            GeopoliticalBloc.NORTH_AMERICA,
+        ]
+        assert calculate_shannon_diversity(blocs) == 1.0
+
+
+    def test_distinct_blocs_amplifies_diversity(self) -> None:
+        blocs = [
+            GeopoliticalBloc.GLOBAL_WIRE,
+            GeopoliticalBloc.EUROPE,
+            GeopoliticalBloc.MIDDLE_EAST_AFRICA,
+        ]
+        diversity = calculate_shannon_diversity(blocs)
+        # H = ln(3) ~ 1.0986, min(H, 1.0) = 1.0, D = 1.0 + 1.0 * 0.5 = 1.5
+        assert diversity == 1.5
+
+
+    def test_two_distinct_blocs(self) -> None:
+        blocs = [
+            GeopoliticalBloc.GLOBAL_WIRE,
+            GeopoliticalBloc.EUROPE,
+        ]
+        diversity = calculate_shannon_diversity(blocs)
+        # H = ln(2) ~ 0.6931, D = 1.0 + 0.6931 * 0.5 ~ 1.3466
+        assert diversity == pytest.approx(1.3466, abs=0.001)
+
+
+    def test_accepts_strings_and_enums(self) -> None:
+        enum_diversity = calculate_shannon_diversity([
+            GeopoliticalBloc.GLOBAL_WIRE,
+            GeopoliticalBloc.EUROPE,
+        ])
+        str_diversity = calculate_shannon_diversity(["GLOBAL_WIRE", "EUROPE"])
+        assert enum_diversity == str_diversity
+
+
+# ---------------------------------------------------------------------------
+# Coverage velocity
+# ---------------------------------------------------------------------------
+
+
+class TestCalculateVelocity:
+    def test_single_article_returns_one(self) -> None:
+        now = datetime.now(UTC).replace(tzinfo=None)
+        assert calculate_velocity(1, now, now) == 1.0
+
+
+    def test_rapid_articles_high_velocity(self) -> None:
+        now = datetime.now(UTC).replace(tzinfo=None)
+        first = now - timedelta(minutes=30)
+        # 5 articles in 0.5 hours -> max(0.5, 1.0) = 1.0 -> 5.0 articles/hr
+        assert calculate_velocity(5, first, now) == 5.0
+
+
+    def test_spaced_articles_moderate_velocity(self) -> None:
+        now = datetime.now(UTC).replace(tzinfo=None)
+        first = now - timedelta(hours=5)
+        # 5 articles in 5 hours -> 5 / 5.0 = 1.0 articles/hr
+        assert calculate_velocity(5, first, now) == 1.0
+
+
+    def test_slow_articles_low_velocity(self) -> None:
+        now = datetime.now(UTC).replace(tzinfo=None)
+        first = now - timedelta(hours=20)
+        # 2 articles in 20 hours -> 2 / 20.0 = 0.1 articles/hr
+        assert calculate_velocity(2, first, now) == 0.1
+
+
+# ---------------------------------------------------------------------------
+# Velocity boost multiplier
+# ---------------------------------------------------------------------------
+
+
+class TestCalculateVelocityMultiplier:
+    def test_baseline_velocity_returns_one(self) -> None:
+        assert calculate_velocity_multiplier(1.0) == 1.0
+        assert calculate_velocity_multiplier(0.5) == 1.0
+
+
+    def test_higher_velocity_boosts_multiplier(self) -> None:
+        # velocity 2.0 -> 1.0 + min(1.0 * 0.2, 1.0) = 1.2
+        assert calculate_velocity_multiplier(2.0) == 1.2
+
+
+    def test_capped_at_maximum(self) -> None:
+        # velocity 10.0 -> 1.0 + min(9.0 * 0.2, 1.0) = 2.0
+        assert calculate_velocity_multiplier(10.0) == 2.0
+
+
+# ---------------------------------------------------------------------------
+# Multi-Factor Event Scoring
+# ---------------------------------------------------------------------------
+
+
+class TestEventScoringMultiFactor:
+    def _make_session_and_svc(self, event: MagicMock | None = None) -> tuple[AsyncMock, EventService]:
+        session = make_async_session(get_return=event)
+        svc = EventService(session)
+        return session, svc
+
+
+    def test_create_event_with_impact_level_critical(self) -> None:
+        session = make_async_session()
+        async def _flush():
+            pass
+        session.flush = AsyncMock(side_effect=_flush)
+        svc = EventService(session)
+        extraction = _Extraction(impact_level=ImpactLevel.CRITICAL)
+
+        with patch.object(svc._article_service, "create_article", new_callable=AsyncMock):
+            event = run(
+                svc.create_event_with_article(
+                    extraction=extraction,
+                    geocoding=None,
+                    article_title="Major Crisis",
+                    article_url="https://example.com/crisis",
+                    source_id=make_uuid(),
+                    source_credibility=CredibilityTier.TIER_1,
+                )
+            )
+        assert event is not None
+        assert event.impact_level == ImpactLevel.CRITICAL
+        # TIER_1 (3.0) * CRITICAL (2.0) = 6.0
+        assert event.trending_score == pytest.approx(6.0)
+
+
+    def test_create_event_with_impact_level_minor(self) -> None:
+        session = make_async_session()
+        async def _flush():
+            pass
+        session.flush = AsyncMock(side_effect=_flush)
+        svc = EventService(session)
+        extraction = _Extraction(impact_level=ImpactLevel.MINOR)
+
+        with patch.object(svc._article_service, "create_article", new_callable=AsyncMock):
+            event = run(
+                svc.create_event_with_article(
+                    extraction=extraction,
+                    geocoding=None,
+                    article_title="Local Fair",
+                    article_url="https://example.com/fair",
+                    source_id=make_uuid(),
+                    source_credibility=CredibilityTier.TIER_2,
+                )
+            )
+        assert event is not None
+        assert event.impact_level == ImpactLevel.MINOR
+        # TIER_2 (2.0) * MINOR (0.8) = 1.6
+        assert event.trending_score == pytest.approx(1.6)
+
+
+    def test_add_article_syndicated_diminishing_returns(self) -> None:
+        source_id = make_uuid()
+        event = make_event(trending_score=3.0, article_count=1)
+        session, svc = self._make_session_and_svc(event=event)
+
+        # Mock execute to return 2 articles from the same source (this added article is the 2nd)
+        result_mock = MagicMock()
+        result_mock.all = MagicMock(return_value=[
+            (source_id, "reuters-wire"),
+            (source_id, "reuters-wire"),
+        ])
+        session.execute = AsyncMock(return_value=result_mock)
+
+        with patch.object(svc._article_service, "create_article", new_callable=AsyncMock):
+            run(
+                svc.add_article_to_event(
+                    event_id=event.id,
+                    article_title="Syndicated Reuters",
+                    article_url="https://example.com/reuters-2",
+                    source_id=source_id,
+                    source_credibility=CredibilityTier.TIER_1,
+                )
+            )
+        # Initial 3.0 + (3.0 / sqrt(2) * 1.0 * 1.0 * 1.0)
+        expected_added = 3.0 / math.sqrt(2)
+        assert event.trending_score == pytest.approx(3.0 + expected_added)
+
+
+    def test_add_article_cross_border_diversity_amplification(self) -> None:
+        src_reuters = make_uuid()
+        src_bbc = make_uuid()
+        src_aljazeera = make_uuid()
+        event = make_event(trending_score=3.0, article_count=2)
+        session, svc = self._make_session_and_svc(event=event)
+
+        # 3 articles spanning 3 distinct geopolitical blocs: GLOBAL_WIRE, EUROPE, MIDDLE_EAST_AFRICA
+        result_mock = MagicMock()
+        result_mock.all = MagicMock(return_value=[
+            (src_reuters, "reuters-wire"),
+            (src_bbc, "bbc-world"),
+            (src_aljazeera, "aljazeera"),
+        ])
+        session.execute = AsyncMock(return_value=result_mock)
+
+        with patch.object(svc._article_service, "create_article", new_callable=AsyncMock):
+            run(
+                svc.add_article_to_event(
+                    event_id=event.id,
+                    article_title="Al Jazeera Report",
+                    article_url="https://example.com/aljazeera-1",
+                    source_id=src_aljazeera,
+                    source_credibility=CredibilityTier.TIER_2,
+                )
+            )
+        # diversity is 1.5, n = 1 for Al Jazeera, impact is MODERATE (1.0), vel_mult is 1.0
+        # Added score = 2.0 (TIER_2) * (1 / sqrt(1)) * 1.0 * 1.5 * 1.0 = 3.0
+        assert event.trending_score == pytest.approx(3.0 + 3.0)
+
+
+# ---------------------------------------------------------------------------
+# Half-Life Decay Constants
+# ---------------------------------------------------------------------------
+
+
+class TestLifecycleDecayConstants:
+    def test_half_life_hours_is_eighteen(self) -> None:
+        assert HALF_LIFE_HOURS == 18.0
+
+
+    def test_hourly_decay_factor_yields_half_at_eighteen_hours(self) -> None:
+        assert pytest.approx(0.5) == (HOURLY_DECAY_FACTOR ** 18)
+        assert pytest.approx(0.962216, abs=0.0001) == HOURLY_DECAY_FACTOR
+

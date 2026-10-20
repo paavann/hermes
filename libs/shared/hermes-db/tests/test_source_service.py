@@ -11,6 +11,7 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
+from hermes_db.enums import SourceType
 from hermes_db.models import Source
 from hermes_db.services.source import (
     DueSource,
@@ -27,8 +28,9 @@ def _make_source(
     slug: str,
     name: str = "Test",
     url: str = "https://example.com",
-    feed_url: str = "https://example.com/rss",
+    feed_url: str | None = "https://example.com/rss",
     credibility: str = "TIER_3",
+    source_type: SourceType = SourceType.RSS,
     is_active: bool = True,
 ) -> MagicMock:
     """Create a mock Source ORM object."""
@@ -38,6 +40,7 @@ def _make_source(
     source.url = url
     source.feed_url = feed_url
     source.credibility = credibility
+    source.source_type = source_type
     source.is_active = is_active
     return source
 
@@ -390,5 +393,32 @@ def test_source_service_update_last_fetched():
 
     service = SourceService(session)
     asyncio.run(service.update_last_fetched(source_id))
+
+
+def test_source_service_get_due_sources_gdelt():
+    """GDELT sources without feed_url must still be returned when due."""
+    s_gdelt = _make_source(
+        "reuters-wire",
+        name="Reuters",
+        url="https://reuters.com",
+        feed_url=None,
+        source_type=SourceType.GDELT,
+    )
+    s_gdelt.id = uuid.uuid4()
+    s_gdelt.fetch_interval_minutes = 15
+    s_gdelt.last_fetched_at = None
+
+    session = AsyncMock()
+    mock_result = MagicMock()
+    mock_result.scalars.return_value.all.return_value = [s_gdelt]
+    session.execute.return_value = mock_result
+
+    service = SourceService(session)
+    due = asyncio.run(service.get_due_sources(force=False))
+
+    assert len(due) == 1
+    assert due[0].name == "Reuters"
+    assert due[0].source_type == SourceType.GDELT
+    assert due[0].feed_url is None
 
     session.execute.assert_called_once()

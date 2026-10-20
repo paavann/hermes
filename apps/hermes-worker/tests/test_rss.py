@@ -1,15 +1,19 @@
-"""Unit tests for hermes_worker.services.rss feed parsing and article extraction."""
-
 import asyncio
 import time
+import uuid
 from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 import httpx
-from hermes_worker.services.rss import (
+from hermes_db.enums import CredibilityTier, SourceType
+from hermes_db.services.source import DueSource
+from hermes_worker.services.fetchers.base import (
     ParsedArticle,
+    _truncate_to_words,
+)
+from hermes_worker.services.fetchers.rss import (
+    RSSFetcher,
     _extract_content,
     _parse_date,
-    _truncate_to_words,
     fetch_feed,
 )
 
@@ -24,6 +28,7 @@ class TestParsedArticleModel:
         )
         assert art.text_for_ai == "Detailed article content that has more context."
 
+
     def test_text_for_ai_falls_back_to_description(self):
         art = ParsedArticle(
             title="Headline",
@@ -32,6 +37,7 @@ class TestParsedArticleModel:
             content=None,
         )
         assert art.text_for_ai == "Fallback description"
+
 
     def test_text_for_ai_truncates_long_content(self):
         long_content = "word " * 600
@@ -42,7 +48,6 @@ class TestParsedArticleModel:
             content=long_content,
         )
         words = art.text_for_ai.split()
-        # 500 words plus "..."
         assert len(words) == 500
         assert words[-1].endswith("...")
 
@@ -56,25 +61,29 @@ class TestRssHelpers:
         truncated = _truncate_to_words(long_txt, 3)
         assert truncated == "a b c..."
 
+
     def test_parse_date_valid(self):
-        # time tuple: (2026, 10, 3, 12, 0, 0, 0, 0, 0)
         time_tuple = time.strptime("2026-10-03 12:00:00", "%Y-%m-%d %H:%M:%S")
         entry = {"published_parsed": time_tuple}
         parsed = _parse_date(entry)
         assert parsed == datetime(2026, 10, 3, 12, 0, 0)
+
 
     def test_parse_date_missing_or_invalid(self):
         assert _parse_date({}) is None
         assert _parse_date({"published_parsed": None}) is None
         assert _parse_date({"published_parsed": "invalid"}) is None
 
+
     def test_extract_content_from_content_list(self):
         entry = {"content": [{"value": "  Extracted body text  "}]}
         assert _extract_content(entry) == "Extracted body text"
 
+
     def test_extract_content_from_content_encoded(self):
         entry = {"content_encoded": "  Encoded HTML/prose text  "}
         assert _extract_content(entry) == "Encoded HTML/prose text"
+
 
     def test_extract_content_empty_fallback(self):
         assert _extract_content({}) is None
@@ -124,6 +133,7 @@ class TestFetchFeed:
 
         asyncio.run(run())
 
+
     def test_fetch_feed_handles_timeout(self):
         async def run():
             mock_client = AsyncMock()
@@ -135,6 +145,7 @@ class TestFetchFeed:
                 assert articles == []
 
         asyncio.run(run())
+
 
     def test_fetch_feed_handles_http_error(self):
         async def run():
@@ -149,5 +160,51 @@ class TestFetchFeed:
                 mock_client_cls.return_value.__aenter__.return_value = mock_client
                 articles = await fetch_feed("https://error.com/rss")
                 assert articles == []
+
+        asyncio.run(run())
+
+
+    def test_rss_fetcher_missing_feed_url(self):
+        async def run():
+            source = DueSource(
+                id=uuid.uuid4(),
+                slug="test-missing",
+                name="Test Missing",
+                source_type=SourceType.RSS,
+                credibility=CredibilityTier.TIER_2,
+                feed_url=None,
+            )
+            fetcher = RSSFetcher()
+            articles = await fetcher.fetch_articles(source)
+            assert articles == []
+
+        asyncio.run(run())
+
+
+    def test_rss_fetcher_delegates_to_fetch_feed(self):
+        async def run():
+            source = DueSource(
+                id=uuid.uuid4(),
+                slug="test-rss",
+                name="Test RSS",
+                source_type=SourceType.RSS,
+                credibility=CredibilityTier.TIER_2,
+                feed_url="https://example.com/feed.xml",
+            )
+            fetcher = RSSFetcher()
+            expected = [
+                ParsedArticle(
+                    title="Headline",
+                    url="https://example.com/1",
+                    description="Desc",
+                )
+            ]
+            with patch(
+                "hermes_worker.services.fetchers.rss.fetch_feed",
+                AsyncMock(return_value=expected),
+            ) as mock_fetch:
+                result = await fetcher.fetch_articles(source)
+                assert result == expected
+                mock_fetch.assert_awaited_once_with("https://example.com/feed.xml")
 
         asyncio.run(run())

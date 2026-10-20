@@ -6,6 +6,7 @@ from hermes_ai import (
     ArticleInput,
     GeocodingService,
 )
+from hermes_db.enums import SourceType
 from hermes_db.services import (
     DueSource,
     EventService,
@@ -14,15 +15,38 @@ from hermes_db.services import (
 )
 from hermes_db.session import AsyncSessionLocal
 from hermes_worker.services.ai import AiService
-from hermes_worker.services.rss import ParsedArticle, fetch_feed
+from hermes_worker.services.fetchers import (
+    BaseArticleFetcher,
+    GDELTFetcher,
+    ParsedArticle,
+    RSSFetcher,
+    SitemapFetcher,
+)
 
 
 logger = logging.getLogger(__name__)
 
 
 class SyncService:
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        rss_fetcher: BaseArticleFetcher | None = None,
+        gdelt_fetcher: BaseArticleFetcher | None = None,
+        sitemap_fetcher: BaseArticleFetcher | None = None,
+    ) -> None:
         self._ai = AiService()
+        self._rss_fetcher = rss_fetcher or RSSFetcher()
+        self._gdelt_fetcher = gdelt_fetcher or GDELTFetcher()
+        self._sitemap_fetcher = sitemap_fetcher or SitemapFetcher()
+
+
+    def _get_fetcher(self, source_type: SourceType) -> BaseArticleFetcher:
+        if source_type == SourceType.GDELT:
+            return self._gdelt_fetcher
+        if source_type == SourceType.SCRAPE:
+            return self._sitemap_fetcher
+        return self._rss_fetcher
+
 
     async def _sync_source(self, source: DueSource) -> dict[str, int]:
         stats = {
@@ -36,9 +60,17 @@ class SyncService:
         feed_url = source.feed_url
         source_id = source.id
         source_name = source.name
+        source_type = source.source_type
 
-        logger.info("syncing source: %s (%s).", source_name, feed_url)
-        articles = await fetch_feed(feed_url)
+        logger.info(
+            "syncing source: %s (type: %s, url: %s).",
+            source_name,
+            source_type.value,
+            feed_url or source.url,
+        )
+
+        fetcher = self._get_fetcher(source_type)
+        articles = await fetcher.fetch_articles(source)
         stats["articles_fetched"] = len(articles)
         if not articles:
             logger.info("no articles found in %s.", source_name)
@@ -147,6 +179,7 @@ class SyncService:
             stats["articles_failed"],
         )
         return stats
+
 
     async def sync_all_sources(self, force: bool = False) -> dict[str, int]:
         stats = {
