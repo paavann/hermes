@@ -35,3 +35,7 @@ class Article(Base, UUIDPrimaryKeyMixin):
 
     event: Mapped[Event] = relationship(back_populates="articles")
     source: Mapped[Source] = relationship(back_populates="articles")
+
+    @property
+    def source_name(self) -> str | None:
+        return self.source.name if self.source else None

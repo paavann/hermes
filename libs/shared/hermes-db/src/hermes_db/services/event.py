@@ -255,7 +255,7 @@ class EventService:
     async def get_event_by_id(self, event_id: uuid.UUID) -> Event | None:
         stmt = (
             select(Event)
-            .options(selectinload(Event.articles))
+            .options(selectinload(Event.articles).joinedload(Article.source))
             .where(Event.id == event_id)
         )
         result = await self._session.execute(stmt)

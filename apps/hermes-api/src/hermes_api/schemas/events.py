@@ -9,6 +9,7 @@ class ArticleResponse(BaseModel):
     title: str
     url: str
     published_at: datetime | None
+    source_name: str | None = None
     model_config = ConfigDict(from_attributes=True)
 
 

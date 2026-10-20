@@ -3,24 +3,32 @@
     "slug": "reuters-wire",
     "name": "Reuters",
     "url": "https://www.reuters.com",
-    "feed_url": null,
-    "source_type": "GDELT",
+    "feed_url": "https://news.google.com/rss/search?q=source:Reuters&hl=en-US&gl=US&ceid=US:en",
+    "source_type": "RSS",
     "credibility": "TIER_1"
   },
   {
     "slug": "ap-wire",
     "name": "Associated Press",
     "url": "https://apnews.com",
-    "feed_url": null,
-    "source_type": "GDELT",
+    "feed_url": "https://news.google.com/rss/search?q=source:%22Associated+Press%22&hl=en-US&gl=US&ceid=US:en",
+    "source_type": "RSS",
     "credibility": "TIER_1"
   },
   {
     "slug": "afp-wire",
     "name": "Agence France-Presse",
     "url": "https://www.afp.com",
-    "feed_url": null,
-    "source_type": "GDELT",
+    "feed_url": "https://news.google.com/rss/search?q=source:%22Agence+France-Presse%22&hl=en-US&gl=US&ceid=US:en",
+    "source_type": "RSS",
+    "credibility": "TIER_1"
+  },
+  {
+    "slug": "upi-wire",
+    "name": "United Press International",
+    "url": "https://www.upi.com",
+    "feed_url": "https://rss.upi.com/news/world_news.rss",
+    "source_type": "RSS",
     "credibility": "TIER_1"
   },
   {
@@ -43,7 +51,7 @@
     "slug": "nhk-world",
     "name": "NHK World-Japan",
     "url": "https://www3.nhk.or.jp/nhkworld",
-    "feed_url": "https://www3.nhk.or.jp/nhkworld/en/news/stories/rss.xml",
+    "feed_url": "https://news.google.com/rss/search?q=source:%22NHK+WORLD-JAPAN%22&hl=en-US&gl=US&ceid=US:en",
     "source_type": "RSS",
     "credibility": "TIER_1"
   },
@@ -99,7 +107,7 @@
     "slug": "wapo-world",
     "name": "The Washington Post World",
     "url": "https://www.washingtonpost.com/world",
-    "feed_url": "https://feeds.washingtonpost.com/rss/world",
+    "feed_url": "https://news.google.com/rss/search?q=source:%22The+Washington+Post%22&hl=en-US&gl=US&ceid=US:en",
     "source_type": "RSS",
     "credibility": "TIER_1"
   },

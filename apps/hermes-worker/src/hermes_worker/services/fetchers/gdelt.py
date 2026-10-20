@@ -12,7 +12,9 @@ from hermes_worker.services.fetchers.base import BaseArticleFetcher, ParsedArtic
 logger = logging.getLogger(__name__)
 
 GDELT_DOC_API_URL: str = "https://api.gdeltproject.org/api/v2/doc/doc"
-_DEFAULT_GDELT_LIMITER = TbRateLimiter(req_per_min=12, max_burst=1.0)
+_DEFAULT_GDELT_LIMITER = TbRateLimiter(
+    req_per_min=8, max_burst=1.0, circuit_cooldown_seconds=30.0
+)
 
 
 def _parse_gdelt_date(date_str: str) -> datetime | None:
@@ -91,9 +93,9 @@ class GDELTFetcher(BaseArticleFetcher):
                     )
 
             if res.status_code in (429, 403):
-                self._limiter.trip_circuit_breaker()
+                self._limiter.trip_circuit_breaker(duration=30.0)
                 logger.warning(
-                    "gdelt returned status %s for source '%s'. circuit breaker tripped.",
+                    "gdelt returned status %s for source '%s'. circuit breaker tripped for 30s.",
                     res.status_code,
                     source.name,
                 )
