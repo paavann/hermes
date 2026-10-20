@@ -5,10 +5,10 @@ import Landing from '../../app/routes/landing';
 
 vi.mock('@clerk/react-router', () => ({
   Show: ({ when, children }: { when: string; children: React.ReactNode }) =>
-    when === 'signed-out' ? <>{children}</> : null,
+    when === 'signed-out' ? children : null,
   UserButton: () => <div data-testid="user-button">USER_BUTTON</div>,
-  SignInButton: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  SignUpButton: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  SignInButton: ({ children }: { children: React.ReactNode }) => children,
+  SignUpButton: ({ children }: { children: React.ReactNode }) => children,
 }));
 
 describe('Landing Page Route', () => {
@@ -19,7 +19,7 @@ describe('Landing Page Route', () => {
     },
   ]);
 
-  it('renders landing hero, sections, access clearance form, and brutalist footer', () => {
+  it('renders landing hero, sections, contact form, and brutalist footer', () => {
     render(<ReactRouterStub />);
 
     // Header & Navigation
@@ -32,31 +32,36 @@ describe('Landing Page Route', () => {
     // Capabilities
     expect(screen.getAllByText('Capabilities').length).toBeGreaterThan(0);
 
-    // Access Section
-    expect(screen.getAllByText('Access').length).toBeGreaterThan(0);
-    expect(screen.getByText(/Request early dispatch/)).toBeTruthy();
-    expect(screen.getByLabelText(/FULL NAME/)).toBeTruthy();
-    expect(screen.getByLabelText(/DISPATCH ADDRESS/)).toBeTruthy();
+    // Contact Section
+    expect(screen.getAllByText('Contact').length).toBeGreaterThan(0);
+    expect(screen.getByText(/Have questions or feedback\?/)).toBeTruthy();
+    expect(screen.getByLabelText(/NAME \*/)).toBeTruthy();
+    expect(screen.getByLabelText(/EMAIL ADDRESS \*/)).toBeTruthy();
 
     // Footer
     expect(screen.getByText(/HERMES GEOINT INC/)).toBeTruthy();
     expect(screen.getByRole('img', { name: 'Hermes' })).toBeTruthy();
   }, 15000);
 
-  it('handles access form dispatch submission', async () => {
+  it('handles contact form transmission submission', async () => {
     render(<ReactRouterStub />);
 
-    const nameInput = screen.getByLabelText(/FULL NAME/);
-    const emailInput = screen.getByLabelText(/DISPATCH ADDRESS/);
-    const submitBtn = screen.getByRole('button', { name: /TRANSMIT DISPATCH REQUEST/i });
+    const nameInput = screen.getByLabelText(/NAME \*/);
+    const emailInput = screen.getByLabelText(/EMAIL ADDRESS \*/);
+    const messageInput = screen.getByLabelText(/MESSAGE \*/);
+    const submitBtn = screen.getByRole('button', { name: /Send message/i });
 
     fireEvent.change(nameInput, { target: { value: 'Agent Test' } });
     fireEvent.change(emailInput, { target: { value: 'agent@hermes.intel' } });
+    fireEvent.change(messageInput, { target: { value: 'Testing contact submission' } });
     fireEvent.click(submitBtn);
 
-    await waitFor(() => {
-      expect(screen.getByText(/200 OK \/\/ DISPATCH LOGGED/)).toBeTruthy();
-    });
+    await waitFor(
+      () => {
+        expect(screen.getByText(/200 OK \/\/ MESSAGE RECEIVED/)).toBeTruthy();
+      },
+      { timeout: 4000 }
+    );
 
     expect(screen.getByText(/agent@hermes.intel/)).toBeTruthy();
   }, 15000);

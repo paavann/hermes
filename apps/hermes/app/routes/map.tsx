@@ -37,48 +37,32 @@ const DynamicMapContainer = lazy(async () => {
 });
 
 /**
- * Tactical monospace loading skeleton rendered on the server during SSR
- * and displayed in the browser while Mapbox GL JS initializes.
+ * Minimal loading screen displayed during SSR hydration
+ * and while Mapbox GL JS initializes.
  */
-export function TacticalMapSkeleton(): React.JSX.Element {
+export function MapLoadingFallback(): React.JSX.Element {
   return (
     <div
-      className="relative w-full h-dvh overflow-hidden bg-black flex flex-col items-center justify-center font-mono select-none"
+      className="relative w-full h-dvh overflow-hidden bg-black flex items-center justify-center font-mono select-none"
       role="status"
       aria-live="polite"
     >
-      <div className="border border-hud-border bg-hud-bg/80 backdrop-blur-md px-6 py-4 max-w-md w-full mx-4 shadow-[0_0_20px_rgba(0,240,255,0.1)]">
-        <div className="flex items-center justify-between border-b border-hud-border/60 pb-2 mb-3">
-          <span className="text-neon-blue text-xs uppercase tracking-widest flex items-center gap-2">
-            <span className="inline-block w-2 h-2 bg-neon-blue animate-pulse" />
-            Hermes // Core Terminal
-          </span>
-          <span className="text-xs text-neutral-400">GEO.LOCK</span>
-        </div>
-        <p className="text-xs text-neutral-300 tracking-wider">
-          INITIALIZING SATELLITE TELEMETRY...
-        </p>
-        <div className="mt-3 w-full bg-neutral-900 h-1 overflow-hidden">
-          <div className="h-full bg-neon-blue animate-pulse w-2/3" />
-        </div>
-        <div className="mt-3 flex justify-between text-[10px] text-neutral-400 uppercase">
-          <span>WebGL Engine: Standby</span>
-          <span>SRID: 4326</span>
-        </div>
-      </div>
+      <span className="text-xs uppercase tracking-widest text-slate-muted animate-pulse">
+        Loading Map...
+      </span>
     </div>
   );
 }
 
 export function HydrateFallback(): React.JSX.Element {
-  return <TacticalMapSkeleton />;
+  return <MapLoadingFallback />;
 }
 
 export default function MapRoute(): React.JSX.Element {
   return (
     <QueryClientProvider client={queryClient}>
       <main className="relative w-full h-dvh overflow-hidden bg-black">
-        <Suspense fallback={<TacticalMapSkeleton />}>
+        <Suspense fallback={<MapLoadingFallback />}>
           <DynamicMapContainer />
         </Suspense>
         <LiveClock />
