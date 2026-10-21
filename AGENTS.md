@@ -134,7 +134,7 @@ This is an Nx monorepo. The workspace contains the following projects (configure
 
 | Project Name | Path | Role | Key Tech |
 | :--- | :--- | :--- | :--- |
-| **`@hermes/hermes`** | `apps/hermes/` | React frontend shell — interactive map and HUD | React 19, React Router 8 (SPA mode), Vite, Mapbox GL JS v3, Zustand 5, TanStack Query v5, Tailwind CSS 4 |
+| **`@hermes/hermes`** | `apps/hermes/` | React frontend shell — interactive map and HUD | React 19, React Router 8 (SSR mode with dynamic WebGL boundary), Vite, Mapbox GL JS v3, Zustand 5, TanStack Query v5, Tailwind CSS 4 |
 | **`hermes-api`** | `apps/hermes-api/` | Python backend — stateless REST API & on-demand historical timeline synthesis | Python 3.14+, FastAPI, SQLAlchemy 2.0 Async, PostGIS, pgvector (`halfvec`), LiteLLM, uv |
 | **`hermes-worker`** | `apps/hermes-worker/` | Python CLI worker — autonomous RSS ingestion, AI batch extraction, geocoding shield & lifecycle decay. Ephemeral batch execution on AWS ECS Fargate + EventBridge | Python 3.14+, feedparser, LiteLLM, PostGIS, pgvector (`halfvec`), httpx, uv, Docker, AWS Fargate |
 | **`@hermes/hermes-e2e`** | `apps/hermes-e2e/` | End-to-end browser tests | Playwright, TypeScript |

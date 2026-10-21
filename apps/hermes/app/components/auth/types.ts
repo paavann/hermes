@@ -1,4 +1,4 @@
-export type AuthMode = 'email' | 'otp' | 'setup' | 'password';
+export type AuthMode = 'email' | 'login' | 'otp' | 'setup';
 
 export type AuthStatus = 'idle' | 'submitting';
 

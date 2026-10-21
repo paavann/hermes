@@ -1,5 +1,4 @@
 export * from './types';
-export * from './auth-storage';
 export * from './AuthCheckerboardPattern';
 export * from './SsoCallbackView';
 export * from './EmailStep';

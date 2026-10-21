@@ -17,16 +17,14 @@ This document provides high-level architectural context, constraints, and engine
 
 ---
 
-## 2. Architectural Rationale: Strict SPA Mode (`ssr: false`)
+## 2. Architectural Rationale: Server-Side Rendering (`ssr: true`) with Dynamic WebGL Isolation
 
-The application is explicitly configured for Single Page Application mode via `ssr: false` in [`react-router.config.ts`](file:///home/pavan/proj/hermes/apps/hermes/react-router.config.ts).
+The application runs in Server-Side Rendering (SSR) mode via `ssr: true` in [`react-router.config.ts`](file:///home/pavan/proj/hermes/apps/hermes/react-router.config.ts).
 
-### Why SSR Was Rejected
-1. **WebGL Canvas Hydration Impossibility**: The core Hermes interface is driven by Mapbox GL JS v3, which requires a live `window` reference, direct DOM measurements, and an active `WebGLRenderingContext`. A server-side streaming or pre-rendering pass cannot construct or hydrate a WebGL canvas context.
-2. **Hydration Mismatches & Double Mounting**: Attempting SSR for map-heavy pages produces hydration mismatches, awkward DOM flashing, or forced two-phase mounting shields that introduce unnecessary latency.
-3. **Domain Applicability**: Hermes is an interactive, real-time tactical command console rather than a text-heavy, indexable blog. SEO crawlers do not index real-time WebGL canvas frames.
-
-**Implementation**: Vite builds a minimal HTML host document (`build/client/index.html`) that boots React 19 directly in the client browser, completely eliminating SSR overhead while maximizing runtime stability.
+### Why SSR and How WebGL Canvas Is Isolated
+1. **Server Authentication Guarding**: In SSR mode, Clerk runs [`clerkMiddleware()`](file:///home/pavan/proj/hermes/apps/hermes/app/root.tsx) and [`rootAuthLoader()`](file:///home/pavan/proj/hermes/apps/hermes/app/root.tsx) to verify session JWT cookies directly in Node.js, completely eliminating unauthenticated UI flashing on initial document requests. Route loaders enforce access via `getAuth(args)`.
+2. **Client-Only WebGL Boundary**: Because Mapbox GL JS v3 requires a live `window` reference, direct DOM measurements, and an active `WebGLRenderingContext`, it is strictly isolated behind a dynamic `React.lazy` boundary in [`apps/hermes/app/routes/map.tsx`](file:///home/pavan/proj/hermes/apps/hermes/app/routes/map.tsx). During SSR, Node.js renders a lightweight tactical loading fallback (`MapLoadingFallback`), preventing any WebGL or `window` evaluation errors on the server.
+3. **Hydration Parity**: Server-rendered HTML delivers the core document shell, metadata, and tactical layouts while Mapbox GL initializes smoothly upon client hydration.
 
 ---
 

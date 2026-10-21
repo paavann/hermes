@@ -1,18 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams, useLocation, useParams } from 'react-router';
+import { useClerk } from '@clerk/react-router';
+import { useSignIn, useSignUp } from '@clerk/react-router/legacy';
+import type { OAuthStrategy, EmailCodeFactor, SignInFirstFactor } from '@clerk/types';
 import gsap from 'gsap';
 import type { OAuthProviderId } from '@hermes/ui-components';
 import type { AuthMode, AuthStatus } from './types';
-import {
-  getStoredEmail,
-  setStoredEmail,
-  clearStoredEmail,
-  getStoredOnboardingToken,
-  setStoredOnboardingToken,
-  clearStoredOnboardingToken,
-  isKnownUserEmail,
-  markUserEmailAsKnown,
-} from './auth-storage';
 
 export interface UseAuthWorkflowReturn {
   readonly isSsoCallback: boolean;
@@ -25,7 +18,6 @@ export interface UseAuthWorkflowReturn {
   readonly fullName: string;
   readonly password: string;
   readonly confirmPassword: string;
-  readonly fallbackPassword: string;
   readonly status: AuthStatus;
   readonly activeOAuth: OAuthProviderId | null;
   readonly errorMsg: string | null;
@@ -34,20 +26,55 @@ export interface UseAuthWorkflowReturn {
   readonly setFullName: (name: string) => void;
   readonly setPassword: (password: string) => void;
   readonly setConfirmPassword: (password: string) => void;
-  readonly setFallbackPassword: (password: string) => void;
-  readonly handleEmailSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
-  readonly handleOAuthClick: (providerId: OAuthProviderId) => void;
+  readonly handleEmailSubmit: (e: React.FormEvent<HTMLFormElement>) => Promise<void>;
+  readonly handlePasswordSubmit: (e: React.FormEvent<HTMLFormElement>) => Promise<void>;
+  readonly handleOAuthClick: (providerId: OAuthProviderId) => Promise<void>;
   readonly handleOtpChange: (index: number, rawValue: string) => void;
   readonly handleOtpKeyDown: (index: number, e: React.KeyboardEvent<HTMLInputElement>) => void;
   readonly handleOtpPaste: (e: React.ClipboardEvent<HTMLInputElement>) => void;
-  readonly handleOtpSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
-  readonly handleResendOtp: () => void;
-  readonly handleSetupSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
-  readonly handleFallbackPasswordSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
+  readonly handleOtpSubmit: (e: React.FormEvent<HTMLFormElement>) => Promise<void>;
+  readonly handleResendOtp: () => Promise<void>;
+  readonly handleSetupSubmit: (e: React.FormEvent<HTMLFormElement>) => Promise<void>;
   readonly handleChangeEmail: () => void;
-  readonly handleUsePassword: () => void;
-  readonly handleBackToOtp: () => void;
+  readonly handleSwitchToOtpFromLogin: () => Promise<void>;
 }
+
+export function extractClerkError(err: unknown): string {
+  if (typeof err === 'object' && err !== null && 'errors' in err) {
+    const clerkErr = err as {
+      errors: Array<{ message?: string; longMessage?: string; code?: string }>;
+    };
+    const first = clerkErr.errors?.[0];
+    if (!first) return 'An error occurred during authentication.';
+    if (first.code === 'form_password_pwned') {
+      return 'Password was compromised in an external data breach. Select a stronger password.';
+    }
+    if (first.code === 'form_code_incorrect') {
+      return 'Verification code is invalid. Check your inbox and retry.';
+    }
+    if (first.code === 'form_password_incorrect') {
+      return 'Incorrect password. Please verify and retry.';
+    }
+    if (first.code === 'form_identifier_not_found') {
+      return 'Operator account not found.';
+    }
+    if (first.code === 'form_param_format_invalid') {
+      return 'Invalid email address format.';
+    }
+    return first.longMessage || first.message || 'Authentication request failed.';
+  }
+  if (err instanceof Error) {
+    return err.message;
+  }
+  return 'An unexpected error occurred during authentication.';
+}
+
+const OAUTH_STRATEGY_MAP: Record<OAuthProviderId, OAuthStrategy> = {
+  google: 'oauth_google',
+  facebook: 'oauth_facebook',
+  x: 'oauth_x',
+  microsoft: 'oauth_microsoft',
+};
 
 export function useAuthWorkflow(): UseAuthWorkflowReturn {
   const navigate = useNavigate();
@@ -56,6 +83,20 @@ export function useAuthWorkflow(): UseAuthWorkflowReturn {
   const [searchParams, setSearchParams] = useSearchParams();
   const modeContainerRef = useRef<HTMLDivElement | null>(null);
 
+  const clerk = useClerk();
+  const { isLoaded: isSignInLoaded, signIn: legacySignIn, setActive: legacySetActive } = useSignIn();
+  const { isLoaded: isSignUpLoaded, signUp: legacySignUp } = useSignUp();
+
+  const isClerkLoaded = Boolean(
+    clerk?.loaded ||
+    (isSignInLoaded && isSignUpLoaded) ||
+    (typeof window !== 'undefined' && (window as unknown as { Clerk?: { loaded?: boolean } }).Clerk?.loaded)
+  );
+
+  const signIn = legacySignIn || clerk.client?.signIn;
+  const signUp = legacySignUp || clerk.client?.signUp;
+  const setActive = legacySetActive || clerk.setActive;
+
   const isSsoCallback =
     params['*'] === 'sso-callback' ||
     location.pathname.endsWith('/sso-callback') ||
@@ -63,15 +104,16 @@ export function useAuthWorkflow(): UseAuthWorkflowReturn {
 
   const rawMode = searchParams.get('mode');
   const currentMode: AuthMode =
-    rawMode === 'otp' || rawMode === 'setup' || rawMode === 'password'
+    rawMode === 'login' || rawMode === 'otp' || rawMode === 'setup'
       ? rawMode
       : 'email';
 
-  const [email, setEmail] = useState<string>(() => getStoredEmail());
-  const [onboardingToken, setOnboardingToken] = useState<string | null>(() =>
-    getStoredOnboardingToken()
-  );
-
+  const flowParam = searchParams.get('flow');
+  const flowType: 'sign-in' | 'sign-up' =
+    flowParam === 'sign-up' || (!signIn?.identifier && Boolean(signUp?.emailAddress))
+      ? 'sign-up'
+      : 'sign-in';
+  const [email, setEmail] = useState<string>(() => signIn?.identifier || signUp?.emailAddress || '');
   const [otpDigits, setOtpDigits] = useState<string[]>(['', '', '', '', '', '']);
   const otpInputRefs = useRef<(HTMLInputElement | null)[]>([]);
   const [resendCooldown, setResendCooldown] = useState<number>(0);
@@ -79,38 +121,28 @@ export function useAuthWorkflow(): UseAuthWorkflowReturn {
   const [fullName, setFullName] = useState<string>('');
   const [password, setPassword] = useState<string>('');
   const [confirmPassword, setConfirmPassword] = useState<string>('');
-  const [fallbackPassword, setFallbackPassword] = useState<string>('');
 
   const [status, setStatus] = useState<AuthStatus>('idle');
   const [activeOAuth, setActiveOAuth] = useState<OAuthProviderId | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const isBusy = status === 'submitting' || activeOAuth !== null;
+  const isBusy = status === 'submitting' || !isClerkLoaded || activeOAuth !== null;
 
-  useEffect(() => {
-    setStoredEmail(email);
-  }, [email]);
-
-  useEffect(() => {
-    setStoredOnboardingToken(onboardingToken);
-  }, [onboardingToken]);
-
+  // Protect against direct manual navigation to deep steps without prior email context
   useEffect(() => {
     if (isSsoCallback) return;
 
-    const storedEmail = email.trim() || getStoredEmail();
-    const storedToken = onboardingToken || getStoredOnboardingToken();
+    const hasActiveContext =
+      email.trim() ||
+      signIn?.identifier ||
+      signUp?.emailAddress;
 
-    if ((currentMode === 'otp' || currentMode === 'password') && !storedEmail) {
+    if ((currentMode === 'login' || currentMode === 'otp' || currentMode === 'setup') && !hasActiveContext) {
       setSearchParams({}, { replace: true });
-      return;
     }
+  }, [currentMode, email, signIn?.identifier, signUp?.emailAddress, setSearchParams, isSsoCallback]);
 
-    if (currentMode === 'setup' && (!storedEmail || !storedToken)) {
-      setSearchParams(storedEmail ? { mode: 'otp' } : {}, { replace: true });
-    }
-  }, [currentMode, email, onboardingToken, setSearchParams, isSsoCallback]);
-
+  // Visual entrance animation on step changes
   useEffect(() => {
     setErrorMsg(null);
 
@@ -130,6 +162,7 @@ export function useAuthWorkflow(): UseAuthWorkflowReturn {
     }
   }, [currentMode, isSsoCallback]);
 
+  // Resend cooldown countdown
   useEffect(() => {
     if (resendCooldown <= 0) return;
     const timer = window.setInterval(() => {
@@ -138,7 +171,7 @@ export function useAuthWorkflow(): UseAuthWorkflowReturn {
     return () => window.clearInterval(timer);
   }, [resendCooldown]);
 
-  const handleEmailSubmit = (e: React.FormEvent<HTMLFormElement>): void => {
+  const handleEmailSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault();
     const trimmedEmail = email.trim();
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -148,26 +181,129 @@ export function useAuthWorkflow(): UseAuthWorkflowReturn {
       return;
     }
 
+    if (!isClerkLoaded || !signIn || !signUp) {
+      return;
+    }
+
     setErrorMsg(null);
     setStatus('submitting');
 
-    window.setTimeout(() => {
+    try {
+      // 1. Attempt to find existing user via signIn.create
+      await signIn.create({ identifier: trimmedEmail });
+
+      // User exists! Advance directly to login mode with revealed password field
+      setStatus('idle');
+      setSearchParams({ mode: 'login' });
+    } catch (err: unknown) {
+      const firstCode =
+        typeof err === 'object' && err !== null && 'errors' in err
+          ? (err as { errors: Array<{ code?: string }> }).errors?.[0]?.code
+          : undefined;
+
+      if (firstCode === 'form_identifier_not_found') {
+        // User does not exist! Gracefully convert to registration via signUp
+        try {
+          await signUp.create({ emailAddress: trimmedEmail });
+          await signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
+
+          setStatus('idle');
+          setOtpDigits(['', '', '', '', '', '']);
+          setResendCooldown(30);
+          setSearchParams({ mode: 'otp', flow: 'sign-up' });
+        } catch (signUpErr: unknown) {
+          setStatus('idle');
+          setErrorMsg(extractClerkError(signUpErr));
+        }
+      } else {
+        setStatus('idle');
+        setErrorMsg(extractClerkError(err));
+      }
+    }
+  };
+
+  const handlePasswordSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
+    e.preventDefault();
+    if (!password.trim()) {
+      setErrorMsg('Please enter your password.');
+      return;
+    }
+
+    if (!isClerkLoaded || !signIn) return;
+
+    setErrorMsg(null);
+    setStatus('submitting');
+
+    try {
+      const result = await signIn.attemptFirstFactor({
+        strategy: 'password',
+        password,
+      });
+
+      if (result.status === 'complete') {
+        if (setActive) {
+          await setActive({ session: result.createdSessionId });
+        }
+        navigate('/map', { replace: true });
+      } else {
+        setStatus('idle');
+        setErrorMsg('Authentication incomplete. Please check verification requirements.');
+      }
+    } catch (err: unknown) {
+      setStatus('idle');
+      setErrorMsg(extractClerkError(err));
+    }
+  };
+
+  const handleSwitchToOtpFromLogin = async (): Promise<void> => {
+    if (!isClerkLoaded || !signIn) return;
+    setErrorMsg(null);
+    setStatus('submitting');
+
+    try {
+      const isEmailCodeFactor = (factor: SignInFirstFactor): factor is EmailCodeFactor =>
+        factor.strategy === 'email_code';
+
+      const emailCodeFactor = signIn.supportedFirstFactors?.find(isEmailCodeFactor);
+
+      if (!emailCodeFactor) {
+        setStatus('idle');
+        setErrorMsg('Email verification code is not configured for this account.');
+        return;
+      }
+
+      await signIn.prepareFirstFactor({
+        strategy: 'email_code',
+        emailAddressId: emailCodeFactor.emailAddressId,
+      });
+
       setStatus('idle');
       setOtpDigits(['', '', '', '', '', '']);
       setResendCooldown(30);
-      setSearchParams({ mode: 'otp' });
-    }, 450);
+      setSearchParams({ mode: 'otp', flow: 'sign-in' });
+    } catch (err: unknown) {
+      setStatus('idle');
+      setErrorMsg(extractClerkError(err));
+    }
   };
 
-  const handleOAuthClick = (providerId: OAuthProviderId): void => {
-    if (isBusy) return;
+  const handleOAuthClick = async (providerId: OAuthProviderId): Promise<void> => {
+    if (isBusy || !isClerkLoaded || !signIn) return;
     setErrorMsg(null);
     setActiveOAuth(providerId);
 
-    window.setTimeout(() => {
+    try {
+      const strategy = OAUTH_STRATEGY_MAP[providerId];
+      await signIn.authenticateWithRedirect({
+        strategy,
+        redirectUrl: '/auth/sso-callback',
+        redirectUrlComplete: '/map',
+        continueSignUp: true,
+      });
+    } catch (err: unknown) {
       setActiveOAuth(null);
-      navigate('/map', { replace: true });
-    }, 600);
+      setErrorMsg(extractClerkError(err));
+    }
   };
 
   const handleOtpChange = (index: number, rawValue: string): void => {
@@ -240,55 +376,95 @@ export function useAuthWorkflow(): UseAuthWorkflowReturn {
     otpInputRefs.current[focusIdx]?.focus();
   };
 
-  const handleOtpSubmit = (e: React.FormEvent<HTMLFormElement>): void => {
+  const handleOtpSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault();
     const code = otpDigits.join('');
     if (code.length < 6) {
       setErrorMsg('Please enter all 6 digits of your verification code.');
       return;
     }
+    if (!isClerkLoaded) return;
 
     setErrorMsg(null);
     setStatus('submitting');
 
-    window.setTimeout(() => {
-      setStatus('idle');
-      const isExistingUser = isKnownUserEmail(email);
+    try {
+      if (flowType === 'sign-in') {
+        if (!signIn) return;
+        const result = await signIn.attemptFirstFactor({
+          strategy: 'email_code',
+          code,
+        });
 
-      if (isExistingUser) {
-        clearStoredEmail();
-        clearStoredOnboardingToken();
-        navigate('/map', { replace: true });
+        if (result.status === 'complete') {
+          if (setActive) {
+            await setActive({ session: result.createdSessionId });
+          }
+          navigate('/map', { replace: true });
+        } else {
+          setStatus('idle');
+          setErrorMsg('Sign-in requires additional verification steps.');
+        }
       } else {
-        const tempToken = `ob_${Date.now()}`;
-        setOnboardingToken(tempToken);
-        setStoredOnboardingToken(tempToken);
-        setSearchParams({ mode: 'setup' }, { replace: true });
+        if (!signUp) return;
+        const result = await signUp.attemptEmailAddressVerification({ code });
+
+        if (result.verifications.emailAddress.status === 'verified') {
+          setStatus('idle');
+          setSearchParams({ mode: 'setup' }, { replace: true });
+        } else {
+          setStatus('idle');
+          setErrorMsg('Verification code could not be confirmed.');
+        }
       }
-    }, 500);
+    } catch (err: unknown) {
+      setStatus('idle');
+      setErrorMsg(extractClerkError(err));
+    }
   };
 
-  const handleResendOtp = (): void => {
-    if (resendCooldown > 0 || isBusy) return;
+  const handleResendOtp = async (): Promise<void> => {
+    if (resendCooldown > 0 || isBusy || !isClerkLoaded) return;
     setOtpDigits(['', '', '', '', '', '']);
     setErrorMsg(null);
-    setResendCooldown(30);
-    otpInputRefs.current[0]?.focus();
+    setStatus('submitting');
+
+    try {
+      if (flowType === 'sign-in') {
+        if (!signIn) return;
+        const isEmailCodeFactor = (factor: SignInFirstFactor): factor is EmailCodeFactor =>
+          factor.strategy === 'email_code';
+        const emailCodeFactor = signIn.supportedFirstFactors?.find(isEmailCodeFactor);
+
+        if (emailCodeFactor) {
+          await signIn.prepareFirstFactor({
+            strategy: 'email_code',
+            emailAddressId: emailCodeFactor.emailAddressId,
+          });
+        }
+      } else {
+        if (!signUp) return;
+        await signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
+      }
+
+      setStatus('idle');
+      setResendCooldown(30);
+      otpInputRefs.current[0]?.focus();
+    } catch (err: unknown) {
+      setStatus('idle');
+      setErrorMsg(extractClerkError(err));
+    }
   };
 
-  const handleSetupSubmit = (e: React.FormEvent<HTMLFormElement>): void => {
+  const handleSetupSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault();
     if (!fullName.trim() || !password || !confirmPassword) {
       setErrorMsg('Full name, password, and confirmation are required.');
       return;
     }
 
-    const hasMinLength = password.length >= 6;
-    const hasNumber = /\d/.test(password);
-    const hasCapital = /[A-Z]/.test(password);
-
-    if (!hasMinLength || !hasNumber || !hasCapital) {
-      setErrorMsg('Password requires 6+ characters, one number, and one capital letter.');
+    if (password.length < 8) {
+      setErrorMsg('Password must be at least 8 characters long.');
       return;
     }
 
@@ -297,46 +473,41 @@ export function useAuthWorkflow(): UseAuthWorkflowReturn {
       return;
     }
 
+    if (!isClerkLoaded || !signUp) return;
+
     setErrorMsg(null);
     setStatus('submitting');
 
-    window.setTimeout(() => {
-      setStatus('idle');
-      markUserEmailAsKnown(email);
-      clearStoredEmail();
-      clearStoredOnboardingToken();
-      navigate('/map', { replace: true });
-    }, 600);
-  };
+    try {
+      const parts = fullName.trim().split(' ');
+      const firstName = parts[0];
+      const lastName = parts.slice(1).join(' ') || undefined;
 
-  const handleFallbackPasswordSubmit = (e: React.FormEvent<HTMLFormElement>): void => {
-    e.preventDefault();
-    if (!fallbackPassword.trim()) {
-      setErrorMsg('Please enter your password.');
-      return;
+      const result = await signUp.update({
+        firstName,
+        lastName,
+        password,
+      });
+
+      if (result.status === 'complete') {
+        if (setActive) {
+          await setActive({ session: result.createdSessionId });
+        }
+        navigate('/map', { replace: true });
+      } else {
+        setStatus('idle');
+        setErrorMsg('Setup incomplete. Please review required fields.');
+      }
+    } catch (err: unknown) {
+      setStatus('idle');
+      setErrorMsg(extractClerkError(err));
     }
-
-    setErrorMsg(null);
-    setStatus('submitting');
-
-    window.setTimeout(() => {
-      setStatus('idle');
-      clearStoredEmail();
-      clearStoredOnboardingToken();
-      navigate('/map', { replace: true });
-    }, 500);
   };
 
   const handleChangeEmail = (): void => {
     setSearchParams({});
-  };
-
-  const handleUsePassword = (): void => {
-    setSearchParams({ mode: 'password' });
-  };
-
-  const handleBackToOtp = (): void => {
-    setSearchParams({ mode: 'otp' });
+    setPassword('');
+    setErrorMsg(null);
   };
 
   return {
@@ -350,7 +521,6 @@ export function useAuthWorkflow(): UseAuthWorkflowReturn {
     fullName,
     password,
     confirmPassword,
-    fallbackPassword,
     status,
     activeOAuth,
     errorMsg,
@@ -359,8 +529,8 @@ export function useAuthWorkflow(): UseAuthWorkflowReturn {
     setFullName,
     setPassword,
     setConfirmPassword,
-    setFallbackPassword,
     handleEmailSubmit,
+    handlePasswordSubmit,
     handleOAuthClick,
     handleOtpChange,
     handleOtpKeyDown,
@@ -368,9 +538,7 @@ export function useAuthWorkflow(): UseAuthWorkflowReturn {
     handleOtpSubmit,
     handleResendOtp,
     handleSetupSubmit,
-    handleFallbackPasswordSubmit,
     handleChangeEmail,
-    handleUsePassword,
-    handleBackToOtp,
+    handleSwitchToOtpFromLogin,
   };
 }

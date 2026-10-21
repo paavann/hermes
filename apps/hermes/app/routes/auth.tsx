@@ -1,16 +1,24 @@
 import type React from 'react';
-import { Link } from 'react-router';
-import type { MetaFunction } from 'react-router';
+import { Link, redirect } from 'react-router';
+import type { MetaFunction, LoaderFunctionArgs } from 'react-router';
+import { getAuth } from '@clerk/react-router/server';
 import { HermesWordmark, cn } from '@hermes/ui-components';
 import {
   AuthCheckerboardPattern,
   EmailStep,
   OtpStep,
-  PasswordStep,
   SetupStep,
   SsoCallbackView,
   useAuthWorkflow,
 } from '../components/auth';
+
+export async function loader(args: LoaderFunctionArgs) {
+  const { userId } = await getAuth(args);
+  if (userId) {
+    return redirect('/map');
+  }
+  return {};
+}
 
 export const meta: MetaFunction = ({ location }) => {
   const isSso = location?.pathname?.includes('/sso-callback');
@@ -69,16 +77,25 @@ export default function Auth(): React.JSX.Element {
           <div ref={auth.modeContainerRef} className="w-full flex flex-col items-center">
             {auth.isSsoCallback ? (
               <SsoCallbackView />
-            ) : auth.currentMode === 'email' ? (
+            ) : auth.currentMode === 'email' || auth.currentMode === 'login' ? (
               <EmailStep
+                mode={auth.currentMode}
                 email={auth.email}
+                password={auth.password}
                 isBusy={auth.isBusy}
                 status={auth.status}
                 activeOAuth={auth.activeOAuth}
                 errorMsg={auth.errorMsg}
                 onEmailChange={auth.setEmail}
-                onSubmit={auth.handleEmailSubmit}
+                onPasswordChange={auth.setPassword}
+                onSubmit={
+                  auth.currentMode === 'login'
+                    ? auth.handlePasswordSubmit
+                    : auth.handleEmailSubmit
+                }
                 onSelectOAuth={auth.handleOAuthClick}
+                onChangeEmail={auth.handleChangeEmail}
+                onForgotPassword={auth.handleSwitchToOtpFromLogin}
               />
             ) : auth.currentMode === 'otp' ? (
               <OtpStep
@@ -96,7 +113,7 @@ export default function Auth(): React.JSX.Element {
                 onResend={auth.handleResendOtp}
                 onChangeEmail={auth.handleChangeEmail}
               />
-            ) : auth.currentMode === 'setup' ? (
+            ) : (
               <SetupStep
                 email={auth.email}
                 fullName={auth.fullName}
@@ -109,18 +126,6 @@ export default function Auth(): React.JSX.Element {
                 onPasswordChange={auth.setPassword}
                 onConfirmPasswordChange={auth.setConfirmPassword}
                 onSubmit={auth.handleSetupSubmit}
-              />
-            ) : (
-              <PasswordStep
-                email={auth.email}
-                password={auth.fallbackPassword}
-                isBusy={auth.isBusy}
-                status={auth.status}
-                errorMsg={auth.errorMsg}
-                onPasswordChange={auth.setFallbackPassword}
-                onSubmit={auth.handleFallbackPasswordSubmit}
-                onChangeEmail={auth.handleChangeEmail}
-                onBackToOtp={auth.handleBackToOtp}
               />
             )}
           </div>
