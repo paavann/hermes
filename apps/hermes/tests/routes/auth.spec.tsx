@@ -79,6 +79,25 @@ describe('Auth Progressive Route', () => {
     expect(screen.getByText('operator@hermes.intel')).toBeTruthy();
     expect(screen.getByLabelText('Digit 1 of 6')).toBeTruthy();
     expect(screen.getByRole('button', { name: /VERIFY & CONTINUE/i })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /Use password instead/i })).toBeNull();
+  });
+
+  test('renders setup step and locks page scroll', async () => {
+    window.sessionStorage.setItem('hermes_auth_email', 'operator@hermes.intel');
+    window.sessionStorage.setItem('hermes_onboarding_token', 'temp_token_123');
+
+    render(<ReactRouterStub initialEntries={['/auth?mode=setup']} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Complete your profile')).toBeTruthy();
+    });
+
+    expect(screen.getByLabelText(/Full Name/i)).toBeTruthy();
+    expect(screen.getByLabelText(/^Password/i)).toBeTruthy();
+    expect(screen.getByLabelText(/Confirm Password/i)).toBeTruthy();
+    expect(screen.getByRole('button', { name: /COMPLETE SETUP/i })).toBeTruthy();
+    expect(document.body.style.overflow).toBe('hidden');
+    expect(document.documentElement.style.overflow).toBe('hidden');
   });
 
   test('renders password fallback mode directly when state exists', async () => {

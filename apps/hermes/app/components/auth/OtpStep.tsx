@@ -16,7 +16,6 @@ export interface OtpStepProps {
   readonly onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
   readonly onResend: () => void;
   readonly onChangeEmail: () => void;
-  readonly onUsePassword: () => void;
 }
 
 export function OtpStep({
@@ -33,7 +32,6 @@ export function OtpStep({
   onSubmit,
   onResend,
   onChangeEmail,
-  onUsePassword,
 }: OtpStepProps): React.JSX.Element {
   return (
     <>
@@ -100,8 +98,8 @@ export function OtpStep({
         </div>
       </form>
 
-      {/* Resend OTP & Fallback Password Links */}
-      <div className="w-full mt-6 flex items-center justify-between text-[11px] text-slate-muted/70 font-mono">
+      {/* Resend OTP Link */}
+      <div className="w-full mt-6 flex items-center justify-center text-[11px] text-slate-muted/70 font-mono">
         <button
           type="button"
           disabled={resendCooldown > 0 || isBusy}
@@ -111,15 +109,6 @@ export function OtpStep({
           {resendCooldown > 0
             ? `Resend code in ${resendCooldown}s`
             : 'Resend code'}
-        </button>
-
-        <button
-          type="button"
-          disabled={isBusy}
-          onClick={onUsePassword}
-          className="text-slate-muted/70 hover:text-neon-blue transition-colors underline underline-offset-4 cursor-pointer"
-        >
-          Use password instead
         </button>
       </div>
     </>

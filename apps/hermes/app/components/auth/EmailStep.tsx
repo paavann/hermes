@@ -67,7 +67,7 @@ export function EmailStep({
           <TacticalActionBtn
             variant="roll"
             label="CONTINUE"
-            loadingLabel="DISPATCHING OTP..."
+            loadingLabel="LOADING..."
             isSubmitting={status === 'submitting'}
             disabled={isBusy}
           />

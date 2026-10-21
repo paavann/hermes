@@ -1,7 +1,7 @@
 import type React from 'react';
 import { Link } from 'react-router';
 import type { MetaFunction } from 'react-router';
-import { HermesWordmark } from '@hermes/ui-components';
+import { HermesWordmark, cn } from '@hermes/ui-components';
 import {
   AuthCheckerboardPattern,
   EmailStep,
@@ -31,9 +31,23 @@ export default function Auth(): React.JSX.Element {
   const auth = useAuthWorkflow();
 
   return (
-    <div className="min-h-screen w-full bg-obsidian text-slate-muted font-mono selection:bg-neon-blue/20 selection:text-neon-blue flex flex-col lg:flex-row overflow-x-hidden">
+    <div
+      className={cn(
+        'w-full bg-obsidian text-slate-muted font-mono selection:bg-neon-blue/20 selection:text-neon-blue flex flex-col lg:flex-row',
+        auth.currentMode === 'setup'
+          ? 'h-screen max-h-screen overflow-hidden'
+          : 'min-h-screen overflow-x-hidden'
+      )}
+    >
       {/* Left Side: Header + Centered Progressive Auth Form (~70% width on desktop) */}
-      <div className="w-full lg:w-[70%] min-h-screen flex flex-col justify-between px-6 sm:px-12 md:px-16 py-7 relative z-10">
+      <div
+        className={cn(
+          'w-full lg:w-[70%] flex flex-col justify-between px-6 sm:px-12 md:px-16 py-7 relative z-10',
+          auth.currentMode === 'setup'
+            ? 'h-screen max-h-screen overflow-hidden py-4 sm:py-6'
+            : 'min-h-screen'
+        )}
+      >
         <header role="banner" className="flex items-center">
           <Link
             to="/"
@@ -44,7 +58,12 @@ export default function Auth(): React.JSX.Element {
           </Link>
         </header>
 
-        <main className="w-full max-w-[390px] mx-auto my-auto py-12 flex flex-col items-center">
+        <main
+          className={cn(
+            'w-full max-w-[390px] mx-auto my-auto flex flex-col items-center',
+            auth.currentMode === 'setup' ? 'py-2 sm:py-4' : 'py-12'
+          )}
+        >
           <HermesWordmark className="w-[185px] sm:w-[205px] mb-6 text-[#8F8C7C]" />
 
           <div ref={auth.modeContainerRef} className="w-full flex flex-col items-center">
@@ -76,7 +95,6 @@ export default function Auth(): React.JSX.Element {
                 onSubmit={auth.handleOtpSubmit}
                 onResend={auth.handleResendOtp}
                 onChangeEmail={auth.handleChangeEmail}
-                onUsePassword={auth.handleUsePassword}
               />
             ) : auth.currentMode === 'setup' ? (
               <SetupStep

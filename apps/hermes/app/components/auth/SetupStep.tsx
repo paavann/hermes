@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import type React from 'react';
 import { Input, Label, TacticalActionBtn } from '@hermes/ui-components';
 import type { AuthStatus } from './types';
@@ -29,22 +30,59 @@ export function SetupStep({
   onConfirmPasswordChange,
   onSubmit,
 }: SetupStepProps): React.JSX.Element {
+  // Strictly disable all window and page scrolling during the setup step
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const html = document.documentElement;
+    const body = document.body;
+    const prevHtmlOverflow = html.style.overflow;
+    const prevBodyOverflow = body.style.overflow;
+    const prevOverscroll = body.style.overscrollBehavior;
+
+    html.style.overflow = 'hidden';
+    body.style.overflow = 'hidden';
+    body.style.overscrollBehavior = 'none';
+
+    const preventScroll = (e: Event): void => {
+      // Allow scrolling inside input fields if needed, but prevent outer viewport scrolling
+      const target = e.target as HTMLElement | null;
+      if (target?.tagName === 'INPUT' || target?.tagName === 'TEXTAREA') {
+        return;
+      }
+      if (e.cancelable) {
+        e.preventDefault();
+      }
+    };
+
+    window.addEventListener('wheel', preventScroll, { passive: false });
+    window.addEventListener('touchmove', preventScroll, { passive: false });
+
+    return () => {
+      html.style.overflow = prevHtmlOverflow;
+      body.style.overflow = prevBodyOverflow;
+      body.style.overscrollBehavior = prevOverscroll;
+      window.removeEventListener('wheel', preventScroll);
+      window.removeEventListener('touchmove', preventScroll);
+    };
+  }, []);
+
   return (
-    <>
-      <h1 className="text-2xl sm:text-3xl font-bold text-ivory tracking-tight text-center mb-2">
+    <div className="w-full flex flex-col items-center overflow-hidden overscroll-none select-none">
+      <h1 className="text-2xl sm:text-3xl font-bold text-ivory tracking-tight text-center mb-1.5">
         Complete your profile
       </h1>
-      <p className="text-xs text-slate-muted/80 text-center mb-7">
+      <p className="text-xs text-slate-muted/80 text-center mb-5">
         Set up your operator credentials for{' '}
         <span className="text-ivory font-medium">{email}</span>
       </p>
 
-      <form onSubmit={onSubmit} className="w-full space-y-4" noValidate>
+      <form onSubmit={onSubmit} className="w-full space-y-3.5" noValidate>
         {/* Full Name */}
         <div>
           <Label
             htmlFor="setup-name"
-            className="text-[11px] uppercase tracking-widest text-slate-muted/80 font-mono mb-2 block"
+            className="text-[11px] uppercase tracking-widest text-slate-muted/80 font-mono mb-1.5 block"
           >
             Full Name
           </Label>
@@ -58,7 +96,7 @@ export function SetupStep({
             value={fullName}
             onChange={(e) => onFullNameChange(e.target.value)}
             placeholder="Elena Rostova"
-            className="w-full bg-black/60 border border-white/10 px-4 py-3 text-sm text-ivory placeholder:text-slate-muted/30 focus:border-neon-blue focus:outline-none transition-colors font-mono rounded-none disabled:opacity-50"
+            className="w-full bg-black/60 border border-white/10 px-4 py-2.5 text-sm text-ivory placeholder:text-slate-muted/30 focus:border-neon-blue focus:outline-none transition-colors font-mono rounded-none disabled:opacity-50"
           />
         </div>
 
@@ -66,7 +104,7 @@ export function SetupStep({
         <div>
           <Label
             htmlFor="setup-password"
-            className="text-[11px] uppercase tracking-widest text-slate-muted/80 font-mono mb-2 block"
+            className="text-[11px] uppercase tracking-widest text-slate-muted/80 font-mono mb-1.5 block"
           >
             Password
           </Label>
@@ -80,9 +118,9 @@ export function SetupStep({
             value={password}
             onChange={(e) => onPasswordChange(e.target.value)}
             placeholder="••••••••••••"
-            className="w-full bg-black/60 border border-white/10 px-4 py-3 text-sm text-ivory placeholder:text-slate-muted/30 focus:border-neon-blue focus:outline-none transition-colors font-mono rounded-none disabled:opacity-50"
+            className="w-full bg-black/60 border border-white/10 px-4 py-2.5 text-sm text-ivory placeholder:text-slate-muted/30 focus:border-neon-blue focus:outline-none transition-colors font-mono rounded-none disabled:opacity-50"
           />
-          <p className="mt-1.5 text-[11px] text-slate-muted/50 font-mono leading-relaxed">
+          <p className="mt-1 text-[10px] text-slate-muted/50 font-mono leading-relaxed">
             6+ characters, one number, and one capital letter
           </p>
         </div>
@@ -91,7 +129,7 @@ export function SetupStep({
         <div>
           <Label
             htmlFor="setup-confirm-password"
-            className="text-[11px] uppercase tracking-widest text-slate-muted/80 font-mono mb-2 block"
+            className="text-[11px] uppercase tracking-widest text-slate-muted/80 font-mono mb-1.5 block"
           >
             Confirm Password
           </Label>
@@ -105,7 +143,7 @@ export function SetupStep({
             value={confirmPassword}
             onChange={(e) => onConfirmPasswordChange(e.target.value)}
             placeholder="••••••••••••"
-            className="w-full bg-black/60 border border-white/10 px-4 py-3 text-sm text-ivory placeholder:text-slate-muted/30 focus:border-neon-blue focus:outline-none transition-colors font-mono rounded-none disabled:opacity-50"
+            className="w-full bg-black/60 border border-white/10 px-4 py-2.5 text-sm text-ivory placeholder:text-slate-muted/30 focus:border-neon-blue focus:outline-none transition-colors font-mono rounded-none disabled:opacity-50"
           />
         </div>
 
@@ -125,6 +163,6 @@ export function SetupStep({
           />
         </div>
       </form>
-    </>
+    </div>
   );
 }
