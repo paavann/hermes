@@ -1,176 +1,69 @@
-# Hermes: AI Agent Context & Brain
+# Hermes Workspace
 
-Welcome to Hermes! This document provides the high-level context, domain knowledge, and architectural vision required to effectively contribute to this codebase. As an AI agent working on this repository, you must read and internalize this document before making structural changes.
+Workspace instructions for AI agents. All commands run from the monorepo root (`.`). Never `cd` into child directories. List projects via `npx nx show projects`; each application and library maintains its own nested `AGENTS.md` for domain-specific details.
 
-_(Note: For strict, non-negotiable coding standards, refer to the `.agents/rules/` directory and project-level `.agents/rules/` files)._
+## 1. Commands
 
----
+All commands run from the workspace root:
 
-## 1. AI Persona & Core Mandate
+| Task                      | Command                                                                             |
+| :------------------------ | :---------------------------------------------------------------------------------- |
+| **Install**               | `npm ci && uv sync`                                                                 |
+| **Dev (UI)**              | `npx nx dev hermes`                                                                 |
+| **Dev (API)**             | `npx nx serve hermes-api`                                                           |
+| **Dev (DB)**              | `docker compose up -d hermes-db`                                                    |
+| **Create Migration**      | `npx nx run hermes-db:makemigrations -- -m "<msg>"`                                |
+| **Apply Migration**       | `npx nx run hermes-db:migrate`                                                      |
+| **Lint**                  | `npx nx lint <project>`                                                             |
+| **Typecheck**             | `npx nx typecheck <project>`                                                        |
+| **Test (Suite)**          | `npx nx test <project>`                                                             |
+| **Test (Single TS File)** | `npx nx test <project> -- path/to/file.spec.ts`                                     |
+| **Test (Single TS Case)** | `npx nx test <project> -- -t "<test_name>"`                                         |
+| **Test (Single Py File)** | `npx nx test <project> -- tests/path/to/test_file.py`                                |
+| **Test (Single Py Case)** | `npx nx test <project> -- -k <test_name>`                                           |
+| **Format (TS)**           | `npx nx format:write --projects=<project>`                                          |
+| **Format (Python)**       | `npx nx run <project>:format`                                                       |
+| **Affected Check**        | `npx nx affected -t lint typecheck test --base=master`                              |
 
-- **Role**: You are a Senior Full-Stack Spatial/AI Engineer.
-- **Behavior**: Be highly autonomous and proactive. Suggest architectural improvements and optimizations when you see them. However, always ask for explicit user permission before introducing new third-party dependencies to `package.json` or `pyproject.toml`.
-- **Workflow**:
-  - Proactively verify your changes by running `npx nx test <project>` and `npx nx lint <project>` locally once all execution steps are completed (never on individual intermediate steps).
-  - Always write tests for your execution.
-  - Leave the actual `git commit` and push execution entirely to the user.
-- **Consistency Watchdog**: This project's AI context is distributed across multiple files: the root `AGENTS.md`, app-level `AGENTS.md` files (`apps/hermes/AGENTS.md`, `apps/hermes-api/AGENTS.md`), and strict rules in `.agents/rules/`. If you ever detect a **contradiction, inconsistency, or ambiguity** between any of these files — for example, a rule in `.agents/rules/` that conflicts with architectural guidance in `apps/hermes-api/AGENTS.md`, or an outdated tech stack reference that no longer matches `package.json` / `pyproject.toml` — OR if you find any **inconsistency between the actual implementation in the codebase and the guidelines documented in any `AGENTS.md` file**, you must **immediately alert the user** before proceeding. Do NOT silently pick one interpretation over another. Clearly explain the conflict, cite the specific files, code sections, and documentation involved, and ask the user to resolve it so they can either update the code or the relevant context file. Keeping these context files accurate and in sync with the codebase is critical.
+## 2. Invariants
 
----
+- **Coordinates**: Derive coordinates exclusively via the geocoding pipeline in `libs/shared/hermes-ai` (cached, token-bucket rate-limited Nominatim client). Never accept LLM-generated coordinates; never call Nominatim directly (1 req/s policy).
+- **Database Schemas**: Apply all schema alterations through Alembic migrations only. Raw SQL DDL and `create_all()` are strictly prohibited.
+- **Contract Synchronization**: TypeScript response models in `libs/shared/util-types/src/lib/api-types.ts` are hand-mirrored from Pydantic schemas in `apps/hermes-api/src/hermes_api/schemas/events.py`. Update both together in the same task whenever contracts change.
 
-## 2. Product Vision & Core Mechanics
+## 3. Conventions
 
-Project Hermes is a real-time geospatial news aggregator designed to combat modern news fatigue by transforming traditional text-heavy feeds into a unified, interactive global map.
+- **Thin Shells (`apps/` vs `libs/`)**: Applications in `apps/` contain routing, document shells, and top-level provider wiring only. All business logic, state stores, spatial math, and UI widgets reside in `libs/`.
+- **Modular Feature Structure**: Decompose features into dedicated directories containing `index.ts` (public export), `types.ts` (contracts), `use-[feature].ts` (logic/state hook), and isolated subcomponent files. Avoid monolithic single-file implementations.
+- **UI Primitives**: Install shadcn primitives via `npx shadcn@latest add <component> --cwd libs/shared/ui-components`. Place shared UI elements in `libs/shared/ui-components`, never inside `apps/hermes`.
+- **Generators vs Manual Files**: Use Nx generators (`npx nx g ...`) exclusively when creating new monorepo libraries or applications. Internal feature files (`types.ts`, hooks, components) are created directly by hand.
+- **Dependencies**: Adding, updating, or removing any dependency requires explicit user approval. Once approved, prefer the Nx target (e.g. `npx nx run <project>:add --name=<pkg>`), falling back to `npm install` (Node) or `uv add` (Python).
 
-### Target Audience
+## 4. Gotchas & Landmines
 
-- **Journalists, analysts, and researchers** who need to track global events spatially and see patterns across regions.
-- **Geopolitically curious individuals** who want a visual, intuitive alternative to scrolling through text-heavy news feeds.
-- **Anyone experiencing "news fatigue"** from traditional aggregators — Hermes lets them _observe_ the world instead of _reading_ about it.
+- **SSR WebGL Isolation**: `apps/hermes` runs in SSR mode (`ssr: true`), but Mapbox GL requires browser globals (`window`, WebGL context). Never render Mapbox canvas directly during SSR; isolate it behind dynamic `React.lazy` boundaries with a fallback skeleton.
+- **Database Availability**: The PostGIS container must be running (`docker compose up -d hermes-db`) before starting the API or applying migrations to prevent connection refused errors.
+- **`nx affected` Base Branch**: Nx defaults to `--base=main`, which fails because this repo uses `master`. Always pass `--base=master`.
 
-### Core Mechanics
+## 5. Boundaries & Environment
 
-As an agent, you must design features that align with these core mechanics:
+- **Production Protection**: Never run migrations, the worker, or any script against a production database or with production API keys. Use `.env.example` to learn variable names; never read `.env` for values beyond the `DB_HOST` check above. Never place secret values in code or commits.
+- **Migration History**: Never edit existing migration files in `libs/shared/hermes-db/migrations/versions/`; always create a new migration via the Alembic revision command.
+- **Mandatory Approvals**: Agents must obtain explicit user approval before:
+  1. Adding, updating, or removing dependencies in `package.json` or `pyproject.toml`.
+  2. Executing database migrations (`npx nx run hermes-db:migrate`).
+  3. Running `git commit` or `git push` (leave version control execution to the user).
+  4. Modifying `.env` files or security credentials.
+- **Protected Files**: Never manually edit lockfiles (`package-lock.json`, `uv.lock`).
+- **Verification**: After completing a code task, run the Affected Check command from the Commands table. Skip it for conversational questions and intermediate edits; a targeted single check to debug a failure is fine.
+- **Environment Reference**: Consult `.env.example` for required workspace variables (`ENV`, `API_PORT`, `FRONTEND_PORT`, `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `VITE_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`) and `apps/hermes-api/.env.example` for AI keys (`LLM_API`, `LLM_MODEL`, `EMBED_API`, `EMBED_MODEL`). Never place secret values in code or commits.
 
-- **Dual-Mode Interface (Roadmap Vision)**: The target product design envisions seamless transitions between a two-dimensional regional map and a three-dimensional geopolitical globe. *(Current Implementation: Runs on a 2D Mercator WebGL canvas with native clustering, panning, and dynamic viewport querying).*
-- **Smart Editor Algorithm**: The application must not overwhelm the user with raw data. Instead, it relies on a backend algorithm that ranks news based on **source consensus** and **time decay**. The initial load displays only the most critical global events.
-- **Dynamic Viewport Queries**: As users zoom into specific regions, the application queries the spatial database to populate hyper-local news within their bounding box.
-- **Visual Categorization**: Use color-coded pins to categorize events (e.g., economic shifts, conflicts). Pins automatically cluster at higher zoom levels via WebGL to prevent screen clutter.
-- **Hybrid Geoparsing & Geocoding**: The system uses an AI pipeline to extract location _names_ from raw article text, which are then passed through a dedicated geocoding service (Nominatim) backed by a PostgreSQL cache. This eliminates AI coordinate hallucinations and ensures pinpoint map accuracy.
-- **Historical Causality (Timeline Engine)**: Users can inspect an event and open an interactive timeline drawer (`TlPanel`) to observe causal antecedents, Wikipedia historical context, and map camera hops across historical milestones culminating in today's active event.
+## 6. Domain Triggers
 
-### Key User Journeys
-
-When building any feature, keep these critical user journeys in mind:
-
-1. **Map Landing**: A first-time user opens the app, watches the tactical boot sequence, and immediately sees the day's most critical global events displayed as color-coded pins on the world map.
-2. **Regional Zoom**: The user zooms into a specific region (e.g., the Middle East) and sees hyper-local news events dynamically populate within their viewport.
-3. **Event Inspection**: The user clicks an event pin, centers the camera smoothly, reads a concise AI-generated summary with a terminal scramble-text decode, and sees original news sources.
-4. **Historical Timeline Investigation**: The user opens the timeline panel to trace the historical roots of the event via a causal graph (MediaWiki extracts linked to the current incident).
-5. **Category Filtering**: The user toggles filters to focus on specific domains (Economy, Conflict, Politics, Technology, etc.).
-6. **Real-Time Breaking News**: When the ingestion pipeline discovers breaking news, new events appear on the map dynamically.
-
----
-
-## 3. Domain Glossary
-
-To maintain consistency across the codebase, the following terms have precise meanings in the Hermes domain:
-
-| Term | Definition |
-| :--- | :--- |
-| **Event** | A single newsworthy occurrence extracted from one or more RSS articles, geolocated, categorized, and scored. An Event is the fundamental data unit in Hermes — it has coordinates (`POINT`, SRID 4326), a category, a category color, a summary, a trending score, and an embedding vector. |
-| **Source Consensus** | A ranking signal. When multiple independent RSS feeds report the same event (detected via semantic vector similarity using `pgvector` half-precision embeddings and confirmed by the LLM), the event's score increases according to the source credibility tiers. |
-| **Credibility Tier** | A weighting tier assigned to news sources (`TIER_1` = +3.0, `TIER_2` = +2.0, `TIER_3` = +1.0, `TIER_4` = +0.5) that determines how much weight an article adds to an event's trending score. |
-| **Time Decay** | A ranking signal. Recent events are weighted more heavily than older ones. An hourly lifecycle background job applies a strict -10% decay to all active trending scores so that old news organically drops down the rankings over 24–48 hours. |
-| **Geoparsing** | The process of extracting a geographic location name from unstructured article text (e.g., 'Geneva, Switzerland') via AI, and subsequently resolving it to exact latitude/longitude coordinates using a geocoding service backed by `geocode_cache`. |
-| **Historical Timeline (Lineage)** | A synthesized causal graph (`event_timelines`) connecting historical Wikipedia milestones through causal verbs (`"led to"`, `"triggered"`) to the current active event. |
-| **Viewport** | The currently visible geographic area on the user's map screen, defined by a bounding box (`north`, `south`, `east`, `west`). The backend uses this to return only spatially relevant events via `ST_Within`. |
-| **Cluster** | A visual WebGL grouping of multiple nearby event pins at higher zoom levels, showing a count badge. Clusters prevent screen clutter when thousands of events are dense in a region. |
-
----
-
-## 4. System Architecture Overview
-
-**Crucial Note on Flexibility**: The architecture described below is the _current_ iteration. You must remain flexible, actively seek performant approaches, and not blindly stick to this specific architecture if a superior one exists.
-
-### High-Level Data Flow
-
-```text
-RSS Feeds (Global Sources)
-        │
-        ▼
-┌───────────────────┐
-│   hermes-worker   │  ← Python standalone CLI worker
-│   (Ingestion +    │     - Parallel RSS Ingestion (feedparser + httpx)
-│    Embeddings +   │     - 2048-dim Embeddings (nemotron-3-embed-1b)
-│    Batch Ext +    │     - AI Batch Extraction (LiteLLM Mistral/NIM)
-│    Nominatim +    │     - Grounded Geocoding (Nominatim + GeocodeCache)
-│    Lifecycle)     │     - Hourly Time Decay & Status Transitions
-└───────┬───────────┘
-        │
-        ▼
-┌───────────────────┐
-│   PostGIS         │  ← Spatial & Vector database (Docker)
-│   (PostgreSQL 16  │     - Point Geometry (SRID 4326) with GIST Index
-│    + PostGIS      │     - pgvector halfvec(2048) with HNSW Index
-│    + pgvector)    │     - JSONB Historical Timeline Nodes & Edges
-└───────┬───────────┘
-        ▲
-        │ (SQLAlchemy 2.0 Async / Event & Timeline Models)
-┌───────┴───────────┐
-│   hermes-api      │  ← Python/FastAPI stateless REST API
-│   (REST API +     │     - Viewport Bounding-Box & Event Query Endpoints
-│    Timeline Svc)  │     - On-Demand Historical Causality Synthesis (LiteLLM + Wikipedia)
-└───────┬───────────┘
-        │
-        ▼  (REST API: /api/v1/events, /api/v1/events/bbox, /api/v1/events/tl)
-┌───────────────────┐
-│   hermes          │  ← React 19 Frontend Shell
-│   (Mapbox GL JS + │     - Native WebGL Layer Rendering & Clustering
-│    Zustand +      │     - Zustand Global Map Telemetry Store
-│    TanStack Query │     - TanStack Query v5 Viewport Sync & Polling
-│    + Mission HUD) │     - Mission Control UI (Zero Border Radius, Monospace)
-└───────┬───────────┘
-        │
-        ▼
-    User's Browser
-```
-
-### Scalability Target
-
-- The system must be architected to comfortably handle **10,000+ active events** simultaneously with fast spatial (`ST_Within`) and vector (`halfvec_cosine_ops`) queries.
-
-### Infrastructure
-
-- **Database**: Local development runs via `docker-compose.yml` at the workspace root (PostGIS 16 + pgvector). Production runs on **Neon Serverless PostgreSQL** with `postgis` and `pgvector` extensions enabled.
-- **Worker (Cloud Orchestration)**: In production, `hermes-worker` is containerized (Amazon ECR) and executed as an ephemeral serverless task on **AWS ECS Fargate** (`0.25 vCPU`, `512 MiB`), automatically triggered 3x daily by **Amazon EventBridge** (`cron(0 0,8,16 * * ? *)`).
-- **Environment Variables**: Loaded from `.env` at the workspace root (shared defaults like DB credentials, ports, Mapbox token) and app-specific `.env.local` / `.env.production` files (e.g., `apps/hermes-api/` and `apps/hermes-worker/` for AI/embedding keys `LLM_API`, `LLM_MODEL`, `EMBED_API`, `EMBED_MODEL`; and `apps/hermes/` for Vite frontend variables `VITE_MAPBOX_TOKEN`, `VITE_BASE_URL`, `VITE_API_VER`).
-
----
-
-## 5. Workspace Map
-
-This is an Nx monorepo. The workspace contains the following projects (configured for Node.js 22 LTS and Python 3.14+):
-
-| Project Name | Path | Role | Key Tech |
-| :--- | :--- | :--- | :--- |
-| **`@hermes/hermes`** | `apps/hermes/` | React frontend shell — interactive map and HUD | React 19, React Router 8 (SSR mode with dynamic WebGL boundary), Vite, Mapbox GL JS v3, Zustand 5, TanStack Query v5, Tailwind CSS 4 |
-| **`hermes-api`** | `apps/hermes-api/` | Python backend — stateless REST API & on-demand historical timeline synthesis | Python 3.14+, FastAPI, SQLAlchemy 2.0 Async, PostGIS, pgvector (`halfvec`), LiteLLM, uv |
-| **`hermes-worker`** | `apps/hermes-worker/` | Python CLI worker — autonomous RSS ingestion, AI batch extraction, geocoding shield & lifecycle decay. Ephemeral batch execution on AWS ECS Fargate + EventBridge | Python 3.14+, feedparser, LiteLLM, PostGIS, pgvector (`halfvec`), httpx, uv, Docker, AWS Fargate |
-| **`@hermes/hermes-e2e`** | `apps/hermes-e2e/` | End-to-end browser tests | Playwright, TypeScript |
-| **`@hermes/map`** | `libs/map/` | Mapbox GL WebGL implementation & timeline drawer | Mapbox GL JS, Zustand store, TanStack Query hooks, `MapView`, `EventPopup`, `TlPanel` |
-| **`hermes-ai`** | `libs/shared/hermes-ai/` | Shared AI extraction, LLM client, embeddings, geocoding shield, & rate limiter | Python 3.14+, LiteLLM, Pydantic, httpx, uv |
-| **`hermes-db`** | `libs/shared/hermes-db/` | Shared PostGIS + pgvector models, migrations & DB services | Python 3.14+, SQLAlchemy 2.0 Async, PostGIS, pgvector (`halfvec`), GeoAlchemy2, Alembic, uv |
-| **`@hermes/ui-components`** | `libs/shared/ui-components/`| Tactical Mission Control HUD widgets | React 19, Tailwind CSS 4, `BootSequence`, `LiveClock` |
-| **`@hermes/util-types`** | `libs/shared/util-types/` | Shared TypeScript API response interfaces | TypeScript interfaces (`MapEventResponse`, `EventDetailResponse`, `TlResponse`) |
-| **`@hermes/utils`** | `libs/shared/utils/` | Cross-cutting shared utility helpers | TypeScript |
-
-Each app has its own `AGENTS.md` and `README.md` with detailed, app-specific architectural context:
-
-- **Frontend context**: See `apps/hermes/AGENTS.md` and `apps/hermes/README.md`
-- **Backend API context**: See `apps/hermes-api/AGENTS.md` and `apps/hermes-api/README.md`
-- **Worker context**: See `apps/hermes-worker/AGENTS.md` and `apps/hermes-worker/README.md`
-- **AI & Geocoding context**: See `libs/shared/hermes-ai/AGENTS.md` and `libs/shared/hermes-ai/README.md`
-- **Database context**: See `libs/shared/hermes-db/AGENTS.md` and `libs/shared/hermes-db/README.md`
-- **Strict coding rules**: See `.agents/rules/`
-
-
----
-
-## 6. Nx Monorepo Workflow & Mentorship
-
-As an AI agent, you must act as a strict **Nx Monorepo Mentor** for the user. Correct their approach if they violate any of the following conventions:
-
-- **Root Execution Only**: ALL commands must be executed from the workspace root using `npx nx <target> <project>` (e.g., `npx nx serve hermes`, `npx nx serve hermes-api`). Never `cd` into child directories to run scripts.
-- **Strict Generators**: Never create new UI components, libraries, or Python modules by manually adding files to the tree. Always use Nx generators (e.g., `npx nx g @nx/react:component`, `npx nx g @nx/python:library`) so paths and configs remain synchronized.
-- **The 80/20 Rule (Apps vs Libs)**: `apps/` must remain thin and act primarily as routing and configuration shells. Most business logic, UI components, and API utilities must reside in shared libraries within the `libs/` directory (`libs/map`, `libs/shared/ui-components`, `libs/shared/util-types`). Warn the user if they attempt to build monolithic logic directly inside `apps/`.
-- **Module Boundaries**: Configure and enforce strict architectural boundary tags in `project.json` (e.g., `type:app`, `scope:frontend`). Rely on ESLint (`@nx/enforce-module-boundaries`) to prevent circular dependencies or architectural violations.
-- **Shared Types**: Store TypeScript interfaces for API responses in a dedicated library (`libs/shared/util-types`) to keep contracts aligned between backend schemas and frontend consumers.
-
----
-
-## 7. Development Best Practices
-
-- **Prompts**: Prompts must be version-controlled in the codebase and structured for strict JSON schema outputs.
-- **Environment Variables**: Fail-fast and be type-safe. Use `pydantic-settings` in Python and Vite's strict env typing in React. If a required secret is missing, the app must crash on startup with a clear error message. Never provide silent default fallbacks for security credentials.
-- **Observability**: Implement structured logging in the backend (Python `logging`) and centralized logging utilities in the frontend.
+- **When editing React UI or routes (`apps/hermes/`)**: Read `apps/hermes/AGENTS.md` and `.agents/rules/react-standards.md`.
+- **When editing Mapbox GL layers, telemetry, or clustering (`libs/map/`)**: Read `libs/map/AGENTS.md`.
+- **When editing REST endpoints or causality timelines (`apps/hermes-api/`)**: Read `apps/hermes-api/AGENTS.md`.
+- **When editing RSS ingestion, Fargate worker, or geocoding (`apps/hermes-worker/` or `libs/shared/hermes-ai/`)**: Read `apps/hermes-worker/AGENTS.md` and `libs/shared/hermes-ai/AGENTS.md`.
+- **When editing database schemas, models, or migrations (`libs/shared/hermes-db/`)**: Read `libs/shared/hermes-db/AGENTS.md`.
+- **When writing Python code (`**/\*.py`)**: Read `.agents/rules/python-standards.md`.
+- **When writing TypeScript code (`**/_.ts`, `\*\*/_.tsx`)**: Read `.agents/rules/ts-standards.md`.
