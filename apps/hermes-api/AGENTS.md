@@ -1,25 +1,24 @@
-# Hermes API — AI Agent Context
+# Hermes API (`apps/hermes-api`)
 
-## 1. Application Role & Architectural Boundaries
-`hermes-api` is the **stateless REST API and on-demand historical timeline synthesis engine** of Project Hermes. It acts as the read-optimized bridge connecting PostGIS and client applications (`apps/hermes`, `@hermes/map`).
+Stateless FastAPI REST API and on-demand historical timeline synthesis engine.
 
-### Key Engineering Decisions ("The Why")
-- **12-Factor Statelessness & Zero In-Process Schedulers**: `hermes-api` runs strictly zero cron jobs, background workers, or ingestion loops. All RSS feed harvesting, embedding generation, and time decay are isolated to `hermes-worker`. This prevents asyncio event-loop starvation from long-running network or compute tasks and eliminates split-brain / duplicate task executions when scaling API replicas horizontally across container pods or Uvicorn workers.
-- **Data Layer Externalization**: All SQLAlchemy ORM models (`Event`, `Article`, `EventTl`, `GeocodeCache`, `Source`), spatial geometry fields, and Alembic migrations reside exclusively in `libs/shared/hermes-db`. `hermes-api` never defines ORM entities; it interacts strictly through async sessions (`get_db`) and service facades (`EventService`, `EventTlService`). This guarantees a unified data contract across the monorepo and prevents schema drift.
-- **Strict Dependency Injection**: Routes in `api/v1/` never instantiate database sessions or services directly. They consume them via FastAPI `Depends()` (`get_event_service`, `get_tl_service`). This decouples request routing from persistence logic and allows effortless mocking in unit tests (`tests/test_events_api.py`).
+## 1. Commands
 
-## 2. Timeline Engine Orchestration Pipeline
-The `POST /api/v1/events/tl/{event_id}` endpoint orchestrates a multi-step causality generation pipeline on demand:
-1. **Triage**: An LLM filter (`AiService.analyze_tl_context`) determines if the breaking headline warrants historical context (`is_tl_worthy`) and generates an optimal Wikipedia search query, preventing wasteful API spend and latency on ephemeral news.
-2. **Extraction & Index Resolution**: The MediaWiki service queries Wikipedia. If an index page is detected (e.g., annual chronologies), it enumerates and sorts sub-pages chronologically before fetching extracts in batched requests (`explaintext=1`, up to 50 pages per batch).
-3. **Graph Extraction**: An LLM extractor (`hermes-ai`) processes the prose to produce a directed acyclic graph of milestone nodes (dates, headlines, summaries) and causal edges (e.g., `"led to"`, `"triggered"`).
-4. **Grounded Geocoding Shield**: Extracted historical location names are geocoded via `GeocodingService` (Nominatim backed by PostgreSQL `geocode_cache`). Coordinates are never hallucinated by the LLM.
-5. **Terminal Stitching**: The active breaking event's coordinates are queried from PostGIS (`ST_X`/`ST_Y`) and injected as the terminal leaf node (`id="current-event"`) with its category color. A synthetic causal edge (`relationship="led to"`) connects the final historical milestone to this breaking event.
-6. **State Machine & Idempotency**: Status transitions (`GENERATING` -> `READY` / `NO_CONTENT` / `FAILED`) are persisted in `event_timelines` (JSONB nodes/edges). Concurrent requests receive the `GENERATING` state immediately, preventing redundant AI generation runs. Clients can bypass cache via `?force_refresh=true`.
+Run all commands from the workspace root using project `hermes-api`. See root `AGENTS.md` Commands table for lint, typecheck, test, and format.
 
-## 3. CORS Error Handling Caveat
-FastAPI exception handlers registered in `core/errors.py` (`AppException`, `RequestValidationError`, `StarletteHTTPException`, universal `Exception`) build `JSONResponse` objects directly inside Starlette's `ExceptionMiddleware`. Under certain error conditions, this bypasses the outer `CORSMiddleware`, causing web browsers to mask the true API error behind an opaque CORS error. To prevent this, all custom error handlers explicitly inject origin headers via `_cors_headers(request)`. Any new exception handler added to the registry must preserve this pattern.
+| Task    | Command                   |
+| :------ | :------------------------ |
+| **Dev** | `npx nx serve hermes-api` |
 
-## 4. Lifespan & Resiliency
-- **Async Lifespan**: `lifespan` in `main.py` initializes the connection pool (`init_db`) on startup and disposes it (`close_db`) on shutdown.
-- **Graceful Degradation**: If LLM credentials (`LLM_API`, `LLM_MODEL`) are missing at boot, the server logs a warning and remains operational for spatial queries. The timeline endpoint gracefully returns HTTP 503 instead of crashing the process.
+## 2. Invariants
+
+- **Stateless Operation**: Never add cron runners, background workers, or ingestion loops. All harvesting and decay belong in `hermes-worker`.
+- **Dependency Injection**: Route handlers in `api/v1/` must never instantiate database sessions or services directly; consume them via FastAPI `Depends()`.
+- **CORS Exception Headers**: Handlers in `core/errors.py` bypass Starlette's `CORSMiddleware`. Every custom exception handler must explicitly include origin headers via `_cors_headers(request)`.
+- **Lifespan Pool Management**: Initialize and dispose database connection pools inside `lifespan` in `main.py` via `init_db` and `close_db`. Never initialize connections at module import time.
+- **Graceful Degradation**: When LLM credentials are missing, keep the server operational for spatial queries and return HTTP 503 from timeline synthesis endpoints instead of crashing.
+- **No Local ORM Models**: All database models and migrations reside in `libs/shared/hermes-db`. Never define SQLAlchemy models in `hermes-api`.
+
+## 3. Domain Triggers
+
+- **When modifying endpoints, timeline synthesis pipeline, or error handling**: Read `apps/hermes-api/docs/architecture.md`.
