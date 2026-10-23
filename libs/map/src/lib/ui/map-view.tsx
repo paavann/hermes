@@ -43,7 +43,7 @@ export function MapView() {
   const map = useRef<mapboxgl.Map | null>(null);
   const [isMapReady, setIsMapReady] = useState(false);
   const setViewport = useMapStore((state) => state.setViewport);
-  const { data: events, isFetching } = useMapDataSync();
+  const { data: events } = useMapDataSync();
   const setSelectedId = useMapStore((s) => s.setSelectedEventId);
 
   const isTimelineMode = useMapStore((s) => s.isTlMode);

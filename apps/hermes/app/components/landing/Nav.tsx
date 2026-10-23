@@ -22,8 +22,8 @@ export function LaunchMapBtn({ className }: LaunchMapBtnProps): React.JSX.Elemen
     <RollButton
       to="/map"
       id="nav-launch-map"
-      text1="LAUNCH MAP"
-      text2="LAUNCH MAP ↗"
+      label="LAUNCH MAP"
+      hoverLabel="LAUNCH MAP ↗"
       ariaLabel="Launch the intelligence map"
       className={className}
     />

@@ -1,7 +1,7 @@
 import type React from 'react';
 import { cn } from './utils';
 
-export type OAuthProviderId = 'google' | 'facebook' | 'x' | 'microsoft';
+export type OAuthProviderId = 'google' | 'facebook' | 'x';
 
 export interface OAuthProvider {
   readonly id: OAuthProviderId;
@@ -33,22 +33,10 @@ export const OAUTH_PROVIDERS: readonly OAuthProvider[] = [
   },
   {
     id: 'x',
-    label: 'X / Twitter',
+    label: 'X',
     icon: (
       <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 fill-current" aria-hidden="true">
         <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-      </svg>
-    ),
-  },
-  {
-    id: 'microsoft',
-    label: 'Microsoft',
-    icon: (
-      <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 fill-current" aria-hidden="true">
-        <rect x="2" y="2" width="9.2" height="9.2" />
-        <rect x="12.8" y="2" width="9.2" height="9.2" />
-        <rect x="2" y="12.8" width="9.2" height="9.2" />
-        <rect x="12.8" y="12.8" width="9.2" height="9.2" />
       </svg>
     ),
   },
@@ -56,7 +44,7 @@ export const OAUTH_PROVIDERS: readonly OAuthProvider[] = [
 
 export interface OAuthButtonGroupProps {
   readonly activeProvider?: OAuthProviderId | null;
-  readonly onSelect: (provider: OAuthProviderId) => void;
+  readonly onSelect: (providerId: OAuthProviderId) => void;
   readonly disabled?: boolean;
   readonly className?: string;
 }
@@ -68,7 +56,7 @@ export function OAuthButtonGroup({
   className,
 }: OAuthButtonGroupProps): React.JSX.Element {
   return (
-    <div className={cn('w-full grid grid-cols-2 gap-2.5', className)}>
+    <div className={cn('w-full grid grid-cols-3 gap-2', className)}>
       {OAUTH_PROVIDERS.map((provider) => {
         const isProviderLoading = activeProvider === provider.id;
 
@@ -79,15 +67,15 @@ export function OAuthButtonGroup({
             disabled={disabled}
             onClick={() => onSelect(provider.id)}
             className={cn(
-              'group relative flex items-center justify-center gap-2.5 bg-black/60 border border-white/10 hover:border-neon-blue/60 hover:bg-white/[0.04] px-3 py-2.5 text-xs text-slate-muted hover:text-ivory transition-all duration-200 font-mono rounded-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed',
+              'group relative flex items-center justify-center gap-2 bg-black/60 border border-white/10 hover:border-neon-blue/60 hover:bg-white/[0.04] px-2.5 py-2.5 text-xs text-slate-muted hover:text-ivory transition-all duration-200 font-mono rounded-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed',
               isProviderLoading && 'border-neon-blue text-neon-blue bg-neon-blue/5'
             )}
             aria-label={`Continue with ${provider.label}`}
           >
-            <span className="text-slate-muted group-hover:text-ivory transition-colors">
+            <span className="text-slate-muted group-hover:text-ivory transition-colors shrink-0">
               {provider.icon}
             </span>
-            <span className="tracking-wider uppercase text-[11px]">
+            <span className="tracking-wider uppercase text-[11px] truncate">
               {isProviderLoading ? 'CONNECTING...' : provider.label}
             </span>
           </button>

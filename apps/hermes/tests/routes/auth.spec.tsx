@@ -105,7 +105,7 @@ describe('Auth Progressive Route', () => {
     expect(screen.getByRole('button', { name: /Continue with Google/i })).toBeTruthy();
     expect(screen.getByRole('button', { name: /Continue with Facebook/i })).toBeTruthy();
     expect(screen.getByRole('button', { name: /Continue with X/i })).toBeTruthy();
-    expect(screen.getByRole('button', { name: /Continue with Microsoft/i })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /Continue with Microsoft/i })).toBeNull();
 
     const patternAside = screen.getByLabelText('Geometric pattern panel');
     expect(patternAside).toBeTruthy();

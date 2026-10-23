@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams, useLocation, useParams } from 'react-router';
 import { useClerk } from '@clerk/react-router';
 import { useSignIn, useSignUp } from '@clerk/react-router/legacy';
-import type { OAuthStrategy, EmailCodeFactor, SignInFirstFactor } from '@clerk/types';
+import type { OAuthStrategy, EmailCodeFactor, SignInFirstFactor } from '@clerk/shared/types';
 import gsap from 'gsap';
 import type { OAuthProviderId } from '@hermes/ui-components';
 import type { AuthMode, AuthStatus } from './types';
@@ -73,7 +73,6 @@ const OAUTH_STRATEGY_MAP: Record<OAuthProviderId, OAuthStrategy> = {
   google: 'oauth_google',
   facebook: 'oauth_facebook',
   x: 'oauth_x',
-  microsoft: 'oauth_microsoft',
 };
 
 export function useAuthWorkflow(): UseAuthWorkflowReturn {
@@ -160,6 +159,7 @@ export function useAuthWorkflow(): UseAuthWorkflowReturn {
       }, 40);
       return () => window.clearTimeout(timer);
     }
+    return undefined;
   }, [currentMode, isSsoCallback]);
 
   // Resend cooldown countdown
