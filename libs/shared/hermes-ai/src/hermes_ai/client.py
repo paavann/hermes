@@ -17,14 +17,11 @@ logger = logging.getLogger(__name__)
 
 
 class HermesAiClient:
-    """Unified client orchestrating LLM inference, extraction, and geocoding."""
-
     def __init__(self, config: AiConfig) -> None:
         self._config = config
         self._llm = LlmService(config)
         self._events_extractor = EventExtractor(self)
         self._tl_extractor = TlExtractor(self)
-
         logger.info("hermes ai client initialized.")
 
     @property

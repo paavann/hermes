@@ -34,12 +34,10 @@ class TbRateLimiter:
         self._circuit_tripped_until = 0.0
         self._lock: asyncio.Lock | None = None
 
-
     def _get_lock(self) -> asyncio.Lock:
         if self._lock is None:
             self._lock = asyncio.Lock()
         return self._lock
-
 
     def _refill(self) -> None:
         now = time.monotonic()
@@ -50,10 +48,8 @@ class TbRateLimiter:
         )
         self._last_refill = now
 
-
     def is_circuit_open(self) -> bool:
         return time.monotonic() < self._circuit_tripped_until
-
 
     def trip_circuit_breaker(self, duration: float | None = None) -> None:
         cooldown = duration if duration is not None else self._circuit_cooldown
@@ -63,10 +59,8 @@ class TbRateLimiter:
             cooldown,
         )
 
-
     def reset_circuit_breaker(self) -> None:
         self._circuit_tripped_until = 0.0
-
 
     async def acquire(self) -> None:
         if self.is_circuit_open():
@@ -94,11 +88,9 @@ class TbRateLimiter:
                 self._refill()
             self._tokens -= 1.0
 
-
     @property
     def req_per_min(self) -> int:
         return self._rpm
-
 
     @property
     def max_burst(self) -> float:

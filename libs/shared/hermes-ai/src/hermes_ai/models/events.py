@@ -102,7 +102,6 @@ class ExtractedEvent(BaseModel):
     def coerce_strings(cls, v: object) -> str:
         return coerce_to_str(v)
 
-
     @field_validator("impact_level", mode="before")
     @classmethod
     def coerce_impact_level(cls, v: object) -> str:

@@ -277,6 +277,7 @@ from hermes_ai import (
     HermesAiClient,
 )
 
+
 async def main() -> None:
     # 1. Configure the client
     config = AiConfig(
@@ -306,6 +307,7 @@ async def main() -> None:
             if hasattr(event, "latitude"):
                 print(f"Coordinates: ({event.latitude}, {event.longitude})")
 
+
 if __name__ == "__main__":
     asyncio.run(main())
 ```
@@ -313,9 +315,11 @@ if __name__ == "__main__":
 ### 2. Historical Timeline Extraction from Wikipedia Prose
 
 ```python
-async def extract_timeline_example(client: HermesAiClient, geocoder: GeocodingService) -> None:
+async def extract_timeline_example(
+    client: HermesAiClient, geocoder: GeocodingService
+) -> None:
     headline = "Armistice Signed in Geneva Ending Border Dispute"
-    
+
     # 1. Triage whether the headline warrants a historical timeline
     triage = await client.analyze_tl_context(headline)
     if not triage or not triage.is_tl_worthy:
@@ -330,19 +334,23 @@ async def extract_timeline_example(client: HermesAiClient, geocoder: GeocodingSe
     By 2002, the Treaty of Bern established a temporary demilitarized zone.
     In 2024, direct diplomatic talks culminated in the comprehensive Geneva Accord.
     """
-    
+
     timeline = await client.extract_tl(
         pg_title="Border Conflict History",
         prose=wiki_prose,
         geocoding_svc=geocoder,
     )
-    
+
     if timeline:
         print(f"Summary: {timeline.tl_summary}")
         for node in timeline.nodes:
-            print(f"- [{node.date}] {node.headline} ({node.latitude}, {node.longitude})")
+            print(
+                f"- [{node.date}] {node.headline} ({node.latitude}, {node.longitude})"
+            )
         for edge in timeline.edges:
-            print(f"  Edge: Event {edge.source_index} -> Event {edge.target_index} ({edge.relationship})")
+            print(
+                f"  Edge: Event {edge.source_index} -> Event {edge.target_index} ({edge.relationship})"
+            )
 ```
 
 ### 3. Generating Vector Embeddings
@@ -366,18 +374,23 @@ async def embedding_example(client: HermesAiClient) -> None:
 ```python
 from hermes_ai import GeocodeCacheEntry, GeocodeCacheProtocol
 
+
 class InMemoryGeocodeCache(GeocodeCacheProtocol):
     def __init__(self) -> None:
         self._store: dict[str, tuple[float | None, float | None, str | None]] = {}
 
-    async def get_by_location_name(self, location_name: str) -> GeocodeCacheEntry | None:
+    async def get_by_location_name(
+        self, location_name: str
+    ) -> GeocodeCacheEntry | None:
         if location_name in self._store:
             lat, lon, name = self._store[location_name]
+
             # Duck-typed GeocodeCacheEntry
             class Entry:
                 latitude = lat
                 longitude = lon
                 display_name = name
+
             return Entry()
         return None
 
