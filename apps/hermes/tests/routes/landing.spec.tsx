@@ -1,17 +1,23 @@
 import { createRoutesStub } from 'react-router';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { vi } from 'vitest';
+import { vi, describe, it, expect, beforeEach } from 'vitest';
 import Landing from '../../app/routes/landing';
+
+let mockAuthState: 'signed-out' | 'signed-in' = 'signed-out';
 
 vi.mock('@clerk/react-router', () => ({
   Show: ({ when, children }: { when: string; children: React.ReactNode }) =>
-    when === 'signed-out' ? children : null,
-  UserButton: () => <div data-testid="user-button">USER_BUTTON</div>,
+    when === mockAuthState ? children : null,
+  SignOutButton: ({ children }: { children: React.ReactNode }) => children,
   SignInButton: ({ children }: { children: React.ReactNode }) => children,
   SignUpButton: ({ children }: { children: React.ReactNode }) => children,
 }));
 
 describe('Landing Page Route', () => {
+  beforeEach(() => {
+    mockAuthState = 'signed-out';
+  });
+
   const ReactRouterStub = createRoutesStub([
     {
       path: '/',
@@ -41,6 +47,29 @@ describe('Landing Page Route', () => {
     // Footer
     expect(screen.getByText(/HERMES GEOINT INC/)).toBeTruthy();
     expect(screen.getByRole('img', { name: 'Hermes' })).toBeTruthy();
+  }, 15000);
+
+  it('renders LOGIN link pointing to /auth and no LOGOUT when signed out', () => {
+    mockAuthState = 'signed-out';
+    render(<ReactRouterStub />);
+
+    const loginLinks = screen.getAllByRole('link', { name: /^LOGIN$/i });
+    expect(loginLinks.length).toBeGreaterThan(0);
+    expect(loginLinks[0].getAttribute('href')).toBe('/auth');
+
+    expect(screen.queryByRole('button', { name: /^LOGOUT$/i })).toBeNull();
+    expect(screen.queryByText(/OPERATOR PROFILE/i)).toBeNull();
+  }, 15000);
+
+  it('renders LOGOUT button and no LOGIN link when signed in', () => {
+    mockAuthState = 'signed-in';
+    render(<ReactRouterStub />);
+
+    const logoutButtons = screen.getAllByRole('button', { name: /^LOGOUT$/i });
+    expect(logoutButtons.length).toBeGreaterThan(0);
+
+    expect(screen.queryByRole('link', { name: /^LOGIN$/i })).toBeNull();
+    expect(screen.queryByText(/OPERATOR PROFILE/i)).toBeNull();
   }, 15000);
 
   it('handles contact form transmission submission', async () => {

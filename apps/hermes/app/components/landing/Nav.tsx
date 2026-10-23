@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import type React from 'react';
 import { Link } from 'react-router';
-import { Show, UserButton } from '@clerk/react-router';
+import { Show, SignOutButton } from '@clerk/react-router';
 import { cn, RollButton } from '@hermes/ui-components';
 
 import type { NavItem } from './types';
@@ -171,7 +171,7 @@ export function Nav({ activeSection: controlledActiveSection }: NavProps): React
 
           {/* Right Actions */}
           <div className="flex items-center gap-5 ml-auto">
-            {/* Auth Status & Login Trigger */}
+            {/* Auth Status & Login / Logout Actions */}
             <Show when="signed-out">
               <Link
                 to="/auth"
@@ -182,17 +182,14 @@ export function Nav({ activeSection: controlledActiveSection }: NavProps): React
             </Show>
 
             <Show when="signed-in">
-              <UserButton
-                appearance={{
-                  variables: {
-                    colorPrimary: '#00f0ff',
-                    colorBackground: '#0a0d14',
-                    colorText: '#f4f4f0',
-                    fontFamily: '"JetBrains Mono", monospace',
-                    borderRadius: '0px',
-                  },
-                }}
-              />
+              <SignOutButton redirectUrl="/auth">
+                <button
+                  type="button"
+                  className="text-xs uppercase tracking-wider text-slate-muted hover:text-ivory transition-colors cursor-pointer"
+                >
+                  LOGOUT
+                </button>
+              </SignOutButton>
             </Show>
 
             {/* Launch Map CTA with GSAP roll animation */}
@@ -259,22 +256,16 @@ export function Nav({ activeSection: controlledActiveSection }: NavProps): React
             </Link>
           </Show>
           <Show when="signed-in">
-            <div className="flex items-center justify-between py-2 border-t border-white/5">
-              <span className="text-xs uppercase tracking-wider text-slate-muted font-mono">
-                OPERATOR PROFILE
-              </span>
-              <UserButton
-                appearance={{
-                  variables: {
-                    colorPrimary: '#00f0ff',
-                    colorBackground: '#0a0d14',
-                    colorText: '#f4f4f0',
-                    fontFamily: '"JetBrains Mono", monospace',
-                    borderRadius: '0px',
-                  },
-                }}
-              />
-            </div>
+            <SignOutButton redirectUrl="/auth">
+              <button
+                type="button"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center gap-2 py-2 text-xs uppercase tracking-wider text-slate-muted hover:text-ivory cursor-pointer w-full text-left"
+              >
+                <span className="text-neon-blue text-[9px]">/</span>
+                <span>LOGOUT</span>
+              </button>
+            </SignOutButton>
           </Show>
         </div>
       )}

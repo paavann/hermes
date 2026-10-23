@@ -44,7 +44,7 @@ export function EmailStep({
   return (
     <>
       <h1 className="text-2xl sm:text-3xl font-bold text-ivory tracking-tight text-center mb-8">
-        {isLoginMode ? 'Authenticate Operator' : 'Welcome to Hermes'}
+        {isLoginMode ? 'Welcome Back!' : 'Welcome to Hermes!'}
       </h1>
 
       <form onSubmit={onSubmit} className="w-full space-y-5" noValidate>
@@ -64,7 +64,7 @@ export function EmailStep({
                 disabled={isBusy}
                 className="text-neon-blue hover:underline underline-offset-4 text-[11px] uppercase tracking-wider cursor-pointer font-mono disabled:opacity-50"
               >
-                [ Change ]
+                [Change]
               </button>
             )}
           </div>
@@ -99,7 +99,7 @@ export function EmailStep({
                   disabled={isBusy}
                   className="text-neon-blue hover:underline underline-offset-4 text-[11px] uppercase tracking-wider cursor-pointer font-mono disabled:opacity-50"
                 >
-                  [ Sign in with OTP ]
+                  [Sign in with OTP]
                 </button>
               )}
             </div>
@@ -129,7 +129,7 @@ export function EmailStep({
           <TacticalActionBtn
             variant="roll"
             label={isLoginMode ? 'SIGN IN' : 'CONTINUE'}
-            loadingLabel={isLoginMode ? 'AUTHENTICATING...' : 'CHECKING OPERATOR...'}
+            loadingLabel={isLoginMode ? 'SIGNING IN...' : 'CHECKING...'}
             isSubmitting={status === 'submitting'}
             disabled={isBusy}
           />

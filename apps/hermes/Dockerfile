@@ -8,7 +8,7 @@ COPY apps/hermes-e2e/package.json ./apps/hermes-e2e/
 COPY libs/map/package.json ./libs/map/
 COPY libs/shared/ui-components/package.json ./libs/shared/ui-components/
 COPY libs/shared/util-types/package.json ./libs/shared/util-types/
-COPY libs/shared/utils/package.json ./libs/shared/utils/
+COPY libs/shared/utils/ts/package.json ./libs/shared/utils/ts/
 
 RUN --mount=type=cache,target=/root/.npm npm ci
 

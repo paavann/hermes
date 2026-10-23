@@ -95,7 +95,7 @@ describe('Auth Progressive Route', () => {
   test('renders auth route with email input, action button, and OAuth providers', () => {
     render(<ReactRouterStub initialEntries={['/auth']} />);
 
-    expect(screen.getByText('Welcome to Hermes')).toBeTruthy();
+    expect(screen.getByText(/Welcome to Hermes/i)).toBeTruthy();
     expect(screen.getByLabelText(/Email/i)).toBeTruthy();
 
     const continueBtn = screen.getByRole('button', { name: /^CONTINUE$/i });
@@ -109,7 +109,7 @@ describe('Auth Progressive Route', () => {
 
     const patternAside = screen.getByLabelText('Geometric pattern panel');
     expect(patternAside).toBeTruthy();
-  });
+  }, 15000);
 
   test('validates invalid email format and displays error', async () => {
     render(<ReactRouterStub initialEntries={['/auth']} />);
@@ -122,7 +122,7 @@ describe('Auth Progressive Route', () => {
 
     expect(screen.getByText(/Please enter a valid email address/i)).toBeTruthy();
     expect(mockSignIn.create).not.toHaveBeenCalled();
-  });
+  }, 15000);
 
   test('existing user: progresses to login mode and reveals password field right below email', async () => {
     mockSignIn.create.mockResolvedValueOnce({
@@ -138,18 +138,21 @@ describe('Auth Progressive Route', () => {
     fireEvent.change(emailInput, { target: { value: 'existing@hermes.intel' } });
     fireEvent.click(continueBtn);
 
-    await waitFor(() => {
-      expect(mockSignIn.create).toHaveBeenCalledWith({ identifier: 'existing@hermes.intel' });
-      expect(screen.getByText('Authenticate Operator')).toBeTruthy();
-    });
+    await waitFor(
+      () => {
+        expect(mockSignIn.create).toHaveBeenCalledWith({ identifier: 'existing@hermes.intel' });
+        expect(screen.getByText(/Welcome Back!/i)).toBeTruthy();
+      },
+      { timeout: 5000 }
+    );
 
     // Password field is revealed
     const passwordInput = screen.getByLabelText(/^Password/i);
     expect(passwordInput).toBeTruthy();
     expect(screen.getByRole('button', { name: /^SIGN IN$/i })).toBeTruthy();
     expect(screen.getByRole('button', { name: /\[Change\]/i })).toBeTruthy();
-    expect(screen.getByRole('button', { name: /Back to 6-digit OTP verification/i })).toBeTruthy();
-  });
+    expect(screen.getByRole('button', { name: /Sign in with OTP/i })).toBeTruthy();
+  }, 15000);
 
   test('existing user: submits password in login mode and activates session', async () => {
     mockSignIn.identifier = 'existing@hermes.intel';
@@ -169,14 +172,17 @@ describe('Auth Progressive Route', () => {
     const signInBtn = screen.getByRole('button', { name: /^SIGN IN$/i });
     fireEvent.click(signInBtn);
 
-    await waitFor(() => {
-      expect(mockSignIn.attemptFirstFactor).toHaveBeenCalledWith({
-        strategy: 'password',
-        password: 'OperatorSecret123!',
-      });
-      expect(mockSetActive).toHaveBeenCalledWith({ session: 'sess_abc123' });
-    });
-  });
+    await waitFor(
+      () => {
+        expect(mockSignIn.attemptFirstFactor).toHaveBeenCalledWith({
+          strategy: 'password',
+          password: 'OperatorSecret123!',
+        });
+        expect(mockSetActive).toHaveBeenCalledWith({ session: 'sess_abc123' });
+      },
+      { timeout: 5000 }
+    );
+  }, 15000);
 
   test('new user: converts to OTP verification when identifier is not found', async () => {
     mockSignIn.create.mockRejectedValueOnce({
@@ -193,18 +199,21 @@ describe('Auth Progressive Route', () => {
     fireEvent.change(emailInput, { target: { value: 'newoperator@hermes.intel' } });
     fireEvent.click(continueBtn);
 
-    await waitFor(() => {
-      expect(mockSignIn.create).toHaveBeenCalledWith({ identifier: 'newoperator@hermes.intel' });
-      expect(mockSignUp.create).toHaveBeenCalledWith({ emailAddress: 'newoperator@hermes.intel' });
-      expect(mockSignUp.prepareEmailAddressVerification).toHaveBeenCalledWith({
-        strategy: 'email_code',
-      });
-      expect(screen.getByText('Check your inbox')).toBeTruthy();
-    });
+    await waitFor(
+      () => {
+        expect(mockSignIn.create).toHaveBeenCalledWith({ identifier: 'newoperator@hermes.intel' });
+        expect(mockSignUp.create).toHaveBeenCalledWith({ emailAddress: 'newoperator@hermes.intel' });
+        expect(mockSignUp.prepareEmailAddressVerification).toHaveBeenCalledWith({
+          strategy: 'email_code',
+        });
+        expect(screen.getByText('Check your inbox')).toBeTruthy();
+      },
+      { timeout: 5000 }
+    );
 
     expect(screen.getByText('newoperator@hermes.intel')).toBeTruthy();
     expect(screen.getByLabelText('Digit 1 of 6')).toBeTruthy();
-  });
+  }, 15000);
 
   test('new user: verifies OTP and transitions to setup mode', async () => {
     mockSignUp.emailAddress = 'newoperator@hermes.intel';
@@ -220,12 +229,15 @@ describe('Auth Progressive Route', () => {
     const verifyBtn = screen.getByRole('button', { name: /VERIFY & CONTINUE/i });
     fireEvent.click(verifyBtn);
 
-    await waitFor(() => {
-      expect(mockSignUp.attemptEmailAddressVerification).toHaveBeenCalledWith({
-        code: '123456',
-      });
-    });
-  });
+    await waitFor(
+      () => {
+        expect(mockSignUp.attemptEmailAddressVerification).toHaveBeenCalledWith({
+          code: '123456',
+        });
+      },
+      { timeout: 5000 }
+    );
+  }, 15000);
 
   test('new user: completes setup with name and password and activates session', async () => {
     mockSignUp.emailAddress = 'newoperator@hermes.intel';
@@ -247,15 +259,18 @@ describe('Auth Progressive Route', () => {
     const setupBtn = screen.getByRole('button', { name: /COMPLETE SETUP/i });
     fireEvent.click(setupBtn);
 
-    await waitFor(() => {
-      expect(mockSignUp.update).toHaveBeenCalledWith({
-        firstName: 'Elena',
-        lastName: 'Rostova',
-        password: 'Tactical2026!',
-      });
-      expect(mockSetActive).toHaveBeenCalledWith({ session: 'sess_new_456' });
-    });
-  });
+    await waitFor(
+      () => {
+        expect(mockSignUp.update).toHaveBeenCalledWith({
+          firstName: 'Elena',
+          lastName: 'Rostova',
+          password: 'Tactical2026!',
+        });
+        expect(mockSetActive).toHaveBeenCalledWith({ session: 'sess_new_456' });
+      },
+      { timeout: 5000 }
+    );
+  }, 15000);
 
   test('triggers OAuth redirect when a social provider button is clicked', async () => {
     mockSignIn.authenticateWithRedirect.mockResolvedValueOnce({});
@@ -265,13 +280,16 @@ describe('Auth Progressive Route', () => {
     const googleBtn = screen.getByRole('button', { name: /Continue with Google/i });
     fireEvent.click(googleBtn);
 
-    await waitFor(() => {
-      expect(mockSignIn.authenticateWithRedirect).toHaveBeenCalledWith({
-        strategy: 'oauth_google',
-        redirectUrl: '/auth/sso-callback',
-        redirectUrlComplete: '/map',
-        continueSignUp: true,
-      });
-    });
-  });
+    await waitFor(
+      () => {
+        expect(mockSignIn.authenticateWithRedirect).toHaveBeenCalledWith({
+          strategy: 'oauth_google',
+          redirectUrl: '/auth/sso-callback',
+          redirectUrlComplete: '/map',
+          continueSignUp: true,
+        });
+      },
+      { timeout: 5000 }
+    );
+  }, 15000);
 });

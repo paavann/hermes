@@ -1,5 +1,4 @@
 import { lazy, Suspense } from 'react';
-import { redirect } from 'react-router';
 import type { LoaderFunctionArgs } from 'react-router';
 import { getAuth } from '@clerk/react-router/server';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -10,10 +9,7 @@ import type { Route } from './+types/map';
 
 export async function loader(args: LoaderFunctionArgs) {
   const { userId } = await getAuth(args);
-  if (!userId) {
-    return redirect('/auth');
-  }
-  return { userId };
+  return { userId: userId ?? null };
 }
 
 const queryClient = new QueryClient();
