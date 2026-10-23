@@ -16,7 +16,7 @@ def _parse_date(entry: Mapping[str, object]) -> datetime | None:
     if parsed_time and isinstance(parsed_time, (tuple, list)):
         try:
             return datetime(*parsed_time[:6])
-        except (ValueError, TypeError):
+        except ValueError, TypeError:
             return None
     return None
 

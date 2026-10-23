@@ -5,17 +5,17 @@ import sys
 from collections.abc import Awaitable, Callable
 from hermes_worker.core.lifespan import db_lifespan
 from hermes_worker.core.logger import setup_logging
-from hermes_worker.handlers.commands import WorkerCmd
 from hermes_worker.handlers.parser import build_parser
 
 
-logger = logging.getLogger("hermes_worker")
+logger = logging.getLogger(__name__)
 
-CommandHandler = Callable[[argparse.Namespace], Awaitable[None]]
+CmdHandler = Callable[[argparse.Namespace], Awaitable[None]]
 
 
 async def run_app(args: argparse.Namespace) -> int:
-    handler: CommandHandler | None = getattr(args, "handler", None)
+    handler: CmdHandler | None = getattr(args, "handler", None)
+    # if docker compose is used to run hermes-worker without passing any sub-command, it will default to "run-all" command.
     if handler is None:
         logger.error("unknown command: %s.", getattr(args, "command", "none"))
         return 1
@@ -30,19 +30,6 @@ async def run_app(args: argparse.Namespace) -> int:
                 getattr(args, "command", "unknown"),
             )
             return 1
-
-
-async def _run_command(command: str, force: bool = False) -> int:
-    parser = build_parser()
-    args_list = [command]
-    if force and command in (WorkerCmd.SYNC.value, WorkerCmd.ALL.value):
-        args_list.append("--force")
-    try:
-        args = parser.parse_args(args_list)
-    except SystemExit:
-        logger.error("unknown command: %s.", command)
-        return 1
-    return await run_app(args)
 
 
 def main() -> None:

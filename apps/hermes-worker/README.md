@@ -195,7 +195,7 @@ flowchart TD
 * Truncates long content to 500 words to conserve LLM context windows while preserving crucial lead paragraphs.
 
 ### Stage 2: Embeddings & Semantic Candidate Retrieval
-* Evaluates non-duplicate articles through `nvidia/nemotron-3-embed-1b` via [`AiService.gen_embeddings`](file:///home/pavan/proj/hermes/apps/hermes-worker/src/hermes_worker/services/ai.py).
+* Evaluates non-duplicate articles through `nvidia/nemotron-3-embed-1b` via [`HermesAiClient.gen_embeddings`](file:///home/pavan/proj/hermes/libs/shared/hermes-ai/src/hermes_ai/client.py) (initialized via [`create_ai_client`](file:///home/pavan/proj/hermes/apps/hermes-worker/src/hermes_worker/core/ai.py)).
 * Queries the `events` table via [`EventService.get_active_events_by_embeddings`](file:///home/pavan/proj/hermes/libs/shared/hermes-db/src/hermes_db/services/event.py) using `pgvector` half-precision cosine distances (`cosine_distance < 0.25`).
 * Collects up to 5 matching active event candidates per article to supply context to the LLM.
 

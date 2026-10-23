@@ -60,7 +60,7 @@
         "{workspaceRoot}/coverage/{projectRoot}"
       ],
       "options": {
-        "command": "uv run pytest tests/",
+        "command": "uv run pytest",
         "cwd": "{projectRoot}"
       },
       "cache": true
@@ -85,6 +85,20 @@
       "executor": "@nxlv/python:run-commands",
       "options": {
         "command": "uv run hermes-worker run-all",
+        "cwd": "{projectRoot}"
+      }
+    },
+    "run-sync": {
+      "executor": "@nxlv/python:run-commands",
+      "options": {
+        "command": "uv run hermes-worker run-sync",
+        "cwd": "{projectRoot}"
+      }
+    },
+    "run-lifecycle": {
+      "executor": "@nxlv/python:run-commands",
+      "options": {
+        "command": "uv run hermes-worker run-lifecycle",
         "cwd": "{projectRoot}"
       }
     }

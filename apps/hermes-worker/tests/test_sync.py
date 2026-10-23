@@ -27,14 +27,13 @@ def dummy_due_source() -> DueSource:
 
 class TestSyncService:
     @pytest.fixture(autouse=True)
-    def mock_ai_service_class(self) -> Generator[MagicMock]:
-        with patch("hermes_worker.services.sync.AiService") as mock_cls:
+    def mock_ai_client(self) -> Generator[MagicMock]:
+        with patch("hermes_worker.services.sync.create_ai_client") as mock_factory:
             mock_inst = MagicMock()
             mock_inst.gen_embeddings = AsyncMock(return_value=[[0.1] * 2048])
-            mock_inst.get_metadata = AsyncMock(return_value=[])
-            mock_cls.return_value = mock_inst
+            mock_inst.extract_events = AsyncMock(return_value=[])
+            mock_factory.return_value = mock_inst
             yield mock_inst
-
 
     def test_sync_all_sources_no_due_sources(self) -> None:
         async def run() -> None:
@@ -61,7 +60,6 @@ class TestSyncService:
 
         asyncio.run(run())
 
-
     def test_sync_source_empty_feed(self, dummy_due_source: DueSource) -> None:
         async def run() -> None:
             mock_fetcher = AsyncMock(spec=BaseArticleFetcher)
@@ -76,10 +74,7 @@ class TestSyncService:
 
         asyncio.run(run())
 
-
-    def test_sync_source_skips_duplicates(
-        self, dummy_due_source: DueSource
-    ) -> None:
+    def test_sync_source_skips_duplicates(self, dummy_due_source: DueSource) -> None:
         async def run() -> None:
             articles = [
                 ParsedArticle(
@@ -117,9 +112,8 @@ class TestSyncService:
 
         asyncio.run(run())
 
-
     def test_sync_source_creates_event_when_no_match(
-        self, dummy_due_source: DueSource, mock_ai_service_class: MagicMock
+        self, dummy_due_source: DueSource, mock_ai_client: MagicMock
     ) -> None:
         async def run() -> None:
             article = ParsedArticle(
@@ -156,12 +150,8 @@ class TestSyncService:
                 mock_evt.get_active_events_by_embeddings = AsyncMock(return_value=[])
                 mock_evt.create_event_with_article = AsyncMock()
 
-                mock_ai_service_class.gen_embeddings = AsyncMock(
-                    return_value=[[0.1] * 2048]
-                )
-                mock_ai_service_class.get_metadata = AsyncMock(
-                    return_value=[extraction]
-                )
+                mock_ai_client.gen_embeddings = AsyncMock(return_value=[[0.1] * 2048])
+                mock_ai_client.extract_events = AsyncMock(return_value=[extraction])
 
                 svc = SyncService(rss_fetcher=mock_fetcher)
                 stats = await svc._sync_source(dummy_due_source)
@@ -173,9 +163,8 @@ class TestSyncService:
 
         asyncio.run(run())
 
-
     def test_sync_source_links_to_matched_event(
-        self, dummy_due_source: DueSource, mock_ai_service_class: MagicMock
+        self, dummy_due_source: DueSource, mock_ai_client: MagicMock
     ) -> None:
         async def run() -> None:
             article = ParsedArticle(
@@ -213,12 +202,8 @@ class TestSyncService:
                 mock_evt.get_active_events_by_embeddings = AsyncMock(return_value=[])
                 mock_evt.add_article_to_event = AsyncMock(return_value=True)
 
-                mock_ai_service_class.gen_embeddings = AsyncMock(
-                    return_value=[[0.1] * 2048]
-                )
-                mock_ai_service_class.get_metadata = AsyncMock(
-                    return_value=[extraction]
-                )
+                mock_ai_client.gen_embeddings = AsyncMock(return_value=[[0.1] * 2048])
+                mock_ai_client.extract_events = AsyncMock(return_value=[extraction])
 
                 svc = SyncService(rss_fetcher=mock_fetcher)
                 stats = await svc._sync_source(dummy_due_source)
@@ -229,7 +214,6 @@ class TestSyncService:
                 mock_evt.add_article_to_event.assert_awaited_once()
 
         asyncio.run(run())
-
 
     def test_sync_source_dispatches_to_gdelt(self) -> None:
         async def run() -> None:
@@ -250,7 +234,6 @@ class TestSyncService:
             mock_gdelt.fetch_articles.assert_awaited_once_with(gdelt_source)
 
         asyncio.run(run())
-
 
     def test_sync_source_dispatches_to_sitemap(self) -> None:
         async def run() -> None:

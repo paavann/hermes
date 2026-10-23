@@ -5,7 +5,7 @@ from hermes_worker.services.lifecycle import run_lifecycle
 from hermes_worker.services.sync import SyncService
 
 
-logger = logging.getLogger("hermes_worker")
+logger = logging.getLogger(__name__)
 
 
 class WorkerCmd(enum.StrEnum):

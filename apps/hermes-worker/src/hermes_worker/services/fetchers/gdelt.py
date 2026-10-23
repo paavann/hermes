@@ -50,7 +50,6 @@ class GDELTFetcher(BaseArticleFetcher):
         self._limiter = rate_limiter or _DEFAULT_GDELT_LIMITER
         self._client = client
 
-
     async def fetch_articles(self, source: DueSource) -> list[ParsedArticle]:
         if self._limiter.is_circuit_open():
             logger.warning(
@@ -117,7 +116,7 @@ class GDELTFetcher(BaseArticleFetcher):
 
         try:
             data = res.json()
-        except (json.JSONDecodeError, ValueError):
+        except json.JSONDecodeError, ValueError:
             logger.warning(
                 "invalid json from gdelt for source '%s'.",
                 source.name,

@@ -11,7 +11,8 @@ def _truncate_to_words(text: str, max_words: int) -> str:
     words = text.split()
     if len(words) <= max_words:
         return text
-    return " ".join(words[:max_words]) + "..."
+    else:
+        return " ".join(words[:max_words]) + "..."
 
 
 class ParsedArticle(BaseModel):
@@ -31,5 +32,4 @@ class ParsedArticle(BaseModel):
 
 
 class BaseArticleFetcher(Protocol):
-    async def fetch_articles(self, source: DueSource) -> list[ParsedArticle]:
-        ...
+    async def fetch_articles(self, source: DueSource) -> list[ParsedArticle]: ...

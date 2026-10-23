@@ -3,7 +3,7 @@
 import argparse
 import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
-from hermes_worker.cli import _run_command, build_parser, main, run_app
+from hermes_worker.cli import build_parser, main, run_app
 from hermes_worker.core.lifespan import db_lifespan
 from hermes_worker.handlers.commands import (
     WorkerCmd,
@@ -165,10 +165,13 @@ def test_run_app_exception():
     asyncio.run(_test())
 
 
-def test_run_command_compat():
-    """Verifies backward compatibility of the _run_command helper function."""
+def test_run_app_lifecycle():
+    """Verifies that run_app coordinates database lifespan and lifecycle transitions."""
 
     async def _test():
+        parser = build_parser()
+        args = parser.parse_args(["run-lifecycle"])
+
         with (
             patch("hermes_worker.core.lifespan.init_db", new_callable=AsyncMock),
             patch("hermes_worker.core.lifespan.close_db", new_callable=AsyncMock),
@@ -178,12 +181,8 @@ def test_run_command_compat():
             ) as mock_life,
         ):
             mock_life.return_value = {"decayed": 1}
-            code = await _run_command("run-lifecycle")
+            code = await run_app(args)
             assert code == 0
-
-        # Invalid command string should return 1.
-        bad_code = await _run_command("non-existent-command")
-        assert bad_code == 1
 
     asyncio.run(_test())
 

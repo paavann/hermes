@@ -1,14 +1,15 @@
-"""Unit tests for hermes_worker.services.ai event extraction, geoparsing, and fallback logic."""
+"""Unit tests for hermes_worker.core.ai event extraction, geoparsing, and fallback logic."""
 
 import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
+from hermes_ai.client import HermesAiClient
 from hermes_ai.models.events import (
     ArticleInput,
     ExtractedEvent,
 )
 from hermes_ai.utils.coercion import coerce_to_str
-from hermes_worker.services.ai import AiService
+from hermes_worker.core.ai import create_ai_client
 
 
 class TestAiHelpers:
@@ -59,34 +60,37 @@ class TestExtractedEventModel:
         assert event.category == "ECONOMY"
 
 
-class TestWorkerAiService:
+class TestWorkerAiClientFactory:
     @pytest.fixture(autouse=True)
-    def mock_ai_settings(self, monkeypatch):
+    def mock_ai_settings(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr("hermes_worker.core.ai.settings.LLM_API", "mock-llm-key")
         monkeypatch.setattr(
-            "hermes_worker.services.ai.settings.LLM_API", "mock-llm-key"
+            "hermes_worker.core.ai.settings.LLM_MODEL", "mistral/mistral-large"
         )
         monkeypatch.setattr(
-            "hermes_worker.services.ai.settings.LLM_MODEL", "mistral/mistral-large"
+            "hermes_worker.core.ai.settings.EMBED_API", "mock-embed-key"
         )
         monkeypatch.setattr(
-            "hermes_worker.services.ai.settings.EMBED_API", "mock-embed-key"
-        )
-        monkeypatch.setattr(
-            "hermes_worker.services.ai.settings.EMBED_MODEL",
+            "hermes_worker.core.ai.settings.EMBED_MODEL",
             "nvidia/nemotron-3-embed-1b",
         )
 
-    def test_get_metadata_empty_input(self):
-        async def run():
-            svc = AiService()
-            res = await svc.get_metadata(articles=[], existing_events=[])
+    def test_create_ai_client_success(self) -> None:
+        client = create_ai_client()
+        assert isinstance(client, HermesAiClient)
+        assert client.router is not None
+
+    def test_extract_events_empty_input(self) -> None:
+        async def run() -> None:
+            client = create_ai_client()
+            res = await client.extract_events(articles=[], existing_events=[])
             assert res == []
 
         asyncio.run(run())
 
-    def test_get_metadata_successful_extraction(self):
-        async def run():
-            svc = AiService()
+    def test_extract_events_successful_extraction(self) -> None:
+        async def run() -> None:
+            client = create_ai_client()
             articles = [
                 ArticleInput(
                     title="Global Oil Prices Rise",
@@ -115,10 +119,12 @@ class TestWorkerAiService:
             ]
 
             with patch.object(
-                svc._router, "acompletion", new_callable=AsyncMock
+                client.router, "acompletion", new_callable=AsyncMock
             ) as mock_complete:
                 mock_complete.return_value = mock_response
-                results = await svc.get_metadata(articles=articles, existing_events=[])
+                results = await client.extract_events(
+                    articles=articles, existing_events=[]
+                )
 
                 assert len(results) == 1
                 assert results[0] is not None
@@ -129,25 +135,27 @@ class TestWorkerAiService:
 
         asyncio.run(run())
 
-    def test_get_metadata_handles_api_failure(self):
-        async def run():
-            svc = AiService()
+    def test_extract_events_handles_api_failure(self) -> None:
+        async def run() -> None:
+            client = create_ai_client()
             articles = [ArticleInput(title="Test Article", content="Test content")]
 
             with patch.object(
-                svc._router, "acompletion", new_callable=AsyncMock
+                client.router, "acompletion", new_callable=AsyncMock
             ) as mock_complete:
                 mock_complete.side_effect = Exception("LLM connection timeout")
-                results = await svc.get_metadata(articles=articles, existing_events=[])
+                results = await client.extract_events(
+                    articles=articles, existing_events=[]
+                )
                 # Should return [None] corresponding to the input article on failure
                 assert results == [None]
 
         asyncio.run(run())
 
-    def test_gen_embeddings_empty_input(self):
-        async def run():
-            svc = AiService()
-            res = await svc.gen_embeddings([])
+    def test_gen_embeddings_empty_input(self) -> None:
+        async def run() -> None:
+            client = create_ai_client()
+            res = await client.gen_embeddings([])
             assert res == []
 
         asyncio.run(run())

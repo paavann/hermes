@@ -67,7 +67,6 @@ class SitemapFetcher(BaseArticleFetcher):
         self._client = client
         self._max_articles = max_articles
 
-
     async def fetch_articles(self, source: DueSource) -> list[ParsedArticle]:
         sitemap_url = source.feed_url
         if not sitemap_url:

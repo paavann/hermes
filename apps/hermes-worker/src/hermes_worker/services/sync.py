@@ -5,6 +5,7 @@ from hermes_ai import (
     ARTICLE_BATCH_SIZE,
     ArticleInput,
     GeocodingService,
+    HermesAiClient,
 )
 from hermes_db.enums import SourceType
 from hermes_db.services import (
@@ -14,7 +15,7 @@ from hermes_db.services import (
     SourceService,
 )
 from hermes_db.session import AsyncSessionLocal
-from hermes_worker.services.ai import AiService
+from hermes_worker.core.ai import create_ai_client
 from hermes_worker.services.fetchers import (
     BaseArticleFetcher,
     GDELTFetcher,
@@ -30,15 +31,15 @@ logger = logging.getLogger(__name__)
 class SyncService:
     def __init__(
         self,
+        ai_client: HermesAiClient | None = None,
         rss_fetcher: BaseArticleFetcher | None = None,
         gdelt_fetcher: BaseArticleFetcher | None = None,
         sitemap_fetcher: BaseArticleFetcher | None = None,
     ) -> None:
-        self._ai = AiService()
+        self._ai = ai_client or create_ai_client()
         self._rss_fetcher = rss_fetcher or RSSFetcher()
         self._gdelt_fetcher = gdelt_fetcher or GDELTFetcher()
         self._sitemap_fetcher = sitemap_fetcher or SitemapFetcher()
-
 
     def _get_fetcher(self, source_type: SourceType) -> BaseArticleFetcher:
         if source_type == SourceType.GDELT:
@@ -46,7 +47,6 @@ class SyncService:
         if source_type == SourceType.SCRAPE:
             return self._sitemap_fetcher
         return self._rss_fetcher
-
 
     async def _sync_source(self, source: DueSource) -> dict[str, int]:
         stats = {
@@ -105,7 +105,7 @@ class SyncService:
                     embeddings
                 )
 
-            extractions = await self._ai.get_metadata(
+            extractions = await self._ai.extract_events(
                 articles=ai_inputs,
                 existing_events=existing_events,
             )
@@ -179,7 +179,6 @@ class SyncService:
             stats["articles_failed"],
         )
         return stats
-
 
     async def sync_all_sources(self, force: bool = False) -> dict[str, int]:
         stats = {
