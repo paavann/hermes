@@ -60,7 +60,7 @@
         "{workspaceRoot}/coverage/{projectRoot}"
       ],
       "options": {
-        "command": "uv run pytest tests/",
+        "command": "uv run pytest",
         "cwd": "{projectRoot}"
       },
       "cache": true
@@ -72,6 +72,13 @@
         "args": "",
         "verbose": false,
         "debug": false
+      }
+    },
+    "makemigrations": {
+      "executor": "@nxlv/python:run-commands",
+      "options": {
+        "command": "uv run alembic revision --autogenerate",
+        "cwd": "{projectRoot}"
       }
     },
     "migrate": {

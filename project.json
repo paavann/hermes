@@ -4,6 +4,17 @@
   "projectType": "application",
   "root": ".",
   "targets": {
+    "install": {
+      "executor": "nx:run-commands",
+      "options": {
+        "commands": [
+          "npm install",
+          "uv sync"
+        ],
+        "parallel": false,
+        "cwd": "."
+      }
+    },
     "sync": {
       "executor": "nx:run-commands",
       "options": {

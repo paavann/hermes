@@ -13,13 +13,13 @@
       "path": "./libs/shared/ui-components"
     },
     {
-      "path": "./libs/shared/utils"
-    },
-    {
       "path": "./libs/shared/util-types"
     },
     {
       "path": "./libs/map"
+    },
+    {
+      "path": "./libs/shared/utils/ts"
     }
   ]
 }

@@ -39,6 +39,7 @@ services:
       - ./libs/shared/hermes-db/migrations:/app/libs/shared/hermes-db/migrations
       - ./libs/shared/hermes-db/alembic.ini:/app/libs/shared/hermes-db/alembic.ini
       - ./libs/shared/hermes-ai/src:/app/libs/shared/hermes-ai/src
+      - ./libs/shared/utils/py/src:/app/libs/shared/utils/py/src
     env_file:
       - .env.development
       - path: ./apps/hermes-api/.env.development
@@ -61,6 +62,7 @@ services:
       - ./libs/shared/hermes-db/migrations:/app/libs/shared/hermes-db/migrations
       - ./libs/shared/hermes-db/alembic.ini:/app/libs/shared/hermes-db/alembic.ini
       - ./libs/shared/hermes-ai/src:/app/libs/shared/hermes-ai/src
+      - ./libs/shared/utils/py/src:/app/libs/shared/utils/py/src
     env_file:
       - .env.development
       - path: ./apps/hermes-worker/.env.development

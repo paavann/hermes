@@ -476,7 +476,9 @@ uv run --project libs/shared/hermes-db alembic current
 uv run --project libs/shared/hermes-db alembic history
 
 # Auto-generate a new migration script based on model changes
-uv run --project libs/shared/hermes-db alembic revision --autogenerate -m "describe_change"
+npx nx run hermes-db:makemigrations -- -m "describe_change"
+# Or directly with uv:
+# uv run --project libs/shared/hermes-db alembic revision --autogenerate -m "describe_change"
 
 # Downgrade one revision
 uv run --project libs/shared/hermes-db alembic downgrade -1

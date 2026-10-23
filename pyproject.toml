@@ -3,7 +3,13 @@ name = "hermes-workspace"
 version = "0.1.0"
 description = "Hermes Monorepo Workspace"
 requires-python = ">=3.14"
-dependencies = [ "hermes-api", "hermes-worker", "hermes-db", "hermes-ai" ]
+dependencies = [
+  "hermes-api",
+  "hermes-worker",
+  "hermes-db",
+  "hermes-ai",
+  "utils-py"
+]
 
 [tool.uv.sources.hermes-api]
 workspace = true
@@ -17,12 +23,16 @@ workspace = true
 [tool.uv.sources.hermes-ai]
 workspace = true
 
+[tool.uv.sources.utils-py]
+workspace = true
+
 [tool.uv.workspace]
 members = [
   "apps/hermes-api",
   "apps/hermes-worker",
   "libs/shared/hermes-ai",
-  "libs/shared/hermes-db"
+  "libs/shared/hermes-db",
+  "libs/shared/utils/py"
 ]
 
 [dependency-groups]
@@ -31,5 +41,6 @@ dev = [
   "pytest>=8.3.4",
   "pytest-sugar>=1.0.0",
   "pytest-cov>=6.0.0",
-  "pytest-html>=4.1.1"
+  "pytest-html>=4.1.1",
+  "autopep8>=2.3.1"
 ]

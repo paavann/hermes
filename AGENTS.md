@@ -47,7 +47,7 @@ All commands run from the workspace root:
 
 ## 5. Boundaries & Environment
 
-- **Production Protection**: Never run migrations, the worker, or any script against a production database or with production API keys. Use `.env.example` to learn variable names; never read `.env` for values beyond the `DB_HOST` check above. Never place secret values in code or commits.
+- **Production Protection**: Never run migrations, the worker, or any script against a production database or with production API keys. Read variable names from `.env.example` only. Before any destructive run, check the target environment with `grep '^DB_HOST=' .env` — never print or read the full file. Never place secret values in code or commits.
 - **Migration History**: Never edit existing migration files in `libs/shared/hermes-db/migrations/versions/`; always create a new migration via the Alembic revision command.
 - **Mandatory Approvals**: Agents must obtain explicit user approval before:
   1. Adding, updating, or removing dependencies in `package.json` or `pyproject.toml`.
@@ -66,4 +66,4 @@ All commands run from the workspace root:
 - **When editing RSS ingestion, Fargate worker, or geocoding (`apps/hermes-worker/` or `libs/shared/hermes-ai/`)**: Read `apps/hermes-worker/AGENTS.md` and `libs/shared/hermes-ai/AGENTS.md`.
 - **When editing database schemas, models, or migrations (`libs/shared/hermes-db/`)**: Read `libs/shared/hermes-db/AGENTS.md`.
 - **When writing Python code (`**/\*.py`)**: Read `.agents/rules/python-standards.md`.
-- **When writing TypeScript code (`**/_.ts`, `\*\*/_.tsx`)**: Read `.agents/rules/ts-standards.md`.
+- **When writing TypeScript code (`**/*.ts`, `**/*.tsx`)**: Read `.agents/rules/ts-standards.md`.
