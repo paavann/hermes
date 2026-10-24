@@ -49,3 +49,16 @@ In `apps/hermes/app/routes/map.tsx`, the map container is wrapped inside a dynam
 The user interface implements a high-density tactical display:
 - **Zero Border Radius**: Border radius utility tokens are reset (`--radius-*: initial;`) in `apps/hermes/styles.css`. Components must not apply `rounded-*` classes.
 - **Design Tokens**: Colors, typography, and HUD borders are defined via theme variables in `apps/hermes/styles.css`. Hardcoded color literals and font family definitions must be avoided in component templates.
+
+## 6. Provider Composition & Data Boundaries
+
+The document shell and root layouts structure providers in a strict hierarchy:
+1. **Document Shell (`app/root.tsx`)**: Initializes `ClerkProvider` for authentication context and configures document-level HTML, metadata, and Tailwind CSS.
+2. **Route Boundaries (`app/routes/map.tsx`)**: Instantiates `QueryClientProvider` (TanStack Query) for server and client state caching.
+3. **Map Configuration Provider (`MapConfigProvider`)**: Injects runtime API configuration (`baseUrl`, `apiVer`, `mapboxToken`) down to `@hermes/map` without coupling library code to Vite or environment globals.
+
+## 7. Production Hosting & Network Topology
+
+- **Vercel Node.js SSR**: Deployed at `hermes-eight-inky.vercel.app`. Route loaders evaluate auth cookies and render initial document HTML on edge/server instances.
+- **Direct API Ingress**: Client-side queries issued via TanStack Query communicate directly with `hermes-api` hosted on Render without intermediate proxy layers. CORS headers returned by the API ensure secure cross-origin communication.
+
