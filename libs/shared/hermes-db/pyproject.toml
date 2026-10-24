@@ -21,7 +21,6 @@ name = "hermes-db"
 version = "1.0.0"
 description = "shared postgis + pgvector database models for hermes."
 requires-python = ">=3.14"
-readme = 'README.md'
 dependencies = [
   "asyncpg>=0.31.0",
   "geoalchemy2>=0.17.1",

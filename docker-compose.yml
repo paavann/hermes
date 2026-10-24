@@ -46,6 +46,8 @@ services:
         required: false
       - path: ./apps/hermes-api/.env.local
         required: false
+    environment:
+      DB_HOST: ${DOCKER_DB_HOST}
     depends_on:
       hermes-db:
         condition: service_healthy
@@ -69,6 +71,8 @@ services:
         required: true
       - path: ./apps/hermes-worker/.env.local
         required: false
+    environment:
+      DB_HOST: ${DOCKER_DB_HOST}
     depends_on:
       hermes-db:
         condition: service_healthy

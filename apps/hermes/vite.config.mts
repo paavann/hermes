@@ -6,7 +6,7 @@ import tailwindcss from "@tailwindcss/vite";
 export default defineConfig(() => ({
   root: import.meta.dirname,
   cacheDir: '../../node_modules/.vite/apps/hermes',
-  envDir: '../../',
+  envDir: import.meta.dirname,
   resolve: {
     tsconfigPaths: true,
   },
