@@ -73,6 +73,13 @@ describe('Landing Page Route', () => {
   }, 15000);
 
   it('handles contact form transmission submission', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async () =>
+      new Response(JSON.stringify({ next: 'https://formspree.io/thanks' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    );
+
     render(<ReactRouterStub />);
 
     const nameInput = screen.getByLabelText(/NAME \*/);

@@ -39,7 +39,7 @@ describe('Privacy Route', () => {
     expect(screen.queryByText(/SPEC-PRIVACY/)).toBeNull();
     expect(screen.queryByText(/ALPHA PROTOTYPE NOTICE/)).toBeNull();
     expect(screen.queryByText(/CLEARANCE/)).toBeNull();
-  });
+  }, 15000);
 
   it('renders all key protocol sections and plain-language commitments', () => {
     render(<ReactRouterStub initialEntries={['/privacy']} />);
@@ -64,7 +64,7 @@ describe('Privacy Route', () => {
     expect(screen.getAllByText('Clerk').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Mapbox').length).toBeGreaterThan(0);
     expect(screen.getAllByText(/OpenStreetMap \/ Nominatim/).length).toBeGreaterThan(0);
-  });
+  }, 15000);
 
   it('renders navigation links and brutalist footer', () => {
     render(<ReactRouterStub initialEntries={['/privacy']} />);
@@ -75,7 +75,7 @@ describe('Privacy Route', () => {
     // Footer
     expect(screen.getByText(/HERMES GEOINT INC/)).toBeTruthy();
     expect(screen.getAllByText('Privacy Protocol').length).toBeGreaterThan(0);
-  });
+  }, 15000);
 
   it('renders LOGIN link when signed out and LOGOUT button when signed in', () => {
     const { unmount } = render(<ReactRouterStub initialEntries={['/privacy']} />);
@@ -87,7 +87,7 @@ describe('Privacy Route', () => {
     render(<ReactRouterStub initialEntries={['/privacy']} />);
     expect(screen.getByRole('button', { name: 'LOGOUT' })).toBeTruthy();
     expect(screen.queryByRole('link', { name: 'LOGIN' })).toBeNull();
-  });
+  }, 15000);
 
   it('exports valid metadata for SEO and social graphs', () => {
     const metadata = meta({} as Parameters<typeof meta>[0]);

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type React from 'react';
+import { useForm, ValidationError } from '@formspree/react';
 import {
   Input,
   Textarea,
@@ -21,7 +22,7 @@ export function SendMessageBtn({
   return (
     <TacticalActionBtn
       label="SEND MESSAGE"
-      loadingLabel="TRANSMITTING MESSAGE..."
+      loadingLabel="SENDING..."
       isSubmitting={isSubmitting}
       disabled={disabled}
       variant="slide"
@@ -45,26 +46,29 @@ export function ContactSection(): React.JSX.Element {
     subject: '',
     message: '',
   });
-  const [status, setStatus] = useState<'idle' | 'submitting' | 'submitted'>('idle');
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [clientError, setClientError] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>): void => {
+  const [state, handleSubmit, reset] = useForm('mqpppqar', {
+    data: {
+      _subject: () =>
+        formData.subject.trim() || `Inquiry from ${formData.name.trim() || 'Visitor'} via Hermes`,
+    },
+  });
+
+  const onSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault();
     if (!formData.name.trim() || !formData.email.trim() || !formData.message.trim()) {
-      setErrorMsg('Name, email, and message are required.');
+      setClientError('Name, email, and message are required.');
       return;
     }
-    setErrorMsg(null);
-    setStatus('submitting');
-    setTimeout(() => {
-      setStatus('submitted');
-    }, 500);
+    setClientError(null);
+    await handleSubmit(e);
   };
 
   const handleReset = (): void => {
     setFormData({ name: '', email: '', subject: '', message: '' });
-    setStatus('idle');
-    setErrorMsg(null);
+    setClientError(null);
+    reset();
   };
 
   return (
@@ -119,19 +123,16 @@ export function ContactSection(): React.JSX.Element {
 
           {/* Right Column: Brutalist Tactical Form */}
           <div className="w-full max-w-lg">
-            {status === 'submitted' ? (
+            {state.succeeded ? (
               <div className="border border-neon-blue/40 bg-neon-blue/5 p-6 md:p-8 space-y-5">
                 <div className="flex items-center gap-2 text-xs uppercase tracking-widest text-neon-blue">
                   <span className="w-2 h-2 bg-neon-blue inline-block animate-pulse" />
-                  <span>200 OK // MESSAGE RECEIVED</span>
+                  <span>MESSAGE RECEIVED</span>
                 </div>
                 <p className="text-sm text-ivory leading-relaxed">
                   Thank you for reaching out! Your message has been received. I'll get back to you shortly at{' '}
                   <strong className="text-neon-blue font-mono">{formData.email}</strong>.
                 </p>
-                <div className="pt-2 text-[10px] text-slate-muted/60 font-mono tracking-widest uppercase">
-                  STATUS // DELIVERED • ENCRYPTED TLS 1.3
-                </div>
                 <div className="pt-4 border-t border-neon-blue/20">
                   <button
                     type="button"
@@ -143,7 +144,17 @@ export function ContactSection(): React.JSX.Element {
                 </div>
               </div>
             ) : (
-              <form onSubmit={handleSubmit} className="space-y-5" noValidate>
+              <form onSubmit={onSubmit} className="space-y-5" noValidate>
+                {/* Honeypot anti-spam field (hidden from human visitors) */}
+                <input
+                  type="text"
+                  name="_gotcha"
+                  tabIndex={-1}
+                  autoComplete="off"
+                  className="hidden"
+                  aria-hidden="true"
+                />
+
                 <div>
                   <Label htmlFor="contact-name">NAME *</Label>
                   <Input
@@ -156,6 +167,12 @@ export function ContactSection(): React.JSX.Element {
                       setFormData((prev) => ({ ...prev, name: e.target.value }))
                     }
                     placeholder="Your name"
+                  />
+                  <ValidationError
+                    prefix="Name"
+                    field="name"
+                    errors={state.errors}
+                    className="text-xs text-rose-400 font-mono tracking-wide mt-1"
                   />
                 </div>
 
@@ -172,6 +189,12 @@ export function ContactSection(): React.JSX.Element {
                     }
                     placeholder="name@example.com"
                   />
+                  <ValidationError
+                    prefix="Email"
+                    field="email"
+                    errors={state.errors}
+                    className="text-xs text-rose-400 font-mono tracking-wide mt-1"
+                  />
                 </div>
 
                 <div>
@@ -185,6 +208,12 @@ export function ContactSection(): React.JSX.Element {
                       setFormData((prev) => ({ ...prev, subject: e.target.value }))
                     }
                     placeholder="e.g. Collaboration, Question, Feedback..."
+                  />
+                  <ValidationError
+                    prefix="Subject"
+                    field="subject"
+                    errors={state.errors}
+                    className="text-xs text-rose-400 font-mono tracking-wide mt-1"
                   />
                 </div>
 
@@ -201,15 +230,26 @@ export function ContactSection(): React.JSX.Element {
                     }
                     placeholder="Write your message here..."
                   />
+                  <ValidationError
+                    prefix="Message"
+                    field="message"
+                    errors={state.errors}
+                    className="text-xs text-rose-400 font-mono tracking-wide mt-1"
+                  />
                 </div>
 
-                {errorMsg && (
+                {clientError && (
                   <div className="text-xs text-rose-400 font-mono tracking-wide text-center">
-                    {errorMsg}
+                    {clientError}
                   </div>
                 )}
 
-                <SendMessageBtn isSubmitting={status === 'submitting'} />
+                <ValidationError
+                  errors={state.errors}
+                  className="text-xs text-rose-400 font-mono tracking-wide text-center"
+                />
+
+                <SendMessageBtn isSubmitting={state.submitting} disabled={state.submitting} />
               </form>
             )}
           </div>
