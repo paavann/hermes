@@ -89,27 +89,42 @@ export function Footer(): React.JSX.Element {
               </div>
               <ul className="space-y-2.5 text-xs text-slate-muted font-mono">
                 <li>
-                  <Link to="/map" className="hover:text-ivory transition-colors">
+                  <Link
+                    to="/map"
+                    className="hover:text-ivory transition-colors"
+                  >
                     Live Map
                   </Link>
                 </li>
                 <li>
-                  <a href="#hero" className="hover:text-ivory transition-colors">
+                  <a
+                    href="/#hero"
+                    className="hover:text-ivory transition-colors"
+                  >
                     Orbital Observability
                   </a>
                 </li>
                 <li>
-                  <a href="#problem" className="hover:text-ivory transition-colors">
+                  <a
+                    href="/#problem"
+                    className="hover:text-ivory transition-colors"
+                  >
                     The Problem
                   </a>
                 </li>
                 <li>
-                  <a href="#capabilities" className="hover:text-ivory transition-colors">
+                  <a
+                    href="/#capabilities"
+                    className="hover:text-ivory transition-colors"
+                  >
                     Capabilities
                   </a>
                 </li>
                 <li>
-                  <Link to="/auth" className="hover:text-ivory transition-colors">
+                  <Link
+                    to="/auth"
+                    className="hover:text-ivory transition-colors"
+                  >
                     Operator Login
                   </Link>
                 </li>
@@ -124,22 +139,34 @@ export function Footer(): React.JSX.Element {
               </div>
               <ul className="space-y-2.5 text-xs text-slate-muted font-mono">
                 <li>
-                  <a href="#capabilities" className="hover:text-ivory transition-colors">
+                  <a
+                    href="/#capabilities"
+                    className="hover:text-ivory transition-colors"
+                  >
                     Geopolitical
                   </a>
                 </li>
                 <li>
-                  <a href="#capabilities" className="hover:text-ivory transition-colors">
+                  <a
+                    href="/#capabilities"
+                    className="hover:text-ivory transition-colors"
+                  >
                     Energy & Trade
                   </a>
                 </li>
                 <li>
-                  <a href="#capabilities" className="hover:text-ivory transition-colors">
+                  <a
+                    href="/#capabilities"
+                    className="hover:text-ivory transition-colors"
+                  >
                     Infrastructure
                   </a>
                 </li>
                 <li>
-                  <a href="#capabilities" className="hover:text-ivory transition-colors">
+                  <a
+                    href="/#capabilities"
+                    className="hover:text-ivory transition-colors"
+                  >
                     Environmental
                   </a>
                 </li>
@@ -169,11 +196,21 @@ export function Footer(): React.JSX.Element {
               </div>
               <ul className="space-y-2.5 text-xs text-slate-muted font-mono">
                 <li>
-                  <a href="#contact" className="hover:text-ivory transition-colors">
+                  <a
+                    href="/#contact"
+                    className="hover:text-ivory transition-colors"
+                  >
                     Contact
                   </a>
                 </li>
-                <li className="text-slate-muted/70">Privacy Protocol</li>
+                <li>
+                  <Link
+                    to="/privacy"
+                    className="hover:text-ivory transition-colors"
+                  >
+                    Privacy Protocol
+                  </Link>
+                </li>
                 <li className="text-slate-muted/70">Air-Gapped Ingestion</li>
                 <li className="text-slate-muted/70">Security Audits</li>
                 <li className="text-slate-muted/70">Terms of Clearance</li>
@@ -183,7 +220,10 @@ export function Footer(): React.JSX.Element {
 
           {/* Sub-row Copyright & Top Jump */}
           <div className="pt-10 mt-12 border-t border-white/5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-xs text-slate-muted/60 font-mono">
-            <div>© {new Date().getFullYear()} HERMES GEOINT INC. ALL RIGHTS RESERVED.</div>
+            <div>
+              © {new Date().getFullYear()} HERMES GEOINT INC. ALL RIGHTS
+              RESERVED.
+            </div>
             <div className="flex items-center gap-4">
               <Link to="/map" className="hover:text-ivory transition-colors">
                 MAP
