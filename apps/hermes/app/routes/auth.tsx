@@ -1,8 +1,8 @@
-import type React from 'react';
-import { Link, redirect } from 'react-router';
-import type { MetaFunction, LoaderFunctionArgs } from 'react-router';
-import { getAuth } from '@clerk/react-router/server';
-import { HermesWordmark, cn } from '@hermes/ui-components';
+import type React from 'react'
+import { Link, redirect } from 'react-router'
+import type { MetaFunction, LoaderFunctionArgs } from 'react-router'
+import { getAuth } from '@clerk/react-router/server'
+import { HermesWordmark, cn } from '@hermes/ui-components'
 import {
   AuthCheckerboardPattern,
   EmailStep,
@@ -10,18 +10,18 @@ import {
   SetupStep,
   SsoCallbackView,
   useAuthWorkflow,
-} from '../components/auth';
+} from '../components/auth'
 
 export async function loader(args: LoaderFunctionArgs) {
-  const { userId } = await getAuth(args);
+  const { userId } = await getAuth(args)
   if (userId) {
-    return redirect('/map');
+    return redirect('/map')
   }
-  return {};
+  return {}
 }
 
 export const meta: MetaFunction = ({ location }) => {
-  const isSso = location?.pathname?.includes('/sso-callback');
+  const isSso = location?.pathname?.includes('/sso-callback')
   return [
     {
       title: isSso
@@ -32,11 +32,11 @@ export const meta: MetaFunction = ({ location }) => {
       name: 'description',
       content: 'Authenticate into the Hermes geospatial intelligence platform.',
     },
-  ];
-};
+  ]
+}
 
 export default function Auth(): React.JSX.Element {
-  const auth = useAuthWorkflow();
+  const auth = useAuthWorkflow()
 
   return (
     <div
@@ -142,5 +142,5 @@ export default function Auth(): React.JSX.Element {
         <AuthCheckerboardPattern />
       </aside>
     </div>
-  );
+  )
 }
