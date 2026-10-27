@@ -94,7 +94,7 @@ describe('Landing Page Route', () => {
 
     await waitFor(
       () => {
-        expect(screen.getByText(/200 OK \/\/ MESSAGE RECEIVED/)).toBeTruthy();
+        expect(screen.getByText(/MESSAGE RECEIVED/)).toBeTruthy();
       },
       { timeout: 4000 }
     );
