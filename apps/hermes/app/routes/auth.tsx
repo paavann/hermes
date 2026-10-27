@@ -1,16 +1,18 @@
-import type React from 'react'
 import { Link, redirect } from 'react-router'
-import type { MetaFunction, LoaderFunctionArgs } from 'react-router'
 import { getAuth } from '@clerk/react-router/server'
+import type React from 'react'
+import type { MetaFunction, LoaderFunctionArgs } from 'react-router'
 import { HermesWordmark, cn } from '@hermes/ui-components'
 import {
   AuthCheckerboardPattern,
-  EmailStep,
-  OtpStep,
-  SetupStep,
+  EmailStep, OtpStep, SetupStep,
   SsoCallbackView,
   useAuthWorkflow,
 } from '../components/auth'
+
+
+
+
 
 export async function loader(args: LoaderFunctionArgs) {
   const { userId } = await getAuth(args)
@@ -68,11 +70,11 @@ export default function Auth(): React.JSX.Element {
 
         <main
           className={cn(
-            'w-full max-w-[390px] mx-auto my-auto flex flex-col items-center',
+            'w-full max-w-97.5 mx-auto my-auto flex flex-col items-center',
             auth.currentMode === 'setup' ? 'py-2 sm:py-4' : 'py-12'
           )}
         >
-          <HermesWordmark className="w-[185px] sm:w-[205px] mb-6 text-[#8F8C7C]" />
+          <HermesWordmark className="w-46.25 sm:w-51.25 mb-6 text-[#8F8C7C]" />
 
           <div ref={auth.modeContainerRef} className="w-full flex flex-col items-center">
             {auth.isSsoCallback ? (
