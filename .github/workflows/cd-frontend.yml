@@ -1,0 +1,79 @@
+name: Deploy Hermes UI to Vercel
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+concurrency:
+  group: cd-hermes-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check-changes:
+    name: check affected frontend paths
+    runs-on: ubuntu-latest
+    outputs:
+      should_deploy: ${{ github.event_name == 'workflow_dispatch' || steps.filter.outputs.frontend == 'true' }}
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: check frontend paths
+        id: filter
+        if: github.event_name != 'workflow_dispatch'
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            frontend:
+              - 'apps/hermes/**'
+              - 'libs/shared/ui-components/**'
+              - 'libs/shared/util-types/**'
+              - 'libs/map/**'
+              - 'package.json'
+              - 'package-lock.json'
+              - '.github/workflows/cd-frontend.yml'
+
+  deploy-to-vercel:
+    name: build and deploy to vercel
+    needs: check-changes
+    if: needs.check-changes.outputs.should_deploy == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@v4
+
+      - name: set up node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: install dependencies
+        run: npm ci
+
+      - name: inject production env
+        run: echo "${{ secrets.HERMES_PROD_ENV }}" > apps/hermes/.env.production
+
+      - name: install vercel cli
+        run: npm install --global vercel@latest
+
+      - name: pull vercel environment
+        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }} --cwd apps/hermes
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+      - name: build project artifacts
+        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }} --cwd apps/hermes
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+      - name: deploy prebuilt artifact to vercel
+        run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }} --cwd apps/hermes
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}

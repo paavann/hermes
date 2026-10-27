@@ -11,7 +11,8 @@
     "lint": "nx run workspace:lint",
     "test": "nx run workspace:test",
     "lint:py": "nx run workspace:lint:py",
-    "test:py": "nx run workspace:test:py"
+    "test:py": "nx run workspace:test:py",
+    "env:push:prod": "gh secret set HERMES_PROD_ENV < apps/hermes/.env.production"
   },
   "private": true,
   "dependencies": {
