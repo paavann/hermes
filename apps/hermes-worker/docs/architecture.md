@@ -18,7 +18,7 @@ flowchart TD
 
     subgraph ComputeLayer ["Serverless Compute (AWS ECS Fargate ap-southeast-2)"]
         ECS["ECS Cluster: hermes-cluster"]
-        Task["hermes-worker Task\n0.25 vCPU • 512 MB RAM • x86 Linux"]
+        Task["hermes-worker Task\n0.25 vCPU • 512 MB RAM • ARM64 (AWS Graviton)"]
         Container["Container: hermes-worker:latest\nuv run hermes-worker run-all (~5–10 min)"]
         Teardown["Container Exits (sys.exit 0/1)\nFargate Deallocates Resources • Zero Idle Spend"]
     end
@@ -46,8 +46,8 @@ flowchart TD
 ### Lifecycle of an Ephemeral Execution
 
 1. **EventBridge Scheduler Fires**: At the scheduled cadence (00:00, 08:00, 16:00 UTC daily), EventBridge issues an `ecs:RunTask` API call to the ECS cluster `hermes-cluster`.
-2. **Dynamic Resource Allocation**: AWS Fargate dynamically provisions 0.25 vCPU and 512 MB of RAM from the shared compute pool. No virtual machine or container remains pre-running or idle between intervals.
-3. **Container Image Pull**: Fargate pulls the production container image (`hermes-worker:latest`) from Amazon ECR.
+2. **Dynamic Resource Allocation**: AWS Fargate dynamically provisions 0.25 vCPU and 512 MB of RAM on **ARM64 (AWS Graviton)** architecture from the shared compute pool. No virtual machine or container remains pre-running or idle between intervals.
+3. **Container Image Pull**: Fargate pulls the production container image (`hermes-worker:latest`, compiled for `linux/arm64`) from Amazon ECR.
 4. **Execution in Isolated Lifespan**: The container initializes, wraps execution in [`db_lifespan()`](file:///home/pavan/proj/hermes/apps/hermes-worker/src/hermes_worker/core/lifespan.py), and runs `hermes-worker run-all`:
    - Lifecycle maintenance: applies score decay and updates status transitions (`ACTIVE` $\rightarrow$ `STALE` $\rightarrow$ `ARCHIVED`).
    - Source synchronization: fetches due feeds, generates embeddings, deduplicates via vector similarity, extracts metadata via LiteLLM, geocodes coordinates, and commits transactions.
@@ -59,13 +59,17 @@ flowchart TD
 - **Memory Leak Protection**: Parsing thousands of arbitrary, third-party RSS XML feeds with native C-extensions (`feedparser`, `libxml`) in Python frequently leads to memory fragmentation and slow leaks across long-lived processes. Terminating the process on completion guarantees complete memory reclamation by the operating system.
 - **Connection Hygiene**: Encapsulating command runs within `db_lifespan()` guarantees that the SQLAlchemy `AsyncEngine` pool initializes on process boot and explicitly calls `engine.dispose()` on process teardown, eliminating dangling socket connections against Neon's PgBouncer pool.
 - **Externalized Reliability**: Cloud schedulers natively manage timeouts, execution intervals, retries, and dead-letter alarms, eliminating in-process threading deadlocks across worker restarts.
-- **Extreme Cost Efficiency**:
-  Running a continuous $24/7$ worker VM or resident container costs $15.00–$45.00/month in idle compute. In contrast, `hermes-worker` runs for ~5–10 minutes per invocation (3 times daily):
+- **Extreme Cost Efficiency (AWS Graviton ARM64)**:
+  Running a continuous $24/7$ worker VM or resident container costs $15.00–$45.00/month in idle compute. In contrast, `hermes-worker` runs for ~5–10 minutes per invocation (3 times daily) on serverless ARM64 Graviton compute:
   $$\text{Monthly Runtime} = 3 \text{ runs/day} \times 10 \text{ min} \times 30 \text{ days} = 900 \text{ minutes} = 15 \text{ hours/month}$$
-  At AWS Fargate Linux rates ($0.04048/vCPU-hour, $0.004445/GB-hour):
-  $$\text{vCPU Cost} = 15 \text{ hrs} \times 0.25 \text{ vCPU} \times \$0.04048 = \$0.15$$
-  $$\text{Memory Cost} = 15 \text{ hrs} \times 0.5 \text{ GB} \times \$0.004445 = \$0.03$$
-  $$\text{Total Compute Cost} \approx \mathbf{\$0.18 / \text{month}}$$
+  At AWS Fargate Linux ARM64 Graviton rates ($0.032384/vCPU-hour, $0.003556/GB-hour — a 20% discount over standard x86):
+  $$\text{vCPU Cost} = 15 \text{ hrs} \times 0.25 \text{ vCPU} \times \$0.032384 \approx \$0.12$$
+  $$\text{Memory Cost} = 15 \text{ hrs} \times 0.5 \text{ GB} \times \$0.003556 \approx \$0.03$$
+  $$\text{Total Compute Cost} \approx \mathbf{\$0.15 / \text{month}}$$
+- **AWS Graviton Architecture Rationale**:
+  - **20% Lower Compute Costs**: AWS Fargate discounts ARM64 tasks by 20% compared to x86_64 across both vCPU and memory dimensions.
+  - **Memory & Async I/O Efficiency**: Graviton's Neoverse cores deliver higher memory bandwidth per vCPU, optimizing high-throughput async network I/O during feed scraping and vector serialization.
+  - **Cross-Architecture CI/CD**: Built via `docker/setup-qemu-action` and `docker/build-push-action` (`platforms: linux/arm64`) in GitHub Actions, ensuring consistent OCI-compliant ARM64 binaries without requiring dedicated ARM build runners.
 
 ---
 
