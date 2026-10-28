@@ -1,17 +1,17 @@
-import { useState, useEffect, useRef } from 'react';
-import gsap from 'gsap';
-import type { CheckerboardLayout, SquareCell } from './types';
+import { useState, useEffect, useRef } from 'react'
+import gsap from 'gsap'
+import type { CheckerboardLayout, SquareCell } from './types'
 
 function computeCheckerboardLayout(width: number, height: number): CheckerboardLayout {
-  const safeWidth = Math.max(width, 240);
-  const safeHeight = Math.max(height, 600);
+  const safeWidth = Math.max(width, 240)
+  const safeHeight = Math.max(height, 600)
 
   // 5-6 columns across the pattern space (5 on narrower panels, 6 on standard/wide desktop)
-  const colCount = safeWidth >= 380 ? 4 : 3;
+  const colCount = safeWidth >= 380 ? 4 : 3
 
   // Distribute integer pixel widths evenly so adjacent corners meet with zero gaps
-  const colLefts: number[] = [];
-  const colWidths: number[] = [];
+  const colLefts: number[] = []
+  const colWidths: number[] = []
   for (let c = 0; c < colCount; c += 1) {
     const left = Math.round((c * safeWidth) / colCount);
     const right = Math.round(((c + 1) * safeWidth) / colCount);
