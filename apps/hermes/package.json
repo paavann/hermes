@@ -2,6 +2,8 @@
   "name": "@hermes/hermes",
   "private": true,
   "type": "module",
-  "scripts": {},
+  "scripts": {
+    "build": "react-router build"
+  },
   "sideEffects": ["*.css"]
 }
