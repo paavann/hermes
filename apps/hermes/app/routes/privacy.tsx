@@ -1,7 +1,7 @@
-import type React from 'react';
-import type { MetaFunction } from 'react-router';
-import { Footer } from '../components/landing';
-import { PrivacyNav, PrivacyPolicyContent } from '../components/privacy';
+import type React from 'react'
+import type { MetaFunction } from 'react-router'
+import { Footer } from '../components/landing'
+import { PrivacyNav, PrivacyPolicyContent } from '../components/privacy'
 
 export const meta: MetaFunction = () => [
   { title: 'Privacy Policy — Hermes Geospatial Intelligence' },
@@ -19,7 +19,7 @@ export const meta: MetaFunction = () => [
     content:
       'Open-source geospatial intelligence privacy commitments and data practices.',
   },
-];
+]
 
 export default function PrivacyRoute(): React.JSX.Element {
   return (
@@ -44,5 +44,5 @@ export default function PrivacyRoute(): React.JSX.Element {
 
       <Footer />
     </div>
-  );
+  )
 }
