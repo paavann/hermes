@@ -1,6 +1,6 @@
-import type React from 'react';
-import { Link } from 'react-router';
-import { HermesWordmark } from '@hermes/ui-components';
+import type React from 'react'
+import { Link } from 'react-router'
+import { HermesWordmark } from '@hermes/ui-components'
 
 export function Footer(): React.JSX.Element {
   return (
@@ -244,5 +244,5 @@ export function Footer(): React.JSX.Element {
         </div>
       </div>
     </footer>
-  );
+  )
 }

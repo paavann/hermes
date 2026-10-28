@@ -346,7 +346,7 @@ export function TlPanel({ map }: { map: mapboxgl.Map | null }) {
                   }}
                 >
                   <div
-                    className={`absolute left-[-5px] top-1 w-[9px] h-[9px] border border-black bg-neon-blue transition-transform shadow-[0_0_10px_rgba(0,240,255,0.4)] ${
+                    className={`absolute -left-1.25 top-1 w-2.25 h-2.25 border border-black bg-neon-blue transition-transform shadow-[0_0_10px_rgba(0,240,255,0.4)] ${
                       activeNodeId === node.id
                         ? 'scale-150'
                         : 'group-hover:scale-125'
@@ -357,7 +357,7 @@ export function TlPanel({ map }: { map: mapboxgl.Map | null }) {
                       {formattedDate}
                     </span>
                     {node.location_name && (
-                      <span className="truncate max-w-[120px] text-gray-500">
+                      <span className="truncate max-w-30 text-gray-500">
                         {node.location_name}
                       </span>
                     )}
