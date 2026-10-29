@@ -77,7 +77,7 @@ export function ContactSection(): React.JSX.Element {
       <span id="access" className="absolute -top-20" aria-hidden="true" />
 
       {/* Left Column (Sticky Sidebar Track aligned with 180px/220px vertical line) */}
-      <div className="hidden md:block absolute top-0 bottom-0 left-0 w-[180px] md:w-[220px] z-30 pointer-events-none mt-5">
+      <div className="hidden md:block absolute top-0 bottom-0 left-0 w-45 md:w-55 z-30 pointer-events-none mt-5">
         <div className="sticky top-24 p-5 md:p-8 pointer-events-auto">
           <h2 className="text-xs uppercase tracking-widest text-ivory flex items-center gap-2">
             <span className="text-neon-blue">■</span>

@@ -34,6 +34,9 @@ export default defineConfig(() => ({
       transformMixedEsModules: true,
     },
   },
+  ssr: {
+    noExternal: ['gsap'],
+  },
   test: {
     name: '@hermes/hermes',
     watch: false,

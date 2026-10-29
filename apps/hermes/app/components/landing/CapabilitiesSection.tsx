@@ -116,7 +116,7 @@ export function CapabilitiesSection(): React.JSX.Element {
   return (
     <section id="capabilities" className="relative w-full border-b border-border-subtle bg-obsidian scroll-mt-16">
       {/* Left Column (Sticky Sidebar Track aligned with 180px/220px vertical line) */}
-      <div className="hidden md:block absolute top-0 bottom-0 left-0 w-[180px] md:w-[220px] z-30 pointer-events-none">
+      <div className="hidden md:block absolute top-0 bottom-0 left-0 w-45 md:w-55 z-30 pointer-events-none">
         <div className="sticky top-24 p-5 md:p-8 pointer-events-auto">
           <h2 className="text-xs uppercase tracking-widest text-ivory flex items-center gap-2">
             <span className="text-neon-blue">■</span>
@@ -137,7 +137,7 @@ export function CapabilitiesSection(): React.JSX.Element {
               cardRefs.current[idx] = el;
             }}
             style={{ zIndex: 10 + idx }}
-            className="sticky top-0 min-h-screen w-full flex flex-col justify-between border-t border-white/[0.06] first:border-t-0 bg-obsidian overflow-hidden"
+            className="sticky top-0 min-h-screen w-full flex flex-col justify-between border-t border-white/6 first:border-t-0 bg-obsidian overflow-hidden"
           >
             {/* Background Media Layer with Dark Gradient Tint & Scroll Parallax */}
             {card.bgImg && (
@@ -154,8 +154,8 @@ export function CapabilitiesSection(): React.JSX.Element {
                   className="w-full h-full object-cover opacity-20 filter grayscale contrast-125"
                   loading="lazy"
                 />
-                <div className="absolute inset-0 bg-gradient-to-r from-obsidian via-obsidian/85 to-obsidian/60" />
-                <div className="absolute inset-0 bg-gradient-to-t from-obsidian via-transparent to-obsidian/50" />
+                <div className="absolute inset-0 bg-linear-to-r from-obsidian via-obsidian/85 to-obsidian/60" />
+                <div className="absolute inset-0 bg-linear-to-t from-obsidian via-transparent to-obsidian/50" />
               </div>
             )}
 
@@ -169,7 +169,7 @@ export function CapabilitiesSection(): React.JSX.Element {
             />
 
             {/* Overlaid Card Content Container (Aligned with 180px/220px vertical line) */}
-            <div className="relative z-10 w-full flex-1 flex flex-col justify-between pl-5 md:pl-[240px] pr-5 md:pr-12 lg:pr-16 pt-6 md:pt-10 pb-8 md:pb-12 max-w-7xl">
+            <div className="relative z-10 w-full flex-1 flex flex-col justify-between pl-5 md:pl-60 pr-5 md:pr-12 lg:pr-16 pt-6 md:pt-10 pb-8 md:pb-12 max-w-7xl">
               {/* Content Header & Body */}
               <div>
                 {/* Mobile Section Header */}
@@ -216,7 +216,7 @@ export function CapabilitiesSection(): React.JSX.Element {
               </div>
 
               {/* Card Footer Telemetry Bar */}
-              <div className="pt-8 mt-8 border-t border-white/[0.06] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-[10px] text-slate-muted/60 font-mono tracking-widest uppercase">
+              <div className="pt-8 mt-8 border-t border-white/6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-[10px] text-slate-muted/60 font-mono tracking-widest uppercase">
                 <div className="flex items-center gap-2">
                   <span className="w-1.5 h-1.5 bg-neon-blue inline-block animate-pulse" />
                   <span>{card.telemetry}</span>
