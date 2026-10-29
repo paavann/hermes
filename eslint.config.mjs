@@ -10,6 +10,7 @@ export default [
       '**/out-tsc',
       '**/build',
       '**/.react-router',
+      '**/.vercel',
       '**/vite.config.*.timestamp*',
       '**/vitest.config.*.timestamp*',
       '**/test-output',

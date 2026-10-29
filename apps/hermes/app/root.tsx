@@ -52,11 +52,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
 export default function App({ loaderData }: AppProps) {
   return (
-    <ClerkProvider
-      loaderData={loaderData}
-      publishableKey={import.meta.env.VITE_CLERK_PUBLISHABLE_KEY}
-      clerkJSUrl="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@6/dist/clerk.browser.js"
-    >
+    <ClerkProvider loaderData={loaderData}>
       <Outlet />
     </ClerkProvider>
   )
