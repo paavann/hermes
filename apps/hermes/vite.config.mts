@@ -37,6 +37,13 @@ export default defineConfig(() => ({
   ssr: {
     noExternal: ['gsap'],
   },
+  environments: {
+    ssr: {
+      resolve: {
+        noExternal: ['gsap'],
+      },
+    },
+  },
   test: {
     name: '@hermes/hermes',
     watch: false,
