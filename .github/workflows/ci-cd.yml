@@ -66,3 +66,10 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     uses: ./.github/workflows/cd-frontend.yml
     secrets: inherit
+
+  deploy-api:
+    name: deploy hermes api
+    needs: validate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    uses: ./.github/workflows/cd-api.yml
+    secrets: inherit

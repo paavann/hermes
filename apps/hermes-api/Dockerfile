@@ -42,4 +42,4 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 WORKDIR /app/apps/hermes-api
 ENV PORT=8000
 EXPOSE 8000
-CMD ["sh", "-c", "uv run alembic -c ../../libs/shared/hermes-db/alembic.ini upgrade head && uv run uvicorn hermes_api.main:app --host 0.0.0.0 --port ${PORT:-8000} --workers 2"]
+CMD ["sh", "-c", "uv run alembic -c ../../libs/shared/hermes-db/alembic.ini upgrade head && uv run uvicorn hermes_api.main:app --host 0.0.0.0 --port ${PORT:-8000} --workers ${WORKERS:-1}"]

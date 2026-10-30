@@ -1,0 +1,131 @@
+name: deploy hermes-api
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+concurrency:
+  group: cd-api-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check-changes:
+    name: check affected api paths
+    runs-on: ubuntu-latest
+    outputs:
+      should_deploy: ${{ github.event_name == 'workflow_dispatch' || steps.filter.outputs.api == 'true' }}
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: detect api changes
+        id: filter
+        if: github.event_name != 'workflow_dispatch'
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            api:
+              - 'apps/hermes-api/**'
+              - 'libs/shared/hermes-db/**'
+              - 'libs/shared/hermes-ai/**'
+              - 'libs/shared/utils/py/**'
+              - 'pyproject.toml'
+              - 'uv.lock'
+              - '.github/workflows/cd-api.yml'
+
+  deploy-lightsail:
+    name: build, push and deploy to lightsail
+    needs: check-changes
+    if: needs.check-changes.outputs.should_deploy == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@v4
+
+      - name: configure aws credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: install lightsailctl plugin
+        run: |
+          echo "Installing lightsailctl..."
+          sudo curl "https://s3.us-west-2.amazonaws.com/lightsailctl/latest/linux-amd64/lightsailctl" -o "/usr/local/bin/lightsailctl"
+          sudo chmod +x /usr/local/bin/lightsailctl
+          lightsailctl --version
+
+      - name: build production docker image
+        run: |
+          docker build \
+            --target production \
+            -t hermes-api:latest \
+            -f apps/hermes-api/Dockerfile .
+
+      - name: push image to lightsail container service
+        id: push-image
+        run: |
+          SERVICE_NAME="hermes-api-service"
+          LABEL="v-${{ github.sha }}"
+
+          echo "pushing image to lightsail service $SERVICE_NAME..."
+          OUTPUT=$(aws lightsail push-container-image \
+            --region ${{ secrets.AWS_REGION }} \
+            --service-name "$SERVICE_NAME" \
+            --label "$LABEL" \
+            --image hermes-api:latest)
+          echo "$OUTPUT"
+
+          IMAGE_TAG=$(echo "$OUTPUT" | grep -oE ':[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+\.[0-9]+' | head -n 1)
+          if [ -z "$IMAGE_TAG" ]; then
+            echo "Error: Failed to parse Lightsail image reference from output."
+            exit 1
+          fi
+          echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_OUTPUT
+
+      - name: deploy revision to lightsail
+        run: |
+          SERVICE_NAME="hermes-api-service"
+          IMAGE_TAG="${{ steps.push-image.outputs.IMAGE_TAG }}"
+
+          echo "fetching current environment configuration from aws lightsail..."
+          CURRENT_ENV=$(aws lightsail get-container-services \
+            --region ${{ secrets.AWS_REGION }} \
+            --service-name "$SERVICE_NAME" \
+            --query 'containerServices[0].currentDeployment.containers."hermes-api".environment' \
+            --output json)
+
+          if [ "$CURRENT_ENV" = "null" ] || [ -z "$CURRENT_ENV" ]; then
+            CURRENT_ENV="{}"
+          fi
+
+          echo "deploying $IMAGE_TAG to $SERVICE_NAME preserving existing environment variables..."
+          aws lightsail create-container-service-deployment \
+            --region ${{ secrets.AWS_REGION }} \
+            --service-name "$SERVICE_NAME" \
+            --containers "{
+              \"hermes-api\": {
+                \"image\": \"$IMAGE_TAG\",
+                \"environment\": $CURRENT_ENV,
+                \"ports\": {
+                  \"8000\": \"HTTP\"
+                }
+              }
+            }" \
+            --public-endpoint "{
+              \"containerName\": \"hermes-api\",
+              \"containerPort\": 8000,
+              \"healthCheck\": {
+                \"path\": \"/\",
+                \"successCodes\": \"200-299\"
+              }
+            }"
+
+          echo "Deployment initiated successfully!"
