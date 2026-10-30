@@ -53,7 +53,32 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
+          aws-region: ap-southeast-2
+
+      - name: inspect aws region secret
+        env:
+          REGION_SECRET: ${{ secrets.AWS_REGION }}
+          REGION_VAR: ${{ vars.AWS_REGION }}
+        run: |
+          echo "=== Debugging AWS_REGION configuration ==="
+          if [ -z "$REGION_SECRET" ]; then
+            echo "secrets.AWS_REGION is EMPTY or NOT CONFIGURED in repository secrets."
+          else
+            echo "Length of secrets.AWS_REGION: ${#REGION_SECRET} characters"
+            # GitHub automatically masks exact secrets as '***'.
+            # We space characters and print base64 so you can clearly see the value:
+            echo -n "secrets.AWS_REGION (spaced): "
+            echo "$REGION_SECRET" | sed 's/./& /g'
+            echo -n "secrets.AWS_REGION (base64): "
+            echo -n "$REGION_SECRET" | base64
+          fi
+
+          if [ -n "$REGION_VAR" ]; then
+            echo "vars.AWS_REGION is: $REGION_VAR"
+          else
+            echo "vars.AWS_REGION is not set."
+          fi
+          echo "=========================================="
 
       - name: install lightsailctl plugin
         run: |
@@ -72,12 +97,12 @@ jobs:
       - name: push image to lightsail container service
         id: push-image
         run: |
-          SERVICE_NAME="hermes-api-service"
+          SERVICE_NAME="hermes-api"
           LABEL="v-${{ github.sha }}"
 
-          echo "pushing image to lightsail service $SERVICE_NAME..."
+          echo "pushing image to lightsail service $SERVICE_NAME in ap-southeast-2..."
           OUTPUT=$(aws lightsail push-container-image \
-            --region ${{ secrets.AWS_REGION }} \
+            --region ap-southeast-2 \
             --service-name "$SERVICE_NAME" \
             --label "$LABEL" \
             --image hermes-api:latest)
@@ -92,23 +117,39 @@ jobs:
 
       - name: deploy revision to lightsail
         run: |
-          SERVICE_NAME="hermes-api-service"
+          SERVICE_NAME="hermes-api"
           IMAGE_TAG="${{ steps.push-image.outputs.IMAGE_TAG }}"
 
-          echo "fetching current environment configuration from aws lightsail..."
+          echo "fetching environment configuration from aws lightsail in ap-southeast-2..."
+          # First try to query the active currentDeployment
           CURRENT_ENV=$(aws lightsail get-container-services \
-            --region ${{ secrets.AWS_REGION }} \
+            --region ap-southeast-2 \
             --service-name "$SERVICE_NAME" \
-            --query 'containerServices[0].currentDeployment.containers."hermes-api".environment' \
-            --output json)
+            --query 'containerServices[0].currentDeployment.containers.*.environment | [0]' \
+            --output json 2>/dev/null || echo "null")
+
+          # If there is no active deployment (e.g. initial setup or failed deployment),
+          # query the latest deployment specification from deployment history:
+          if [ "$CURRENT_ENV" = "null" ] || [ -z "$CURRENT_ENV" ]; then
+            echo "No active currentDeployment found. Querying most recent deployment history..."
+            CURRENT_ENV=$(aws lightsail get-container-service-deployments \
+              --region ap-southeast-2 \
+              --service-name "$SERVICE_NAME" \
+              --query 'deployments[0].containers.*.environment | [0]' \
+              --output json 2>/dev/null || echo "{}")
+          fi
 
           if [ "$CURRENT_ENV" = "null" ] || [ -z "$CURRENT_ENV" ]; then
             CURRENT_ENV="{}"
           fi
 
+          # Log detected keys safely without exposing values:
+          ENV_KEYS=$(echo "$CURRENT_ENV" | jq -r 'keys | join(", ")' 2>/dev/null || echo "none")
+          echo "Preserving environment keys: [$ENV_KEYS]"
+
           echo "deploying $IMAGE_TAG to $SERVICE_NAME preserving existing environment variables..."
           aws lightsail create-container-service-deployment \
-            --region ${{ secrets.AWS_REGION }} \
+            --region ap-southeast-2 \
             --service-name "$SERVICE_NAME" \
             --containers "{
               \"hermes-api\": {

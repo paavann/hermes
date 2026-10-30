@@ -124,7 +124,7 @@ sequenceDiagram
 
 ## 4. Cloud Infrastructure & Production Hosting (Amazon Lightsail)
 
-`hermes-api` is deployed as a managed container service on **Amazon Lightsail Container Services** (`hermes-api-service`).
+`hermes-api` is deployed as a managed container service on **Amazon Lightsail Container Services** (`hermes-api`).
 
 ```mermaid
 flowchart TD
