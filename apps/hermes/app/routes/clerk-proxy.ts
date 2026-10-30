@@ -39,11 +39,23 @@ async function handleClerkProxy(request: Request): Promise<Response> {
   const hasBody = request.method !== 'GET' && request.method !== 'HEAD'
   const body = hasBody ? await request.arrayBuffer() : undefined
 
-  return fetch(targetUrl, {
+  const response = await fetch(targetUrl, {
     method: request.method,
     headers,
     body,
     redirect: 'manual',
+  })
+
+  const responseHeaders = new Headers(response.headers)
+  if (response.headers.get('content-encoding')) {
+    responseHeaders.delete('content-encoding')
+    responseHeaders.delete('content-length')
+  }
+
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers: responseHeaders,
   })
 }
 

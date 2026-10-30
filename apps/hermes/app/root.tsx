@@ -15,8 +15,25 @@ interface AppProps {
 }
 
 
-export const middleware: MiddlewareFunction<Response>[] = [clerkMiddleware()]
-export const loader = (args: LoaderFunctionArgs) => rootAuthLoader(args)
+const clerkAuthMiddleware = clerkMiddleware()
+
+export const middleware: MiddlewareFunction<Response>[] = [
+  async (args, next) => {
+    const url = new URL(args.request.url)
+    if (url.pathname.startsWith('/__clerk')) {
+      return next()
+    }
+    return clerkAuthMiddleware(args, next)
+  },
+]
+
+export const loader = (args: LoaderFunctionArgs) => {
+  const url = new URL(args.request.url)
+  if (url.pathname.startsWith('/__clerk')) {
+    return null
+  }
+  return rootAuthLoader(args)
+}
 
 export const meta: MetaFunction = () => [
   { title: 'Hermes — Geospatial Intelligence' },
