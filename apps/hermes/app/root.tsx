@@ -52,7 +52,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
 export default function App({ loaderData }: AppProps) {
   return (
-    <ClerkProvider loaderData={loaderData}>
+    <ClerkProvider
+      loaderData={loaderData}
+      proxyUrl={import.meta.env.VITE_CLERK_PROXY_URL || undefined}
+    >
       <Outlet />
     </ClerkProvider>
   )

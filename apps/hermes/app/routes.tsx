@@ -5,4 +5,5 @@ export default [
   route('map', './routes/map.tsx'),
   route('auth/*', './routes/auth.tsx'),
   route('privacy', './routes/privacy.tsx'),
+  route('__clerk/*', './routes/clerk-proxy.ts'),
 ] satisfies RouteConfig
