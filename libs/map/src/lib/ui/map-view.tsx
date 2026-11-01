@@ -141,7 +141,9 @@ export function MapView() {
       updateBounds();
       map.current?.addSource('events-source', {
         type: 'geojson',
-        data: { type: 'FeatureCollection', features: [] },
+        data: events
+          ? createGeoJson(events)
+          : { type: 'FeatureCollection', features: [] },
         cluster: true,
         clusterMaxZoom: 14,
         clusterRadius: 50,
@@ -203,13 +205,23 @@ export function MapView() {
   }, [setViewport, setSelectedId, config.mapboxToken]);
 
   useEffect(() => {
-    if (!map.current || !map.current.isStyleLoaded()) return;
-    const source = map.current.getSource(
-      'events-source',
-    ) as mapboxgl.GeoJSONSource;
-    if (source && events) {
-      const geojsonData = createGeoJson(events);
-      source.setData(geojsonData);
+    if (!map.current) return;
+
+    const updateSource = () => {
+      const source = map.current?.getSource(
+        'events-source',
+      ) as mapboxgl.GeoJSONSource;
+      if (source && events) {
+        const geojsonData = createGeoJson(events);
+        source.setData(geojsonData);
+      }
+    };
+
+    if (map.current.isStyleLoaded()) {
+      updateSource();
+    } else {
+      map.current.once('load', updateSource);
+      map.current.once('style.load', updateSource);
     }
   }, [events]);
 
