@@ -2,7 +2,7 @@ FROM node:22-alpine AS base
 
 WORKDIR /app
 
-COPY package.json package-lock.json nx.json tsconfig.base.json ./
+COPY .npmrc package.json package-lock.json nx.json tsconfig.base.json eslint.config.mjs ./
 COPY apps/hermes/package.json ./apps/hermes/
 COPY apps/hermes-e2e/package.json ./apps/hermes-e2e/
 COPY libs/map/package.json ./libs/map/

@@ -90,11 +90,10 @@ services:
       - ./apps/hermes/styles.css:/app/apps/hermes/styles.css
       - ./apps/hermes/public:/app/apps/hermes/public
       - ./libs:/app/libs
+      - ./eslint.config.mjs:/app/eslint.config.mjs:ro
     env_file:
       - .env.development
       - path: ./apps/hermes/.env.development
-        required: false
-      - path: ./apps/hermes/.env.local
         required: false
     environment:
       HOST: 0.0.0.0

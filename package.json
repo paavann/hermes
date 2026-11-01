@@ -12,7 +12,6 @@
     "test": "nx run workspace:test",
     "lint:py": "nx run workspace:lint:py",
     "test:py": "nx run workspace:test:py",
-    "env:push:prod": "gh secret set HERMES_PROD_ENV < apps/hermes/.env.production",
     "env:push:ui": "gh secret set HERMES_PROD_ENV < apps/hermes/.env.production",
     "env:push:api": "(cat .env.production; echo \"\"; cat apps/hermes-api/.env.production; echo \"\") | gh secret set HERMES_API_PROD_ENV"
   },
@@ -100,9 +99,9 @@
     "brace-expansion": "^5.0.9",
     "uuid": "^11.1.1",
     "qs": "^6.15.4",
-    "typescript": "$typescript",
+    "typescript": "~6.0.3",
     "smol-toml": "^1.9.0",
-    "axios": "$axios",
+    "axios": "^1.20.0",
     "follow-redirects": "^1.16.2",
     "body-parser": "^2.4.0",
     "fast-uri": "^3.1.9"
