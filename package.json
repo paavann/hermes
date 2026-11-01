@@ -13,7 +13,7 @@
     "lint:py": "nx run workspace:lint:py",
     "test:py": "nx run workspace:test:py",
     "env:push:prod": "gh secret set HERMES_PROD_ENV < apps/hermes/.env.production",
-    "env:push:api": "cat .env.production apps/hermes-api/.env.production | gh secret set HERMES_API_PROD_ENV"
+    "env:push:api": "(cat .env.production; echo \"\"; cat apps/hermes-api/.env.production; echo \"\") | gh secret set HERMES_API_PROD_ENV"
   },
   "private": true,
   "dependencies": {
