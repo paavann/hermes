@@ -116,50 +116,90 @@ jobs:
           echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_OUTPUT
 
       - name: deploy revision to lightsail
+        env:
+          SERVICE_NAME: hermes-api
+          IMAGE_TAG: ${{ steps.push-image.outputs.IMAGE_TAG }}
+          PROD_ENV_SECRET: ${{ secrets.HERMES_API_PROD_ENV }}
         run: |
-          SERVICE_NAME="hermes-api"
-          IMAGE_TAG="${{ steps.push-image.outputs.IMAGE_TAG }}"
+          echo "preparing deployment specification for $SERVICE_NAME..."
 
-          echo "fetching environment configuration from aws lightsail in ap-southeast-2..."
-          # First try to query the active currentDeployment
-          CURRENT_ENV=$(aws lightsail get-container-services \
-            --region ap-southeast-2 \
-            --service-name "$SERVICE_NAME" \
-            --query 'containerServices[0].currentDeployment.containers.*.environment | [0]' \
-            --output json 2>/dev/null || echo "null")
+          # Generate containers.json with sanitized environment variables
+          python3 -c "
+          import os, json, subprocess
 
-          # If there is no active deployment (e.g. initial setup or failed deployment),
-          # query the latest deployment specification from deployment history:
-          if [ "$CURRENT_ENV" = "null" ] || [ -z "$CURRENT_ENV" ]; then
-            echo "No active currentDeployment found. Querying most recent deployment history..."
-            CURRENT_ENV=$(aws lightsail get-container-service-deployments \
-              --region ap-southeast-2 \
-              --service-name "$SERVICE_NAME" \
-              --query 'deployments[0].containers.*.environment | [0]' \
-              --output json 2>/dev/null || echo "{}")
-          fi
+          raw_secret = os.environ.get('PROD_ENV_SECRET', '').strip()
+          image_tag = os.environ['IMAGE_TAG']
+          service_name = os.environ['SERVICE_NAME']
+          env_dict = {}
 
-          if [ "$CURRENT_ENV" = "null" ] || [ -z "$CURRENT_ENV" ]; then
-            CURRENT_ENV="{}"
-          fi
+          if raw_secret:
+              print('Loading environment variables from HERMES_API_PROD_ENV secret...')
+              for line in raw_secret.splitlines():
+                  line = line.strip()
+                  if not line or line.startswith('#'):
+                      continue
+                  if '=' in line:
+                      k, v = line.split('=', 1)
+                      k, v = k.strip(), v.strip()
+                      # Remove wrapping single or double quotes
+                      if (v.startswith('\"') and v.endswith('\"')) or (v.startswith('\'') and v.endswith('\'')):
+                          v = v[1:-1]
+                      env_dict[k] = v
+          else:
+              print('HERMES_API_PROD_ENV secret is empty; falling back to existing Lightsail configuration...')
+              cmd = [
+                  'aws', 'lightsail', 'get-container-services',
+                  '--region', 'ap-southeast-2',
+                  '--service-name', service_name,
+                  '--query', 'containerServices[0].currentDeployment.containers.*.environment | [0]',
+                  '--output', 'json'
+              ]
+              res = subprocess.run(cmd, capture_output=True, text=True)
+              try:
+                  parsed = json.loads(res.stdout) if res.stdout.strip() else {}
+                  if isinstance(parsed, dict):
+                      env_dict = parsed
+              except Exception:
+                  pass
 
-          # Log detected keys safely without exposing values:
-          ENV_KEYS=$(echo "$CURRENT_ENV" | jq -r 'keys | join(", ")' 2>/dev/null || echo "none")
-          echo "Preserving environment keys: [$ENV_KEYS]"
+              if not env_dict:
+                  print('No active deployment environment found; checking deployment history...')
+                  hist_cmd = [
+                      'aws', 'lightsail', 'get-container-service-deployments',
+                      '--region', 'ap-southeast-2',
+                      '--service-name', service_name,
+                      '--query', 'deployments[0].containers.*.environment | [0]',
+                      '--output', 'json'
+                  ]
+                  hist_res = subprocess.run(hist_cmd, capture_output=True, text=True)
+                  try:
+                      hist_parsed = json.loads(hist_res.stdout) if hist_res.stdout.strip() else {}
+                      if isinstance(hist_parsed, dict):
+                          env_dict = hist_parsed
+                  except Exception:
+                      pass
 
-          echo "deploying $IMAGE_TAG to $SERVICE_NAME preserving existing environment variables..."
+          print(f'Preserving environment keys: {sorted(list(env_dict.keys()))}')
+
+          containers_payload = {
+              'hermes-api': {
+                  'image': image_tag,
+                  'environment': env_dict,
+                  'ports': {
+                      '8000': 'HTTP'
+                  }
+              }
+          }
+
+          with open('containers.json', 'w') as f:
+              json.dump(containers_payload, f, indent=2)
+          "
+
+          echo "deploying $IMAGE_TAG to $SERVICE_NAME using containers.json..."
           aws lightsail create-container-service-deployment \
             --region ap-southeast-2 \
             --service-name "$SERVICE_NAME" \
-            --containers "{
-              \"hermes-api\": {
-                \"image\": \"$IMAGE_TAG\",
-                \"environment\": $CURRENT_ENV,
-                \"ports\": {
-                  \"8000\": \"HTTP\"
-                }
-              }
-            }" \
+            --containers file://containers.json \
             --public-endpoint "{
               \"containerName\": \"hermes-api\",
               \"containerPort\": 8000,

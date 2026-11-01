@@ -31,6 +31,7 @@ CMD ["sh", "-c", "uv run alembic -c ../../libs/shared/hermes-db/alembic.ini upgr
 # production target (--no-dev, precompiled bytecode, production worker pool).
 FROM base AS production
 ENV UV_COMPILE_BYTECODE=1
+ENV PATH="/app/.venv/bin:$PATH"
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --package hermes-api --frozen --no-dev --no-install-workspace
 COPY libs/shared/hermes-db ./libs/shared/hermes-db
@@ -42,4 +43,4 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 WORKDIR /app/apps/hermes-api
 ENV PORT=8000
 EXPOSE 8000
-CMD ["sh", "-c", "uv run alembic -c ../../libs/shared/hermes-db/alembic.ini upgrade head && uv run uvicorn hermes_api.main:app --host 0.0.0.0 --port ${PORT:-8000} --workers ${WORKERS:-1}"]
+CMD ["sh", "-c", "alembic -c ../../libs/shared/hermes-db/alembic.ini upgrade head && uvicorn hermes_api.main:app --host 0.0.0.0 --port ${PORT:-8000} --workers ${WORKERS:-1}"]
