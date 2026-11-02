@@ -33,10 +33,6 @@ class HermesAi:
         return self._llm.router
 
     @property
-    def _router(self) -> Router:
-        return self._llm.router
-
-    @property
     def rate_limiter(self) -> TbRateLimiter | None:
         return self._llm.rate_limiter
 

@@ -90,7 +90,7 @@ def test_client_rate_limiter_wiring() -> None:
                     )
                 )
             ]
-            client._router.acompletion = AsyncMock(return_value=mock_res)
+            client.router.acompletion = AsyncMock(return_value=mock_res)
             articles = [ArticleInput(title="T", content="C")]
             await client.extract_events(articles)
             assert mock_acquire.called

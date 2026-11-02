@@ -231,7 +231,7 @@ def test_autonomous_grounding_in_event_extractor() -> None:
         )
         mock_msg = AsyncMock(content=json_content)
         mock_res = AsyncMock(choices=[AsyncMock(message=mock_msg)])
-        client._router.acompletion = AsyncMock(return_value=mock_res)
+        client.router.acompletion = AsyncMock(return_value=mock_res)
 
         with patch.object(
             geo_service,
@@ -267,7 +267,7 @@ def test_autonomous_grounding_in_tl_extractor() -> None:
         )
         mock_msg = AsyncMock(content=tl_json)
         mock_res = AsyncMock(choices=[AsyncMock(message=mock_msg)])
-        client._router.acompletion = AsyncMock(return_value=mock_res)
+        client.router.acompletion = AsyncMock(return_value=mock_res)
 
         with patch.object(
             geo_service,
