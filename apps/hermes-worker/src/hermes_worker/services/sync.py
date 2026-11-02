@@ -5,7 +5,7 @@ from hermes_ai import (
     ARTICLE_BATCH_SIZE,
     ArticleInput,
     GeocodingService,
-    HermesAiClient,
+    HermesAi,
 )
 from hermes_db.enums import SourceType
 from hermes_db.services import (
@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 class SyncService:
     def __init__(
         self,
-        ai_client: HermesAiClient | None = None,
+        ai_client: HermesAi | None = None,
         rss_fetcher: BaseArticleFetcher | None = None,
         gdelt_fetcher: BaseArticleFetcher | None = None,
         sitemap_fetcher: BaseArticleFetcher | None = None,

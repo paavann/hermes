@@ -3,7 +3,7 @@
 import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
-from hermes_ai.client import HermesAiClient
+from hermes_ai.client import HermesAi
 from hermes_ai.models.events import (
     ArticleInput,
     ExtractedEvent,
@@ -77,7 +77,7 @@ class TestWorkerAiClientFactory:
 
     def test_create_ai_client_success(self) -> None:
         client = create_ai_client()
-        assert isinstance(client, HermesAiClient)
+        assert isinstance(client, HermesAi)
         assert client.router is not None
 
     def test_extract_events_empty_input(self) -> None:

@@ -2,7 +2,7 @@ import asyncio
 import time
 from unittest.mock import AsyncMock, patch
 
-from hermes_ai.client import HermesAiClient
+from hermes_ai.client import HermesAi
 from hermes_ai.core.config import AiConfig
 from hermes_ai.models.events import ArticleInput
 from hermes_ai.utils.rate_limiter import (
@@ -60,7 +60,7 @@ def test_client_rate_limiter_wiring() -> None:
             primary_model="mistral/mistral-large",
             primary_api_key="key",
         )
-        client_no_limits = HermesAiClient(config_no_limits)
+        client_no_limits = HermesAi(config_no_limits)
         assert client_no_limits.rate_limiter is None
         assert client_no_limits.embed_rate_limiter is None
 
@@ -72,7 +72,7 @@ def test_client_rate_limiter_wiring() -> None:
             rpm_limit=120,
             embed_rpm_limit=240,
         )
-        client = HermesAiClient(config_with_limits)
+        client = HermesAi(config_with_limits)
         assert client.rate_limiter is not None
         assert client.rate_limiter.req_per_min == 120
         assert client.embed_rate_limiter is not None

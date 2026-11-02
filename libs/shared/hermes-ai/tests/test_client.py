@@ -1,11 +1,11 @@
-"""Unit tests for HermesAiClient and domain extractors."""
+"""Unit tests for HermesAi and domain extractors."""
 
 import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from hermes_ai.client import HermesAiClient
+from hermes_ai.client import HermesAi
 from hermes_ai.core.config import AiConfig
 from hermes_ai.models.events import ArticleInput, ExtractedEvent
 from hermes_ai.models.tl import (
@@ -32,11 +32,11 @@ def test_init_raises_without_primary_credentials() -> None:
     with pytest.raises(
         ValueError, match="primary_api_key and primary_model are required"
     ):
-        HermesAiClient(AiConfig(primary_model="", primary_api_key=""))
+        HermesAi(AiConfig(primary_model="", primary_api_key=""))
 
 
 def test_init_succeeds_with_primary_only() -> None:
-    client = HermesAiClient(
+    client = HermesAi(
         AiConfig(primary_model="mistral/mistral-large", primary_api_key="key")
     )
     assert client.router is not None
@@ -44,7 +44,7 @@ def test_init_succeeds_with_primary_only() -> None:
 
 @patch("litellm.Router.acompletion")
 def test_call_llm_success(mock_acompletion: AsyncMock, base_config: AiConfig) -> None:
-    client = HermesAiClient(base_config)
+    client = HermesAi(base_config)
     mock_res = MagicMock()
     mock_res.choices = [
         MagicMock(
@@ -72,7 +72,7 @@ def test_call_llm_success(mock_acompletion: AsyncMock, base_config: AiConfig) ->
 def test_extract_events_success(
     mock_acompletion: AsyncMock, base_config: AiConfig
 ) -> None:
-    client = HermesAiClient(base_config)
+    client = HermesAi(base_config)
     event = ExtractedEvent(
         article_index=0,
         has_location=True,
@@ -101,7 +101,7 @@ def test_extract_events_success(
 
 @patch("litellm.Router.acompletion")
 def test_extract_tl_success(mock_acompletion: AsyncMock, base_config: AiConfig) -> None:
-    client = HermesAiClient(base_config)
+    client = HermesAi(base_config)
     tl = TlExtractionResponse(
         tl_summary="Historical arc",
         nodes=[
@@ -133,7 +133,7 @@ def test_extract_tl_success(mock_acompletion: AsyncMock, base_config: AiConfig) 
 def test_gen_embeddings_success(
     mock_aembedding: AsyncMock, base_config: AiConfig
 ) -> None:
-    client = HermesAiClient(base_config)
+    client = HermesAi(base_config)
     mock_res = MagicMock()
     mock_res.data = [{"embedding": [0.1, 0.2, 0.3]}]
     mock_aembedding.return_value = mock_res
@@ -144,7 +144,7 @@ def test_gen_embeddings_success(
 
 
 def test_gen_embeddings_empty_list(base_config: AiConfig) -> None:
-    client = HermesAiClient(base_config)
+    client = HermesAi(base_config)
     assert asyncio.run(client.gen_embeddings([])) == []
 
 
@@ -152,7 +152,7 @@ def test_gen_embeddings_empty_list(base_config: AiConfig) -> None:
 def test_call_llm_fallback_on_validation_failure(
     mock_acompletion: AsyncMock, base_config: AiConfig
 ) -> None:
-    client = HermesAiClient(base_config)
+    client = HermesAi(base_config)
 
     # Primary returns invalid json, fallback returns valid
     bad_res = MagicMock()

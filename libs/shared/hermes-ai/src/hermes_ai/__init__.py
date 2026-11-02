@@ -1,4 +1,4 @@
-from hermes_ai.client import HermesAiClient
+from hermes_ai.client import HermesAi
 from hermes_ai.core.config import AiConfig
 from hermes_ai.core.constants import (
     ARTICLE_BATCH_SIZE,
@@ -51,7 +51,7 @@ __all__ = [
     "GeocodeCacheProtocol",
     "GeocodingResult",
     "GeocodingService",
-    "HermesAiClient",
+    "HermesAi",
     "LlmService",
     "NominatimResilienceManager",
     "PREDEFINED_CATEGORIES",

@@ -3,7 +3,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
 
-from hermes_ai.client import HermesAiClient
+from hermes_ai.client import HermesAi
 from hermes_ai.core.config import AiConfig
 from hermes_ai.models.events import ArticleInput, GroundedEvent
 from hermes_ai.models.tl import GroundedTlNode
@@ -220,7 +220,7 @@ def test_autonomous_grounding_in_event_extractor() -> None:
             primary_model="mistral/mistral-large",
             primary_api_key="key",
         )
-        client = HermesAiClient(config)
+        client = HermesAi(config)
         geo_service = GeocodingService()
 
         # Mock LLM response with location
@@ -257,7 +257,7 @@ def test_autonomous_grounding_in_tl_extractor() -> None:
             primary_model="mistral/mistral-large",
             primary_api_key="key",
         )
-        client = HermesAiClient(config)
+        client = HermesAi(config)
         geo_service = GeocodingService()
 
         tl_json = (

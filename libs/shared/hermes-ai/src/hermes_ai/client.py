@@ -16,13 +16,13 @@ from hermes_ai.utils.rate_limiter import TbRateLimiter
 logger = logging.getLogger(__name__)
 
 
-class HermesAiClient:
+class HermesAi:
     def __init__(self, config: AiConfig) -> None:
         self._config = config
         self._llm = LlmService(config)
         self._events_extractor = EventExtractor(self)
         self._tl_extractor = TlExtractor(self)
-        logger.info("hermes ai client initialized.")
+        logger.info("hermes ai configured.")
 
     @property
     def llm(self) -> LlmService:

@@ -18,7 +18,7 @@ from hermes_ai.utils.prompts import ARTICLE_SYSTEM_PROMPT
 
 
 if TYPE_CHECKING:
-    from hermes_ai.client import HermesAiClient
+    from hermes_ai.client import HermesAi
 
 logger = logging.getLogger(__name__)
 
@@ -83,7 +83,7 @@ def _reidx_results[T, V](
 
 
 class EventExtractor:
-    def __init__(self, client: HermesAiClient) -> None:
+    def __init__(self, client: HermesAi) -> None:
         self._client = client
 
     async def extract_events(

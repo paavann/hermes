@@ -1,7 +1,7 @@
 import logging
 from hermes_ai import (
     AiConfig,
-    HermesAiClient,
+    HermesAi,
     TlEdgeExtraction,
     TlExtractionResponse,
     TlNodeExtraction,
@@ -25,7 +25,7 @@ class AiService:
             logger.error("primary llm api key or model is missing.")
             raise ValueError("LLM_API or LLM_MODEL is missing.")
 
-        self._client = HermesAiClient(
+        self._client = HermesAi(
             AiConfig(
                 primary_model=settings.LLM_MODEL,
                 primary_api_key=settings.LLM_API,
@@ -45,7 +45,7 @@ class AiService:
         )
 
     @property
-    def client(self) -> HermesAiClient:
+    def client(self) -> HermesAi:
         return self._client
 
     @property

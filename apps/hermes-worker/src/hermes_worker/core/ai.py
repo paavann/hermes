@@ -1,8 +1,8 @@
-from hermes_ai import AiConfig, HermesAiClient
+from hermes_ai import AiConfig, HermesAi
 from hermes_worker.core.config import settings
 
 
-def create_ai_client() -> HermesAiClient:
+def create_ai_client() -> HermesAi:
     config = AiConfig(
         primary_model=settings.LLM_MODEL,
         primary_api_key=settings.LLM_API,
@@ -16,5 +16,5 @@ def create_ai_client() -> HermesAiClient:
         rpm_limit=settings.RPM_LIMIT,
         embed_rpm_limit=settings.EMBED_RPM_LIMIT,
     )
-    client = HermesAiClient(config)
+    client = HermesAi(config)
     return client
