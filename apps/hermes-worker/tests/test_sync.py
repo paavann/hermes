@@ -30,8 +30,8 @@ class TestSyncService:
     def mock_ai_client(self) -> Generator[MagicMock]:
         with patch("hermes_worker.services.sync.create_ai_client") as mock_factory:
             mock_inst = MagicMock()
-            mock_inst.gen_embeddings = AsyncMock(return_value=[[0.1] * 2048])
-            mock_inst.extract_events = AsyncMock(return_value=[])
+            mock_inst.llm.gen_embeddings = AsyncMock(return_value=[[0.1] * 2048])
+            mock_inst.events.extract = AsyncMock(return_value=[])
             mock_factory.return_value = mock_inst
             yield mock_inst
 
@@ -150,8 +150,10 @@ class TestSyncService:
                 mock_evt.get_active_events_by_embeddings = AsyncMock(return_value=[])
                 mock_evt.create_event_with_article = AsyncMock()
 
-                mock_ai_client.gen_embeddings = AsyncMock(return_value=[[0.1] * 2048])
-                mock_ai_client.extract_events = AsyncMock(return_value=[extraction])
+                mock_ai_client.llm.gen_embeddings = AsyncMock(
+                    return_value=[[0.1] * 2048]
+                )
+                mock_ai_client.events.extract = AsyncMock(return_value=[extraction])
 
                 svc = SyncService(rss_fetcher=mock_fetcher)
                 stats = await svc._sync_source(dummy_due_source)
@@ -202,8 +204,10 @@ class TestSyncService:
                 mock_evt.get_active_events_by_embeddings = AsyncMock(return_value=[])
                 mock_evt.add_article_to_event = AsyncMock(return_value=True)
 
-                mock_ai_client.gen_embeddings = AsyncMock(return_value=[[0.1] * 2048])
-                mock_ai_client.extract_events = AsyncMock(return_value=[extraction])
+                mock_ai_client.llm.gen_embeddings = AsyncMock(
+                    return_value=[[0.1] * 2048]
+                )
+                mock_ai_client.events.extract = AsyncMock(return_value=[extraction])
 
                 svc = SyncService(rss_fetcher=mock_fetcher)
                 stats = await svc._sync_source(dummy_due_source)

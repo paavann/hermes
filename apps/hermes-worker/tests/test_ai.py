@@ -78,12 +78,12 @@ class TestWorkerAiClientFactory:
     def test_create_ai_client_success(self) -> None:
         client = create_ai_client()
         assert isinstance(client, HermesAi)
-        assert client.router is not None
+        assert client.config.primary_model == "mistral/mistral-large"
 
     def test_extract_events_empty_input(self) -> None:
         async def run() -> None:
             client = create_ai_client()
-            res = await client.extract_events(articles=[], existing_events=[])
+            res = await client.events.extract(articles=[], existing_events=[])
             assert res == []
 
         asyncio.run(run())
@@ -118,11 +118,11 @@ class TestWorkerAiClientFactory:
                 )
             ]
 
-            with patch.object(
-                client.router, "acompletion", new_callable=AsyncMock
+            with patch(
+                "litellm.Router.acompletion", new_callable=AsyncMock
             ) as mock_complete:
                 mock_complete.return_value = mock_response
-                results = await client.extract_events(
+                results = await client.events.extract(
                     articles=articles, existing_events=[]
                 )
 
@@ -140,11 +140,11 @@ class TestWorkerAiClientFactory:
             client = create_ai_client()
             articles = [ArticleInput(title="Test Article", content="Test content")]
 
-            with patch.object(
-                client.router, "acompletion", new_callable=AsyncMock
+            with patch(
+                "litellm.Router.acompletion", new_callable=AsyncMock
             ) as mock_complete:
                 mock_complete.side_effect = Exception("LLM connection timeout")
-                results = await client.extract_events(
+                results = await client.events.extract(
                     articles=articles, existing_events=[]
                 )
                 # Should return [None] corresponding to the input article on failure
@@ -155,7 +155,7 @@ class TestWorkerAiClientFactory:
     def test_gen_embeddings_empty_input(self) -> None:
         async def run() -> None:
             client = create_ai_client()
-            res = await client.gen_embeddings([])
+            res = await client.llm.gen_embeddings([])
             assert res == []
 
         asyncio.run(run())

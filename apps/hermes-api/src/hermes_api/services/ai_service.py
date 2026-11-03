@@ -7,7 +7,6 @@ from hermes_ai import (
     TlNodeExtraction,
     TlSearchQuery,
 )
-from litellm.router import Router
 from hermes_api.core.config import settings
 
 
@@ -48,19 +47,15 @@ class AiService:
     def client(self) -> HermesAi:
         return self._client
 
-    @property
-    def router(self) -> Router:
-        return self._client.router
-
     async def extract_tl(
         self, pg_title: str, prose: str
     ) -> TlExtractionResponse | None:
         """Extract a chronological event timeline from Wikipedia prose."""
-        return await self._client.extract_tl(pg_title, prose)
+        return await self._client.timelines.extract(pg_title, prose)
 
     async def analyze_tl_context(self, headline: str) -> TlSearchQuery | None:
         """Analyze whether an event headline warrants historical timeline synthesis."""
-        return await self._client.analyze_tl_context(headline)
+        return await self._client.timelines.analyze(headline)
 
 
 __all__ = [

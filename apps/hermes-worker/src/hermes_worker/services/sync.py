@@ -4,6 +4,7 @@ import uuid
 from hermes_ai import (
     ARTICLE_BATCH_SIZE,
     ArticleInput,
+    GeocodingError,
     GeocodingService,
     HermesAi,
 )
@@ -98,14 +99,14 @@ class SyncService:
                 ArticleInput(title=a.title, content=a.text_for_ai) for a in batch
             ]
             batch_texts = [f"{a.title}\n{a.text_for_ai}" for a in batch]
-            embeddings = await self._ai.gen_embeddings(batch_texts)
+            embeddings = await self._ai.llm.gen_embeddings(batch_texts)
             async with AsyncSessionLocal() as session:
                 event_service = EventService(session)
                 existing_events = await event_service.get_active_events_by_embeddings(
                     embeddings
                 )
 
-            extractions = await self._ai.extract_events(
+            extractions = await self._ai.events.extract(
                 articles=ai_inputs,
                 existing_events=existing_events,
             )
@@ -124,9 +125,16 @@ class SyncService:
                             geocoding_svc = GeocodingService(
                                 GeocodeCacheService(session)
                             )
-                            geocoding = await geocoding_svc.geocode(
-                                extraction.location_name
-                            )
+                            try:
+                                geocoding = await geocoding_svc.geocode(
+                                    extraction.location_name
+                                )
+                            except GeocodingError:
+                                logger.warning(
+                                    "geocoding failed for '%s', continuing without coordinates.",
+                                    extraction.location_name,
+                                )
+                                geocoding = None
 
                         matched = False
                         if extraction.matched_event_id:

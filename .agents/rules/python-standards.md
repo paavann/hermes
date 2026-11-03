@@ -14,6 +14,7 @@ globs: **/*.py
 - **Python Imports**: Strictly use absolute imports in Python (e.g., `from src.services.db import get_db`) and avoid relative dot imports.
 - **Minimal Naming Conventions**: The naming of variables, functions, and other identifiers should be kept minimal and short. Use concise forms to keep the code clean.
 - **Function and Method Spacing**: ALWAYS leave at least two blank lines of space between functions, regardless of whether they are top-level global functions or methods defined inside classes.
+- **Prohibition of Method and Function Aliasing**: Defining method or function aliases inside classes or modules (e.g., `call = call_llm` or `embed = gen_embeddings`) is strictly forbidden. Every method or function must have a single canonical name and be invoked using that exact canonical name. Aliasing creates ambiguity, hides intent, degrades static analysis, and reflects poor design taste.
 - **Pragmatic DRY Principle**: Strictly follow and adhere to DRY (Don't Repeat Yourself) principles while writing code wherever possible, but avoid applying it in situations where it adds unnecessary complexity or seems not required.
 
 ## Tooling & Logging

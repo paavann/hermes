@@ -99,7 +99,7 @@ sequenceDiagram
             Note over DB: HNSW cosine distance scan: Event.embedding <=> vector < 0.25
             DB-->>W: Candidate active events per article
             
-            W->>AI: extract_events(articles, candidate_events)
+            W->>AI: events.extract(articles, candidate_events)
             Note over AI: LiteLLM evaluates whether to corroborate candidate or create new
             AI-->>W: List of ExtractedEvent models
             
