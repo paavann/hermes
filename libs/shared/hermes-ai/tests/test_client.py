@@ -7,6 +7,7 @@ import pytest
 
 from hermes_ai.client import HermesAi
 from hermes_ai.core.config import AiConfig
+from hermes_ai.exceptions import ConfigurationError
 from hermes_ai.models.events import ArticleInput, ExtractedEvent
 from hermes_ai.models.tl import (
     TlEdgeExtraction,
@@ -30,7 +31,7 @@ def base_config() -> AiConfig:
 
 def test_init_raises_without_primary_credentials() -> None:
     with pytest.raises(
-        ValueError, match="primary_api_key and primary_model are required"
+        ConfigurationError, match="primary_api_key and primary_model are required"
     ):
         HermesAi(AiConfig(primary_model="", primary_api_key=""))
 
@@ -39,7 +40,8 @@ def test_init_succeeds_with_primary_only() -> None:
     client = HermesAi(
         AiConfig(primary_model="mistral/mistral-large", primary_api_key="key")
     )
-    assert client.router is not None
+    assert client.config.primary_model == "mistral/mistral-large"
+    assert client.config.has_fallback is False
 
 
 @patch("litellm.Router.acompletion")
@@ -56,7 +58,7 @@ def test_call_llm_success(mock_acompletion: AsyncMock, base_config: AiConfig) ->
     mock_acompletion.return_value = mock_res
 
     res = asyncio.run(
-        client.call_llm(
+        client.llm.call_llm(
             sys_prompt="system",
             user_prompt="user",
             res_model=TlSearchQuery,
@@ -91,7 +93,7 @@ def test_extract_events_success(
     mock_acompletion.return_value = mock_res
 
     articles = [ArticleInput(title="Berlin Tech Summit", content="Full text")]
-    results = asyncio.run(client.extract_events(articles))
+    results = asyncio.run(client.events.extract(articles))
 
     assert len(results) == 1
     assert results[0] is not None
@@ -123,7 +125,7 @@ def test_extract_tl_success(mock_acompletion: AsyncMock, base_config: AiConfig) 
     mock_res.choices = [MagicMock(message=MagicMock(content=tl.model_dump_json()))]
     mock_acompletion.return_value = mock_res
 
-    res = asyncio.run(client.extract_tl("Page Title", "Prose body"))
+    res = asyncio.run(client.timelines.extract("Page Title", "Prose body"))
     assert res is not None
     assert res.tl_summary == "Historical arc"
     assert len(res.nodes) == 1
@@ -138,14 +140,14 @@ def test_gen_embeddings_success(
     mock_res.data = [{"embedding": [0.1, 0.2, 0.3]}]
     mock_aembedding.return_value = mock_res
 
-    embeddings = asyncio.run(client.gen_embeddings(["Sample text"]))
+    embeddings = asyncio.run(client.llm.gen_embeddings(["Sample text"]))
     assert len(embeddings) == 1
     assert embeddings[0] == [0.1, 0.2, 0.3]
 
 
 def test_gen_embeddings_empty_list(base_config: AiConfig) -> None:
     client = HermesAi(base_config)
-    assert asyncio.run(client.gen_embeddings([])) == []
+    assert asyncio.run(client.llm.gen_embeddings([])) == []
 
 
 @patch("litellm.Router.acompletion")
@@ -168,7 +170,7 @@ def test_call_llm_fallback_on_validation_failure(
     mock_acompletion.side_effect = [bad_res, good_res]
 
     res = asyncio.run(
-        client.call_llm(
+        client.llm.call_llm(
             sys_prompt="system",
             user_prompt="user",
             res_model=TlSearchQuery,
@@ -179,3 +181,60 @@ def test_call_llm_fallback_on_validation_failure(
     assert res.is_tl_worthy is True
     assert res.wiki_search_query == "Crisis"
     assert mock_acompletion.call_count == 2
+
+
+def test_async_context_manager(base_config: AiConfig) -> None:
+    async def _run() -> None:
+        async with HermesAi(base_config) as client:
+            assert client.config.primary_model == "mistral/ministral-8b-latest"
+
+    asyncio.run(_run())
+
+
+@patch("litellm.Router.acompletion")
+def test_resource_namespaces(
+    mock_acompletion: AsyncMock, base_config: AiConfig
+) -> None:
+    client = HermesAi(base_config)
+    assert client.llm is not None
+    assert client.events is not None
+    assert client.timelines is not None
+
+    mock_res = MagicMock()
+    mock_res.choices = [
+        MagicMock(
+            message=MagicMock(
+                content='{"is_tl_worthy": true, "wiki_search_query": "Treaty"}'
+            )
+        )
+    ]
+    mock_acompletion.return_value = mock_res
+
+    res = asyncio.run(client.timelines.analyze("Treaty of Versailles"))
+    assert res is not None
+    assert res.is_tl_worthy is True
+
+
+def test_exception_hierarchy() -> None:
+    from hermes_ai import (
+        CircuitBreakerOpenError,
+        ConfigurationError,
+        GeocodingError,
+        HermesAiError,
+        ModelExecutionError,
+        RateLimitExceededError,
+        SchemaValidationError,
+    )
+
+    assert issubclass(ConfigurationError, HermesAiError)
+    assert issubclass(ConfigurationError, ValueError)
+    assert issubclass(ModelExecutionError, HermesAiError)
+    assert issubclass(ModelExecutionError, RuntimeError)
+    assert issubclass(SchemaValidationError, HermesAiError)
+    assert issubclass(SchemaValidationError, ValueError)
+    assert issubclass(RateLimitExceededError, HermesAiError)
+    assert issubclass(RateLimitExceededError, RuntimeError)
+    assert issubclass(CircuitBreakerOpenError, RateLimitExceededError)
+    assert issubclass(CircuitBreakerOpenError, HermesAiError)
+    assert issubclass(GeocodingError, HermesAiError)
+    assert issubclass(GeocodingError, RuntimeError)

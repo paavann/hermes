@@ -7,9 +7,10 @@ from typing import Protocol
 
 import httpx
 
+from hermes_ai.exceptions import GeocodingError
+
 
 logger = logging.getLogger(__name__)
-
 
 NOMINATIM_SEARCH_URL = "https://nominatim.openstreetmap.org/search"
 
@@ -284,12 +285,15 @@ class GeocodingService:
                     await asyncio.sleep(2.0 * (attempt + 1))
                 else:
                     return None
-            except KeyError, ValueError, IndexError:
+            except (KeyError, ValueError, IndexError) as exc:
                 logger.exception(
                     "failed to parse nominatim response for '%s'.",
                     location_name,
                 )
-                return None
+                raise GeocodingError(
+                    f"failed to parse nominatim response for '{location_name}': {exc}.",
+                    location_name=location_name,
+                ) from exc
 
         if last_was_429:
             self._resilience.trip_circuit_breaker()

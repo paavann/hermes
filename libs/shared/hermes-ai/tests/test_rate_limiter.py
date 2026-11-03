@@ -1,6 +1,6 @@
 import asyncio
 import time
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from hermes_ai.client import HermesAi
 from hermes_ai.core.config import AiConfig
@@ -61,8 +61,8 @@ def test_client_rate_limiter_wiring() -> None:
             primary_api_key="key",
         )
         client_no_limits = HermesAi(config_no_limits)
-        assert client_no_limits.rate_limiter is None
-        assert client_no_limits.embed_rate_limiter is None
+        assert client_no_limits.config.rpm_limit is None
+        assert client_no_limits.config.embed_rpm_limit is None
 
         config_with_limits = AiConfig(
             primary_model="mistral/mistral-large",
@@ -73,37 +73,42 @@ def test_client_rate_limiter_wiring() -> None:
             embed_rpm_limit=240,
         )
         client = HermesAi(config_with_limits)
-        assert client.rate_limiter is not None
-        assert client.rate_limiter.req_per_min == 120
-        assert client.embed_rate_limiter is not None
-        assert client.embed_rate_limiter.req_per_min == 240
+        assert client.config.rpm_limit == 120
+        assert client.config.embed_rpm_limit == 240
 
         # Verify rate_limiter.acquire is called during call_llm
-        with patch.object(
-            client.rate_limiter, "acquire", new_callable=AsyncMock
-        ) as mock_acquire:
-            mock_res = AsyncMock()
+        assert client.llm._rate_limiter is not None
+        with (
+            patch.object(
+                client.llm._rate_limiter, "acquire", new_callable=AsyncMock
+            ) as mock_acquire,
+            patch(
+                "litellm.Router.acompletion", new_callable=AsyncMock
+            ) as mock_acompletion,
+        ):
+            mock_res = MagicMock()
             mock_res.choices = [
-                AsyncMock(
-                    message=AsyncMock(
+                MagicMock(
+                    message=MagicMock(
                         content='{"events": [{"article_index": 0, "has_location": false, "headline": "H", "summary": "S", "category": "WORLD"}]}'
                     )
                 )
             ]
-            client.router.acompletion = AsyncMock(return_value=mock_res)
+            mock_acompletion.return_value = mock_res
             articles = [ArticleInput(title="T", content="C")]
-            await client.extract_events(articles)
+            await client.events.extract(articles)
             assert mock_acquire.called
 
         # Verify embed_rate_limiter.acquire is called during gen_embeddings
+        assert client.llm._embed_rate_limiter is not None
         with (
             patch.object(
-                client.embed_rate_limiter, "acquire", new_callable=AsyncMock
+                client.llm._embed_rate_limiter, "acquire", new_callable=AsyncMock
             ) as mock_embed_acquire,
             patch("litellm.aembedding", new_callable=AsyncMock) as mock_embed,
         ):
-            mock_embed.return_value = AsyncMock(data=[{"embedding": [0.1, 0.2]}])
-            embeddings = await client.gen_embeddings(["sample"])
+            mock_embed.return_value = MagicMock(data=[{"embedding": [0.1, 0.2]}])
+            embeddings = await client.llm.gen_embeddings(["sample"])
             assert mock_embed_acquire.called
             assert embeddings == [[0.1, 0.2]]
 

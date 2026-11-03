@@ -1,5 +1,3 @@
-"""Constants and domain definitions for hermes-ai."""
-
 PREDEFINED_CATEGORIES: dict[str, dict[str, str]] = {
     "CONFLICT": {
         "display_name": "Conflict & Crisis",

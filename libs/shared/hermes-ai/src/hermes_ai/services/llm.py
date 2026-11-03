@@ -1,11 +1,17 @@
+import json
 import logging
 
 import litellm
 from litellm.router import Router
 from litellm.types.router import DeploymentTypedDict
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 from hermes_ai.core.config import AiConfig
+from hermes_ai.exceptions import (
+    ConfigurationError,
+    ModelExecutionError,
+    SchemaValidationError,
+)
 from hermes_ai.utils.rate_limiter import TbRateLimiter
 
 
@@ -18,6 +24,7 @@ def _clean_json_str(raw: str) -> str:
         cleaned = cleaned.removeprefix("```json").strip()
     elif cleaned.startswith("```"):
         cleaned = cleaned.removeprefix("```").strip()
+
     if cleaned.endswith("```"):
         cleaned = cleaned.removesuffix("```").strip()
     return cleaned
@@ -28,7 +35,7 @@ class LlmService:
         self._config = config
         if not config.primary_api_key or not config.primary_model:
             logger.error("primary llm api key or model is missing.")
-            raise ValueError("primary_api_key and primary_model are required.")
+            raise ConfigurationError("primary_api_key and primary_model are required.")
 
         model_list: list[DeploymentTypedDict] = [
             {
@@ -84,82 +91,119 @@ class LlmService:
     def embed_rate_limiter(self) -> TbRateLimiter | None:
         return self._embed_rate_limiter
 
+    async def _invoke_and_parse[T: BaseModel](
+        self,
+        model_name: str,
+        sys_prompt: str,
+        user_prompt: str,
+        res_model: type[T],
+        schema_name: str,
+    ) -> T:
+        if self._rate_limiter:
+            await self._rate_limiter.acquire()
+
+        res = await self._router.acompletion(
+            model=model_name,
+            messages=[
+                {"role": "system", "content": sys_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+            response_format={
+                "type": "json_schema",
+                "json_schema": {
+                    "name": schema_name,
+                    "schema": res_model.model_json_schema(),
+                },
+            },
+        )
+        content = res.choices[0].message.content
+        if not content:
+            logger.warning("llm returned empty content for %s.", schema_name)
+            raise ValueError(f"empty content from {model_name} for {schema_name}.")
+        return res_model.model_validate_json(_clean_json_str(content))
+
     async def call_llm[T: BaseModel](
         self,
         sys_prompt: str,
         user_prompt: str,
         res_model: type[T],
         schema_name: str,
-    ) -> T | None:
-        if self._rate_limiter:
-            await self._rate_limiter.acquire()
+    ) -> T:
         try:
-            res = await self._router.acompletion(
-                model="primary-extractor",
-                messages=[
-                    {"role": "system", "content": sys_prompt},
-                    {"role": "user", "content": user_prompt},
-                ],
-                response_format={
-                    "type": "json_schema",
-                    "json_schema": {
-                        "name": schema_name,
-                        "schema": res_model.model_json_schema(),
-                    },
-                },
-            )
-            content = res.choices[0].message.content
-            if not content:
-                logger.warning("llm returned empty content for %s.", schema_name)
-                raise ValueError(
-                    f"empty content from primary-extractor for {schema_name}."
-                )
-            return res_model.model_validate_json(_clean_json_str(content))
-        except Exception as exc:
-            logger.warning(
-                "primary llm call failed for %s: %s. attempting fallback if available.",
+            return await self._invoke_and_parse(
+                "primary-extractor",
+                sys_prompt,
+                user_prompt,
+                res_model,
                 schema_name,
-                exc,
+            )
+        except (ValidationError, ValueError, json.JSONDecodeError) as val_err:
+            logger.warning(
+                "primary llm output validation failed for %s: %s. attempting fallback if available.",
+                schema_name,
+                val_err,
             )
             if self._config.fallback_model and self._config.fallback_api_key:
                 try:
-                    if self._rate_limiter:
-                        await self._rate_limiter.acquire()
-                    res = await self._router.acompletion(
-                        model="fallback-extractor",
-                        messages=[
-                            {"role": "system", "content": sys_prompt},
-                            {"role": "user", "content": user_prompt},
-                        ],
-                        response_format={
-                            "type": "json_schema",
-                            "json_schema": {
-                                "name": schema_name,
-                                "schema": res_model.model_json_schema(),
-                            },
-                        },
+                    parsed = await self._invoke_and_parse(
+                        "fallback-extractor",
+                        sys_prompt,
+                        user_prompt,
+                        res_model,
+                        schema_name,
                     )
-                    content = res.choices[0].message.content
-                    if content:
-                        parsed = res_model.model_validate_json(_clean_json_str(content))
-                        logger.info("fallback extractor succeeded for %s.", schema_name)
-                        return parsed
+                    logger.info("fallback extractor succeeded for %s.", schema_name)
+                    return parsed
+                except (
+                    ValidationError,
+                    ValueError,
+                    json.JSONDecodeError,
+                ) as fb_val_err:
+                    logger.error(
+                        "fallback llm output validation failed for %s: %s.",
+                        schema_name,
+                        fb_val_err,
+                    )
+                    raise SchemaValidationError(
+                        f"output validation failed across primary and fallback models for {schema_name}.",
+                        schema_name=schema_name,
+                        validation_error=fb_val_err,
+                    ) from fb_val_err
                 except Exception as fb_exc:
                     logger.error(
                         "fallback llm call failed for %s: %s.", schema_name, fb_exc
                     )
-            logger.error("llm call failed for %s: %s.", schema_name, exc)
-            return None
+                    raise ModelExecutionError(
+                        f"fallback model execution failed for {schema_name}: {fb_exc}.",
+                        schema_name=schema_name,
+                        original_exception=fb_exc,
+                    ) from fb_exc
+
+            logger.error("llm call failed for %s: %s.", schema_name, val_err)
+            raise SchemaValidationError(
+                f"primary llm output validation failed for {schema_name} and no fallback available.",
+                schema_name=schema_name,
+                validation_error=val_err,
+            ) from val_err
+        except Exception as exc:
+            logger.error(
+                "llm call failed across router deployments for %s: %s.",
+                schema_name,
+                exc,
+            )
+            raise ModelExecutionError(
+                f"all router deployments failed for {schema_name}: {exc}.",
+                schema_name=schema_name,
+                original_exception=exc,
+            ) from exc
 
     async def gen_embeddings(self, texts: list[str]) -> list[list[float] | None]:
         if not texts:
             return []
-
-        if not self._config.embed_model or not self._config.embed_api_key:
+        elif not self._config.embed_model or not self._config.embed_api_key:
             logger.error("embed api key or model is missing.")
             return [None] * len(texts)
-
-        if self._embed_rate_limiter:
+        elif self._embed_rate_limiter:
             await self._embed_rate_limiter.acquire()
 
         try:
@@ -175,3 +219,6 @@ class LlmService:
         except Exception as exc:
             logger.error("failed to generate embeddings: %s.", exc)
             return [None] * len(texts)
+
+    async def aclose(self) -> None:
+        logger.info("closing llm service resources.")

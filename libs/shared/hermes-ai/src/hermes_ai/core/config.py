@@ -1,5 +1,3 @@
-"""Configuration models for Hermes AI services."""
-
 from dataclasses import dataclass
 
 
@@ -16,3 +14,7 @@ class AiConfig:
     retry_after: bool = True
     rpm_limit: int | None = None
     embed_rpm_limit: int | None = None
+
+    @property
+    def has_fallback(self) -> bool:
+        return self.fallback_model is not None

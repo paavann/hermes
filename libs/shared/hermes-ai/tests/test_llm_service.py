@@ -6,6 +6,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from hermes_ai.core.config import AiConfig
+from hermes_ai.exceptions import (
+    ModelExecutionError,
+    SchemaValidationError,
+)
 from hermes_ai.models.events import ExtractionResponse
 from hermes_ai.models.tl import TlSearchQuery
 from hermes_ai.services.llm import LlmService
@@ -146,3 +150,44 @@ def test_llm_service_call_llm_markdown_fence_and_raw_list(
     assert res is not None
     assert len(res.events) == 1
     assert res.events[0].headline == "Fence"
+
+
+@patch("litellm.Router.acompletion")
+def test_llm_service_call_llm_raises_model_execution_error(
+    mock_acompletion: AsyncMock, base_config: AiConfig
+) -> None:
+    svc = LlmService(base_config)
+    mock_acompletion.side_effect = RuntimeError("Provider 503 outage")
+
+    with pytest.raises(ModelExecutionError, match="all router deployments failed"):
+        asyncio.run(
+            svc.call_llm(
+                sys_prompt="system",
+                user_prompt="user",
+                res_model=TlSearchQuery,
+                schema_name="triage",
+            )
+        )
+
+
+@patch("litellm.Router.acompletion")
+def test_llm_service_call_llm_raises_schema_validation_error(
+    mock_acompletion: AsyncMock, base_config: AiConfig
+) -> None:
+    svc = LlmService(base_config)
+    bad_res = MagicMock()
+    bad_res.choices = [MagicMock(message=MagicMock(content='{"invalid": "data"}'))]
+    mock_acompletion.side_effect = [bad_res, bad_res]
+
+    with pytest.raises(
+        SchemaValidationError,
+        match="output validation failed across primary and fallback",
+    ):
+        asyncio.run(
+            svc.call_llm(
+                sys_prompt="system",
+                user_prompt="user",
+                res_model=TlSearchQuery,
+                schema_name="triage",
+            )
+        )
