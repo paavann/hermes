@@ -58,6 +58,11 @@ class Settings(BaseSettings):
     # cors configuration.
     CORS_ORIGINS: list[str] = ["*"]
 
+    # langfuse tracing.
+    LANGFUSE_PUBLIC_KEY: str = ""
+    LANGFUSE_SECRET_KEY: str = ""
+    LANGFUSE_HOST: str = "https://cloud.langfuse.com"
+
     # database connection url.
     @property
     def db_url(self) -> URL:

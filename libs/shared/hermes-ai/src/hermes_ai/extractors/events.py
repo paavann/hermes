@@ -1,6 +1,8 @@
 import logging
 from collections.abc import Callable, Sequence
 
+from langfuse import observe
+
 from hermes_ai.core.constants import (
     ARTICLE_BATCH_SIZE,
     DEFAULT_CATEGORY_COLOR,
@@ -87,6 +89,9 @@ class EventExtractor:
     def __init__(self, llm: LlmService) -> None:
         self._llm = llm
 
+    @observe(
+        as_type="span", name="event-extract", capture_input=False, capture_output=False
+    )
     async def extract(
         self,
         articles: list[ArticleInput],

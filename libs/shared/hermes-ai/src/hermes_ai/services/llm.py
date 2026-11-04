@@ -1,7 +1,9 @@
 import json
 import logging
+import os
 
 import litellm
+from langfuse import get_client, observe
 from litellm.router import Router
 from litellm.types.router import DeploymentTypedDict
 from pydantic import BaseModel, ValidationError
@@ -73,6 +75,17 @@ class LlmService:
             TbRateLimiter(config.embed_rpm_limit) if config.embed_rpm_limit else None
         )
 
+        if config.tracing_enabled:
+            if config.langfuse_public_key:
+                os.environ["LANGFUSE_PUBLIC_KEY"] = config.langfuse_public_key
+            if config.langfuse_secret_key:
+                os.environ["LANGFUSE_SECRET_KEY"] = config.langfuse_secret_key
+            if config.langfuse_host:
+                os.environ["LANGFUSE_HOST"] = config.langfuse_host
+
+            litellm.callbacks = ["langfuse_otel"]
+            logger.info("langfuse tracing enabled via langfuse_otel callback.")
+
         logger.info(
             "llm service initialized. primary=%s, fallback=%s via litellm router.",
             config.primary_model,
@@ -122,6 +135,7 @@ class LlmService:
             raise ValueError(f"empty content from {model_name} for {schema_name}.")
         return res_model.model_validate_json(_clean_json_str(content))
 
+    @observe(as_type="generation", capture_input=False, capture_output=False)
     async def call_llm[T: BaseModel](
         self,
         sys_prompt: str,
@@ -129,14 +143,22 @@ class LlmService:
         res_model: type[T],
         schema_name: str,
     ) -> T:
+        lf = get_client()
+        lf.update_current_span(
+            name=schema_name,
+            input=user_prompt,
+            metadata={"schema": schema_name, "tags": self._config.tracing_tags},
+        )
         try:
-            return await self._invoke_and_parse(
+            result = await self._invoke_and_parse(
                 "primary-extractor",
                 sys_prompt,
                 user_prompt,
                 res_model,
                 schema_name,
             )
+            lf.update_current_span(output=result.model_dump())
+            return result
         except (ValidationError, ValueError, json.JSONDecodeError) as val_err:
             logger.warning(
                 "primary llm output validation failed for %s: %s. attempting fallback if available.",
@@ -153,6 +175,14 @@ class LlmService:
                         schema_name,
                     )
                     logger.info("fallback extractor succeeded for %s.", schema_name)
+                    lf.update_current_span(
+                        output=parsed.model_dump(),
+                        metadata={
+                            "schema": schema_name,
+                            "tags": self._config.tracing_tags,
+                            "used_fallback": True,
+                        },
+                    )
                     return parsed
                 except (
                     ValidationError,
@@ -164,6 +194,10 @@ class LlmService:
                         schema_name,
                         fb_val_err,
                     )
+                    lf.update_current_span(
+                        level="ERROR",
+                        status_message=f"primary + fallback validation failed: {fb_val_err}",
+                    )
                     raise SchemaValidationError(
                         f"output validation failed across primary and fallback models for {schema_name}.",
                         schema_name=schema_name,
@@ -173,6 +207,10 @@ class LlmService:
                     logger.error(
                         "fallback llm call failed for %s: %s.", schema_name, fb_exc
                     )
+                    lf.update_current_span(
+                        level="ERROR",
+                        status_message=f"fallback model execution failed: {fb_exc}",
+                    )
                     raise ModelExecutionError(
                         f"fallback model execution failed for {schema_name}: {fb_exc}.",
                         schema_name=schema_name,
@@ -180,6 +218,10 @@ class LlmService:
                     ) from fb_exc
 
             logger.error("llm call failed for %s: %s.", schema_name, val_err)
+            lf.update_current_span(
+                level="ERROR",
+                status_message=f"primary validation failed, no fallback: {val_err}",
+            )
             raise SchemaValidationError(
                 f"primary llm output validation failed for {schema_name} and no fallback available.",
                 schema_name=schema_name,
@@ -191,12 +233,17 @@ class LlmService:
                 schema_name,
                 exc,
             )
+            lf.update_current_span(
+                level="ERROR",
+                status_message=f"all router deployments failed: {exc}",
+            )
             raise ModelExecutionError(
                 f"all router deployments failed for {schema_name}: {exc}.",
                 schema_name=schema_name,
                 original_exception=exc,
             ) from exc
 
+    @observe(as_type="embedding", capture_input=False, capture_output=False)
     async def gen_embeddings(self, texts: list[str]) -> list[list[float] | None]:
         if not texts:
             return []
@@ -205,6 +252,16 @@ class LlmService:
             return [None] * len(texts)
         elif self._embed_rate_limiter:
             await self._embed_rate_limiter.acquire()
+
+        lf = get_client()
+        lf.update_current_span(
+            name="gen-embeddings",
+            input={"text_count": len(texts)},
+            metadata={
+                "model": self._config.embed_model,
+                "tags": self._config.tracing_tags,
+            },
+        )
 
         try:
             res = await litellm.aembedding(
@@ -215,10 +272,22 @@ class LlmService:
                 if self._config.embed_model.startswith("nvidia_nim/")
                 else None,
             )
-            return [item["embedding"] for item in res.data]
+            embeddings: list[list[float] | None] = [
+                item["embedding"] for item in res.data
+            ]
+            lf.update_current_span(output={"embedding_count": len(embeddings)})
+            return embeddings
         except Exception as exc:
             logger.error("failed to generate embeddings: %s.", exc)
+            lf.update_current_span(
+                level="ERROR",
+                status_message=f"embedding generation failed: {exc}",
+            )
             return [None] * len(texts)
 
     async def aclose(self) -> None:
+        if self._config.tracing_enabled:
+            lf = get_client()
+            lf.flush()
+            logger.info("langfuse client flushed.")
         logger.info("closing llm service resources.")

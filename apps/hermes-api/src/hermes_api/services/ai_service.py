@@ -24,6 +24,10 @@ class AiService:
             logger.error("primary llm api key or model is missing.")
             raise ValueError("LLM_API or LLM_MODEL is missing.")
 
+        tracing = bool(settings.LANGFUSE_PUBLIC_KEY and settings.LANGFUSE_SECRET_KEY)
+        if tracing:
+            logger.info("langfuse tracing is enabled for ai service.")
+
         self._client = HermesAi(
             AiConfig(
                 primary_model=settings.LLM_MODEL,
@@ -34,6 +38,11 @@ class AiService:
                 embed_model=settings.EMBED_MODEL,
                 embed_api_key=settings.EMBED_API,
                 embed_rpm_limit=settings.EMBED_RPM_LIMIT,
+                tracing_enabled=tracing,
+                tracing_tags=["hermes-api", settings.ENV],
+                langfuse_public_key=settings.LANGFUSE_PUBLIC_KEY or None,
+                langfuse_secret_key=settings.LANGFUSE_SECRET_KEY or None,
+                langfuse_host=settings.LANGFUSE_HOST or None,
             )
         )
 

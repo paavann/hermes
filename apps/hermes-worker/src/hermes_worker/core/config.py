@@ -47,6 +47,11 @@ class Settings(BaseSettings):
         "HermesGeospatialNews/1.0 (https://github.com/paavann/hermes)"
     )
 
+    # langfuse tracing.
+    LANGFUSE_PUBLIC_KEY: str = ""
+    LANGFUSE_SECRET_KEY: str = ""
+    LANGFUSE_HOST: str = "https://cloud.langfuse.com"
+
     # sync configuration.
     RSS_FETCH_INTERVAL_MIN: int = 15
     SYNC_INTERVAL_MIN: int = 360

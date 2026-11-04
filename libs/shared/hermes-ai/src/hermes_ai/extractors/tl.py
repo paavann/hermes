@@ -1,5 +1,7 @@
 import logging
 
+from langfuse import observe
+
 from hermes_ai.exceptions import (
     ModelExecutionError,
     SchemaValidationError,
@@ -24,6 +26,9 @@ class TlExtractor:
     def __init__(self, llm: LlmService) -> None:
         self._llm = llm
 
+    @observe(
+        as_type="span", name="tl-extract", capture_input=False, capture_output=False
+    )
     async def extract(
         self,
         pg_title: str,
@@ -72,6 +77,9 @@ class TlExtractor:
         logger.info("timeline extracted successfully for %s.", pg_title)
         return res
 
+    @observe(
+        as_type="span", name="tl-analyze", capture_input=False, capture_output=False
+    )
     async def analyze(self, headline: str) -> TlSearchQuery | None:
         user_prompt = f"Headline: {headline}"
         try:
