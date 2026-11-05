@@ -5,6 +5,7 @@ import { useMapStore } from '../store/store';
 import { useMapDataSync } from '../hooks/datasync';
 import { EventPopup } from './components/EventPopup';
 import { TlPanel } from './components/TlPanel';
+import { EventsLoader } from './components/EventsLoader';
 import type { FeatureCollection } from 'geojson';
 import type { MapEventResponse } from '@hermes/util-types';
 import { useMapConfig } from '../config-context';
@@ -43,7 +44,7 @@ export function MapView() {
   const map = useRef<mapboxgl.Map | null>(null);
   const [isMapReady, setIsMapReady] = useState(false);
   const setViewport = useMapStore((state) => state.setViewport);
-  const { data: events } = useMapDataSync();
+  const { data: events, isFetching } = useMapDataSync();
   const setSelectedId = useMapStore((s) => s.setSelectedEventId);
 
   const isTimelineMode = useMapStore((s) => s.isTlMode);
@@ -250,6 +251,8 @@ export function MapView() {
       <div ref={mapContainer} className="fixed inset-0 w-screen h-screen z-0" />
       {isMapReady && !isTimelineMode && <EventPopup map={map.current} />}
       {isMapReady && isTimelineMode && <TlPanel map={map.current} />}
+
+      {isFetching && !isTimelineMode && <EventsLoader />}
     </>
   );
 }
