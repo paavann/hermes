@@ -1,7 +1,6 @@
 """Unit tests for LlmService."""
 
 import asyncio
-import os
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import litellm
@@ -195,14 +194,11 @@ def test_llm_service_call_llm_raises_schema_validation_error(
         )
 
 
+@patch("hermes_ai.services.llm.Langfuse")
 @patch("hermes_ai.services.llm.get_client")
 def test_llm_service_tracing_enabled(
-    mock_get_client: MagicMock, base_config: AiConfig, monkeypatch: pytest.MonkeyPatch
+    mock_get_client: MagicMock, mock_langfuse: MagicMock, base_config: AiConfig
 ) -> None:
-    monkeypatch.delenv("LANGFUSE_PUBLIC_KEY", raising=False)
-    monkeypatch.delenv("LANGFUSE_SECRET_KEY", raising=False)
-    monkeypatch.delenv("LANGFUSE_HOST", raising=False)
-
     cfg = AiConfig(
         primary_model=base_config.primary_model,
         primary_api_key=base_config.primary_api_key,
@@ -212,14 +208,16 @@ def test_llm_service_tracing_enabled(
         langfuse_host="https://test.langfuse.com",
     )
     svc = LlmService(cfg)
+    mock_langfuse.assert_called_once_with(
+        public_key="pk-test",
+        secret_key="sk-test",
+        host="https://test.langfuse.com",
+    )
     assert any(
         cb == "langfuse_otel"
         or getattr(cb, "__class__", None).__name__ == "LangfuseOtelLogger"
         for cb in litellm.callbacks
     )
-    assert os.environ.get("LANGFUSE_PUBLIC_KEY") == "pk-test"
-    assert os.environ.get("LANGFUSE_SECRET_KEY") == "sk-test"
-    assert os.environ.get("LANGFUSE_HOST") == "https://test.langfuse.com"
 
     mock_client = MagicMock()
     mock_get_client.return_value = mock_client

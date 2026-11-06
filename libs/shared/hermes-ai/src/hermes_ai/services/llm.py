@@ -1,9 +1,9 @@
 import json
 import logging
-import os
 
 import litellm
-from langfuse import get_client, observe
+from langfuse import Langfuse, get_client, observe
+from litellm.integrations.langfuse.langfuse_otel import LangfuseOtelLogger
 from litellm.router import Router
 from litellm.types.router import DeploymentTypedDict
 from pydantic import BaseModel, ValidationError
@@ -76,14 +76,24 @@ class LlmService:
         )
 
         if config.tracing_enabled:
-            if config.langfuse_public_key:
-                os.environ["LANGFUSE_PUBLIC_KEY"] = config.langfuse_public_key
-            if config.langfuse_secret_key:
-                os.environ["LANGFUSE_SECRET_KEY"] = config.langfuse_secret_key
-            if config.langfuse_host:
-                os.environ["LANGFUSE_HOST"] = config.langfuse_host
-
-            litellm.callbacks = ["langfuse_otel"]
+            if config.langfuse_public_key and config.langfuse_secret_key:
+                Langfuse(
+                    public_key=config.langfuse_public_key,
+                    secret_key=config.langfuse_secret_key,
+                    host=config.langfuse_host,
+                )
+                otel_config = LangfuseOtelLogger._build_langfuse_otel_config(
+                    public_key=config.langfuse_public_key,
+                    secret_key=config.langfuse_secret_key,
+                    langfuse_host=config.langfuse_host,
+                )
+                litellm.callbacks = [
+                    LangfuseOtelLogger(
+                        config=otel_config, callback_name="langfuse_otel"
+                    )
+                ]
+            else:
+                litellm.callbacks = ["langfuse_otel"]
             logger.info("langfuse tracing enabled via langfuse_otel callback.")
 
         logger.info(
