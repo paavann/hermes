@@ -1,0 +1,20 @@
+{
+  "mcp": {
+    "servers": {
+      "docs-langchain": {
+        "type": "remote",
+        "url": "https://docs.langchain.com/mcp"
+      },
+      "reference-langchain": {
+        "type": "remote",
+        "url": "https://reference.langchain.com/mcp"
+      }
+    }
+  },
+  "references": {
+    "project-skills": {
+      "path": "./.agents/skills",
+      "description": "Contains domain-specific agent skills, prompts, and tool descriptions for this repository."
+    }
+  }
+}

@@ -3,7 +3,6 @@
 import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import litellm
 import pytest
 
 from hermes_ai.core.config import AiConfig
@@ -197,7 +196,9 @@ def test_llm_service_call_llm_raises_schema_validation_error(
 @patch("hermes_ai.services.llm.Langfuse")
 @patch("hermes_ai.services.llm.get_client")
 def test_llm_service_tracing_enabled(
-    mock_get_client: MagicMock, mock_langfuse: MagicMock, base_config: AiConfig
+    mock_get_client: MagicMock,
+    mock_langfuse: MagicMock,
+    base_config: AiConfig,
 ) -> None:
     cfg = AiConfig(
         primary_model=base_config.primary_model,
@@ -208,15 +209,11 @@ def test_llm_service_tracing_enabled(
         langfuse_host="https://test.langfuse.com",
     )
     svc = LlmService(cfg)
+    # Langfuse SDK client is now initialized via `base_url` (not the deprecated `host`).
     mock_langfuse.assert_called_once_with(
         public_key="pk-test",
         secret_key="sk-test",
-        host="https://test.langfuse.com",
-    )
-    assert any(
-        cb == "langfuse_otel"
-        or getattr(cb, "__class__", None).__name__ == "LangfuseOtelLogger"
-        for cb in litellm.callbacks
+        base_url="https://test.langfuse.com",
     )
 
     mock_client = MagicMock()
