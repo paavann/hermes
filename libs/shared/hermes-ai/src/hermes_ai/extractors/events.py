@@ -1,11 +1,16 @@
 import logging
 from collections.abc import Callable, Sequence
-from typing import TYPE_CHECKING
+
+from langfuse import observe
 
 from hermes_ai.core.constants import (
     ARTICLE_BATCH_SIZE,
     DEFAULT_CATEGORY_COLOR,
     PREDEFINED_CATEGORIES,
+)
+from hermes_ai.exceptions import (
+    ModelExecutionError,
+    SchemaValidationError,
 )
 from hermes_ai.models.events import (
     ArticleInput,
@@ -14,11 +19,9 @@ from hermes_ai.models.events import (
     GroundedEvent,
 )
 from hermes_ai.services.geocoding import GeocodingService
+from hermes_ai.services.llm import LlmService
 from hermes_ai.utils.prompts import ARTICLE_SYSTEM_PROMPT
 
-
-if TYPE_CHECKING:
-    from hermes_ai.client import HermesAiClient
 
 logger = logging.getLogger(__name__)
 
@@ -83,10 +86,13 @@ def _reidx_results[T, V](
 
 
 class EventExtractor:
-    def __init__(self, client: HermesAiClient) -> None:
-        self._client = client
+    def __init__(self, llm: LlmService) -> None:
+        self._llm = llm
 
-    async def extract_events(
+    @observe(
+        as_type="span", name="event-extract", capture_input=False, capture_output=False
+    )
+    async def extract(
         self,
         articles: list[ArticleInput],
         existing_events: list[dict[str, str]] | None = None,
@@ -99,7 +105,7 @@ class EventExtractor:
             all_results: list[ExtractedEvent | None] = []
             for i in range(0, len(articles), ARTICLE_BATCH_SIZE):
                 chunk = articles[i : i + ARTICLE_BATCH_SIZE]
-                chunk_results = await self.extract_events(
+                chunk_results = await self.extract(
                     articles=chunk,
                     existing_events=existing_events,
                     geocoding_svc=geocoding_svc,
@@ -108,13 +114,15 @@ class EventExtractor:
             return all_results
 
         user_prompt = _build_events_prompt(articles, existing_events)
-        res = await self._client.call_llm(
-            sys_prompt=ARTICLE_SYSTEM_PROMPT,
-            user_prompt=user_prompt,
-            res_model=ExtractionResponse,
-            schema_name="extraction_response",
-        )
-        if not res:
+        try:
+            res = await self._llm.call_llm(
+                sys_prompt=ARTICLE_SYSTEM_PROMPT,
+                user_prompt=user_prompt,
+                res_model=ExtractionResponse,
+                schema_name="extraction_response",
+            )
+        except (ModelExecutionError, SchemaValidationError) as exc:
+            logger.warning("event extraction failed for batch: %s.", exc)
             return [None] * len(articles)
 
         ordered = _reidx_results(

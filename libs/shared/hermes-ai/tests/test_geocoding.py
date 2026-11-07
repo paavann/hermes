@@ -2,9 +2,11 @@ import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
+import pytest
 
-from hermes_ai.client import HermesAiClient
+from hermes_ai.client import HermesAi
 from hermes_ai.core.config import AiConfig
+from hermes_ai.exceptions import GeocodingError
 from hermes_ai.models.events import ArticleInput, GroundedEvent
 from hermes_ai.models.tl import GroundedTlNode
 from hermes_ai.services.geocoding import (
@@ -220,7 +222,7 @@ def test_autonomous_grounding_in_event_extractor() -> None:
             primary_model="mistral/mistral-large",
             primary_api_key="key",
         )
-        client = HermesAiClient(config)
+        client = HermesAi(config)
         geo_service = GeocodingService()
 
         # Mock LLM response with location
@@ -231,16 +233,21 @@ def test_autonomous_grounding_in_event_extractor() -> None:
         )
         mock_msg = AsyncMock(content=json_content)
         mock_res = AsyncMock(choices=[AsyncMock(message=mock_msg)])
-        client._router.acompletion = AsyncMock(return_value=mock_res)
 
-        with patch.object(
-            geo_service,
-            "geocode",
-            new_callable=AsyncMock,
-            return_value=GeocodingResult(48.8566, 2.3522, "Paris, France"),
-        ) as mock_geo:
+        with (
+            patch(
+                "litellm.Router.acompletion", new_callable=AsyncMock
+            ) as mock_acompletion,
+            patch.object(
+                geo_service,
+                "geocode",
+                new_callable=AsyncMock,
+                return_value=GeocodingResult(48.8566, 2.3522, "Paris, France"),
+            ) as mock_geo,
+        ):
+            mock_acompletion.return_value = mock_res
             articles = [ArticleInput(title="Paris Summit", content="Meeting details")]
-            events = await client.extract_events(articles, geocoding_svc=geo_service)
+            events = await client.events.extract(articles, geocoding_svc=geo_service)
             assert len(events) == 1
             event = events[0]
             assert isinstance(event, GroundedEvent)
@@ -257,7 +264,7 @@ def test_autonomous_grounding_in_tl_extractor() -> None:
             primary_model="mistral/mistral-large",
             primary_api_key="key",
         )
-        client = HermesAiClient(config)
+        client = HermesAi(config)
         geo_service = GeocodingService()
 
         tl_json = (
@@ -267,15 +274,20 @@ def test_autonomous_grounding_in_tl_extractor() -> None:
         )
         mock_msg = AsyncMock(content=tl_json)
         mock_res = AsyncMock(choices=[AsyncMock(message=mock_msg)])
-        client._router.acompletion = AsyncMock(return_value=mock_res)
 
-        with patch.object(
-            geo_service,
-            "geocode",
-            new_callable=AsyncMock,
-            return_value=GeocodingResult(48.8566, 2.3522, "Paris, France"),
+        with (
+            patch(
+                "litellm.Router.acompletion", new_callable=AsyncMock
+            ) as mock_acompletion,
+            patch.object(
+                geo_service,
+                "geocode",
+                new_callable=AsyncMock,
+                return_value=GeocodingResult(48.8566, 2.3522, "Paris, France"),
+            ),
         ):
-            tl = await client.extract_tl(
+            mock_acompletion.return_value = mock_res
+            tl = await client.timelines.extract(
                 pg_title="Liberation_of_Paris",
                 prose="Historical text...",
                 geocoding_svc=geo_service,
@@ -286,5 +298,24 @@ def test_autonomous_grounding_in_tl_extractor() -> None:
             assert isinstance(node, GroundedTlNode)
             assert node.latitude == 48.8566
             assert node.longitude == 2.3522
+
+    asyncio.run(_run())
+
+
+def test_call_nominatim_raises_geocoding_error_on_malformed_json() -> None:
+    async def _run() -> None:
+        service = GeocodingService()
+        mock_res = MagicMock()
+        mock_res.status_code = 200
+        mock_res.json.return_value = [{"invalid": "no lat or lon"}]
+
+        with (
+            patch.object(service._resilience, "enforce_pacing", new_callable=AsyncMock),
+            patch(
+                "httpx.AsyncClient.get", new_callable=AsyncMock, return_value=mock_res
+            ),
+            pytest.raises(GeocodingError, match="failed to parse nominatim response"),
+        ):
+            await service._call_nominatim("Atlantis")
 
     asyncio.run(_run())

@@ -6,6 +6,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from hermes_ai.core.config import AiConfig
+from hermes_ai.exceptions import (
+    ModelExecutionError,
+    SchemaValidationError,
+)
 from hermes_ai.models.events import ExtractionResponse
 from hermes_ai.models.tl import TlSearchQuery
 from hermes_ai.services.llm import LlmService
@@ -146,3 +150,73 @@ def test_llm_service_call_llm_markdown_fence_and_raw_list(
     assert res is not None
     assert len(res.events) == 1
     assert res.events[0].headline == "Fence"
+
+
+@patch("litellm.Router.acompletion")
+def test_llm_service_call_llm_raises_model_execution_error(
+    mock_acompletion: AsyncMock, base_config: AiConfig
+) -> None:
+    svc = LlmService(base_config)
+    mock_acompletion.side_effect = RuntimeError("Provider 503 outage")
+
+    with pytest.raises(ModelExecutionError, match="all router deployments failed"):
+        asyncio.run(
+            svc.call_llm(
+                sys_prompt="system",
+                user_prompt="user",
+                res_model=TlSearchQuery,
+                schema_name="triage",
+            )
+        )
+
+
+@patch("litellm.Router.acompletion")
+def test_llm_service_call_llm_raises_schema_validation_error(
+    mock_acompletion: AsyncMock, base_config: AiConfig
+) -> None:
+    svc = LlmService(base_config)
+    bad_res = MagicMock()
+    bad_res.choices = [MagicMock(message=MagicMock(content='{"invalid": "data"}'))]
+    mock_acompletion.side_effect = [bad_res, bad_res]
+
+    with pytest.raises(
+        SchemaValidationError,
+        match="output validation failed across primary and fallback",
+    ):
+        asyncio.run(
+            svc.call_llm(
+                sys_prompt="system",
+                user_prompt="user",
+                res_model=TlSearchQuery,
+                schema_name="triage",
+            )
+        )
+
+
+@patch("hermes_ai.services.llm.Langfuse")
+@patch("hermes_ai.services.llm.get_client")
+def test_llm_service_tracing_enabled(
+    mock_get_client: MagicMock,
+    mock_langfuse: MagicMock,
+    base_config: AiConfig,
+) -> None:
+    cfg = AiConfig(
+        primary_model=base_config.primary_model,
+        primary_api_key=base_config.primary_api_key,
+        tracing_enabled=True,
+        langfuse_public_key="pk-test",
+        langfuse_secret_key="sk-test",
+        langfuse_host="https://test.langfuse.com",
+    )
+    svc = LlmService(cfg)
+    # Langfuse SDK client is now initialized via `base_url` (not the deprecated `host`).
+    mock_langfuse.assert_called_once_with(
+        public_key="pk-test",
+        secret_key="sk-test",
+        base_url="https://test.langfuse.com",
+    )
+
+    mock_client = MagicMock()
+    mock_get_client.return_value = mock_client
+    asyncio.run(svc.aclose())
+    mock_client.flush.assert_called_once()

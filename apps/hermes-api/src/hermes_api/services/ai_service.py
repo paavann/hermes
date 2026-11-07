@@ -1,13 +1,12 @@
 import logging
 from hermes_ai import (
     AiConfig,
-    HermesAiClient,
+    HermesAi,
     TlEdgeExtraction,
     TlExtractionResponse,
     TlNodeExtraction,
     TlSearchQuery,
 )
-from litellm.router import Router
 from hermes_api.core.config import settings
 
 
@@ -25,7 +24,11 @@ class AiService:
             logger.error("primary llm api key or model is missing.")
             raise ValueError("LLM_API or LLM_MODEL is missing.")
 
-        self._client = HermesAiClient(
+        tracing = bool(settings.LANGFUSE_PUBLIC_KEY and settings.LANGFUSE_SECRET_KEY)
+        if tracing:
+            logger.info("langfuse tracing is enabled for ai service.")
+
+        self._client = HermesAi(
             AiConfig(
                 primary_model=settings.LLM_MODEL,
                 primary_api_key=settings.LLM_API,
@@ -35,6 +38,11 @@ class AiService:
                 embed_model=settings.EMBED_MODEL,
                 embed_api_key=settings.EMBED_API,
                 embed_rpm_limit=settings.EMBED_RPM_LIMIT,
+                tracing_enabled=tracing,
+                tracing_tags=["hermes-api", settings.ENV],
+                langfuse_public_key=settings.LANGFUSE_PUBLIC_KEY or None,
+                langfuse_secret_key=settings.LANGFUSE_SECRET_KEY or None,
+                langfuse_host=settings.LANGFUSE_HOST or None,
             )
         )
 
@@ -45,22 +53,18 @@ class AiService:
         )
 
     @property
-    def client(self) -> HermesAiClient:
+    def client(self) -> HermesAi:
         return self._client
-
-    @property
-    def router(self) -> Router:
-        return self._client.router
 
     async def extract_tl(
         self, pg_title: str, prose: str
     ) -> TlExtractionResponse | None:
         """Extract a chronological event timeline from Wikipedia prose."""
-        return await self._client.extract_tl(pg_title, prose)
+        return await self._client.timelines.extract(pg_title, prose)
 
     async def analyze_tl_context(self, headline: str) -> TlSearchQuery | None:
         """Analyze whether an event headline warrants historical timeline synthesis."""
-        return await self._client.analyze_tl_context(headline)
+        return await self._client.timelines.analyze(headline)
 
 
 __all__ = [

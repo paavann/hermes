@@ -1,5 +1,6 @@
 import os
 from functools import lru_cache
+from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy import URL
 
@@ -57,6 +58,15 @@ class Settings(BaseSettings):
 
     # cors configuration.
     CORS_ORIGINS: list[str] = ["*"]
+
+    # langfuse tracing.
+    LANGFUSE_PUBLIC_KEY: str = ""
+    LANGFUSE_SECRET_KEY: str = ""
+    LANGFUSE_HOST: str = Field(
+        default="https://cloud.langfuse.com",
+        validation_alias=AliasChoices("LANGFUSE_HOST", "LANGFUSE_BASE_URL"),
+    )
+    LANGFUSE_BASE_URL: str | None = None
 
     # database connection url.
     @property

@@ -8,6 +8,7 @@
 [![Python 3.14+](https://img.shields.io/badge/Python-3.14+-3776AB?style=flat&logo=python&logoColor=white)](https://www.python.org/)
 [![PostGIS](https://img.shields.io/badge/PostGIS-3.4-336791?style=flat&logo=postgresql&logoColor=white)](https://postgis.net)
 [![pgvector](https://img.shields.io/badge/pgvector-halfvec(2048)-blue?style=flat)](https://github.com/pgvector/pgvector)
+[![Langfuse](https://img.shields.io/badge/Observability-Langfuse-EE5E2A?style=flat&logo=langfuse&logoColor=white)](https://langfuse.com)
 [![Mapbox GL JS](https://img.shields.io/badge/Mapbox_GL-v3.29-4264FB?style=flat&logo=mapbox&logoColor=white)](https://docs.mapbox.com/mapbox-gl-js/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
@@ -37,6 +38,7 @@ Traditional news aggregators suffer from narrative duplication, click-driven rec
 - **Interactive Tactical Map**: Full-screen WebGL map engine built on Mapbox GL JS with GPU canvas layer clustering, dynamic bounding-box synchronization (`/api/v1/events/bbox`), and camera transitions.
 - **Editorial Consensus Engine**: Corroborates multiple independent reports into single unified events, tracking sources and syndication factors.
 - **Historical Causality DAGs**: On-demand timeline synthesis (`/api/v1/events/tl/{id}`) that connects today's events to historical milestones extracted from Wikipedia.
+- **Traceability & Observability**: Integrated with [Langfuse](https://langfuse.com) for real-time span tracking, token usage accounting, latency monitoring, and model fallback observability across batch ingestion and on-demand synthesis.
 - **Resilient Pipeline**: Token-bucket rate limiting, circuit breaking, and schema-level LLM fallback extractors prevent failures during external API degradation.
 
 ---
@@ -105,7 +107,7 @@ hermes/
    ```bash
    cp .env.example .env
    ```
-   Ensure your `.env` contains database settings, Clerk authentication keys, and your Mapbox public token. For LLM capabilities, configure `LLM_API` and `EMBED_API` in `apps/hermes-api/.env.local`.
+   Ensure your `.env` contains database settings, Clerk authentication keys, and your Mapbox public token. For LLM capabilities, configure `LLM_API` and `EMBED_API` in `apps/hermes-api/.env.local`. To enable Langfuse trace observability, add `LANGFUSE_PUBLIC_KEY` and `LANGFUSE_SECRET_KEY` to `.env`.
 
 4. **Start the local database**:
    ```bash

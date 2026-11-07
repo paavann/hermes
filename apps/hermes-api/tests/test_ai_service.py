@@ -128,9 +128,9 @@ class TestAnalyzeTlContext:
 
 class TestRouterFallback:
     def test_router_configuration(self, ai_service: AiService) -> None:
-        assert len(ai_service.router.model_list) == 2
-        assert ai_service.router.model_list[0]["model_name"] == "primary-extractor"
-        assert ai_service.router.model_list[1]["model_name"] == "fallback-extractor"
-        assert ai_service.router.fallbacks == [
-            {"primary-extractor": ["fallback-extractor"]}
-        ]
+        assert ai_service.client.config.primary_model == "mistral/ministral-8b-latest"
+        assert (
+            ai_service.client.config.fallback_model
+            == "nvidia_nim/meta/llama-3.1-70b-instruct"
+        )
+        assert ai_service.client.config.has_fallback is True

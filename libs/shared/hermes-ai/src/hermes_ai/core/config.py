@@ -1,6 +1,4 @@
-"""Configuration models for Hermes AI services."""
-
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
 @dataclass(frozen=True)
@@ -16,3 +14,12 @@ class AiConfig:
     retry_after: bool = True
     rpm_limit: int | None = None
     embed_rpm_limit: int | None = None
+    tracing_enabled: bool = False
+    tracing_tags: list[str] = field(default_factory=list)
+    langfuse_public_key: str | None = None
+    langfuse_secret_key: str | None = None
+    langfuse_host: str | None = None
+
+    @property
+    def has_fallback(self) -> bool:
+        return self.fallback_model is not None

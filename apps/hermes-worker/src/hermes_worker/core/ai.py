@@ -1,8 +1,10 @@
-from hermes_ai import AiConfig, HermesAiClient
+from hermes_ai import AiConfig, HermesAi
 from hermes_worker.core.config import settings
 
 
-def create_ai_client() -> HermesAiClient:
+def create_ai_client() -> HermesAi:
+    tracing = bool(settings.LANGFUSE_PUBLIC_KEY and settings.LANGFUSE_SECRET_KEY)
+
     config = AiConfig(
         primary_model=settings.LLM_MODEL,
         primary_api_key=settings.LLM_API,
@@ -15,6 +17,11 @@ def create_ai_client() -> HermesAiClient:
         retry_after=True,
         rpm_limit=settings.RPM_LIMIT,
         embed_rpm_limit=settings.EMBED_RPM_LIMIT,
+        tracing_enabled=tracing,
+        tracing_tags=["hermes-worker", settings.ENV],
+        langfuse_public_key=settings.LANGFUSE_PUBLIC_KEY or None,
+        langfuse_secret_key=settings.LANGFUSE_SECRET_KEY or None,
+        langfuse_host=settings.LANGFUSE_HOST or None,
     )
-    client = HermesAiClient(config)
-    return client
+
+    return HermesAi(config)

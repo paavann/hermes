@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useMapStore } from '../../store/store';
 import { useEventDetails } from '../../hooks/eventDetails';
 
@@ -9,7 +9,8 @@ function getOutletTag(
 ): string {
   const name = sourceName?.toLowerCase() ?? '';
   if (name.includes('reuters')) return 'reuters';
-  if (name.includes('associated press') || name.includes('ap wire')) return 'ap';
+  if (name.includes('associated press') || name.includes('ap wire'))
+    return 'ap';
   if (name.includes('france-presse') || name.includes('afp')) return 'afp';
   if (name.includes('united press') || name.includes('upi')) return 'upi';
   if (name.includes('bbc')) return 'bbc';
@@ -23,14 +24,25 @@ function getOutletTag(
   if (name.includes('cbc')) return 'cbc';
   if (name.includes('cnn')) return 'cnn';
   if (name.includes('npr')) return 'npr';
-  if (name.includes('wsj') || name.includes('wall street journal')) return 'wsj';
+  if (name.includes('wsj') || name.includes('wall street journal'))
+    return 'wsj';
   if (name.includes('pbs')) return 'pbs';
   if (name.includes('euronews')) return 'euronews';
 
   const titleLower = title.toLowerCase();
-  if (titleLower.endsWith('- reuters') || titleLower.endsWith(' - reuters')) return 'reuters';
-  if (titleLower.endsWith('- the associated press') || titleLower.endsWith('- ap news') || titleLower.endsWith('- ap')) return 'ap';
-  if (titleLower.endsWith('- agence france-presse') || titleLower.endsWith('- afp')) return 'afp';
+  if (titleLower.endsWith('- reuters') || titleLower.endsWith(' - reuters'))
+    return 'reuters';
+  if (
+    titleLower.endsWith('- the associated press') ||
+    titleLower.endsWith('- ap news') ||
+    titleLower.endsWith('- ap')
+  )
+    return 'ap';
+  if (
+    titleLower.endsWith('- agence france-presse') ||
+    titleLower.endsWith('- afp')
+  )
+    return 'afp';
   if (titleLower.endsWith('- upi')) return 'upi';
   if (titleLower.endsWith('- bbc')) return 'bbc';
 
@@ -42,7 +54,10 @@ function getOutletTag(
   if (domain.includes('theguardian.com')) return 'guardian';
 
   if (sourceName) {
-    return sourceName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+    return sourceName
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '');
   }
 
   return domain.split('.')[0] || 'source';
@@ -57,7 +72,66 @@ export function EventPopup({ map }: { map: mapboxgl.Map | null }) {
   const { data: event, isLoading, isError } = useEventDetails(selectedEventId);
   const [pos, setPos] = useState({ x: -9999, y: -9999 });
   const [scrambledSummary, setScrambledSummary] = useState('');
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
   const popupRef = useRef<HTMLDivElement>(null);
+  const actionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Reset closing and analyzing states whenever the selected event changes
+  useEffect(() => {
+    setIsClosing(false);
+    setIsAnalyzing(false);
+  }, [selectedEventId]);
+
+  useEffect(() => {
+    return () => {
+      if (actionTimeoutRef.current) {
+        clearTimeout(actionTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const handleAnalyze = useCallback(
+    (e?: React.MouseEvent) => {
+      e?.stopPropagation();
+      if (isAnalyzing || !event) return;
+      setIsAnalyzing(true);
+      actionTimeoutRef.current = setTimeout(() => {
+        setTlMode(true, event.id);
+        setSelectedEventId(null);
+        setIsAnalyzing(false);
+      }, 90);
+    },
+    [isAnalyzing, event, setTlMode, setSelectedEventId],
+  );
+
+  const handleClose = useCallback(
+    (e?: React.MouseEvent | React.KeyboardEvent) => {
+      e?.stopPropagation();
+      if (isClosing) return;
+      setIsClosing(true);
+      actionTimeoutRef.current = setTimeout(() => {
+        setSelectedEventId(null);
+        setIsClosing(false);
+      }, 90);
+    },
+    [isClosing, setSelectedEventId],
+  );
+
+  // Keyboard accessibility: Escape key to dismiss the popup per modern web guidance
+  useEffect(() => {
+    if (!selectedEventId) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.stopPropagation();
+        handleClose();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedEventId, handleClose]);
 
   // Track position flawlessly using requestAnimationFrame and Mapbox projection
   useEffect(() => {
@@ -84,7 +158,12 @@ export function EventPopup({ map }: { map: mapboxgl.Map | null }) {
         );
       }
 
-      setPos({ x, y });
+      setPos((prev) => {
+        if (Math.abs(prev.x - x) < 0.5 && Math.abs(prev.y - y) < 0.5) {
+          return prev;
+        }
+        return { x, y };
+      });
       animationFrameId = requestAnimationFrame(updatePosition);
     };
 
@@ -136,16 +215,19 @@ export function EventPopup({ map }: { map: mapboxgl.Map | null }) {
     >
       <div
         ref={popupRef}
+        onClick={(e) => e.stopPropagation()}
+        role="region"
+        aria-label="Event overview"
         className="pointer-events-auto bg-hud-bg/95 backdrop-blur-md border border-hud-border shadow-[0_0_20px_rgba(59,130,246,0.2)] flex flex-col w-96 max-h-[70vh] font-mono"
       >
         {/* Header */}
-        <div className="flex justify-between items-start p-3 border-b border-hud-border bg-black/40">
-          <div className="flex flex-col gap-1">
+        <div className="flex justify-between items-start p-3 border-b border-hud-border bg-black/40 gap-2">
+          <div className="flex flex-col gap-1 min-w-0">
             <span className="text-neon-blue font-bold tracking-[0.2em] text-xs uppercase">
               OVERVIEW
             </span>
             {event && selectedEventLngLat && (
-              <span className="text-gray-400 text-[10px] tracking-wider">
+              <span className="text-gray-400 text-[10px] tracking-wider truncate">
                 {event.location_name ? `${event.location_name} • ` : ''}
                 {selectedEventLngLat[1].toFixed(4)}°,{' '}
                 {selectedEventLngLat[0].toFixed(4)}°
@@ -153,8 +235,12 @@ export function EventPopup({ map }: { map: mapboxgl.Map | null }) {
             )}
           </div>
           <button
-            onClick={() => setSelectedEventId(null)}
-            className="text-red-500 hover:text-red-400 cursor-pointer text-[10px] font-bold tracking-widest mt-0.5 border border-red-500/50 px-1 py-0.5 hover:bg-red-500/20"
+            type="button"
+            onClick={handleClose}
+            aria-label="Close event overview"
+            className={`cursor-pointer bg-[#ef4444] hover:bg-[#f87171] text-[#000000] font-mono font-bold text-[10px] tracking-wider px-2 py-0.5 uppercase transition-all duration-100 ease-out active:scale-[0.98] select-none shrink-0 ${
+              isClosing ? 'animate-pop' : ''
+            }`}
           >
             CLOSE
           </button>
@@ -202,11 +288,11 @@ export function EventPopup({ map }: { map: mapboxgl.Map | null }) {
 
               {/* Lineage Analyze Button */}
               <button
-                onClick={() => {
-                  setTlMode(true, event.id);
-                  setSelectedEventId(null);
-                }}
-                className="w-full py-2 bg-neon-blue/20 hover:bg-neon-blue/40 border border-neon-blue text-neon-blue cursor-pointer text-xs font-bold tracking-widest uppercase transition-colors"
+                type="button"
+                onClick={handleAnalyze}
+                className={`w-full py-2 bg-[#08929c] hover:bg-[#0aa5b1] text-[#000000] cursor-pointer text-xs font-mono font-bold tracking-widest uppercase transition-all duration-100 ease-out active:scale-[0.98] select-none ${
+                  isAnalyzing ? 'animate-pop' : ''
+                }`}
               >
                 ANALYZE
               </button>

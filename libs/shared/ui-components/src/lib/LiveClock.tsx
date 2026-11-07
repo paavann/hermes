@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 
-export function LiveClock() {
+export function LiveClock(): React.JSX.Element {
   const [timeStr, setTimeStr] = useState('');
 
   useEffect(() => {
@@ -8,7 +8,7 @@ export function LiveClock() {
       const now = new Date();
       // Format: HH:MM:SS from UTC string
       const time = now.toISOString().substring(11, 19);
-      setTimeStr(`SYS.TIME ${time} UTC`);
+      setTimeStr(`${time} UTC`);
     };
 
     updateTime();
@@ -19,10 +19,10 @@ export function LiveClock() {
   // Suppress hydration warnings since server/client time might mismatch slightly in SSR (if used)
   return (
     <div
-      className="fixed bottom-4 left-4 z-20 pointer-events-none"
+      className="fixed bottom-4 left-4 z-20 pointer-events-none select-none"
       suppressHydrationWarning
     >
-      <div className="bg-hud-bg border border-hud-border px-3 py-1.5 font-mono text-xs text-neon-blue tracking-[0.1em] shadow-[0_0_10px_rgba(59,130,246,0.2)] backdrop-blur-md">
+      <div className="bg-[#08929c] text-[#000000] px-2 py-0.5 font-mono font-bold text-[10px] tracking-wider uppercase">
         {timeStr}
       </div>
     </div>

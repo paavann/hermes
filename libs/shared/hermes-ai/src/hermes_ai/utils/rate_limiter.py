@@ -2,18 +2,10 @@ import asyncio
 import logging
 import time
 
+from hermes_ai.exceptions import CircuitBreakerOpenError
+
 
 logger = logging.getLogger(__name__)
-
-
-class CircuitBreakerOpenError(Exception):
-    def __init__(
-        self,
-        message: str = "circuit breaker is open.",
-        cooldown_remaining: float | None = None,
-    ) -> None:
-        super().__init__(message)
-        self.cooldown_remaining = cooldown_remaining
 
 
 class TbRateLimiter:

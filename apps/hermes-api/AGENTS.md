@@ -17,6 +17,7 @@ Run all commands from the workspace root using project `hermes-api`. See root `A
 - **CORS Exception Headers**: Handlers in `core/errors.py` bypass Starlette's `CORSMiddleware`. Every custom exception handler must explicitly include origin headers via `_cors_headers(request)`.
 - **Lifespan Pool Management**: Initialize and dispose database connection pools inside `lifespan` in `main.py` via `init_db` and `close_db`. Never initialize connections at module import time.
 - **Graceful Degradation**: When LLM credentials are missing, keep the server operational for spatial queries and return HTTP 503 from timeline synthesis endpoints instead of crashing.
+- **Observability Lifecycle**: When Langfuse keys are configured, `AiService` initializes tracing tagged with `["hermes-api", ENV]`. Ensure `client.close()` is executed on application shutdown to flush queued telemetry before Uvicorn termination.
 - **No Local ORM Models**: All database models and migrations reside in `libs/shared/hermes-db`. Never define SQLAlchemy models in `hermes-api`.
 
 ## 3. Domain Triggers

@@ -1,29 +1,35 @@
 import logging
-from typing import TYPE_CHECKING
 
+from langfuse import observe
+
+from hermes_ai.exceptions import (
+    ModelExecutionError,
+    SchemaValidationError,
+)
 from hermes_ai.models.tl import (
     GroundedTlNode,
     TlExtractionResponse,
     TlSearchQuery,
 )
 from hermes_ai.services.geocoding import GeocodingService
+from hermes_ai.services.llm import LlmService
 from hermes_ai.utils.prompts import (
     TL_SYSTEM_PROMPT,
     TL_TRIAGE_SYSTEM_PROMPT,
 )
 
 
-if TYPE_CHECKING:
-    from hermes_ai.client import HermesAiClient
-
 logger = logging.getLogger(__name__)
 
 
 class TlExtractor:
-    def __init__(self, client: HermesAiClient) -> None:
-        self._client = client
+    def __init__(self, llm: LlmService) -> None:
+        self._llm = llm
 
-    async def extract_tl(
+    @observe(
+        as_type="span", name="tl-extract", capture_input=False, capture_output=False
+    )
+    async def extract(
         self,
         pg_title: str,
         prose: str,
@@ -33,14 +39,15 @@ class TlExtractor:
             return None
 
         user_prompt = f"# Wikipedia page: {pg_title}\n\n{prose}"
-        res = await self._client.call_llm(
-            sys_prompt=TL_SYSTEM_PROMPT,
-            user_prompt=user_prompt,
-            res_model=TlExtractionResponse,
-            schema_name="timeline_extraction",
-        )
-        if not res:
-            logger.warning("failed to extract timeline for %s.", pg_title)
+        try:
+            res = await self._llm.call_llm(
+                sys_prompt=TL_SYSTEM_PROMPT,
+                user_prompt=user_prompt,
+                res_model=TlExtractionResponse,
+                schema_name="timeline_extraction",
+            )
+        except (ModelExecutionError, SchemaValidationError) as exc:
+            logger.warning("failed to extract timeline for %s: %s.", pg_title, exc)
             return None
 
         if geocoding_svc:
@@ -70,14 +77,23 @@ class TlExtractor:
         logger.info("timeline extracted successfully for %s.", pg_title)
         return res
 
-    async def analyze_tl_context(self, headline: str) -> TlSearchQuery | None:
+    @observe(
+        as_type="span", name="tl-analyze", capture_input=False, capture_output=False
+    )
+    async def analyze(self, headline: str) -> TlSearchQuery | None:
         user_prompt = f"Headline: {headline}"
-        res = await self._client.call_llm(
-            sys_prompt=TL_TRIAGE_SYSTEM_PROMPT,
-            user_prompt=user_prompt,
-            res_model=TlSearchQuery,
-            schema_name="timeline_search_query",
-        )
-        if isinstance(res, TlSearchQuery):
-            return res
-        return None
+        try:
+            res = await self._llm.call_llm(
+                sys_prompt=TL_TRIAGE_SYSTEM_PROMPT,
+                user_prompt=user_prompt,
+                res_model=TlSearchQuery,
+                schema_name="timeline_search_query",
+            )
+            if isinstance(res, TlSearchQuery):
+                return res
+            return None
+        except (ModelExecutionError, SchemaValidationError) as exc:
+            logger.warning(
+                "failed to analyze headline context for '%s': %s.", headline, exc
+            )
+            return None

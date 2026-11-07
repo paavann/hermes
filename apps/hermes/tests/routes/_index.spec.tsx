@@ -1,7 +1,10 @@
 import { createRoutesStub } from 'react-router';
 import { render, screen, waitFor } from '@testing-library/react';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
-import MapRoute, { loader as mapLoader, HydrateFallback } from '../../app/routes/map';
+import MapRoute, {
+  loader as mapLoader,
+  HydrateFallback,
+} from '../../app/routes/map';
 
 const mockGetAuth = vi.fn();
 
@@ -29,16 +32,19 @@ describe('Map Route', () => {
   ]);
 
   it('renders map route with tactical hud and map view for authenticated users', async () => {
-    mockGetAuth.mockResolvedValueOnce({ userId: 'user_operator_123', isAuthenticated: true });
+    mockGetAuth.mockResolvedValueOnce({
+      userId: 'user_operator_123',
+      isAuthenticated: true,
+    });
 
     render(<ReactRouterStub initialEntries={['/map']} />);
 
     await waitFor(
       () => {
         expect(screen.getByTestId('map-view')).toBeTruthy();
-        expect(screen.getByText(/SYS\.TIME/)).toBeTruthy();
+        expect(screen.getByText(/UTC/)).toBeTruthy();
       },
-      { timeout: 5000 }
+      { timeout: 5000 },
     );
   }, 15000);
 
@@ -50,9 +56,9 @@ describe('Map Route', () => {
     await waitFor(
       () => {
         expect(screen.getByTestId('map-view')).toBeTruthy();
-        expect(screen.getByText(/SYS\.TIME/)).toBeTruthy();
+        expect(screen.getByText(/UTC/)).toBeTruthy();
       },
-      { timeout: 5000 }
+      { timeout: 5000 },
     );
   }, 15000);
 });

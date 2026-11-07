@@ -73,7 +73,7 @@ def test_get_events_by_bbox_invalid_lat():
     with (
         patch("hermes_api.main.init_db", new_callable=AsyncMock),
         patch("hermes_api.main.close_db", new_callable=AsyncMock),
-        TestClient(app) as client
+        TestClient(app) as client,
     ):
         resp = client.get("/api/v1/events/bbox?north=120&south=40&east=20&west=0")
         assert resp.status_code == 422

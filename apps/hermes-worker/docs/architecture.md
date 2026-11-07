@@ -31,6 +31,7 @@ flowchart TD
     subgraph DataLayer ["Persistence & External Services"]
         NeonDB[("Neon Serverless PostgreSQL 16\nPostGIS + pgvector halfvec(2048)")]
         ExternalAPIs["External Intelligence APIs\nRSS/GDELT • LiteLLM • Nominatim"]
+        Langfuse["Langfuse Observability\n(Traces, Spans & Cost Tracking)"]
     end
 
     EventBridge -->|"Triggers ecs:RunTask"| ECS
@@ -39,6 +40,7 @@ flowchart TD
     Task --> Container
     Container <-->|"Batch Ingestion & Decay"| NeonDB
     Container <-->|"News Ingestion & Extraction"| ExternalAPIs
+    Container -.->|"OTLP Spans (opt-in)"| Langfuse
     Container -->|"Streams stdout / stderr"| CloudWatch
     Container --> Teardown
 ```
@@ -99,7 +101,7 @@ sequenceDiagram
             Note over DB: HNSW cosine distance scan: Event.embedding <=> vector < 0.25
             DB-->>W: Candidate active events per article
             
-            W->>AI: extract_events(articles, candidate_events)
+            W->>AI: events.extract(articles, candidate_events)
             Note over AI: LiteLLM evaluates whether to corroborate candidate or create new
             AI-->>W: List of ExtractedEvent models
             
@@ -197,3 +199,39 @@ $$\Delta S = W_{\text{cred}}(a) \times F_{\text{synd}}(a) \times M_{\text{impact
   - `STALE` $\rightarrow$ `ARCHIVED`: Occurs when an event has remained stale for $> 48$ hours (`EVENT_ARCHIVE_HOURS`).
   - **Reactivation**: Any new incoming article corroborating a `STALE` event immediately reactivates it to `ACTIVE`.
 - **Resource Teardown**: The worker disposes of all database connections on exit, returning a non-zero exit code (`sys.exit(1)`) if an unhandled error occurs during lifecycle or sync tasks.
+
+---
+
+## 6. Observability & Langfuse Tracing
+
+`hermes-worker` incorporates **Langfuse v3** for traceability and cost observability across batch LLM event extraction workloads.
+
+```mermaid
+flowchart LR
+    Sync["SyncService Ingestion Loop"] --> Batch["Batch of 10 Articles"]
+    Batch --> Observe["@observe: event-extract\n(EventExtractor.extract)"]
+    Observe --> Router["LiteLLM Router\n(Primary -> Fallback)"]
+    Router --> LifespanEnd["Lifespan Teardown\n(LlmService.aclose)"]
+    LifespanEnd --> Flush["Langfuse get_client().flush()\n(Synchronous Drain)"]
+    Flush -.->|"HTTPS Ingestion"| Langfuse[("Langfuse Cloud / Host")]
+```
+
+### Architectural Decisions ("The Why")
+
+1. **Process-Level Singleton Registration**:
+   `hermes-worker` instantiates the shared AI facade via `create_ai_client()` in [`core/ai.py`](file:///home/pavan/proj/hermes/apps/hermes-worker/src/hermes_worker/core/ai.py). When `LANGFUSE_PUBLIC_KEY` and `LANGFUSE_SECRET_KEY` are provided, `LlmService` registers the Langfuse SDK singleton using `base_url` (guaranteeing correct regional OTLP routing).
+
+2. **Batch-Level Tracing (`event-extract`)**:
+   Extraction passes over article chunks are decorated with `@observe(as_type="span", name="event-extract", capture_input=False, capture_output=False)`. This captures:
+   - Batch extraction latency and model response times.
+   - Token consumption across primary (`mistral/ministral-8b-latest`) and fallback (`nvidia_nim/openai/gpt-oss-20b`) deployments.
+   - PII protection: inputs and outputs are not captured to avoid exporting raw scraped articles or sensitive content into the telemetry plane.
+
+3. **Critical Flush on Ephemeral Container Shutdown**:
+   Because `hermes-worker` runs on **AWS ECS Fargate** with an ephemeral run-and-die lifecycle, the container terminates immediately upon sync completion (`sys.exit(0)`).
+   - In long-running servers, background telemetry workers can flush lazily on intervals.
+   - In ephemeral batch tasks, process termination kills background threads immediately, resulting in dropped trace batches.
+   - To prevent telemetry loss, `hermes-worker` ensures `LlmService.aclose()` executes `get_client().flush()` before container teardown, synchronously draining the trace queue to Langfuse before OS process exit.
+
+4. **Environment Separation**:
+   Traces are tagged with `["hermes-worker", ENV]`, separating local developer CLI executions (`ENV=development`) from production AWS Fargate automated batches (`ENV=production`).
