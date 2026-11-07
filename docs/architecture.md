@@ -10,10 +10,10 @@ Hermes is deployed as a resilient, cost-optimized multi-cloud system spanning **
 
 ```mermaid
 flowchart TD
-    subgraph ClientLayer["Client & Edge Layer (Vercel)"]
+    subgraph ClientLayer["Client and Edge Layer (Vercel)"]
         User["End User Browser"]
         VercelEdge["Vercel SSR (Node.js Runtime)\napps/hermes • hermes-eight-inky.vercel.app"]
-        ClerkAuth["Clerk Authentication\nSession Management & JWT"]
+        ClerkAuth["Clerk Authentication\nSession Management and JWT"]
     end
 
     subgraph ApiLayer["API Serving Layer (Render)"]
@@ -34,7 +34,7 @@ flowchart TD
         Relational["Relational Tables\nevents, articles, sources, event_timelines, geocode_cache"]
     end
 
-    subgraph ExternalServices["External Intelligence & Inference APIs"]
+    subgraph ExternalServices["External Intelligence and Inference APIs"]
         RSSFeeds["Global News Feeds\nRSS / Atom / News Sitemaps"]
         GDELT["GDELT 2.0 Doc API\nGlobal Event Database"]
         Nominatim["OpenStreetMap Nominatim\nToken-Bucket Rate Limited (1 req/s)"]
@@ -42,31 +42,31 @@ flowchart TD
         LiteLLM["LiteLLM Inference Router"]
         Mistral["Primary LLM:\nmistral/ministral-8b-latest"]
         NvidiaNim["Fallback LLM:\nnvidia_nim/openai/gpt-oss-20b\nEmbeddings:\nnvidia_nim/nvidia/nemotron-3-embed-1b"]
-        Langfuse["Langfuse Observability\nTraces, Spans & Cost Tracking"]
+        Langfuse["Langfuse Observability\nTraces, Spans and Cost Tracking"]
     end
 
     %% User interactions
-    User <-->|"HTTPS / WebGL Map Interactions"| VercelEdge
-    VercelEdge <-->|"Server-Side Auth Validation"| ClerkAuth
-    User <-->|"Direct REST Queries (/events/bbox, /events/tl)"| RenderApi
+    User -->|"HTTPS / WebGL Map Interactions"| VercelEdge
+    VercelEdge -->|"Server-Side Auth Validation"| ClerkAuth
+    User -->|"Direct REST Queries (/events/bbox, /events/tl)"| RenderApi
 
     %% API to Database
-    RenderApi <-->|"asyncpg / SQLAlchemy 2.0 (SSL)"| PgBouncer
+    RenderApi -->|"asyncpg / SQLAlchemy 2.0 (SSL)"| PgBouncer
 
     %% API to AI & Wikipedia
-    RenderApi <-->|"Timeline Extraction"| LiteLLM
-    RenderApi <-->|"Historical Article Search"| Wikipedia
-    RenderApi <-->|"Historical Node Geocoding"| Nominatim
+    RenderApi -->|"Timeline Extraction"| LiteLLM
+    RenderApi -->|"Historical Article Search"| Wikipedia
+    RenderApi -->|"Historical Node Geocoding"| Nominatim
 
     %% Worker Execution
     EventBridge -->|"RunTask Trigger"| Fargate
     ECR -.->|"Image Pull"| Fargate
     Fargate -->|"Logs & Telemetry"| CloudWatch
-    Fargate <-->|"Source Polling"| RSSFeeds
-    Fargate <-->|"Event Discovery"| GDELT
-    Fargate <-->|"Embeddings & Event Extraction"| LiteLLM
-    Fargate <-->|"Location Resolution"| Nominatim
-    Fargate <-->|"Batch Upserts & Lifecycle Decay"| PgBouncer
+    Fargate -->|"Source Polling"| RSSFeeds
+    Fargate -->|"Event Discovery"| GDELT
+    Fargate -->|"Embeddings & Event Extraction"| LiteLLM
+    Fargate -->|"Location Resolution"| Nominatim
+    Fargate -->|"Batch Upserts & Lifecycle Decay"| PgBouncer
 
     %% Database internals
     PgBouncer --> PostGIS
@@ -258,9 +258,9 @@ When an analyst clicks an active event on the map and requests historical lineag
 flowchart TD
     Start(["Analyst Requests Timeline: POST /api/v1/events/tl/{id}"]) --> CheckCache{"Cached Timeline\nExists in DB?"}
     
-    CheckCache -- "Status == READY (and not force_refresh)" --> ReturnCache["Return Cached Timeline DAG"]
-    CheckCache -- "Status == GENERATING" --> ReturnGenerating["Return HTTP 200 (Status: GENERATING)"]
-    CheckCache -- "No / Stale" --> SetGenerating["Set Status = GENERATING in event_timelines"]
+    CheckCache -->|"Status == READY (and not force_refresh)"| ReturnCache["Return Cached Timeline DAG"]
+    CheckCache -->|"Status == GENERATING"| ReturnGenerating["Return HTTP 200 (Status: GENERATING)"]
+    CheckCache -->|"No / Stale"| SetGenerating["Set Status = GENERATING in event_timelines"]
 
     SetGenerating --> AnalyzeHeadline["AiService: Analyze Event Headline\nEvaluate historical worthiness & derive search terms"]
     AnalyzeHeadline --> WikiSearch["Wikipedia REST API Search\nFind primary historical article"]
@@ -269,7 +269,7 @@ flowchart TD
     SubpageEnumeration --> AiExtract["AiService: Extract Historical Milestones\nSynthesize ordered nodes & causal relationships"]
     
     AiExtract --> GeoNom["GeocodingService\nResolve coordinates for historical nodes"]
-    GeoNom --> TerminalNode["Append Terminal Node\nLink last historical node -> Current Breaking Event ('led to')"]
+    GeoNom --> TerminalNode["Append Terminal Node\nLink last historical node to Current Breaking Event ('led to')"]
     
     TerminalNode --> SaveDb["Persist to Neon: event_timelines\nNodes & Edges stored as JSONB with status = READY"]
     SaveDb --> ReturnDag(["Return Complete Timeline DAG (TlResponse)"])
