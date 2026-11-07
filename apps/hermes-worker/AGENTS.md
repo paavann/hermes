@@ -24,6 +24,7 @@ Execute from the workspace root (see root `AGENTS.md` for lint, format, and test
 - **Pipeline Stage Order**: Maintain sequence in `services/sync.py`: compute embeddings, query candidate events via PostGIS HNSW cosine distance, then pass candidates to the LLM to confirm or create an event. Never send articles to an LLM for pairwise comparison.
 - **Geocoding**: Coordinates derive solely from `GeocodingService` in `libs/shared/hermes-ai`. Never call Nominatim from worker code.
 - **Lifecycle Transitions**: Events progress `ACTIVE -> STALE -> ARCHIVED` by age. A matched incoming article reactivates a `STALE` event to `ACTIVE`.
+- **Telemetry Flush on Exit**: Because the worker runs as an ephemeral batch task on AWS Fargate, ensure `LlmService.aclose()` -> `get_client().flush()` has executed on process exit to avoid losing buffered Langfuse trace telemetry before container teardown.
 - **Failure Exit**: The CLI must exit with a non-zero status code on unhandled exceptions or execution failures (`sys.exit(1)`).
 
 ## 4. Runtime & Memory

@@ -5,6 +5,7 @@
 [![Amazon EventBridge](https://img.shields.io/badge/AWS-EventBridge-FF4F8B?style=flat&logo=amazonwebservices&logoColor=white)](https://aws.amazon.com/eventbridge/)
 [![PostGIS](https://img.shields.io/badge/PostGIS-3.4-336791?style=flat&logo=postgresql&logoColor=white)](https://postgis.net)
 [![pgvector](https://img.shields.io/badge/pgvector-halfvec(2048)-blue?style=flat)](https://github.com/pgvector/pgvector)
+[![Langfuse](https://img.shields.io/badge/Observability-Langfuse-EE5E2A?style=flat&logo=langfuse&logoColor=white)](https://langfuse.com)
 
 `hermes-worker` is the autonomous, headless ingestion and data lifecycle worker for Project Hermes. Built as a batch CLI in **Python 3.14+**, it monitors global news feeds (RSS, GDELT, and news sitemaps), computes dense vector embeddings, performs database-side vector deduplication via PostGIS HNSW indexing, resolves coordinates through a grounded geocoding shield, and manages event decay and status transitions.
 
@@ -93,6 +94,21 @@ Settings are managed via `pydantic-settings` in [`core/config.py`](file:///home/
 | `NOMINATIM_USER_AGENT` | `Hermes...` | Custom User-Agent header for OpenStreetMap Nominatim. |
 | `EVENT_STALE_HOURS` | `24` | Hours of inactivity before an `ACTIVE` event transitions to `STALE`. |
 | `EVENT_ARCHIVE_HOURS` | `48` | Hours of inactivity before a `STALE` event transitions to `ARCHIVED`. |
+| `LANGFUSE_PUBLIC_KEY` | `""` | Langfuse project public key. When set with secret key, activates trace observability. |
+| `LANGFUSE_SECRET_KEY` | `""` | Langfuse project secret key. Required alongside public key to enable tracing. |
+| `LANGFUSE_HOST` | `https://cloud.langfuse.com` | Langfuse ingestion base URL (also accepts alias `LANGFUSE_BASE_URL`). |
+
+---
+
+## Observability & Tracing (Langfuse)
+
+`hermes-worker` integrates with [Langfuse](https://langfuse.com) via `libs/shared/hermes-ai` for granular observability across batch LLM event extraction jobs:
+
+- **Opt-in Activation**: Enabled automatically when both `LANGFUSE_PUBLIC_KEY` and `LANGFUSE_SECRET_KEY` are provided. If omitted, news ingestion runs normally without tracing overhead.
+- **Instrumented Spans**:
+  - `event-extract`: Captured by `EventExtractor.extract` around each chunk of 10 incoming articles processed through LiteLLM. Monitors token usage, latency, extraction success, and model fallbacks.
+- **Service & Environment Tags**: Traces are tagged with `["hermes-worker", ENV]` to cleanly isolate worker batch telemetry from API traffic and distinguish local testing from production AWS Fargate runs.
+- **Critical Flush-on-Exit for Ephemeral Compute**: Because `hermes-worker` operates under a run-and-die model on AWS ECS Fargate, the process exits as soon as sync completes. The worker lifespans ensure `LlmService.aclose()` -> `get_client().flush()` is called prior to `sys.exit(0)`, preventing buffered asynchronous trace events from being lost when the container is deallocated.
 
 ---
 

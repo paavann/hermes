@@ -42,6 +42,7 @@ flowchart TD
         LiteLLM["LiteLLM Inference Router"]
         Mistral["Primary LLM:\nmistral/ministral-8b-latest"]
         NvidiaNim["Fallback LLM:\nnvidia_nim/openai/gpt-oss-20b\nEmbeddings:\nnvidia_nim/nvidia/nemotron-3-embed-1b"]
+        Langfuse["Langfuse Observability\nTraces, Spans & Cost Tracking"]
     end
 
     %% User interactions
@@ -72,9 +73,10 @@ flowchart TD
     PgBouncer --> PgVector
     PgBouncer --> Relational
 
-    %% LLM routing
+    %% LLM routing & Observability
     LiteLLM --> Mistral
     LiteLLM -.->|"Failover / Embeddings"| NvidiaNim
+    LiteLLM -.->|"Traces & Spans (opt-in)"| Langfuse
 ```
 
 ---
@@ -293,6 +295,20 @@ The intelligence layer ([`hermes-ai`](file:///home/pavan/proj/hermes/libs/shared
 ### Schema-Level Validation Failover
 When an LLM returns HTTP 200 with syntactically valid JSON that fails Pydantic schema validation (e.g. missing required enum fields or misformatted relations), [`LlmService`](file:///home/pavan/proj/hermes/libs/shared/hermes-ai/src/hermes_ai/services/llm.py) catches the `ValidationError` and automatically retries the prompt against the secondary fallback model.
 
+### LLM Observability & Tracing (Langfuse)
+Hermes instruments LLM operations using the **Langfuse Python SDK v3** (`langfuse>=3.0.0`) within `libs/shared/hermes-ai`. Observability is strictly **opt-in** and activates automatically when both `LANGFUSE_PUBLIC_KEY` and `LANGFUSE_SECRET_KEY` are provisioned in the application environment.
+
+| Span Identifier | Component | Purpose |
+| :--- | :--- | :--- |
+| `event-extract` | `EventExtractor.extract` | Traces batch article deduplication and event corroboration across LiteLLM deployments. |
+| `tl-analyze` | `TlExtractor.analyze` | Records headline triage evaluation and Wikipedia query generation. |
+| `tl-extract` | `TlExtractor.extract` | Measures Wikipedia prose extraction, milestone node structuring, and causal edge linking. |
+
+- **Telemetry Architecture**: `LlmService` registers the Langfuse SDK client singleton on startup. Extractor methods use the `@observe(as_type="span", ...)` decorator to create spans without manual context propagation.
+- **Privacy Controls**: All `@observe` spans configure `capture_input=False` and `capture_output=False` to prevent raw news article text and generated summaries from persisting to telemetry stores.
+- **Teardown Flush Guarantee**: On process or task shutdown, `LlmService.aclose()` invokes `get_client().flush()`. This synchronous drain ensures zero trace loss in ephemeral compute contexts like AWS Fargate.
+- **Context Filtering**: Traces include service-level metadata tags (`["hermes-api", ENV]` or `["hermes-worker", ENV]`), allowing engineers to filter and analyze production vs. local executions within the Langfuse console.
+
 ---
 
 ## 8. Failure Modes, Tradeoffs & Operational Boundaries
@@ -304,6 +320,7 @@ When an LLM returns HTTP 200 with syntactically valid JSON that fails Pydantic s
 | **LLM Provider Outage** | External inference API becomes unavailable or credentials expire. | `hermes-api` catches client initialization errors and returns `HTTP 503` for timeline synthesis while keeping spatial map queries fully operational. |
 | **PgBouncer Transaction Pooling** | Prepared statement conflicts across pooled connections. | SQLAlchemy async engines instantiate with `connect_args={"statement_cache_size": 0}` across both API and Worker processes. |
 | **SSR WebGL Hydration Mismatch** | Mapbox GL attempts to access `window` or WebGL context on the Node.js server. | Map container is isolated behind `React.lazy` and dynamic imports inside `apps/hermes/app/routes/map.tsx`. |
+| **Langfuse Misconfiguration / Outage** | Telemetry endpoint unavailable or API keys omitted. | Tracing is opt-in and fully non-blocking. If credentials are missing or Langfuse is unreachable, LLM extraction and timeline synthesis continue with zero interruption. |
 
 ---
 
