@@ -1,0 +1,2570 @@
+{
+  ".github/workflows/cd-api.yml": {
+    "mtime": 1793965294.825614,
+    "seen": 1794227779.4146328,
+    "ast_hash": "57af697161a80fca686c519762278342",
+    "semantic_hash": ""
+  },
+  ".github/workflows/cd-frontend.yml": {
+    "mtime": 1793965294.8376172,
+    "seen": 1794227779.4146552,
+    "ast_hash": "80c55e5c285770266a11ad8c6a464827",
+    "semantic_hash": ""
+  },
+  ".github/workflows/cd-worker.yml": {
+    "mtime": 1793551351.4043727,
+    "seen": 1794227779.4146688,
+    "ast_hash": "0333c41c5c1a410e7e3a8b78d451e991",
+    "semantic_hash": ""
+  },
+  ".github/workflows/ci-cd.yml": {
+    "mtime": 1793965294.8376172,
+    "seen": 1794227779.4146788,
+    "ast_hash": "6241bde464576d591d4894f00738c412",
+    "semantic_hash": ""
+  },
+  "apps/hermes-api/project.json": {
+    "mtime": 1793107546.5420094,
+    "seen": 1794227779.414688,
+    "ast_hash": "c70f28c8e06eb866b03f2099b58741ad",
+    "semantic_hash": ""
+  },
+  "apps/hermes-api/pyproject.toml": {
+    "mtime": 1791894688.2218635,
+    "seen": 1794227779.4146962,
+    "ast_hash": "02b1ce454f9fe91d43037a506b0f4b2b",
+    "semantic_hash": ""
+  },
+  "apps/hermes-api/src/hermes_api/__init__.py": {
+    "mtime": 1784827191.809047,
+    "seen": 1794227779.4147046,
+    "ast_hash": "1a5c256124ef4e31a568bca2358b3739",
+    "semantic_hash": ""
+  },
+  "apps/hermes-api/src/hermes_api/api/v1/__init__.py": {
+    "mtime": 1788344883.7160213,
+    "seen": 1794227779.414713,
+    "ast_hash": "56eaac8184db21a853fc29eeb44022fd",
+    "semantic_hash": ""
+  },
+  "apps/hermes-api/src/hermes_api/api/v1/chat.py": {
+    "mtime": 1794151377.4115665,
+    "seen": 1794227779.4147203,
+    "ast_hash": "6e911e27fc1e056b0ce45a6d18e024fa",
+    "semantic_hash": ""
+  },
+  "apps/hermes-api/src/hermes_api/api/v1/events.py": {
+    "mtime": 1791894688.2218635,
+    "seen": 1794227779.4147284,
+    "ast_hash": "7ad35643f54955fbc61303d5fe6ca346",
+    "semantic_hash": ""
+  },
+  "apps/hermes-api/src/hermes_api/api/v1/router.py": {
+    "mtime": 1794151366.109819,
+    "seen": 1794227779.4147363,
+    "ast_hash": "651c27bec3f94e5060703b62ff810dc4",
+    "semantic_hash": ""
+  },
+  "apps/hermes-api/src/hermes_api/api/v1/tl.py": {
+    "mtime": 1791894688.2218635,
+    "seen": 1794227779.4147456,
+    "ast_hash": "72f51c4ee776d7864a01d1bcec683c0a",
+    "semantic_hash": ""
+  },
+  "apps/hermes-api/src/hermes_api/core/config.py": {
+    "mtime": 1794046745.0272932,
+    "seen": 1794227779.4147534,
+    "ast_hash": "0373aaf176900f7f7cd8f25c044d90f3",
+    "semantic_hash": ""
+  },
+  "apps/hermes-api/src/hermes_api/core/constants.py": {
+    "mtime": 1790115631.4755735,
+    "seen": 1794227779.4147606,
+    "ast_hash": "12cfd7c8642f4ca176c37e2a12529bf6",
+    "semantic_hash": ""
+  },
+  "apps/hermes-api/src/hermes_api/core/errors.py": {
+    "mtime": 1794151469.2037153,
+    "seen": 1794227779.4147687,
+    "ast_hash": "9890bb44c8d294b340bd5cf4bfa9aaf3",
+    "semantic_hash": ""
+  },
+  "apps/hermes-api/src/hermes_api/core/exceptions.py": {
+    "mtime": 1794049644.4170907,
+    "seen": 1794227779.4147766,
+    "ast_hash": "7efb9f797e619721211ec6d6c324309f",
+    "semantic_hash": ""
+  },
+  "apps/hermes-api/src/hermes_api/core/logger.py": {
+    "mtime": 1790422225.1196375,
+    "seen": 1794227779.4147837,
+    "ast_hash": "e6ce1d7f803179b51df5d33931f880e3",
+    "semantic_hash": ""
+  },
+  "apps/hermes-api/src/hermes_api/main.py": {
+    "mtime": 1794151372.696518,
+    "seen": 1794227779.414791,
+    "ast_hash": "2647a5c4840fbcd618bd9616c0308402",
+    "semantic_hash": ""
+  },
+  "apps/hermes-api/src/hermes_api/schemas/__init__.py": {
+    "mtime": 1788344883.7160213,
+    "seen": 1794227779.4147985,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "apps/hermes-api/src/hermes_api/schemas/chat.py": {
+    "mtime": 1794049307.3997726,
+    "seen": 1794227779.4148057,
+    "ast_hash": "a9efe53106543f2dd131d8e16167b8c4",
+    "semantic_hash": ""
+  },
+  "apps/hermes-api/src/hermes_api/schemas/errors.py": {
+    "mtime": 1791894688.2218635,
+    "seen": 1794227779.4148138,
+    "ast_hash": "f053d3009eeb85ccf2fd03e041f734a5",
+    "semantic_hash": ""
+  },
+  "apps/hermes-api/src/hermes_api/schemas/events.py": {
+    "mtime": 1793107546.5420094,
+    "seen": 1794227779.4148214,
+    "ast_hash": "fc2107bd7fe0ae959861e56542fe3d36",
+    "semantic_hash": ""
+  },
+  "apps/hermes-api/src/hermes_api/services/__init__.py": {
+    "mtime": 1791894688.2218635,
+    "seen": 1794227779.4148304,
+    "ast_hash": "c79355beee1da25e2cecd1126a7c9014",
+    "semantic_hash": ""
+  },
+  "apps/hermes-api/src/hermes_api/services/ai_service.py": {
+    "mtime": 1793965294.8496203,
+    "seen": 1794227779.414838,
+    "ast_hash": "3723d76169529f120b257e3a3d9ac1f6",
+    "semantic_hash": ""
+  },
+  "apps/hermes-api/src/hermes_api/services/chat_guards.py": {
+    "mtime": 1794151469.1637192,
+    "seen": 1794227779.4148455,
+    "ast_hash": "781fbd493805bb8e2062152d1c65bb45",
+    "semantic_hash": ""
+  },
+  "apps/hermes-api/src/hermes_api/services/chat_retriever.py": {
+    "mtime": 1794049520.4828544,
+    "seen": 1794227779.4148526,
+    "ast_hash": "72970bab4f0c94cca54664b21da4219e",
+    "semantic_hash": ""
+  },
+  "apps/hermes-api/src/hermes_api/services/chat_service.py": {
+    "mtime": 1794151377.419565,
+    "seen": 1794227779.4148617,
+    "ast_hash": "113576ef76d62227346dc86d2fac8796",
+    "semantic_hash": ""
+  },
+  "apps/hermes-api/src/hermes_api/services/tl_service.py": {
+    "mtime": 1791894688.2218635,
+    "seen": 1794227779.4148693,
+    "ast_hash": "bae2b910651eb6e1566dc38146d04788",
+    "semantic_hash": ""
+  },
+  "apps/hermes-api/src/hermes_api/services/wikipedia_service.py": {
+    "mtime": 1791894688.2218635,
+    "seen": 1794227779.4148781,
+    "ast_hash": "1bbc8b76dcff2d13c1960026cc6894de",
+    "semantic_hash": ""
+  },
+  "apps/hermes-api/src/hermes_api/utils/__init__.py": {
+    "mtime": 1790115631.487574,
+    "seen": 1794227779.414886,
+    "ast_hash": "3bcb4ac3b3273495a3ca0315b055850a",
+    "semantic_hash": ""
+  },
+  "apps/hermes-api/src/hermes_api/utils/db.py": {
+    "mtime": 1791894688.2218635,
+    "seen": 1794227779.4148939,
+    "ast_hash": "59f6b225a56f392e83123349b40adfa4",
+    "semantic_hash": ""
+  },
+  "apps/hermes-api/tests/__init__.py": {
+    "mtime": 1784827191.809047,
+    "seen": 1794227779.4149013,
+    "ast_hash": "3b3fc691efa23b65b3d5ff99410ab360",
+    "semantic_hash": ""
+  },
+  "apps/hermes-api/tests/conftest.py": {
+    "mtime": 1791894688.2218635,
+    "seen": 1794227779.414909,
+    "ast_hash": "062e9d63207e64a7f6ad04f4ffc9a268",
+    "semantic_hash": ""
+  },
+  "apps/hermes-api/tests/test_ai_service.py": {
+    "mtime": 1793965294.8496203,
+    "seen": 1794227779.4149175,
+    "ast_hash": "8676338c212379a21a4aced5586f4a96",
+    "semantic_hash": ""
+  },
+  "apps/hermes-api/tests/test_chat_api.py": {
+    "mtime": 1794151416.4181478,
+    "seen": 1794227779.414925,
+    "ast_hash": "d7ae2e87ade4fc4c929a66fcad7d250c",
+    "semantic_hash": ""
+  },
+  "apps/hermes-api/tests/test_chat_contract_fixtures.py": {
+    "mtime": 1794215306.2810822,
+    "seen": 1794227779.414933,
+    "ast_hash": "f1e7c5d78c4085b308fc0e9afa509bbc",
+    "semantic_hash": ""
+  },
+  "apps/hermes-api/tests/test_chat_errors.py": {
+    "mtime": 1794151141.5363424,
+    "seen": 1794227779.4149406,
+    "ast_hash": "71ec2d06ebbda9325a0b015d106b34dd",
+    "semantic_hash": ""
+  },
+  "apps/hermes-api/tests/test_chat_guards.py": {
+    "mtime": 1794151141.7802663,
+    "seen": 1794227779.4149487,
+    "ast_hash": "3d7f0f8b03d04beec8625fd559b539fa",
+    "semantic_hash": ""
+  },
+  "apps/hermes-api/tests/test_chat_retriever.py": {
+    "mtime": 1794049520.4828544,
+    "seen": 1794227779.4149563,
+    "ast_hash": "b169b440648700a60dccc8e53adc8573",
+    "semantic_hash": ""
+  },
+  "apps/hermes-api/tests/test_chat_schemas.py": {
+    "mtime": 1794049307.4077728,
+    "seen": 1794227779.4149642,
+    "ast_hash": "e3b4e571d4cc4750fa1564141c0e9be4",
+    "semantic_hash": ""
+  },
+  "apps/hermes-api/tests/test_chat_service.py": {
+    "mtime": 1794151493.4170215,
+    "seen": 1794227779.4149716,
+    "ast_hash": "1b756931df2fddc431cd3323645d494e",
+    "semantic_hash": ""
+  },
+  "apps/hermes-api/tests/test_config.py": {
+    "mtime": 1794046759.2636786,
+    "seen": 1794227779.4149787,
+    "ast_hash": "b76e6a4023f9c331367a33416a22d1a6",
+    "semantic_hash": ""
+  },
+  "apps/hermes-api/tests/test_events_api.py": {
+    "mtime": 1793965294.8496203,
+    "seen": 1794227779.4149868,
+    "ast_hash": "5c308327194513ad335c8499b1aae65a",
+    "semantic_hash": ""
+  },
+  "apps/hermes-api/tests/test_geocoding_service.py": {
+    "mtime": 1791894688.2258637,
+    "seen": 1794227779.4149985,
+    "ast_hash": "0abd96edba9f5dfb1a0172eff9590f6b",
+    "semantic_hash": ""
+  },
+  "apps/hermes-api/tests/test_main.py": {
+    "mtime": 1791894688.2258637,
+    "seen": 1794227779.4150062,
+    "ast_hash": "14c60ed7288bfdc040e0a4eb784be4fa",
+    "semantic_hash": ""
+  },
+  "apps/hermes-api/tests/test_rate_limiter.py": {
+    "mtime": 1791894688.2258637,
+    "seen": 1794227779.415014,
+    "ast_hash": "252d9f7161f4f0d96068b60634c737f3",
+    "semantic_hash": ""
+  },
+  "apps/hermes-api/tests/test_tl_service.py": {
+    "mtime": 1791894688.2258637,
+    "seen": 1794227779.415022,
+    "ast_hash": "a56ebc4512236b9eac9877228075e14e",
+    "semantic_hash": ""
+  },
+  "apps/hermes-api/tests/test_wikipedia_service.py": {
+    "mtime": 1791894688.2258637,
+    "seen": 1794227779.4150293,
+    "ast_hash": "016ce2b8733e181cf2eea916a4e9718b",
+    "semantic_hash": ""
+  },
+  "apps/hermes-e2e/eslint.config.mjs": {
+    "mtime": 1790115631.5115747,
+    "seen": 1794227779.415037,
+    "ast_hash": "0f1d803e920c7daa8bad5b7b4854f3fb",
+    "semantic_hash": ""
+  },
+  "apps/hermes-e2e/package.json": {
+    "mtime": 1784656905.3547747,
+    "seen": 1794227779.4150448,
+    "ast_hash": "7cbbf3288976697e36a830eae71ecb95",
+    "semantic_hash": ""
+  },
+  "apps/hermes-e2e/playwright.config.mts": {
+    "mtime": 1790115631.5115747,
+    "seen": 1794227779.4150522,
+    "ast_hash": "60eb5c2d1bd9b12e6f9667616728cbfc",
+    "semantic_hash": ""
+  },
+  "apps/hermes-e2e/src/example.spec.ts": {
+    "mtime": 1784656905.3547747,
+    "seen": 1794227779.41506,
+    "ast_hash": "5eef37c29e293b80beb38ca7250042a9",
+    "semantic_hash": ""
+  },
+  "apps/hermes-e2e/tsconfig.json": {
+    "mtime": 1791894688.2258637,
+    "seen": 1794227779.4150674,
+    "ast_hash": "805fed75f8602dd8cf10764676199c9a",
+    "semantic_hash": ""
+  },
+  "apps/hermes-worker/project.json": {
+    "mtime": 1793107546.5460095,
+    "seen": 1794227779.415075,
+    "ast_hash": "3016770ff267b00b4c82d8316e6d7e24",
+    "semantic_hash": ""
+  },
+  "apps/hermes-worker/pyproject.toml": {
+    "mtime": 1793107546.5460095,
+    "seen": 1794227779.4150825,
+    "ast_hash": "f7fb4630a877202da838412ae453dafd",
+    "semantic_hash": ""
+  },
+  "apps/hermes-worker/src/hermes_worker/__init__.py": {
+    "mtime": 1791894688.2258637,
+    "seen": 1794227779.4150903,
+    "ast_hash": "56eaac8184db21a853fc29eeb44022fd",
+    "semantic_hash": ""
+  },
+  "apps/hermes-worker/src/hermes_worker/__main__.py": {
+    "mtime": 1791894688.2258637,
+    "seen": 1794227779.4150977,
+    "ast_hash": "b5bf0253a7a6ec70f4c88364529acc3c",
+    "semantic_hash": ""
+  },
+  "apps/hermes-worker/src/hermes_worker/cli.py": {
+    "mtime": 1793107546.5460095,
+    "seen": 1794227779.415106,
+    "ast_hash": "6b1efdb82d9a700fc064117df15995f3",
+    "semantic_hash": ""
+  },
+  "apps/hermes-worker/src/hermes_worker/core/__init__.py": {
+    "mtime": 1791894688.2258637,
+    "seen": 1794227779.4151137,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "apps/hermes-worker/src/hermes_worker/core/ai.py": {
+    "mtime": 1793965294.8496203,
+    "seen": 1794227779.415121,
+    "ast_hash": "d2683c2a917aad5361124c633c015617",
+    "semantic_hash": ""
+  },
+  "apps/hermes-worker/src/hermes_worker/core/config.py": {
+    "mtime": 1793965294.8496203,
+    "seen": 1794227779.4151294,
+    "ast_hash": "01136dcf9d3d3056674d5e5b55ceabd4",
+    "semantic_hash": ""
+  },
+  "apps/hermes-worker/src/hermes_worker/core/lifespan.py": {
+    "mtime": 1793107546.5460095,
+    "seen": 1794227779.4151373,
+    "ast_hash": "4d3b22fd53d7e4cc6df8bab298eb9b11",
+    "semantic_hash": ""
+  },
+  "apps/hermes-worker/src/hermes_worker/core/logger.py": {
+    "mtime": 1793107546.5460095,
+    "seen": 1794227779.415145,
+    "ast_hash": "34f942fd987e43b1c7498f94f48a6381",
+    "semantic_hash": ""
+  },
+  "apps/hermes-worker/src/hermes_worker/handlers/__init__.py": {
+    "mtime": 1791894688.2298636,
+    "seen": 1794227779.4151523,
+    "ast_hash": "56eaac8184db21a853fc29eeb44022fd",
+    "semantic_hash": ""
+  },
+  "apps/hermes-worker/src/hermes_worker/handlers/commands.py": {
+    "mtime": 1793107546.5460095,
+    "seen": 1794227779.4151597,
+    "ast_hash": "d6a81efa6cee2e07a290e6dd64a63fc5",
+    "semantic_hash": ""
+  },
+  "apps/hermes-worker/src/hermes_worker/handlers/parser.py": {
+    "mtime": 1793107546.5460095,
+    "seen": 1794227779.415168,
+    "ast_hash": "98448ed412e687f79913ffd11507da68",
+    "semantic_hash": ""
+  },
+  "apps/hermes-worker/src/hermes_worker/services/__init__.py": {
+    "mtime": 1791894688.2298636,
+    "seen": 1794227779.415176,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "apps/hermes-worker/src/hermes_worker/services/fetchers/__init__.py": {
+    "mtime": 1793107546.5460095,
+    "seen": 1794227779.415184,
+    "ast_hash": "df27e25673c766367ce5c6f566eaad03",
+    "semantic_hash": ""
+  },
+  "apps/hermes-worker/src/hermes_worker/services/fetchers/base.py": {
+    "mtime": 1793107546.5460095,
+    "seen": 1794227779.4151917,
+    "ast_hash": "425d8bd1a3f742804b5ee4fc73b6ea3b",
+    "semantic_hash": ""
+  },
+  "apps/hermes-worker/src/hermes_worker/services/fetchers/gdelt.py": {
+    "mtime": 1793107546.5460095,
+    "seen": 1794227779.4151993,
+    "ast_hash": "c7c1bbd26116f71cd018c2f11482ab0a",
+    "semantic_hash": ""
+  },
+  "apps/hermes-worker/src/hermes_worker/services/fetchers/rss.py": {
+    "mtime": 1793107546.5460095,
+    "seen": 1794227779.4152071,
+    "ast_hash": "8e40315e51767e457fc48eee51180320",
+    "semantic_hash": ""
+  },
+  "apps/hermes-worker/src/hermes_worker/services/fetchers/sitemap.py": {
+    "mtime": 1793107546.5500097,
+    "seen": 1794227779.415215,
+    "ast_hash": "97ded6265fbf7be7745a5188585e46c3",
+    "semantic_hash": ""
+  },
+  "apps/hermes-worker/src/hermes_worker/services/lifecycle.py": {
+    "mtime": 1791894688.2298636,
+    "seen": 1794227779.4152222,
+    "ast_hash": "7a2bd7342ed4cdeea8aa55f42fe261cf",
+    "semantic_hash": ""
+  },
+  "apps/hermes-worker/src/hermes_worker/services/sync.py": {
+    "mtime": 1793965294.8496203,
+    "seen": 1794227779.4152303,
+    "ast_hash": "5391394361db402be5ed910c0480f30e",
+    "semantic_hash": ""
+  },
+  "apps/hermes-worker/tests/__init__.py": {
+    "mtime": 1791894688.2298636,
+    "seen": 1794227779.415238,
+    "ast_hash": "3b3fc691efa23b65b3d5ff99410ab360",
+    "semantic_hash": ""
+  },
+  "apps/hermes-worker/tests/conftest.py": {
+    "mtime": 1791894688.2298636,
+    "seen": 1794227779.4152458,
+    "ast_hash": "bcdea366622ce2e9a939246d3c59f857",
+    "semantic_hash": ""
+  },
+  "apps/hermes-worker/tests/test_ai.py": {
+    "mtime": 1793965294.8576224,
+    "seen": 1794227779.4152534,
+    "ast_hash": "e5239a039950e55c3a3f6090a0672fdc",
+    "semantic_hash": ""
+  },
+  "apps/hermes-worker/tests/test_cli.py": {
+    "mtime": 1793107546.5500097,
+    "seen": 1794227779.4152615,
+    "ast_hash": "848b6cf046e0dd353f7d76a24575a559",
+    "semantic_hash": ""
+  },
+  "apps/hermes-worker/tests/test_config.py": {
+    "mtime": 1791894688.2298636,
+    "seen": 1794227779.4152696,
+    "ast_hash": "3c057ed0fa9d634cd54fad050e7d51c2",
+    "semantic_hash": ""
+  },
+  "apps/hermes-worker/tests/test_fetchers.py": {
+    "mtime": 1793107546.5500097,
+    "seen": 1794227779.4152782,
+    "ast_hash": "3c0dbfef9c6f095b6166aa32e33b7976",
+    "semantic_hash": ""
+  },
+  "apps/hermes-worker/tests/test_geocoding.py": {
+    "mtime": 1791894688.2298636,
+    "seen": 1794227779.4152868,
+    "ast_hash": "895ac18beedde7287fc158979282a1ee",
+    "semantic_hash": ""
+  },
+  "apps/hermes-worker/tests/test_lifecycle.py": {
+    "mtime": 1791894688.2298636,
+    "seen": 1794227779.4152951,
+    "ast_hash": "ceb771e4fd6ff3460cd78513672954a1",
+    "semantic_hash": ""
+  },
+  "apps/hermes-worker/tests/test_rate_limiter.py": {
+    "mtime": 1791894688.2298636,
+    "seen": 1794227779.4153082,
+    "ast_hash": "befa991345e00fa1dd0d3f832c81712b",
+    "semantic_hash": ""
+  },
+  "apps/hermes-worker/tests/test_rss.py": {
+    "mtime": 1793107546.5500097,
+    "seen": 1794227779.4153156,
+    "ast_hash": "93b52343720e25ed9be3f576a048af57",
+    "semantic_hash": ""
+  },
+  "apps/hermes-worker/tests/test_sync.py": {
+    "mtime": 1793965294.8576224,
+    "seen": 1794227779.415324,
+    "ast_hash": "f6a7a21e8f9809a2ade9158498670fa4",
+    "semantic_hash": ""
+  },
+  "apps/hermes/app/components/auth/AuthCheckerboardPattern.tsx": {
+    "mtime": 1793965294.8616235,
+    "seen": 1794227779.4153314,
+    "ast_hash": "a0dfcc5384f006feb14ad35f7a228894",
+    "semantic_hash": ""
+  },
+  "apps/hermes/app/components/auth/EmailStep.tsx": {
+    "mtime": 1793107546.5660102,
+    "seen": 1794227779.4153435,
+    "ast_hash": "f8b84029526e66c620bd88f6f3667854",
+    "semantic_hash": ""
+  },
+  "apps/hermes/app/components/auth/OtpStep.tsx": {
+    "mtime": 1793107546.5660102,
+    "seen": 1794227779.4153514,
+    "ast_hash": "db38ffa66a0b5227697670e1a6ec4f52",
+    "semantic_hash": ""
+  },
+  "apps/hermes/app/components/auth/PasswordStep.tsx": {
+    "mtime": 1793107546.5660102,
+    "seen": 1794227779.4153593,
+    "ast_hash": "b8189efea1b65c860cc81b22a9b58a85",
+    "semantic_hash": ""
+  },
+  "apps/hermes/app/components/auth/SetupStep.tsx": {
+    "mtime": 1793107546.5660102,
+    "seen": 1794227779.4153666,
+    "ast_hash": "cde0d2cdd0a9df42838545992321bd8d",
+    "semantic_hash": ""
+  },
+  "apps/hermes/app/components/auth/SsoCallbackView.tsx": {
+    "mtime": 1793107546.5660102,
+    "seen": 1794227779.4153748,
+    "ast_hash": "c76f4915645b72e86188818319f33e64",
+    "semantic_hash": ""
+  },
+  "apps/hermes/app/components/auth/index.ts": {
+    "mtime": 1793107546.5660102,
+    "seen": 1794227779.4153829,
+    "ast_hash": "d63708bdb4fc2d9cddac298c32aa3f64",
+    "semantic_hash": ""
+  },
+  "apps/hermes/app/components/auth/types.ts": {
+    "mtime": 1793107546.5660102,
+    "seen": 1794227779.4153905,
+    "ast_hash": "e5808ad44d8fc383ea89ee5600de9d60",
+    "semantic_hash": ""
+  },
+  "apps/hermes/app/components/auth/use-auth-workflow.ts": {
+    "mtime": 1793107546.5660102,
+    "seen": 1794227779.4153988,
+    "ast_hash": "5187b02bf394db9b320a991966506059",
+    "semantic_hash": ""
+  },
+  "apps/hermes/app/components/landing/CapabilitiesSection.tsx": {
+    "mtime": 1794227453.0459523,
+    "seen": 1794227779.4154067,
+    "ast_hash": "a5d9c2ef3a208a27630b74b2c9469b62",
+    "semantic_hash": ""
+  },
+  "apps/hermes/app/components/landing/ContactSection.tsx": {
+    "mtime": 1794227463.8869953,
+    "seen": 1794227779.415437,
+    "ast_hash": "63da3b1e961d31050d6c6e48703c6923",
+    "semantic_hash": ""
+  },
+  "apps/hermes/app/components/landing/Footer.tsx": {
+    "mtime": 1794227478.5443974,
+    "seen": 1794227779.4154453,
+    "ast_hash": "c287e2638a3002963800720307308274",
+    "semantic_hash": ""
+  },
+  "apps/hermes/app/components/landing/HeroSection.tsx": {
+    "mtime": 1794227489.586681,
+    "seen": 1794227779.4154532,
+    "ast_hash": "d772fd4f07d16329745ad61fc0e363cb",
+    "semantic_hash": ""
+  },
+  "apps/hermes/app/components/landing/Nav.tsx": {
+    "mtime": 1794156836.7785192,
+    "seen": 1794227779.4154608,
+    "ast_hash": "37e1b17d8b457f691a244669ec2bcccf",
+    "semantic_hash": ""
+  },
+  "apps/hermes/app/components/landing/PatternDivider.tsx": {
+    "mtime": 1793107546.5700104,
+    "seen": 1794227779.4154687,
+    "ast_hash": "855ce49cfc11d6e6c8ff951f30d866e7",
+    "semantic_hash": ""
+  },
+  "apps/hermes/app/components/landing/ProblemSection.tsx": {
+    "mtime": 1794227435.5722597,
+    "seen": 1794227779.4154766,
+    "ast_hash": "783903d31f2f3601449638ed86fef491",
+    "semantic_hash": ""
+  },
+  "apps/hermes/app/components/landing/index.ts": {
+    "mtime": 1793107546.5700104,
+    "seen": 1794227779.415485,
+    "ast_hash": "8f63c3960f12982f7d127bb4910114f1",
+    "semantic_hash": ""
+  },
+  "apps/hermes/app/components/landing/types.ts": {
+    "mtime": 1793107546.5700104,
+    "seen": 1794227779.4154925,
+    "ast_hash": "67660f2a7b1089a5485e5bea811e4fea",
+    "semantic_hash": ""
+  },
+  "apps/hermes/app/components/map/cited-sources.ts": {
+    "mtime": 1794153985.709537,
+    "seen": 1794227779.4155006,
+    "ast_hash": "cc10755f29803f35484272046982a87b",
+    "semantic_hash": ""
+  },
+  "apps/hermes/app/components/privacy/PrivacyNav.tsx": {
+    "mtime": 1793107546.5700104,
+    "seen": 1794227779.4155083,
+    "ast_hash": "260af409b76e3b4131a62256f6121150",
+    "semantic_hash": ""
+  },
+  "apps/hermes/app/components/privacy/PrivacyPolicyContent.tsx": {
+    "mtime": 1793107546.5740106,
+    "seen": 1794227779.4155157,
+    "ast_hash": "4ab2e1f6eb701a6db03e5d563bac631c",
+    "semantic_hash": ""
+  },
+  "apps/hermes/app/components/privacy/index.ts": {
+    "mtime": 1793107546.5780108,
+    "seen": 1794227779.4155238,
+    "ast_hash": "25a1e8e5120f108a607dd9f803877796",
+    "semantic_hash": ""
+  },
+  "apps/hermes/app/components/privacy/types.ts": {
+    "mtime": 1793107546.5780108,
+    "seen": 1794227779.4155312,
+    "ast_hash": "745ab23f5babd90cef7988702d744c58",
+    "semantic_hash": ""
+  },
+  "apps/hermes/app/entry.client.tsx": {
+    "mtime": 1790115631.5115747,
+    "seen": 1794227779.4155397,
+    "ast_hash": "0897a59aff5bd588c6b6f128690fa67e",
+    "semantic_hash": ""
+  },
+  "apps/hermes/app/entry.server.tsx": {
+    "mtime": 1791894688.2338638,
+    "seen": 1794227779.415547,
+    "ast_hash": "6d048473bb9faab22e49eb0c111c4861",
+    "semantic_hash": ""
+  },
+  "apps/hermes/app/root.tsx": {
+    "mtime": 1793965294.8656247,
+    "seen": 1794227779.4155543,
+    "ast_hash": "f13400e576f70a1cc8d22700d64667fc",
+    "semantic_hash": ""
+  },
+  "apps/hermes/app/routes.tsx": {
+    "mtime": 1793965294.8656247,
+    "seen": 1794227779.415562,
+    "ast_hash": "ca1c11149a09f55e67266d186981f85c",
+    "semantic_hash": ""
+  },
+  "apps/hermes/app/routes/auth.tsx": {
+    "mtime": 1793965294.8656247,
+    "seen": 1794227779.41557,
+    "ast_hash": "ffe68b3e8dd2a6bb8611ba29a282dba2",
+    "semantic_hash": ""
+  },
+  "apps/hermes/app/routes/clerk-proxy.ts": {
+    "mtime": 1793965294.8696256,
+    "seen": 1794227779.4155774,
+    "ast_hash": "24dd0df58ee45a0e203f7c408b0ea9ed",
+    "semantic_hash": ""
+  },
+  "apps/hermes/app/routes/landing.tsx": {
+    "mtime": 1794227501.296854,
+    "seen": 1794227779.4155846,
+    "ast_hash": "d075cb7c62cc539ec81365d93894f761",
+    "semantic_hash": ""
+  },
+  "apps/hermes/app/routes/map.tsx": {
+    "mtime": 1794153990.1454403,
+    "seen": 1794227779.4155924,
+    "ast_hash": "4248a0ee40bc9cd89a4024d970d398f7",
+    "semantic_hash": ""
+  },
+  "apps/hermes/app/routes/privacy.tsx": {
+    "mtime": 1793965294.8696256,
+    "seen": 1794227779.4155996,
+    "ast_hash": "e30c9b37c4a113a464ee1a12c81a8ed6",
+    "semantic_hash": ""
+  },
+  "apps/hermes/eslint.config.mjs": {
+    "mtime": 1790115631.5275755,
+    "seen": 1794227779.4156075,
+    "ast_hash": "7bc4f98cf09d67f89917f9c23e619015",
+    "semantic_hash": ""
+  },
+  "apps/hermes/package.json": {
+    "mtime": 1793965294.8696256,
+    "seen": 1794227779.4156156,
+    "ast_hash": "865757da6f294304fafc1e85fb5b9f59",
+    "semantic_hash": ""
+  },
+  "apps/hermes/project.json": {
+    "mtime": 1793012669.810808,
+    "seen": 1794227779.4156227,
+    "ast_hash": "be76b212c3ffbc079a4607e5be3f2e9b",
+    "semantic_hash": ""
+  },
+  "apps/hermes/react-router.config.ts": {
+    "mtime": 1793965294.8696256,
+    "seen": 1794227779.415631,
+    "ast_hash": "9bc84d2f13fe90d7d5abf0a9f7f40d25",
+    "semantic_hash": ""
+  },
+  "apps/hermes/test-env.js": {
+    "mtime": 1789205084.5912664,
+    "seen": 1794227779.4156387,
+    "ast_hash": "8ec61ddb92bea21833583fb3a0c49003",
+    "semantic_hash": ""
+  },
+  "apps/hermes/tests/chat-usage.spec.tsx": {
+    "mtime": 1794215302.428427,
+    "seen": 1794227779.4156468,
+    "ast_hash": "877af3447b40f7a2415082e97d27134b",
+    "semantic_hash": ""
+  },
+  "apps/hermes/tests/cited-sources.spec.ts": {
+    "mtime": 1794153985.709537,
+    "seen": 1794227779.415655,
+    "ast_hash": "4097fcd646319cd3dfdd2667e50f4cc7",
+    "semantic_hash": ""
+  },
+  "apps/hermes/tests/routes/_index.spec.tsx": {
+    "mtime": 1794215302.428427,
+    "seen": 1794227779.4156628,
+    "ast_hash": "2681928937d1b063092aa04e0595c1eb",
+    "semantic_hash": ""
+  },
+  "apps/hermes/tests/routes/auth.spec.tsx": {
+    "mtime": 1793107546.582011,
+    "seen": 1794227779.4156706,
+    "ast_hash": "5a7a9f48dc147f6667ba13fd08a928ba",
+    "semantic_hash": ""
+  },
+  "apps/hermes/tests/routes/landing.spec.tsx": {
+    "mtime": 1793107546.582011,
+    "seen": 1794227779.415678,
+    "ast_hash": "6bc5418ae24643c7237cc2ba38b0f20c",
+    "semantic_hash": ""
+  },
+  "apps/hermes/tests/routes/map-ssr.spec.tsx": {
+    "mtime": 1794153920.8877883,
+    "seen": 1794227779.4156861,
+    "ast_hash": "e71e5653abc8fe059ecd91e98a9870a3",
+    "semantic_hash": ""
+  },
+  "apps/hermes/tests/routes/privacy.spec.tsx": {
+    "mtime": 1793107546.582011,
+    "seen": 1794227779.4156935,
+    "ast_hash": "6928ef719a6262c7ba579a4b5a5a7593",
+    "semantic_hash": ""
+  },
+  "apps/hermes/tsconfig.app.json": {
+    "mtime": 1794153500.4792345,
+    "seen": 1794227779.4157014,
+    "ast_hash": "1cd9290b2d8c41a4138cccae490b3b60",
+    "semantic_hash": ""
+  },
+  "apps/hermes/tsconfig.json": {
+    "mtime": 1790115631.5275755,
+    "seen": 1794227779.4157093,
+    "ast_hash": "2e23ec2c156d57ee7ea50e317f0b9107",
+    "semantic_hash": ""
+  },
+  "apps/hermes/tsconfig.spec.json": {
+    "mtime": 1784656905.3547747,
+    "seen": 1794227779.4157171,
+    "ast_hash": "7227cd1883789ac4cddd11a515d0e128",
+    "semantic_hash": ""
+  },
+  "apps/hermes/vite.config.mts": {
+    "mtime": 1793965294.8696256,
+    "seen": 1794227779.4157243,
+    "ast_hash": "bf2e361279f45705da439fbc4d95db20",
+    "semantic_hash": ""
+  },
+  "docker-compose.prod.yml": {
+    "mtime": 1791894688.2338638,
+    "seen": 1794227779.4157321,
+    "ast_hash": "2cfdbb7a015383a709c6e2525c4047dd",
+    "semantic_hash": ""
+  },
+  "docker-compose.yml": {
+    "mtime": 1793965294.8736267,
+    "seen": 1794227779.4157395,
+    "ast_hash": "73d027c717e97c41f6b16de3f1466e66",
+    "semantic_hash": ""
+  },
+  "eslint.config.mjs": {
+    "mtime": 1794151980.2033904,
+    "seen": 1794227779.415747,
+    "ast_hash": "425374491f9210254e8ba7195cb7c289",
+    "semantic_hash": ""
+  },
+  "libs/chat/eslint.config.mjs": {
+    "mtime": 1794151980.2033904,
+    "seen": 1794227779.4157553,
+    "ast_hash": "06f260bd4e9165f8e14f0497013a9c2a",
+    "semantic_hash": ""
+  },
+  "libs/chat/package.json": {
+    "mtime": 1794152264.248185,
+    "seen": 1794227779.4157624,
+    "ast_hash": "66ee0f2b3ccfb2b5e846798f38afdd58",
+    "semantic_hash": ""
+  },
+  "libs/chat/src/index.ts": {
+    "mtime": 1794153160.1146278,
+    "seen": 1794227779.4157703,
+    "ast_hash": "f7925498ceb4d8697e0c3723cfd0564d",
+    "semantic_hash": ""
+  },
+  "libs/chat/src/lib/citations.spec.tsx": {
+    "mtime": 1794153018.0778158,
+    "seen": 1794227779.4157777,
+    "ast_hash": "7c5175721081cb291085d80c1077d230",
+    "semantic_hash": ""
+  },
+  "libs/chat/src/lib/citations.ts": {
+    "mtime": 1794153120.0718572,
+    "seen": 1794227779.4157856,
+    "ast_hash": "42824398effe227c178ea33d2a17e592",
+    "semantic_hash": ""
+  },
+  "libs/chat/src/lib/config-context.tsx": {
+    "mtime": 1794152321.5799556,
+    "seen": 1794227779.4157934,
+    "ast_hash": "c44c9ca5943c0f16bfac6018a4577f4b",
+    "semantic_hash": ""
+  },
+  "libs/chat/src/lib/hooks/use-chat.spec.tsx": {
+    "mtime": 1794152737.1748655,
+    "seen": 1794227779.4158006,
+    "ast_hash": "ffa6c8793d08e5faa0456875c4a9cb57",
+    "semantic_hash": ""
+  },
+  "libs/chat/src/lib/hooks/use-chat.ts": {
+    "mtime": 1794153160.1146278,
+    "seen": 1794227779.415808,
+    "ast_hash": "a85b2757e68a53196fd2c38e20be78ff",
+    "semantic_hash": ""
+  },
+  "libs/chat/src/lib/store/chat-store.spec.ts": {
+    "mtime": 1794152542.3045628,
+    "seen": 1794227779.4158158,
+    "ast_hash": "993ec3ad71791d4f12b9fb01a2cebd0f",
+    "semantic_hash": ""
+  },
+  "libs/chat/src/lib/store/chat-store.ts": {
+    "mtime": 1794152408.1122837,
+    "seen": 1794227779.4158242,
+    "ast_hash": "cb7c56b1c701033789761d460f37f25b",
+    "semantic_hash": ""
+  },
+  "libs/chat/src/lib/transport/sse.spec.ts": {
+    "mtime": 1794153374.5479035,
+    "seen": 1794227779.4158316,
+    "ast_hash": "1f723f6591465cb8f6e38a9ab4f58432",
+    "semantic_hash": ""
+  },
+  "libs/chat/src/lib/transport/sse.ts": {
+    "mtime": 1794152845.6046894,
+    "seen": 1794227779.4158392,
+    "ast_hash": "6cfbf5e1d5206d683bf7ad1fb062387d",
+    "semantic_hash": ""
+  },
+  "libs/chat/src/lib/ui/ChatComposer.tsx": {
+    "mtime": 1794153145.0415628,
+    "seen": 1794227779.415847,
+    "ast_hash": "3832be1ccd3d95bb380f918f82092b0e",
+    "semantic_hash": ""
+  },
+  "libs/chat/src/lib/ui/ChatPanel.tsx": {
+    "mtime": 1794153374.5439034,
+    "seen": 1794227779.415855,
+    "ast_hash": "08ec82e716abedcd66c16c4ab7e3d662",
+    "semantic_hash": ""
+  },
+  "libs/chat/src/lib/ui/CitationChip.tsx": {
+    "mtime": 1794153125.1121953,
+    "seen": 1794227779.4158628,
+    "ast_hash": "67a388982b22a47a15fade3f63e11e46",
+    "semantic_hash": ""
+  },
+  "libs/chat/src/lib/ui/MessageBubble.tsx": {
+    "mtime": 1794153238.1325085,
+    "seen": 1794227779.4158704,
+    "ast_hash": "e818b6e1f7735c8f54609470db19a864",
+    "semantic_hash": ""
+  },
+  "libs/chat/src/lib/ui/MessageList.tsx": {
+    "mtime": 1794153137.665051,
+    "seen": 1794227779.4158783,
+    "ast_hash": "c8d1157a3a828489cbf3a2ab4b67d98f",
+    "semantic_hash": ""
+  },
+  "libs/chat/src/lib/ui/MessageText.tsx": {
+    "mtime": 1794153125.1121953,
+    "seen": 1794227779.4158864,
+    "ast_hash": "eff787ff1f53a0a79969eecc9a1552d4",
+    "semantic_hash": ""
+  },
+  "libs/chat/src/lib/ui/ScopeSelector.tsx": {
+    "mtime": 1794153145.0335622,
+    "seen": 1794227779.4158945,
+    "ast_hash": "21c608f23fe74134863a084f3e9759f9",
+    "semantic_hash": ""
+  },
+  "libs/chat/src/lib/ui/chat-panel.spec.tsx": {
+    "mtime": 1794153284.388239,
+    "seen": 1794227779.4159024,
+    "ast_hash": "6d5b74f8a0bd03bb06f813d6e1cd942c",
+    "semantic_hash": ""
+  },
+  "libs/chat/tsconfig.json": {
+    "mtime": 1794151980.2033904,
+    "seen": 1794227779.4159095,
+    "ast_hash": "4592714fa7bc875457148d2a982e26cb",
+    "semantic_hash": ""
+  },
+  "libs/chat/tsconfig.lib.json": {
+    "mtime": 1794152286.4117029,
+    "seen": 1794227779.415918,
+    "ast_hash": "abba18df30e9fb68d20356821bed8c42",
+    "semantic_hash": ""
+  },
+  "libs/chat/tsconfig.spec.json": {
+    "mtime": 1794152845.5486894,
+    "seen": 1794227779.4159253,
+    "ast_hash": "94d82bd9ed7996fcf4b659b1eabd0a5a",
+    "semantic_hash": ""
+  },
+  "libs/chat/vite.config.mts": {
+    "mtime": 1794152264.248185,
+    "seen": 1794227779.4159331,
+    "ast_hash": "043f10412eda45489265ac83360a718e",
+    "semantic_hash": ""
+  },
+  "libs/map/eslint.config.mjs": {
+    "mtime": 1791894688.2378638,
+    "seen": 1794227779.4159405,
+    "ast_hash": "06f260bd4e9165f8e14f0497013a9c2a",
+    "semantic_hash": ""
+  },
+  "libs/map/package.json": {
+    "mtime": 1791894688.2378638,
+    "seen": 1794227779.4159477,
+    "ast_hash": "91e5abebed1f73b61061429c6942bd22",
+    "semantic_hash": ""
+  },
+  "libs/map/src/index.ts": {
+    "mtime": 1793965294.8736267,
+    "seen": 1794227779.4159553,
+    "ast_hash": "2e1133017abd05cb3b379b56d814494a",
+    "semantic_hash": ""
+  },
+  "libs/map/src/lib/config-context.tsx": {
+    "mtime": 1791894688.2378638,
+    "seen": 1794227779.415963,
+    "ast_hash": "60955a88117dcd9f4b642fea523fc930",
+    "semantic_hash": ""
+  },
+  "libs/map/src/lib/hooks/datasync.ts": {
+    "mtime": 1791894688.2378638,
+    "seen": 1794227779.4159708,
+    "ast_hash": "45997cc3c3c88fafeed021da8ddf513a",
+    "semantic_hash": ""
+  },
+  "libs/map/src/lib/hooks/eventDetails.ts": {
+    "mtime": 1791894688.2378638,
+    "seen": 1794227779.4159784,
+    "ast_hash": "4eaeaf90d35a866d62e7d0da875c409a",
+    "semantic_hash": ""
+  },
+  "libs/map/src/lib/hooks/useTl.ts": {
+    "mtime": 1791894688.2418637,
+    "seen": 1794227779.4159865,
+    "ast_hash": "0ffe2e5f686a43437e4df4b9ffbb22f0",
+    "semantic_hash": ""
+  },
+  "libs/map/src/lib/store/store.spec.ts": {
+    "mtime": 1794153592.603832,
+    "seen": 1794227779.415994,
+    "ast_hash": "2237a702030bbeaf4449dc846ba9311a",
+    "semantic_hash": ""
+  },
+  "libs/map/src/lib/store/store.ts": {
+    "mtime": 1794153586.815286,
+    "seen": 1794227779.416002,
+    "ast_hash": "8b590ffef25de3a602838df24e418a73",
+    "semantic_hash": ""
+  },
+  "libs/map/src/lib/ui/cited-geojson.spec.ts": {
+    "mtime": 1794153708.095548,
+    "seen": 1794227779.4160094,
+    "ast_hash": "f7cbcb770e4e070697777ca7d6b47bda",
+    "semantic_hash": ""
+  },
+  "libs/map/src/lib/ui/cited-geojson.ts": {
+    "mtime": 1794153708.095548,
+    "seen": 1794227779.416017,
+    "ast_hash": "362ae44936c5e910ced536a4edad862a",
+    "semantic_hash": ""
+  },
+  "libs/map/src/lib/ui/components/EventPopup.spec.tsx": {
+    "mtime": 1793965294.8736267,
+    "seen": 1794227779.4160295,
+    "ast_hash": "d2d1cc528b88779ae9aec164d04935d2",
+    "semantic_hash": ""
+  },
+  "libs/map/src/lib/ui/components/EventPopup.tsx": {
+    "mtime": 1793965294.8736267,
+    "seen": 1794227779.4160368,
+    "ast_hash": "85f4df9664af940e748251289e6d2720",
+    "semantic_hash": ""
+  },
+  "libs/map/src/lib/ui/components/EventsLoader.spec.tsx": {
+    "mtime": 1793965294.8736267,
+    "seen": 1794227779.416045,
+    "ast_hash": "4dc3c39a10aef98a30e02ba64a0dc8b5",
+    "semantic_hash": ""
+  },
+  "libs/map/src/lib/ui/components/EventsLoader.tsx": {
+    "mtime": 1793965294.8776278,
+    "seen": 1794227779.416053,
+    "ast_hash": "3f402e327f276d9b4f8d90076c198ae3",
+    "semantic_hash": ""
+  },
+  "libs/map/src/lib/ui/components/TlPanel.tsx": {
+    "mtime": 1793965294.8776278,
+    "seen": 1794227779.4160607,
+    "ast_hash": "63febccfb7857a81c1e0b1ea86f37a9c",
+    "semantic_hash": ""
+  },
+  "libs/map/src/lib/ui/map-view.tsx": {
+    "mtime": 1794153722.7687862,
+    "seen": 1794227779.416069,
+    "ast_hash": "6a4aeeceb6d85e0eec6c271a10e1439d",
+    "semantic_hash": ""
+  },
+  "libs/map/tsconfig.json": {
+    "mtime": 1791894688.245864,
+    "seen": 1794227779.4160762,
+    "ast_hash": "4592714fa7bc875457148d2a982e26cb",
+    "semantic_hash": ""
+  },
+  "libs/map/tsconfig.lib.json": {
+    "mtime": 1791894688.245864,
+    "seen": 1794227779.4160838,
+    "ast_hash": "6cf6834c96806a7b59f4bab1e6dda05b",
+    "semantic_hash": ""
+  },
+  "libs/map/tsconfig.spec.json": {
+    "mtime": 1793965294.8776278,
+    "seen": 1794227779.4160917,
+    "ast_hash": "4c7b13969ea70e09338cc2fee7b314ec",
+    "semantic_hash": ""
+  },
+  "libs/map/vite.config.mts": {
+    "mtime": 1791894688.245864,
+    "seen": 1794227779.4160988,
+    "ast_hash": "faa7fa007715299db994326a2c48f4d5",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-ai/project.json": {
+    "mtime": 1793107546.5900114,
+    "seen": 1794227779.4161067,
+    "ast_hash": "c46658e6a0659cd3fe8f3f77115891e2",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-ai/pyproject.toml": {
+    "mtime": 1794046607.051542,
+    "seen": 1794227779.4161139,
+    "ast_hash": "d87fd61f07e454536390ea3db016a409",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-ai/src/hermes_ai/__init__.py": {
+    "mtime": 1793965294.8816288,
+    "seen": 1794227779.4161212,
+    "ast_hash": "0e061c740c5d4d811df05ea9967f1602",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-ai/src/hermes_ai/chat/__init__.py": {
+    "mtime": 1794047081.9523509,
+    "seen": 1794227779.4161294,
+    "ast_hash": "ff76daa35eb5b112c005cbd644420fbe",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-ai/src/hermes_ai/chat/citations.py": {
+    "mtime": 1794048731.2841654,
+    "seen": 1794227779.4161365,
+    "ast_hash": "b0374db201e0a87b5d412e5079c9d3f8",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-ai/src/hermes_ai/chat/engine.py": {
+    "mtime": 1794070610.5488317,
+    "seen": 1794227779.4161482,
+    "ast_hash": "47ed8209213b27fa94c2a0d97f10b65b",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-ai/src/hermes_ai/chat/models/__init__.py": {
+    "mtime": 1794227435.0962133,
+    "seen": 1794227779.416159,
+    "ast_hash": "1bdecae4c97d7b4713d274e5b2a49812",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-ai/src/hermes_ai/chat/models/events.py": {
+    "mtime": 1794227435.256229,
+    "seen": 1794227779.4161692,
+    "ast_hash": "4acc86d4c18f8ce08a5b6f064def0d64",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-ai/src/hermes_ai/chat/models/plan.py": {
+    "mtime": 1794227372.3740015,
+    "seen": 1794227779.4161787,
+    "ast_hash": "8ad29754fca07ef9c759233a62f96828",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-ai/src/hermes_ai/chat/models/retrieval.py": {
+    "mtime": 1794227381.822952,
+    "seen": 1794227779.416188,
+    "ast_hash": "54490346b3499a6869cbee0137f49dc4",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-ai/src/hermes_ai/chat/models/scopes.py": {
+    "mtime": 1794227363.909145,
+    "seen": 1794227779.4161983,
+    "ast_hash": "3177b99c1bd57c1a44333af868039d75",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-ai/src/hermes_ai/chat/models/sources.py": {
+    "mtime": 1794227389.0876791,
+    "seen": 1794227779.4162083,
+    "ast_hash": "5e5b2d9c99b322585030c35ab2fcd760",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-ai/src/hermes_ai/chat/planner.py": {
+    "mtime": 1794218624.3312695,
+    "seen": 1794227779.416217,
+    "ast_hash": "71a701268a7fd8b549f82d3972dd663a",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-ai/src/hermes_ai/chat/prompts.py": {
+    "mtime": 1794048750.6767485,
+    "seen": 1794227779.4162254,
+    "ast_hash": "8a3aadf0e13f63b3b272a4b0dddb5a5d",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-ai/src/hermes_ai/chat/retriever.py": {
+    "mtime": 1794049449.517707,
+    "seen": 1794227779.4162333,
+    "ast_hash": "af2d873f9b5c10f47d2694fd080da567",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-ai/src/hermes_ai/chat/web.py": {
+    "mtime": 1794048629.105084,
+    "seen": 1794227779.4162412,
+    "ast_hash": "c1ffc22c204ab1040a910e0d460b5f9d",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-ai/src/hermes_ai/client.py": {
+    "mtime": 1794074417.5546484,
+    "seen": 1794227779.416249,
+    "ast_hash": "db22c361c3498e918cb4323ce89eadaf",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-ai/src/hermes_ai/core/__init__.py": {
+    "mtime": 1791894688.245864,
+    "seen": 1794227779.4162567,
+    "ast_hash": "d8df300a29a82500be5acfeac121a119",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-ai/src/hermes_ai/core/config.py": {
+    "mtime": 1794046723.4787092,
+    "seen": 1794227779.4162643,
+    "ast_hash": "1c90df18f1eded5106563b269fbd0e6a",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-ai/src/hermes_ai/core/constants.py": {
+    "mtime": 1793965294.8816288,
+    "seen": 1794227779.416272,
+    "ast_hash": "4aaa06c2c8b21c364e879d714fc016d7",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-ai/src/hermes_ai/exceptions.py": {
+    "mtime": 1793965294.8816288,
+    "seen": 1794227779.4162793,
+    "ast_hash": "c85bcabce10aa7cad2326335a3ec24db",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-ai/src/hermes_ai/extractors/__init__.py": {
+    "mtime": 1791894688.2498639,
+    "seen": 1794227779.4162867,
+    "ast_hash": "76f098135169d42c242ba22458109539",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-ai/src/hermes_ai/extractors/events.py": {
+    "mtime": 1794048347.2804723,
+    "seen": 1794227779.4162939,
+    "ast_hash": "421ecc455c2ca10d319c92673ab4cea5",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-ai/src/hermes_ai/extractors/tl.py": {
+    "mtime": 1794048347.2804723,
+    "seen": 1794227779.4163017,
+    "ast_hash": "98104db7708e63ef6281dace22fd0b44",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-ai/src/hermes_ai/models/__init__.py": {
+    "mtime": 1791894688.2498639,
+    "seen": 1794227779.4163089,
+    "ast_hash": "9abb0f2a9b94589ba1bcea8c740f57bf",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-ai/src/hermes_ai/models/events.py": {
+    "mtime": 1793107546.5940115,
+    "seen": 1794227779.416317,
+    "ast_hash": "582aa03b5e1640e23f62c6117de75cb3",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-ai/src/hermes_ai/models/tl.py": {
+    "mtime": 1791894688.2498639,
+    "seen": 1794227779.4163244,
+    "ast_hash": "bdc313dbdc7277c4c8474a54687f864d",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-ai/src/hermes_ai/services/__init__.py": {
+    "mtime": 1791894688.2498639,
+    "seen": 1794227779.4163315,
+    "ast_hash": "44b2d450b98ad3e7ca37100ddd381285",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-ai/src/hermes_ai/services/geocoding.py": {
+    "mtime": 1793965294.889631,
+    "seen": 1794227779.4163394,
+    "ast_hash": "80144290e6c1e7cbe96228dc1df3badc",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-ai/src/hermes_ai/services/llm.py": {
+    "mtime": 1794047252.9262016,
+    "seen": 1794227779.416347,
+    "ast_hash": "82ae71ad175abfa967ad983041f1127b",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-ai/src/hermes_ai/utils/__init__.py": {
+    "mtime": 1791894688.2498639,
+    "seen": 1794227779.4163547,
+    "ast_hash": "1f4611e6174c4fb83fb8f7cfd7c320c6",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-ai/src/hermes_ai/utils/coercion.py": {
+    "mtime": 1791894688.2498639,
+    "seen": 1794227779.4163625,
+    "ast_hash": "3bb1c25f758d079c61e1ca40752234a3",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-ai/src/hermes_ai/utils/prompts.py": {
+    "mtime": 1793107546.5940115,
+    "seen": 1794227779.4163702,
+    "ast_hash": "65c3ec133c06fb290895cb6774150e98",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-ai/src/hermes_ai/utils/rate_limiter.py": {
+    "mtime": 1793965294.889631,
+    "seen": 1794227779.416378,
+    "ast_hash": "97e8aadf877db80d23f9bc78e76221e5",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-ai/src/hermes_ai/utils/tracing.py": {
+    "mtime": 1794154708.4197214,
+    "seen": 1794227779.4163852,
+    "ast_hash": "341ae04b1e47c2c8578183f6e72248a5",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-ai/tests/__init__.py": {
+    "mtime": 1791894688.253864,
+    "seen": 1794227779.4163928,
+    "ast_hash": "3b3fc691efa23b65b3d5ff99410ab360",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-ai/tests/conftest.py": {
+    "mtime": 1791894688.253864,
+    "seen": 1794227779.4164007,
+    "ast_hash": "ee0dc597fa1c46be344230fe3cad5f3b",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-ai/tests/test_chat_citations.py": {
+    "mtime": 1794048778.1175725,
+    "seen": 1794227779.4164078,
+    "ast_hash": "42b6f7fcbb8e2b1f17df6bf9aa2c25e0",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-ai/tests/test_chat_engine.py": {
+    "mtime": 1794049520.4828544,
+    "seen": 1794227779.4164157,
+    "ast_hash": "9aa02af6a05f9a36c2a8c595f8c4877f",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-ai/tests/test_chat_models.py": {
+    "mtime": 1794048296.5548992,
+    "seen": 1794227779.4164233,
+    "ast_hash": "6c23209864c79d2fa19834e238f5739d",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-ai/tests/test_chat_planner.py": {
+    "mtime": 1794161027.0716853,
+    "seen": 1794227779.416431,
+    "ast_hash": "41a18c7e06e15b7f3e85e6169fbaf9a9",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-ai/tests/test_chat_prompts.py": {
+    "mtime": 1794048790.8139534,
+    "seen": 1794227779.4164388,
+    "ast_hash": "0af00a315c387b17c9de1709adfeae35",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-ai/tests/test_chat_retriever.py": {
+    "mtime": 1794049466.3699696,
+    "seen": 1794227779.416447,
+    "ast_hash": "2cfd90140adb62206772acb5b499e7b9",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-ai/tests/test_chat_web.py": {
+    "mtime": 1794048642.473488,
+    "seen": 1794227779.416455,
+    "ast_hash": "89fff9628a88fc45d51fda6a6f4151ca",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-ai/tests/test_chat_wiring.py": {
+    "mtime": 1794049117.1476834,
+    "seen": 1794227779.4164627,
+    "ast_hash": "38101093285bc74c4d42f41cb9e9c125",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-ai/tests/test_client.py": {
+    "mtime": 1793965294.889631,
+    "seen": 1794227779.4164705,
+    "ast_hash": "e5dcbe48659186893997895479f4460c",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-ai/tests/test_foundation.py": {
+    "mtime": 1794046730.8509092,
+    "seen": 1794227779.4164777,
+    "ast_hash": "d0e2a41d2c7d257aa8d2649c51e69095",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-ai/tests/test_geocoding.py": {
+    "mtime": 1793965294.889631,
+    "seen": 1794227779.4164855,
+    "ast_hash": "2b142fe60a8abdd6a34d0be2ec41697d",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-ai/tests/test_import_isolation.py": {
+    "mtime": 1794047097.4927661,
+    "seen": 1794227779.4164934,
+    "ast_hash": "66a7a860132e0ffd901d8c23323c69eb",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-ai/tests/test_llm_service.py": {
+    "mtime": 1794048347.2844725,
+    "seen": 1794227779.4165013,
+    "ast_hash": "2a827f42c0851f6e47968ecef233f5c6",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-ai/tests/test_rate_limiter.py": {
+    "mtime": 1793965294.889631,
+    "seen": 1794227779.416509,
+    "ast_hash": "a9b4f55dbc2c3fc833317f59a9b36dc1",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-db/migrations/env.py": {
+    "mtime": 1791894688.253864,
+    "seen": 1794227779.4165168,
+    "ast_hash": "c9713c5e95698f495e4a1f960a40825e",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-db/migrations/versions/2ec3541646e8_initial_schema.py": {
+    "mtime": 1792518489.1276586,
+    "seen": 1794227779.416525,
+    "ast_hash": "0fcdbbf5e2edd8ce90f9a24ae5a15ceb",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-db/migrations/versions/64fc96ec0afd_teardown_old_lineage.py": {
+    "mtime": 1791894688.253864,
+    "seen": 1794227779.416532,
+    "ast_hash": "edec68d478221cbd5738dfa72e8298a8",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-db/migrations/versions/67c2d30edccd_create_event_timeline.py": {
+    "mtime": 1791894688.253864,
+    "seen": 1794227779.41654,
+    "ast_hash": "7278b0dc0e2d55b4892bab6b0027088d",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-db/migrations/versions/a1b2c3d4e5f6_add_unique_constraint_on_article_url.py": {
+    "mtime": 1791894688.257864,
+    "seen": 1794227779.416548,
+    "ast_hash": "5971191535c1d195202a2b2dcfd77ff4",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-db/migrations/versions/b1c2d3e4f5a6_add_impact_level_and_velocity_to_events.py": {
+    "mtime": 1793107546.5940115,
+    "seen": 1794227779.4165554,
+    "ast_hash": "a84f0cfe93b17238f1b1351d5c80b819",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-db/migrations/versions/b8446b410d52_made_event_location_nullable.py": {
+    "mtime": 1791894688.257864,
+    "seen": 1794227779.4165633,
+    "ast_hash": "e0de976a71a0d6786ce889399b6b0c69",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-db/migrations/versions/c1d2e3f4a5b6_create_geocode_cache_table.py": {
+    "mtime": 1791894688.257864,
+    "seen": 1794227779.4165707,
+    "ast_hash": "1b8989f6dc228251a46e7b76d16c7032",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-db/migrations/versions/c2d3e4f5a6b7_add_events_fts_index.py": {
+    "mtime": 1794047533.4373863,
+    "seen": 1794227779.416578,
+    "ast_hash": "9f24f05b9a3e2b842c9fe26c273792d2",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-db/migrations/versions/ce3d9051b570_create_event_edges_table.py": {
+    "mtime": 1791894688.257864,
+    "seen": 1794227779.4165852,
+    "ast_hash": "af63a3a1bbe7486a84c66a4755a5a110",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-db/migrations/versions/d159bcfd1e94_add_lineage_target_id_to_events.py": {
+    "mtime": 1791894688.257864,
+    "seen": 1794227779.416593,
+    "ast_hash": "33996b0d8b87375bdb4cdc5cff900cf7",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-db/migrations/versions/d2e3f4a5b6c7_add_vector_embedding_to_events.py": {
+    "mtime": 1791894688.257864,
+    "seen": 1794227779.4166005,
+    "ast_hash": "62b1e6f6785fd4d67bc676196724eb5f",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-db/migrations/versions/db402a499ebd_create_story_allowlist_table.py": {
+    "mtime": 1791894688.257864,
+    "seen": 1794227779.4166083,
+    "ast_hash": "8e76294abbe9c6a64ee7a27cc5ab34e2",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-db/migrations/versions/e3f4a5b6c7d8_create_event_timelines_table.py": {
+    "mtime": 1791894688.257864,
+    "seen": 1794227779.4166157,
+    "ast_hash": "ca5e0902dd6492eea2453a7cec09b170",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-db/migrations/versions/e4f5a6b7c8d9_update_embedding_to_halfvec_2048.py": {
+    "mtime": 1791894688.257864,
+    "seen": 1794227779.4166229,
+    "ast_hash": "c4902959eedd50a11a15690f7a494721",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-db/migrations/versions/f5a6b7c8d9e0_purge_null_geocode_cache.py": {
+    "mtime": 1791894688.257864,
+    "seen": 1794227779.4166312,
+    "ast_hash": "db340febd0a4c117a3a9d91883f795e0",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-db/project.json": {
+    "mtime": 1793107546.5940115,
+    "seen": 1794227779.416639,
+    "ast_hash": "523785827ff726187df5e14d580a146a",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-db/pyproject.toml": {
+    "mtime": 1793107546.5940115,
+    "seen": 1794227779.416647,
+    "ast_hash": "5d97c742a46c6302f4becab256c3b04c",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-db/src/hermes_db/__init__.py": {
+    "mtime": 1791894688.257864,
+    "seen": 1794227779.4166543,
+    "ast_hash": "ca994956b14ec7c70cbd60dda2cece7c",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-db/src/hermes_db/base.py": {
+    "mtime": 1791894688.257864,
+    "seen": 1794227779.4166615,
+    "ast_hash": "ad331d1c439130b91179f0613d58b631",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-db/src/hermes_db/core/__init__.py": {
+    "mtime": 1791894688.257864,
+    "seen": 1794227779.4166694,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-db/src/hermes_db/core/config.py": {
+    "mtime": 1791894688.257864,
+    "seen": 1794227779.4166768,
+    "ast_hash": "7a4ca2fc7ab6bc48a5cb9fb3deb957f4",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-db/src/hermes_db/data/sources.json": {
+    "mtime": 1793107546.5940115,
+    "seen": 1794227779.4166846,
+    "ast_hash": "a968c4242e4e52723cda89a28aefcd6d",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-db/src/hermes_db/enums.py": {
+    "mtime": 1793107546.5940115,
+    "seen": 1794227779.416692,
+    "ast_hash": "61b3651cf645b4a90c77ecf98401a0f9",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-db/src/hermes_db/models/__init__.py": {
+    "mtime": 1791894688.257864,
+    "seen": 1794227779.4166992,
+    "ast_hash": "5a1aca5834ffeb58fedcccf3dbcf13cb",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-db/src/hermes_db/models/article.py": {
+    "mtime": 1793107546.5940115,
+    "seen": 1794227779.4167066,
+    "ast_hash": "2a945cf248aa2367e643f5d8978815fb",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-db/src/hermes_db/models/event.py": {
+    "mtime": 1794047831.1279018,
+    "seen": 1794227779.4167144,
+    "ast_hash": "b94eef6f8a86a3fb7da6a1a8d1bb68dc",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-db/src/hermes_db/models/event_tl.py": {
+    "mtime": 1791894688.2618642,
+    "seen": 1794227779.416722,
+    "ast_hash": "34d8af768be7b4d0a7d42a41c6385720",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-db/src/hermes_db/models/geocode_cache.py": {
+    "mtime": 1791894688.2618642,
+    "seen": 1794227779.4167302,
+    "ast_hash": "3b0b5d0c47037cc699ba753fed87bcbe",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-db/src/hermes_db/models/source.py": {
+    "mtime": 1791894688.2618642,
+    "seen": 1794227779.4167378,
+    "ast_hash": "3b4fe18ed61390a1c6642c2440895c52",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-db/src/hermes_db/protocols.py": {
+    "mtime": 1793107546.5980117,
+    "seen": 1794227779.4167452,
+    "ast_hash": "7c76af152e54e9806e5a7f5da4d27332",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-db/src/hermes_db/services/__init__.py": {
+    "mtime": 1794048027.2863739,
+    "seen": 1794227779.4167528,
+    "ast_hash": "14cf84f2f71b722ab2721cdfb62e23b1",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-db/src/hermes_db/services/article.py": {
+    "mtime": 1791894688.2618642,
+    "seen": 1794227779.4167602,
+    "ast_hash": "fdfc4ab2f0b9d0d0492f38e1db7ca1a8",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-db/src/hermes_db/services/event.py": {
+    "mtime": 1793107546.5980117,
+    "seen": 1794227779.4167678,
+    "ast_hash": "1bbc7ec7011ebf7b823d6a68b0c31ede",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-db/src/hermes_db/services/geocode.py": {
+    "mtime": 1791894688.2618642,
+    "seen": 1794227779.4167755,
+    "ast_hash": "6ff378649f37a09b46fef6d32d22b72f",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-db/src/hermes_db/services/ranking.py": {
+    "mtime": 1793107546.5980117,
+    "seen": 1794227779.4167829,
+    "ast_hash": "0a0b8e719d82fb81e9f440aa011d7706",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-db/src/hermes_db/services/search.py": {
+    "mtime": 1794216420.1180668,
+    "seen": 1794227779.4167905,
+    "ast_hash": "c362891278cb66594faeaec7ca9efe8f",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-db/src/hermes_db/services/source.py": {
+    "mtime": 1793107546.5980117,
+    "seen": 1794227779.4167979,
+    "ast_hash": "b20a659e166ad2033a1fcb6553dc8130",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-db/src/hermes_db/services/tl.py": {
+    "mtime": 1791894688.2618642,
+    "seen": 1794227779.4168053,
+    "ast_hash": "170e50de445feacb6061ac8c078bed10",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-db/src/hermes_db/session.py": {
+    "mtime": 1793107546.5980117,
+    "seen": 1794227779.4168127,
+    "ast_hash": "5ce19a699d5ea1cd913be2e0feac2910",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-db/tests/__init__.py": {
+    "mtime": 1791894688.2618642,
+    "seen": 1794227779.4168205,
+    "ast_hash": "3b3fc691efa23b65b3d5ff99410ab360",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-db/tests/conftest.py": {
+    "mtime": 1791894688.2618642,
+    "seen": 1794227779.4168284,
+    "ast_hash": "4b42cc05eabf0bef91c31ba7b55e6056",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-db/tests/test_article_service.py": {
+    "mtime": 1791894688.2618642,
+    "seen": 1794227779.4168355,
+    "ast_hash": "38fd203dc2746a7bca0d143333412c04",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-db/tests/test_base.py": {
+    "mtime": 1791894688.2618642,
+    "seen": 1794227779.4168434,
+    "ast_hash": "18548c65e8a16e775c20070e65ac084c",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-db/tests/test_config.py": {
+    "mtime": 1791894688.2618642,
+    "seen": 1794227779.4168508,
+    "ast_hash": "592220da62d4516f9feaef757217235a",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-db/tests/test_enums.py": {
+    "mtime": 1793107546.5980117,
+    "seen": 1794227779.4168587,
+    "ast_hash": "4b077a8a0222560d0c176617efa5e9ad",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-db/tests/test_event_fts.py": {
+    "mtime": 1794047547.4139051,
+    "seen": 1794227779.4168663,
+    "ast_hash": "8b378ac4c3eeaf0d7299ddc3b704efaa",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-db/tests/test_event_service.py": {
+    "mtime": 1793107546.5980117,
+    "seen": 1794227779.4168742,
+    "ast_hash": "26915b4a291696e63cd5c90599c73119",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-db/tests/test_geocode_service.py": {
+    "mtime": 1791894688.2618642,
+    "seen": 1794227779.4168823,
+    "ast_hash": "960231c0d64489d203058a5f88dd5785",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-db/tests/test_models.py": {
+    "mtime": 1793107546.5980117,
+    "seen": 1794227779.4168894,
+    "ast_hash": "cc727ccac3b23ba774daa44bff9d1aec",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-db/tests/test_ranking.py": {
+    "mtime": 1793107546.602012,
+    "seen": 1794227779.4168973,
+    "ast_hash": "28f7045ee36da487d2885f20b31d7622",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-db/tests/test_search_service.py": {
+    "mtime": 1794216439.2305613,
+    "seen": 1794227779.4169054,
+    "ast_hash": "733e66b8a4351a3fb54e5a2395e03325",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-db/tests/test_services.py": {
+    "mtime": 1791894688.2658641,
+    "seen": 1794227779.4169128,
+    "ast_hash": "9cddfaf3bede0141b41983516621b52a",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-db/tests/test_session.py": {
+    "mtime": 1791894688.2658641,
+    "seen": 1794227779.4169211,
+    "ast_hash": "f2025a8f24c11fe1a20dfacbfc48465e",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-db/tests/test_source_service.py": {
+    "mtime": 1793107546.602012,
+    "seen": 1794227779.4169285,
+    "ast_hash": "de18801f71951e082730bd227db227cc",
+    "semantic_hash": ""
+  },
+  "libs/shared/ui-components/components.json": {
+    "mtime": 1793107546.602012,
+    "seen": 1794227779.416936,
+    "ast_hash": "56b4760e7880db586a97b556aaecc26c",
+    "semantic_hash": ""
+  },
+  "libs/shared/ui-components/eslint.config.mjs": {
+    "mtime": 1788951378.083959,
+    "seen": 1794227779.4169436,
+    "ast_hash": "363d13357f08d2bd84e2806408dd517d",
+    "semantic_hash": ""
+  },
+  "libs/shared/ui-components/package.json": {
+    "mtime": 1793107546.602012,
+    "seen": 1794227779.416951,
+    "ast_hash": "051498ed6772794f7563eeb4e7712102",
+    "semantic_hash": ""
+  },
+  "libs/shared/ui-components/src/components/ui/button.tsx": {
+    "mtime": 1793107546.602012,
+    "seen": 1794227779.4169586,
+    "ast_hash": "e34e1def4af05bdee86065ee3f646613",
+    "semantic_hash": ""
+  },
+  "libs/shared/ui-components/src/components/ui/input.tsx": {
+    "mtime": 1793107546.602012,
+    "seen": 1794227779.4169657,
+    "ast_hash": "16fcc3900e0f8155c242d1291ada58a9",
+    "semantic_hash": ""
+  },
+  "libs/shared/ui-components/src/components/ui/label.tsx": {
+    "mtime": 1793107546.602012,
+    "seen": 1794227779.416973,
+    "ast_hash": "8bd2445c67e63e54313623cc69a9c277",
+    "semantic_hash": ""
+  },
+  "libs/shared/ui-components/src/components/ui/separator.tsx": {
+    "mtime": 1793107546.602012,
+    "seen": 1794227779.4169807,
+    "ast_hash": "59ab01a4389f3f07083b08425a4a7776",
+    "semantic_hash": ""
+  },
+  "libs/shared/ui-components/src/components/ui/textarea.tsx": {
+    "mtime": 1793107546.602012,
+    "seen": 1794227779.4169881,
+    "ast_hash": "cd1359a6c56f353fea6062a534ff1f95",
+    "semantic_hash": ""
+  },
+  "libs/shared/ui-components/src/index.ts": {
+    "mtime": 1793107546.602012,
+    "seen": 1794227779.416996,
+    "ast_hash": "4449c74fdf959cd4dea006c71bd85d3f",
+    "semantic_hash": ""
+  },
+  "libs/shared/ui-components/src/lib/BootSequence.tsx": {
+    "mtime": 1790115631.575577,
+    "seen": 1794227779.4170039,
+    "ast_hash": "a677731f84749062305f5ba3f70a9b38",
+    "semantic_hash": ""
+  },
+  "libs/shared/ui-components/src/lib/HermesWordmark.tsx": {
+    "mtime": 1793107546.602012,
+    "seen": 1794227779.4170113,
+    "ast_hash": "8c7b4da0d1ed5ebe5c35f1a47e8e0a12",
+    "semantic_hash": ""
+  },
+  "libs/shared/ui-components/src/lib/LiveClock.tsx": {
+    "mtime": 1793965294.889631,
+    "seen": 1794227779.417019,
+    "ast_hash": "7a6c0c8c1f0512481458ab89fd2af10e",
+    "semantic_hash": ""
+  },
+  "libs/shared/ui-components/src/lib/OAuthButtonGroup.tsx": {
+    "mtime": 1793107546.602012,
+    "seen": 1794227779.4170272,
+    "ast_hash": "d58e13641e3ea81fd74c15dd8947d271",
+    "semantic_hash": ""
+  },
+  "libs/shared/ui-components/src/lib/RollButton.tsx": {
+    "mtime": 1793107546.602012,
+    "seen": 1794227779.4170344,
+    "ast_hash": "6ac03857afdedeea557723407718b434",
+    "semantic_hash": ""
+  },
+  "libs/shared/ui-components/src/lib/TacticalActionBtn.tsx": {
+    "mtime": 1793107546.602012,
+    "seen": 1794227779.4170425,
+    "ast_hash": "d30963284b2ad6e7592933a0ed52241c",
+    "semantic_hash": ""
+  },
+  "libs/shared/ui-components/src/lib/ui-components.spec.tsx": {
+    "mtime": 1788951378.083959,
+    "seen": 1794227779.41705,
+    "ast_hash": "b3cddda49df3e26a08c37a5da45b1019",
+    "semantic_hash": ""
+  },
+  "libs/shared/ui-components/src/lib/ui-components.tsx": {
+    "mtime": 1788951378.083959,
+    "seen": 1794227779.4170575,
+    "ast_hash": "14d3ddf23dabf0df98cc444e09f5f4e6",
+    "semantic_hash": ""
+  },
+  "libs/shared/ui-components/src/lib/utils.ts": {
+    "mtime": 1793107546.606012,
+    "seen": 1794227779.4170654,
+    "ast_hash": "0482d21cfeab8cfcfe44f94927e45afb",
+    "semantic_hash": ""
+  },
+  "libs/shared/ui-components/tsconfig.json": {
+    "mtime": 1793107546.606012,
+    "seen": 1794227779.4170768,
+    "ast_hash": "1aa669fda8af0831b8b1de32ced2db2d",
+    "semantic_hash": ""
+  },
+  "libs/shared/ui-components/tsconfig.lib.json": {
+    "mtime": 1788951378.083959,
+    "seen": 1794227779.4170864,
+    "ast_hash": "6d2f4e8eae1205e9e83aca054e744698",
+    "semantic_hash": ""
+  },
+  "libs/shared/ui-components/tsconfig.spec.json": {
+    "mtime": 1788951378.083959,
+    "seen": 1794227779.4170947,
+    "ast_hash": "dadb4e01e916b90fb7be28903d425e86",
+    "semantic_hash": ""
+  },
+  "libs/shared/ui-components/vite.config.mts": {
+    "mtime": 1793107546.606012,
+    "seen": 1794227779.4171042,
+    "ast_hash": "7f963ed75f3cb8d1c4e44df5ddd242ae",
+    "semantic_hash": ""
+  },
+  "libs/shared/util-types/eslint.config.mjs": {
+    "mtime": 1788951378.083959,
+    "seen": 1794227779.4171143,
+    "ast_hash": "176a5a764d7057c5c8af7454a91757b5",
+    "semantic_hash": ""
+  },
+  "libs/shared/util-types/fixtures/chat/done.json": {
+    "mtime": 1794151815.5930564,
+    "seen": 1794227779.4171245,
+    "ast_hash": "0f5b17b1584135477fa624b19abccd51",
+    "semantic_hash": ""
+  },
+  "libs/shared/util-types/fixtures/chat/error.json": {
+    "mtime": 1794151815.5930564,
+    "seen": 1794227779.4171445,
+    "ast_hash": "503e79faa3362a269d8739628eb16643",
+    "semantic_hash": ""
+  },
+  "libs/shared/util-types/fixtures/chat/request-event.json": {
+    "mtime": 1794151815.5930564,
+    "seen": 1794227779.4171548,
+    "ast_hash": "8edb2b5021875171d4e3622773863b97",
+    "semantic_hash": ""
+  },
+  "libs/shared/util-types/fixtures/chat/request-global.json": {
+    "mtime": 1794151815.5770402,
+    "seen": 1794227779.417165,
+    "ast_hash": "592e29d3e6fbf0be49ef8c2d95b641ac",
+    "semantic_hash": ""
+  },
+  "libs/shared/util-types/fixtures/chat/request.json": {
+    "mtime": 1794151815.5930564,
+    "seen": 1794227779.4171746,
+    "ast_hash": "e867cb4192c7b92b45df0d86cf2e0daa",
+    "semantic_hash": ""
+  },
+  "libs/shared/util-types/fixtures/chat/sources.json": {
+    "mtime": 1794151815.5930564,
+    "seen": 1794227779.4171844,
+    "ast_hash": "3a5bb4566c7e95aa5f1df1295b809b93",
+    "semantic_hash": ""
+  },
+  "libs/shared/util-types/fixtures/chat/status.json": {
+    "mtime": 1794151815.5770402,
+    "seen": 1794227779.417193,
+    "ast_hash": "6818e80687b634905cd1b7439978d4f4",
+    "semantic_hash": ""
+  },
+  "libs/shared/util-types/package.json": {
+    "mtime": 1788951378.083959,
+    "seen": 1794227779.4172022,
+    "ast_hash": "8ecb982fe198f68570b821d22e45d7e1",
+    "semantic_hash": ""
+  },
+  "libs/shared/util-types/src/index.ts": {
+    "mtime": 1790115631.575577,
+    "seen": 1794227779.417211,
+    "ast_hash": "92e7342435e1727ff8783d804c30020a",
+    "semantic_hash": ""
+  },
+  "libs/shared/util-types/src/lib/api-types.spec.ts": {
+    "mtime": 1794151841.8924646,
+    "seen": 1794227779.4172204,
+    "ast_hash": "779cdbae23542c1c5261398bb0e104cf",
+    "semantic_hash": ""
+  },
+  "libs/shared/util-types/src/lib/api-types.ts": {
+    "mtime": 1794151674.283094,
+    "seen": 1794227779.4172306,
+    "ast_hash": "69050778445bf0fb3ca6655f6369519f",
+    "semantic_hash": ""
+  },
+  "libs/shared/util-types/src/lib/util-types.ts": {
+    "mtime": 1788951378.0879593,
+    "seen": 1794227779.417245,
+    "ast_hash": "f9af84a75250d6ae33090d5ccda83c13",
+    "semantic_hash": ""
+  },
+  "libs/shared/util-types/tsconfig.json": {
+    "mtime": 1788951378.0879593,
+    "seen": 1794227779.4172564,
+    "ast_hash": "e908a208f09cfe1225891fcad5cd288a",
+    "semantic_hash": ""
+  },
+  "libs/shared/util-types/tsconfig.lib.json": {
+    "mtime": 1794151833.0432372,
+    "seen": 1794227779.417266,
+    "ast_hash": "d49542fd69d75702ed077b9a8be21e0e",
+    "semantic_hash": ""
+  },
+  "libs/shared/util-types/tsconfig.spec.json": {
+    "mtime": 1794151833.0432372,
+    "seen": 1794227779.4172735,
+    "ast_hash": "3925059fcae62ef0715e634baa7924ef",
+    "semantic_hash": ""
+  },
+  "libs/shared/util-types/vite.config.mts": {
+    "mtime": 1794151833.0392346,
+    "seen": 1794227779.417281,
+    "ast_hash": "967151abd9f11ac4e48f549d37048153",
+    "semantic_hash": ""
+  },
+  "libs/shared/utils/py/project.json": {
+    "mtime": 1793107546.606012,
+    "seen": 1794227779.4172893,
+    "ast_hash": "69d85be9114e2964ecd6a805973e5f53",
+    "semantic_hash": ""
+  },
+  "libs/shared/utils/py/pyproject.toml": {
+    "mtime": 1793107546.606012,
+    "seen": 1794227779.4172971,
+    "ast_hash": "d39219c89fb9ebb70983f37f9213119a",
+    "semantic_hash": ""
+  },
+  "libs/shared/utils/py/src/utils_py/__init__.py": {
+    "mtime": 1793107546.606012,
+    "seen": 1794227779.4173048,
+    "ast_hash": "1a5c256124ef4e31a568bca2358b3739",
+    "semantic_hash": ""
+  },
+  "libs/shared/utils/py/src/utils_py/hello.py": {
+    "mtime": 1793107546.606012,
+    "seen": 1794227779.4173129,
+    "ast_hash": "d1525fd53ef8b9f4b72539b49548c56d",
+    "semantic_hash": ""
+  },
+  "libs/shared/utils/py/tests/__init__.py": {
+    "mtime": 1793107546.606012,
+    "seen": 1794227779.4173203,
+    "ast_hash": "3b3fc691efa23b65b3d5ff99410ab360",
+    "semantic_hash": ""
+  },
+  "libs/shared/utils/py/tests/conftest.py": {
+    "mtime": 1793107546.606012,
+    "seen": 1794227779.417328,
+    "ast_hash": "ee0dc597fa1c46be344230fe3cad5f3b",
+    "semantic_hash": ""
+  },
+  "libs/shared/utils/py/tests/test_hello.py": {
+    "mtime": 1793107546.606012,
+    "seen": 1794227779.4173357,
+    "ast_hash": "06b6d7756ce9716fbc636190f62126af",
+    "semantic_hash": ""
+  },
+  "libs/shared/utils/ts/eslint.config.mjs": {
+    "mtime": 1793107546.606012,
+    "seen": 1794227779.4173434,
+    "ast_hash": "023aac013e6104ae5b38b9dada52c216",
+    "semantic_hash": ""
+  },
+  "libs/shared/utils/ts/package.json": {
+    "mtime": 1793107546.606012,
+    "seen": 1794227779.4173515,
+    "ast_hash": "88f01772de80b1db661817b1ff2f86e6",
+    "semantic_hash": ""
+  },
+  "libs/shared/utils/ts/src/index.ts": {
+    "mtime": 1793107546.606012,
+    "seen": 1794227779.4173589,
+    "ast_hash": "f41bb965ff1d94df25af98d42ceaa297",
+    "semantic_hash": ""
+  },
+  "libs/shared/utils/ts/src/lib/utils-ts.spec.ts": {
+    "mtime": 1793107546.606012,
+    "seen": 1794227779.4173665,
+    "ast_hash": "be14a48aa01ae2c4d28d4dfe5bb9c548",
+    "semantic_hash": ""
+  },
+  "libs/shared/utils/ts/src/lib/utils-ts.ts": {
+    "mtime": 1793107546.606012,
+    "seen": 1794227779.417375,
+    "ast_hash": "89214545a2cc5ed0a5d71828ca193e45",
+    "semantic_hash": ""
+  },
+  "libs/shared/utils/ts/tsconfig.json": {
+    "mtime": 1793107546.6100123,
+    "seen": 1794227779.4173827,
+    "ast_hash": "0215153e41326950936c8469b868958f",
+    "semantic_hash": ""
+  },
+  "libs/shared/utils/ts/tsconfig.lib.json": {
+    "mtime": 1793107546.6100123,
+    "seen": 1794227779.4173906,
+    "ast_hash": "138c93e0919b68fcfeedc49d6345746a",
+    "semantic_hash": ""
+  },
+  "libs/shared/utils/ts/tsconfig.spec.json": {
+    "mtime": 1793107546.6100123,
+    "seen": 1794227779.4173982,
+    "ast_hash": "3b7c5e6d2741f78a448c6e7dd3fbba0c",
+    "semantic_hash": ""
+  },
+  "libs/shared/utils/ts/vitest.config.mts": {
+    "mtime": 1793107546.6100123,
+    "seen": 1794227779.4174056,
+    "ast_hash": "374320cebad949419ea110efff6c4b4f",
+    "semantic_hash": ""
+  },
+  "nx.json": {
+    "mtime": 1788951378.0919592,
+    "seen": 1794227779.417424,
+    "ast_hash": "5214782dad4da9ef62eb650feddc617e",
+    "semantic_hash": ""
+  },
+  "opencode.json": {
+    "mtime": 1794152365.3696153,
+    "seen": 1794227779.4174395,
+    "ast_hash": "1c5ecd9bb6718a0c5c8222a1e8cccdb2",
+    "semantic_hash": ""
+  },
+  "openspec/changes/archive/2026-10-20-multi-source-ingestion-and-ranking/.openspec.yaml": {
+    "mtime": 1793107546.6100123,
+    "seen": 1794227779.4174483,
+    "ast_hash": "55942143d1cd3b4278fd3873c5f00440",
+    "semantic_hash": ""
+  },
+  "openspec/changes/archive/2026-11-09-add-conversational-rag/.openspec.yaml": {
+    "mtime": 1794046254.7577736,
+    "seen": 1794227779.4174562,
+    "ast_hash": "a510889d41a0da0bc16f9dd0a03505b8",
+    "semantic_hash": ""
+  },
+  "openspec/config.yaml": {
+    "mtime": 1793107546.6140122,
+    "seen": 1794227779.4174638,
+    "ast_hash": "500a0a16229f8fd0848dc7cff85d21e9",
+    "semantic_hash": ""
+  },
+  "package.json": {
+    "mtime": 1794152268.7040424,
+    "seen": 1794227779.4174716,
+    "ast_hash": "8e771b557f00ffc907483d536d920dc8",
+    "semantic_hash": ""
+  },
+  "payload.json": {
+    "mtime": 1790115631.6195786,
+    "seen": 1794227779.4174826,
+    "ast_hash": "515e0e91efa2745a95a1b1be6d0f1473",
+    "semantic_hash": ""
+  },
+  "project.json": {
+    "mtime": 1793107546.6260128,
+    "seen": 1794227779.4174926,
+    "ast_hash": "35a79b81e0f2d4e2b626b153a94ae9d3",
+    "semantic_hash": ""
+  },
+  "pyproject.toml": {
+    "mtime": 1793107546.6260128,
+    "seen": 1794227779.4175029,
+    "ast_hash": "4562fa6d44254be70e479b922003f4be",
+    "semantic_hash": ""
+  },
+  "skills-lock.json": {
+    "mtime": 1793965294.9376438,
+    "seen": 1794227779.4175127,
+    "ast_hash": "0b533b67924c3235b6ed91d263e7fdc9",
+    "semantic_hash": ""
+  },
+  "tsconfig.base.json": {
+    "mtime": 1794152282.8797429,
+    "seen": 1794227779.4175205,
+    "ast_hash": "b576524389fcc02bb3de4ff3ca621192",
+    "semantic_hash": ""
+  },
+  "tsconfig.json": {
+    "mtime": 1794151980.207391,
+    "seen": 1794227779.4175303,
+    "ast_hash": "ca1b14c2b2094edb85a4000becf689e7",
+    "semantic_hash": ""
+  },
+  "vitest.workspace.ts": {
+    "mtime": 1793965294.9736533,
+    "seen": 1794227779.417541,
+    "ast_hash": "d536364853852c99f5f89e4f0b9890d7",
+    "semantic_hash": ""
+  },
+  ".agents/rules/explanations.md": {
+    "mtime": 1791894688.2138634,
+    "seen": 1794227779.4175503,
+    "ast_hash": "ceddd55ec40a161a0ba386f3e30bbe1e",
+    "semantic_hash": ""
+  },
+  ".agents/rules/python-standards.md": {
+    "mtime": 1793965294.8136108,
+    "seen": 1794227779.4175594,
+    "ast_hash": "38998d5ae105bfb71d425d394ec676d1",
+    "semantic_hash": ""
+  },
+  ".agents/rules/react-standards.md": {
+    "mtime": 1793107546.5300088,
+    "seen": 1794227779.4175684,
+    "ast_hash": "863fc0e7287fb679ad9defa62bbc6dc0",
+    "semantic_hash": ""
+  },
+  ".agents/rules/ts-standards.md": {
+    "mtime": 1793107546.5300088,
+    "seen": 1794227779.4175773,
+    "ast_hash": "23cfe824d03cf005fe536a3947cc73dd",
+    "semantic_hash": ""
+  },
+  ".agents/skills/langfuse/SKILL.md": {
+    "mtime": 1793965294.8136108,
+    "seen": 1794227779.4175856,
+    "ast_hash": "d0c949986d5515dd689c18a0ea22e2a7",
+    "semantic_hash": ""
+  },
+  ".agents/skills/langfuse/references/ci-cd.md": {
+    "mtime": 1793965294.817612,
+    "seen": 1794227779.417594,
+    "ast_hash": "5bb81b8c3a4bac1ba4172f3108f22b65",
+    "semantic_hash": ""
+  },
+  ".agents/skills/langfuse/references/cli.md": {
+    "mtime": 1793965294.817612,
+    "seen": 1794227779.4176023,
+    "ast_hash": "e4e7a136e2b07a453b2d10b8736ead54",
+    "semantic_hash": ""
+  },
+  ".agents/skills/langfuse/references/cost-optimization.md": {
+    "mtime": 1793965294.817612,
+    "seen": 1794227779.4176116,
+    "ast_hash": "53a444d0029e80fcf0712016e8c5c53c",
+    "semantic_hash": ""
+  },
+  ".agents/skills/langfuse/references/create-dataset.md": {
+    "mtime": 1793965294.817612,
+    "seen": 1794227779.4176211,
+    "ast_hash": "3e0aa5d692702de93fa818aa1620c80c",
+    "semantic_hash": ""
+  },
+  ".agents/skills/langfuse/references/error-analysis.md": {
+    "mtime": 1793965294.817612,
+    "seen": 1794227779.417631,
+    "ast_hash": "1b34cf304dc91a4f1478e7ea11755e99",
+    "semantic_hash": ""
+  },
+  ".agents/skills/langfuse/references/instrumentation.md": {
+    "mtime": 1793965294.817612,
+    "seen": 1794227779.4176407,
+    "ast_hash": "d6880614c1dfdf2276f29f3b9e582630",
+    "semantic_hash": ""
+  },
+  ".agents/skills/langfuse/references/judge-calibration.md": {
+    "mtime": 1793965294.817612,
+    "seen": 1794227779.417653,
+    "ast_hash": "e6a8cdda89dc8b795bc49168c6d8840e",
+    "semantic_hash": ""
+  },
+  ".agents/skills/langfuse/references/prompt-engineering.md": {
+    "mtime": 1793965294.8216128,
+    "seen": 1794227779.4176621,
+    "ast_hash": "f4650420ce998fc6751bbc4c0e8d7587",
+    "semantic_hash": ""
+  },
+  ".agents/skills/langfuse/references/prompt-migration.md": {
+    "mtime": 1793965294.8216128,
+    "seen": 1794227779.4176717,
+    "ast_hash": "f3af8ce90eab1f7b0f9c5f6e489266b4",
+    "semantic_hash": ""
+  },
+  ".agents/skills/langfuse/references/setting-up-evals.md": {
+    "mtime": 1793965294.8216128,
+    "seen": 1794227779.4176805,
+    "ast_hash": "49d05f39a6432cd1f414542f6fa9a066",
+    "semantic_hash": ""
+  },
+  ".agents/skills/langfuse/references/skill-feedback.md": {
+    "mtime": 1793965294.8216128,
+    "seen": 1794227779.41769,
+    "ast_hash": "bb630e73208a9e8921df1a32a5f26330",
+    "semantic_hash": ""
+  },
+  ".agents/skills/langfuse/references/user-feedback.md": {
+    "mtime": 1793965294.8216128,
+    "seen": 1794227779.417699,
+    "ast_hash": "23dab5ec34606f0a64b87aacc55d1d3f",
+    "semantic_hash": ""
+  },
+  ".agents/skills/langfuse/references/v4-project-migration.md": {
+    "mtime": 1793965294.8216128,
+    "seen": 1794227779.4177089,
+    "ast_hash": "12a21c8b8065ae5b2fc0acdbd697aac3",
+    "semantic_hash": ""
+  },
+  ".agents/skills/openspec-apply-change/SKILL.md": {
+    "mtime": 1793107546.5300088,
+    "seen": 1794227779.4177184,
+    "ast_hash": "b5fe3ffc89e11765ae3bda8df44ff131",
+    "semantic_hash": ""
+  },
+  ".agents/skills/openspec-archive-change/SKILL.md": {
+    "mtime": 1793107546.5300088,
+    "seen": 1794227779.4177277,
+    "ast_hash": "820526910dee7791763aebea038e001d",
+    "semantic_hash": ""
+  },
+  ".agents/skills/openspec-explore/SKILL.md": {
+    "mtime": 1793107546.5300088,
+    "seen": 1794227779.4177377,
+    "ast_hash": "ab2db387e3e8b5cebd8f4a0154a01e70",
+    "semantic_hash": ""
+  },
+  ".agents/skills/openspec-propose/SKILL.md": {
+    "mtime": 1793107546.534009,
+    "seen": 1794227779.417747,
+    "ast_hash": "6215ae44b23b22af91f09b6c0bbb922b",
+    "semantic_hash": ""
+  },
+  ".agents/skills/openspec-sync-specs/SKILL.md": {
+    "mtime": 1793107546.534009,
+    "seen": 1794227779.4177551,
+    "ast_hash": "0cf61e8e3830d5d56bf41196edb13471",
+    "semantic_hash": ""
+  },
+  ".agents/skills/openspec-update-change/SKILL.md": {
+    "mtime": 1793107546.534009,
+    "seen": 1794227779.4177647,
+    "ast_hash": "ae0e8cad1eb5376b7b3e6cb435c8a474",
+    "semantic_hash": ""
+  },
+  ".agents/workflows/opsx-apply.md": {
+    "mtime": 1793107546.534009,
+    "seen": 1794227779.417775,
+    "ast_hash": "2ffe2525caec5a9e25190acda0ccb2b5",
+    "semantic_hash": ""
+  },
+  ".agents/workflows/opsx-archive.md": {
+    "mtime": 1793107546.534009,
+    "seen": 1794227779.4177852,
+    "ast_hash": "3b85a7716998c728310ac0d5793b562d",
+    "semantic_hash": ""
+  },
+  ".agents/workflows/opsx-explore.md": {
+    "mtime": 1793107546.534009,
+    "seen": 1794227779.417796,
+    "ast_hash": "7cfaa8a097668cb08346fdba0d655ec6",
+    "semantic_hash": ""
+  },
+  ".agents/workflows/opsx-propose.md": {
+    "mtime": 1793107546.534009,
+    "seen": 1794227779.4178057,
+    "ast_hash": "b70e5c6d3c8f2a18825806fd51ffc24e",
+    "semantic_hash": ""
+  },
+  ".agents/workflows/opsx-sync.md": {
+    "mtime": 1793107546.534009,
+    "seen": 1794227779.4178143,
+    "ast_hash": "fdce239d21ee512a6bcbf69dee9a8f34",
+    "semantic_hash": ""
+  },
+  ".agents/workflows/opsx-update.md": {
+    "mtime": 1793107546.534009,
+    "seen": 1794227779.4178245,
+    "ast_hash": "4eee7b31488a1df40d31bd559b0ffdd3",
+    "semantic_hash": ""
+  },
+  "AGENTS.md": {
+    "mtime": 1793965294.8456192,
+    "seen": 1794227779.417835,
+    "ast_hash": "28ac1dd5ea0f2f148ef9d8ae994ef111",
+    "semantic_hash": ""
+  },
+  "README.md": {
+    "mtime": 1794046277.982429,
+    "seen": 1794227779.4178426,
+    "ast_hash": "b106b843d4a06308cf1836fe9c16713c",
+    "semantic_hash": ""
+  },
+  "apps/hermes-api/.agents/rules/standards.md": {
+    "mtime": 1791894688.2178636,
+    "seen": 1794227779.417852,
+    "ast_hash": "7da128d06baef1833e918be35a9f0f77",
+    "semantic_hash": ""
+  },
+  "apps/hermes-api/AGENTS.md": {
+    "mtime": 1794046277.982429,
+    "seen": 1794227779.4178607,
+    "ast_hash": "595a81acb20a2e1b2729d178c20d9f3b",
+    "semantic_hash": ""
+  },
+  "apps/hermes-api/README.md": {
+    "mtime": 1794151613.0461001,
+    "seen": 1794227779.4178705,
+    "ast_hash": "e56cf00c528290608af436cbc24bce35",
+    "semantic_hash": ""
+  },
+  "apps/hermes-api/docs/architecture.md": {
+    "mtime": 1794151653.1429305,
+    "seen": 1794227779.4178808,
+    "ast_hash": "547dab2c60c176ce274b7e1557743fd3",
+    "semantic_hash": ""
+  },
+  "apps/hermes-worker/AGENTS.md": {
+    "mtime": 1794046277.982429,
+    "seen": 1794227779.417891,
+    "ast_hash": "470dc1405e2c1e006a547d38f6b3c52b",
+    "semantic_hash": ""
+  },
+  "apps/hermes-worker/README.md": {
+    "mtime": 1794046277.982429,
+    "seen": 1794227779.417899,
+    "ast_hash": "754b564c5ffffa9055186195a8ab1c55",
+    "semantic_hash": ""
+  },
+  "apps/hermes-worker/docs/architecture.md": {
+    "mtime": 1794054035.8652759,
+    "seen": 1794227779.4179082,
+    "ast_hash": "4a7ebbb6c6570d9a4837b82379820bcc",
+    "semantic_hash": ""
+  },
+  "apps/hermes/.agents/rules/standards.md": {
+    "mtime": 1791894688.2338638,
+    "seen": 1794227779.4179163,
+    "ast_hash": "fcabe2c7c8a36c2a435de443fbc308b7",
+    "semantic_hash": ""
+  },
+  "apps/hermes/AGENTS.md": {
+    "mtime": 1793107546.5500097,
+    "seen": 1794227779.4179254,
+    "ast_hash": "926ecbf2c081688bc23932e58db30661",
+    "semantic_hash": ""
+  },
+  "apps/hermes/README.md": {
+    "mtime": 1793107546.55401,
+    "seen": 1794227779.417933,
+    "ast_hash": "7b747d689f48a5f4c94fa3d7c5f8af96",
+    "semantic_hash": ""
+  },
+  "apps/hermes/docs/architecture.md": {
+    "mtime": 1794154060.568727,
+    "seen": 1794227779.417942,
+    "ast_hash": "f847acacdc898b56f39641a77fe6c527",
+    "semantic_hash": ""
+  },
+  "docs/architecture.md": {
+    "mtime": 1794054067.342013,
+    "seen": 1794227779.4179513,
+    "ast_hash": "88196ab85068c03f4e884804617754be",
+    "semantic_hash": ""
+  },
+  "libs/chat/README.md": {
+    "mtime": 1794153471.9206152,
+    "seen": 1794227779.417961,
+    "ast_hash": "7b6d989a1b64d0a3f7cd8cec2a07c4e0",
+    "semantic_hash": ""
+  },
+  "libs/map/.agents/rules/standards.md": {
+    "mtime": 1793793534.2358851,
+    "seen": 1794227779.4179704,
+    "ast_hash": "1193294f3d8cfb3fef74415eec856e18",
+    "semantic_hash": ""
+  },
+  "libs/map/AGENTS.md": {
+    "mtime": 1793107546.5860112,
+    "seen": 1794227779.4179792,
+    "ast_hash": "bb60c2ed713fe5fa06246c3a33bf27fd",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-ai/AGENTS.md": {
+    "mtime": 1794046277.982429,
+    "seen": 1794227779.4179883,
+    "ast_hash": "dae7d57278b83122ade55f95ac8dde89",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-ai/README.md": {
+    "mtime": 1794046277.982429,
+    "seen": 1794227779.417998,
+    "ast_hash": "ca906f0f61507b5aeb96e686f2bcc2ff",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-db/.agents/rules/standards.md": {
+    "mtime": 1791894688.253864,
+    "seen": 1794227779.4180071,
+    "ast_hash": "ca10ea04ca1382f7d930a0928e8eb32d",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-db/AGENTS.md": {
+    "mtime": 1793107546.5940115,
+    "seen": 1794227779.4180167,
+    "ast_hash": "f0b4cdb189d4dff7654457d1b2924207",
+    "semantic_hash": ""
+  },
+  "openspec/changes/archive/2026-10-20-multi-source-ingestion-and-ranking/design.md": {
+    "mtime": 1793107546.6100123,
+    "seen": 1794227779.418026,
+    "ast_hash": "26ae81663d19ecab00ffff95699e54b1",
+    "semantic_hash": ""
+  },
+  "openspec/changes/archive/2026-10-20-multi-source-ingestion-and-ranking/proposal.md": {
+    "mtime": 1793107546.6100123,
+    "seen": 1794227779.418035,
+    "ast_hash": "3655cddda192a21bcca7cea9a2975f79",
+    "semantic_hash": ""
+  },
+  "openspec/changes/archive/2026-10-20-multi-source-ingestion-and-ranking/specs/event-ranking/spec.md": {
+    "mtime": 1793107546.6100123,
+    "seen": 1794227779.418044,
+    "ast_hash": "8bc84f63de13f27e4085181e5ededbd3",
+    "semantic_hash": ""
+  },
+  "openspec/changes/archive/2026-10-20-multi-source-ingestion-and-ranking/specs/news-ingestion/spec.md": {
+    "mtime": 1793107546.6140122,
+    "seen": 1794227779.4180758,
+    "ast_hash": "ed8d2f4dad32a393d4559293e4dc6ccd",
+    "semantic_hash": ""
+  },
+  "openspec/changes/archive/2026-10-20-multi-source-ingestion-and-ranking/tasks.md": {
+    "mtime": 1793107546.6140122,
+    "seen": 1794227779.4180868,
+    "ast_hash": "53e7617752ed3d80550421a3ff75dea9",
+    "semantic_hash": ""
+  },
+  "openspec/changes/archive/2026-11-09-add-conversational-rag/design.md": {
+    "mtime": 1794216443.2306828,
+    "seen": 1794227779.4180954,
+    "ast_hash": "336f3b2f195dc194c8a75424a6757a34",
+    "semantic_hash": ""
+  },
+  "openspec/changes/archive/2026-11-09-add-conversational-rag/proposal.md": {
+    "mtime": 1794046254.765774,
+    "seen": 1794227779.4181044,
+    "ast_hash": "44f2410d8259f6b6c6eb730c224d49a1",
+    "semantic_hash": ""
+  },
+  "openspec/changes/archive/2026-11-09-add-conversational-rag/specs/chat-map-integration/spec.md": {
+    "mtime": 1794046254.765774,
+    "seen": 1794227779.418114,
+    "ast_hash": "8b83120ffc4ac76a8827d095b43584c4",
+    "semantic_hash": ""
+  },
+  "openspec/changes/archive/2026-11-09-add-conversational-rag/specs/conversational-rag/spec.md": {
+    "mtime": 1794046254.765774,
+    "seen": 1794227779.4181242,
+    "ast_hash": "e1ec190f71a09cf82e0b93f00943ebeb",
+    "semantic_hash": ""
+  },
+  "openspec/changes/archive/2026-11-09-add-conversational-rag/specs/event-retrieval/spec.md": {
+    "mtime": 1794046254.765774,
+    "seen": 1794227779.418133,
+    "ast_hash": "c3021c7302508bcd1b0f00fb3fe62e81",
+    "semantic_hash": ""
+  },
+  "openspec/changes/archive/2026-11-09-add-conversational-rag/tasks.md": {
+    "mtime": 1794219202.0163362,
+    "seen": 1794227779.4181437,
+    "ast_hash": "d70a2ea4330173b50e62769fef6c7e1d",
+    "semantic_hash": ""
+  },
+  "openspec/specs/chat-map-integration/spec.md": {
+    "mtime": 1794219304.6893995,
+    "seen": 1794227779.4181507,
+    "ast_hash": "80b6b566b532d7a36bfc8830ff373a0b",
+    "semantic_hash": ""
+  },
+  "openspec/specs/conversational-rag/spec.md": {
+    "mtime": 1794219304.6893995,
+    "seen": 1794227779.4181585,
+    "ast_hash": "3d51bff1f5ecf5ad31b77b8e6df78f30",
+    "semantic_hash": ""
+  },
+  "openspec/specs/event-ranking/spec.md": {
+    "mtime": 1793107546.6140122,
+    "seen": 1794227779.4181674,
+    "ast_hash": "f91d17c0084b4e78c4325edbc577a478",
+    "semantic_hash": ""
+  },
+  "openspec/specs/event-retrieval/spec.md": {
+    "mtime": 1794219304.6893995,
+    "seen": 1794227779.4181752,
+    "ast_hash": "7731a7124aea93713a01d4b32ecab26a",
+    "semantic_hash": ""
+  },
+  "openspec/specs/news-ingestion/spec.md": {
+    "mtime": 1793107546.6140122,
+    "seen": 1794227779.4181828,
+    "ast_hash": "009386bb4a67eedc1af7aad416581c7a",
+    "semantic_hash": ""
+  },
+  "reports/apps/hermes-api/unittests/html/index.html": {
+    "mtime": 1794227635.686738,
+    "seen": 1794227779.4181902,
+    "ast_hash": "98e41fe7442c017d3ed77df802abc5db",
+    "semantic_hash": ""
+  },
+  "apps/hermes/app/assets/dark-texture.jpg": {
+    "mtime": 1793107546.55801,
+    "seen": 1794227779.4181986,
+    "ast_hash": "6f3ae8945617f106184e49e61b5fcf2a",
+    "semantic_hash": ""
+  },
+  "apps/hermes/app/assets/earth-orbit.jpg": {
+    "mtime": 1793107546.55801,
+    "seen": 1794227779.4182065,
+    "ast_hash": "35c370c8e7b15338b36c8f6a25751114",
+    "semantic_hash": ""
+  },
+  "apps/hermes/app/assets/map-chart.jpg": {
+    "mtime": 1793107546.5620103,
+    "seen": 1794227779.4182138,
+    "ast_hash": "807db6fefa5c544e78e0ea5083a393b1",
+    "semantic_hash": ""
+  },
+  "apps/hermes/app/assets/satellite.jpg": {
+    "mtime": 1793107546.5620103,
+    "seen": 1794227779.4182215,
+    "ast_hash": "d5d0af140f62320d0340ea1babb99aa8",
+    "semantic_hash": ""
+  },
+  "package-lock.json": {
+    "mtime": 1794152273.9799042,
+    "seen": 1794227779.41823,
+    "ast_hash": "796e2d747809c2a47eceb99d3b7f1287",
+    "semantic_hash": ""
+  }
+}
