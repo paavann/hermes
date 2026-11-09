@@ -68,3 +68,6 @@ test-output
 /reports/*
 .vercel
 .env*
+
+#graphify
+graphify-out/cache
