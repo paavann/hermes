@@ -22,6 +22,9 @@ description = "shared ai and llm abstraction library for hermes."
 requires-python = ">=3.14"
 dependencies = [
   "httpx>=0.28.1",
+  "langchain-core>=1.7.5,<2",
+  "langchain-litellm>=0.11.2,<0.12",
+  "langchain-tavily>=0.2.18,<0.3",
   "langfuse>=3.0.0",
   "litellm>=1.83.0",
   "pydantic>=2.14.0",

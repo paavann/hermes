@@ -6,8 +6,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from hermes_ai.client import HermesAi
-from hermes_ai.core.config import AiConfig
-from hermes_ai.exceptions import ConfigurationError
+from hermes_ai.core.config import AiConfig, ModelRoute, ModelTarget
+from hermes_ai.exceptions import ConfigurationError, SchemaValidationError
 from hermes_ai.models.events import ArticleInput, ExtractedEvent
 from hermes_ai.models.tl import (
     TlEdgeExtraction,
@@ -20,28 +20,54 @@ from hermes_ai.models.tl import (
 @pytest.fixture
 def base_config() -> AiConfig:
     return AiConfig(
-        primary_model="mistral/ministral-8b-latest",
-        primary_api_key="primary-key",
-        fallback_model="nvidia_nim/meta/llama-3.1-70b-instruct",
-        fallback_api_key="fallback-key",
-        embed_model="nvidia/nemotron-3-embed-1b",
-        embed_api_key="embed-key",
+        routes={
+            "extractor": ModelRoute(
+                primary=ModelTarget(
+                    model="mistral/ministral-8b-latest", api_key="primary-key"
+                ),
+                fallbacks=(
+                    ModelTarget(
+                        model="nvidia_nim/meta/llama-3.1-70b-instruct",
+                        api_key="fallback-key",
+                    ),
+                ),
+            ),
+            "embed": ModelRoute(
+                primary=ModelTarget(
+                    model="nvidia_nim/nvidia/nemotron-3-embed-1b",
+                    api_key="embed-key",
+                ),
+            ),
+        },
     )
 
 
 def test_init_raises_without_primary_credentials() -> None:
     with pytest.raises(
-        ConfigurationError, match="primary_api_key and primary_model are required"
+        ConfigurationError,
+        match="extractor primary model and api key are required",
     ):
-        HermesAi(AiConfig(primary_model="", primary_api_key=""))
+        HermesAi(
+            AiConfig(
+                routes={
+                    "extractor": ModelRoute(primary=ModelTarget(model="", api_key=""))
+                }
+            )
+        )
 
 
 def test_init_succeeds_with_primary_only() -> None:
     client = HermesAi(
-        AiConfig(primary_model="mistral/mistral-large", primary_api_key="key")
+        AiConfig(
+            routes={
+                "extractor": ModelRoute(
+                    primary=ModelTarget(model="mistral/mistral-large", api_key="key")
+                )
+            }
+        )
     )
-    assert client.config.primary_model == "mistral/mistral-large"
-    assert client.config.has_fallback is False
+    assert client.config.routes["extractor"].primary.model == "mistral/mistral-large"
+    assert len(client.config.routes["extractor"].fallbacks) == 0
 
 
 @patch("litellm.Router.acompletion")
@@ -151,42 +177,32 @@ def test_gen_embeddings_empty_list(base_config: AiConfig) -> None:
 
 
 @patch("litellm.Router.acompletion")
-def test_call_llm_fallback_on_validation_failure(
+def test_call_llm_raises_schema_validation_error(
     mock_acompletion: AsyncMock, base_config: AiConfig
 ) -> None:
     client = HermesAi(base_config)
-
-    # Primary returns invalid json, fallback returns valid
     bad_res = MagicMock()
     bad_res.choices = [MagicMock(message=MagicMock(content='{"invalid": "data"}'))]
-    good_res = MagicMock()
-    good_res.choices = [
-        MagicMock(
-            message=MagicMock(
-                content='{"is_tl_worthy": true, "wiki_search_query": "Crisis"}'
+    mock_acompletion.return_value = bad_res
+
+    with pytest.raises(SchemaValidationError):
+        asyncio.run(
+            client.llm.call_llm(
+                sys_prompt="system",
+                user_prompt="user",
+                res_model=TlSearchQuery,
+                schema_name="triage",
             )
         )
-    ]
-    mock_acompletion.side_effect = [bad_res, good_res]
-
-    res = asyncio.run(
-        client.llm.call_llm(
-            sys_prompt="system",
-            user_prompt="user",
-            res_model=TlSearchQuery,
-            schema_name="triage",
-        )
-    )
-    assert res is not None
-    assert res.is_tl_worthy is True
-    assert res.wiki_search_query == "Crisis"
-    assert mock_acompletion.call_count == 2
 
 
 def test_async_context_manager(base_config: AiConfig) -> None:
     async def _run() -> None:
         async with HermesAi(base_config) as client:
-            assert client.config.primary_model == "mistral/ministral-8b-latest"
+            assert (
+                client.config.routes["extractor"].primary.model
+                == "mistral/ministral-8b-latest"
+            )
 
     asyncio.run(_run())
 

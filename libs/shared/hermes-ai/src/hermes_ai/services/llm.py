@@ -1,22 +1,35 @@
+from __future__ import annotations
+
 import json
 import logging
 
-import litellm
-from langfuse import Langfuse, get_client
 from litellm.router import Router
-from litellm.types.router import DeploymentTypedDict
+from litellm.types.router import DeploymentTypedDict, LiteLLMParamsTypedDict
 from pydantic import BaseModel, ValidationError
 
-from hermes_ai.core.config import AiConfig
+from hermes_ai.core.config import AiConfig, ModelRoute
 from hermes_ai.exceptions import (
     ConfigurationError,
     ModelExecutionError,
     SchemaValidationError,
 )
+from hermes_ai.services.langfuse import configure_langfuse, flush_langfuse
 from hermes_ai.utils.rate_limiter import TbRateLimiter
 
 
 logger = logging.getLogger(__name__)
+
+
+def _deployment(
+    name: str,
+    model: str,
+    api_key: str,
+    rpm: int | None = None,
+) -> DeploymentTypedDict:
+    params: LiteLLMParamsTypedDict = {"model": model, "api_key": api_key}
+    if rpm is not None:
+        params["rpm"] = rpm
+    return {"model_name": name, "litellm_params": params}
 
 
 def _clean_json_str(raw: str) -> str:
@@ -25,41 +38,46 @@ def _clean_json_str(raw: str) -> str:
         cleaned = cleaned.removeprefix("```json").strip()
     elif cleaned.startswith("```"):
         cleaned = cleaned.removeprefix("```").strip()
-
     if cleaned.endswith("```"):
         cleaned = cleaned.removesuffix("```").strip()
     return cleaned
 
 
+def _fallback_alias(role: str, index: int, total: int) -> str:
+    return f"{role}-fallback" if total == 1 else f"{role}-fallback-{index}"
+
+
+def _build_deployments(
+    routes: dict[str, ModelRoute],
+) -> tuple[list[DeploymentTypedDict], list[dict[str, list[str]]]]:
+    model_list: list[DeploymentTypedDict] = []
+    fallbacks: list[dict[str, list[str]]] = []
+
+    for name, route in routes.items():
+        model_list.append(
+            _deployment(
+                name,
+                route.primary.model,
+                route.primary.api_key,
+                route.primary.rpm,
+            )
+        )
+        fb_names: list[str] = []
+        total_fallbacks = len(route.fallbacks)
+        for idx, fb in enumerate(route.fallbacks, start=1):
+            fb_alias = _fallback_alias(name, idx, total_fallbacks)
+            model_list.append(_deployment(fb_alias, fb.model, fb.api_key, fb.rpm))
+            fb_names.append(fb_alias)
+        if fb_names:
+            fallbacks.append({name: fb_names})
+
+    return model_list, fallbacks
+
+
 class LlmService:
     def __init__(self, config: AiConfig) -> None:
         self._config = config
-        if not config.primary_api_key or not config.primary_model:
-            logger.error("primary llm api key or model is missing.")
-            raise ConfigurationError("primary_api_key and primary_model are required.")
-
-        model_list: list[DeploymentTypedDict] = [
-            {
-                "model_name": "primary-extractor",
-                "litellm_params": {
-                    "model": config.primary_model,
-                    "api_key": config.primary_api_key,
-                },
-            }
-        ]
-        fallbacks: list[dict[str, list[str]]] = []
-        if config.fallback_model and config.fallback_api_key:
-            model_list.append(
-                {
-                    "model_name": "fallback-extractor",
-                    "litellm_params": {
-                        "model": config.fallback_model,
-                        "api_key": config.fallback_api_key,
-                    },
-                }
-            )
-            fallbacks = [{"primary-extractor": ["fallback-extractor"]}]
-
+        model_list, fallbacks = _build_deployments(config.routes)
         self._router = Router(
             model_list=model_list,
             fallbacks=fallbacks,
@@ -70,29 +88,24 @@ class LlmService:
         self._rate_limiter = (
             TbRateLimiter(config.rpm_limit) if config.rpm_limit else None
         )
+        embed_route = config.routes.get("embed")
         self._embed_rate_limiter = (
-            TbRateLimiter(config.embed_rpm_limit) if config.embed_rpm_limit else None
+            TbRateLimiter(embed_route.primary.rpm)
+            if (embed_route and embed_route.primary.rpm)
+            else None
         )
 
         if config.tracing_enabled:
-            if config.langfuse_public_key and config.langfuse_secret_key:
-                # Initialize the Langfuse SDK client singleton. This registers the
-                # client for `get_client()` / `@observe` usage and sets up the SDK's
-                # own OTel TracerProvider for higher-level span management.
-                # Use `base_url` (not the deprecated `host`) so the SDK resolves the
-                # OTLP ingestion endpoint correctly.
-                Langfuse(
-                    public_key=config.langfuse_public_key,
-                    secret_key=config.langfuse_secret_key,
-                    base_url=config.langfuse_host,
-                )
-            logger.info("langfuse tracing enabled.")
+            configure_langfuse(config)
 
         logger.info(
-            "llm service initialized. primary=%s, fallback=%s via litellm router.",
-            config.primary_model,
-            config.fallback_model if fallbacks else "none",
+            "llm service initialized with routes: %s via litellm router.",
+            list(config.routes.keys()),
         )
+
+    @property
+    def config(self) -> AiConfig:
+        return self._config
 
     @property
     def router(self) -> Router:
@@ -116,7 +129,6 @@ class LlmService:
     ) -> T:
         if self._rate_limiter:
             await self._rate_limiter.acquire()
-
         res = await self._router.acompletion(
             model=model_name,
             messages=[
@@ -144,71 +156,29 @@ class LlmService:
         res_model: type[T],
         schema_name: str,
     ) -> T:
+        if "extractor" not in self._config.routes:
+            raise ConfigurationError("extractor route is required for extraction.")
         try:
-            result = await self._invoke_and_parse(
-                "primary-extractor",
+            return await self._invoke_and_parse(
+                "extractor",
                 sys_prompt,
                 user_prompt,
                 res_model,
                 schema_name,
             )
-            return result
         except (ValidationError, ValueError, json.JSONDecodeError) as val_err:
-            logger.warning(
-                "primary llm output validation failed for %s: %s. attempting fallback if available.",
-                schema_name,
-                val_err,
+            logger.error(
+                "llm output validation failed for %s: %s.", schema_name, val_err
             )
-            if self._config.fallback_model and self._config.fallback_api_key:
-                try:
-                    parsed = await self._invoke_and_parse(
-                        "fallback-extractor",
-                        sys_prompt,
-                        user_prompt,
-                        res_model,
-                        schema_name,
-                    )
-                    logger.info("fallback extractor succeeded for %s.", schema_name)
-                    return parsed
-                except (
-                    ValidationError,
-                    ValueError,
-                    json.JSONDecodeError,
-                ) as fb_val_err:
-                    logger.error(
-                        "fallback llm output validation failed for %s: %s.",
-                        schema_name,
-                        fb_val_err,
-                    )
-                    raise SchemaValidationError(
-                        f"output validation failed across primary and fallback models for {schema_name}.",
-                        schema_name=schema_name,
-                        validation_error=fb_val_err,
-                    ) from fb_val_err
-                except Exception as fb_exc:
-                    logger.error(
-                        "fallback llm call failed for %s: %s.", schema_name, fb_exc
-                    )
-                    raise ModelExecutionError(
-                        f"fallback model execution failed for {schema_name}: {fb_exc}.",
-                        schema_name=schema_name,
-                        original_exception=fb_exc,
-                    ) from fb_exc
-
-            logger.error("llm call failed for %s: %s.", schema_name, val_err)
             raise SchemaValidationError(
-                f"primary llm output validation failed for {schema_name} and no fallback available.",
+                f"llm output validation failed for {schema_name}: {val_err}.",
                 schema_name=schema_name,
                 validation_error=val_err,
             ) from val_err
         except Exception as exc:
-            logger.error(
-                "llm call failed across router deployments for %s: %s.",
-                schema_name,
-                exc,
-            )
+            logger.error("llm call failed for %s: %s.", schema_name, exc)
             raise ModelExecutionError(
-                f"all router deployments failed for {schema_name}: {exc}.",
+                f"llm call failed for {schema_name}: {exc}.",
                 schema_name=schema_name,
                 original_exception=exc,
             ) from exc
@@ -216,20 +186,22 @@ class LlmService:
     async def gen_embeddings(self, texts: list[str]) -> list[list[float] | None]:
         if not texts:
             return []
-        elif not self._config.embed_model or not self._config.embed_api_key:
-            logger.error("embed api key or model is missing.")
+        elif not self._config.has_embed:
+            logger.error("embed route is missing from configuration.")
             return [None] * len(texts)
         elif self._embed_rate_limiter:
             await self._embed_rate_limiter.acquire()
-
         try:
-            res = await litellm.aembedding(
-                model=self._config.embed_model,
+            embed_route = self._config.routes.get("embed")
+            encoding_format = (
+                "float"
+                if (embed_route and embed_route.primary.model.startswith("nvidia_nim/"))
+                else None
+            )
+            res = await self._router.aembedding(
+                model="embed",
                 input=texts,
-                api_key=self._config.embed_api_key,
-                encoding_format="float"
-                if self._config.embed_model.startswith("nvidia_nim/")
-                else None,
+                encoding_format=encoding_format,
             )
             embeddings: list[list[float] | None] = [
                 item["embedding"] for item in res.data
@@ -241,7 +213,5 @@ class LlmService:
 
     async def aclose(self) -> None:
         if self._config.tracing_enabled:
-            lf = get_client()
-            lf.flush()
-            logger.info("langfuse client flushed.")
+            flush_langfuse()
         logger.info("closing llm service resources.")

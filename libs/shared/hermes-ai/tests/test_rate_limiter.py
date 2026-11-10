@@ -3,7 +3,7 @@ import time
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from hermes_ai.client import HermesAi
-from hermes_ai.core.config import AiConfig
+from hermes_ai.core.config import AiConfig, ModelRoute, ModelTarget
 from hermes_ai.models.events import ArticleInput
 from hermes_ai.utils.rate_limiter import (
     CircuitBreakerOpenError,
@@ -57,24 +57,34 @@ def test_rate_limiter_refills() -> None:
 def test_client_rate_limiter_wiring() -> None:
     async def _run() -> None:
         config_no_limits = AiConfig(
-            primary_model="mistral/mistral-large",
-            primary_api_key="key",
+            routes={
+                "extractor": ModelRoute(
+                    primary=ModelTarget(model="mistral/mistral-large", api_key="key")
+                )
+            }
         )
         client_no_limits = HermesAi(config_no_limits)
         assert client_no_limits.config.rpm_limit is None
-        assert client_no_limits.config.embed_rpm_limit is None
+        assert client_no_limits.config.has_embed is False
 
         config_with_limits = AiConfig(
-            primary_model="mistral/mistral-large",
-            primary_api_key="key",
-            embed_model="text-embedding-3-small",
-            embed_api_key="key",
+            routes={
+                "extractor": ModelRoute(
+                    primary=ModelTarget(model="mistral/mistral-large", api_key="key")
+                ),
+                "embed": ModelRoute(
+                    primary=ModelTarget(
+                        model="nvidia_nim/text-embedding-3-small",
+                        api_key="key",
+                        rpm=240,
+                    )
+                ),
+            },
             rpm_limit=120,
-            embed_rpm_limit=240,
         )
         client = HermesAi(config_with_limits)
         assert client.config.rpm_limit == 120
-        assert client.config.embed_rpm_limit == 240
+        assert client.config.routes["embed"].primary.rpm == 240
 
         # Verify rate_limiter.acquire is called during call_llm
         assert client.llm._rate_limiter is not None

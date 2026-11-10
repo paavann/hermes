@@ -5,7 +5,7 @@ import httpx
 import pytest
 
 from hermes_ai.client import HermesAi
-from hermes_ai.core.config import AiConfig
+from hermes_ai.core.config import AiConfig, ModelRoute, ModelTarget
 from hermes_ai.exceptions import GeocodingError
 from hermes_ai.models.events import ArticleInput, GroundedEvent
 from hermes_ai.models.tl import GroundedTlNode
@@ -219,8 +219,11 @@ def test_call_nominatim_retries_on_429() -> None:
 def test_autonomous_grounding_in_event_extractor() -> None:
     async def _run() -> None:
         config = AiConfig(
-            primary_model="mistral/mistral-large",
-            primary_api_key="key",
+            routes={
+                "extractor": ModelRoute(
+                    primary=ModelTarget(model="mistral/mistral-large", api_key="key")
+                )
+            }
         )
         client = HermesAi(config)
         geo_service = GeocodingService()
@@ -261,8 +264,11 @@ def test_autonomous_grounding_in_event_extractor() -> None:
 def test_autonomous_grounding_in_tl_extractor() -> None:
     async def _run() -> None:
         config = AiConfig(
-            primary_model="mistral/mistral-large",
-            primary_api_key="key",
+            routes={
+                "extractor": ModelRoute(
+                    primary=ModelTarget(model="mistral/mistral-large", api_key="key")
+                )
+            }
         )
         client = HermesAi(config)
         geo_service = GeocodingService()

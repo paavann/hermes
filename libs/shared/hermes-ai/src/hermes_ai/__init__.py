@@ -1,7 +1,7 @@
 """Public API exports for the hermes-ai package."""
 
 from hermes_ai.client import HermesAi
-from hermes_ai.core.config import AiConfig
+from hermes_ai.core.config import AiConfig, ModelRoute, ModelTarget
 from hermes_ai.core.constants import (
     ARTICLE_BATCH_SIZE,
     DEFAULT_CATEGORY_COLOR,
@@ -65,6 +65,8 @@ __all__ = [
     "HermesAiError",
     "LlmService",
     "ModelExecutionError",
+    "ModelRoute",
+    "ModelTarget",
     "NominatimResilienceManager",
     "PREDEFINED_CATEGORIES",
     "RateLimitExceededError",

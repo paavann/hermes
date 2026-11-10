@@ -44,14 +44,8 @@ The library is configured via the frozen dataclass `AiConfig`:
 
 | Parameter | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
-| `primary_model` | `str` | *Required* | LiteLLM model identifier for primary extraction. |
-| `primary_api_key` | `str` | *Required* | API key for primary model provider. |
-| `fallback_model` | `str \| None` | `None` | Secondary fallback model identifier. |
-| `fallback_api_key` | `str \| None` | `None` | API key for fallback model provider. |
-| `embed_model` | `str \| None` | `None` | Dense embedding model identifier. |
-| `embed_api_key` | `str \| None` | `None` | Embedding model API key. |
+| `routes` | `dict[str, ModelRoute]` | *Required* | Route definitions mapping logical model groups (e.g. `"extractor"`, `"chat"`, `"plan"`, `"embed"`) to a `ModelRoute(primary=..., fallbacks=...)`. |
 | `rpm_limit` | `int \| None` | `None` | Token-bucket rate limit (requests/min) for LLM completions. |
-| `embed_rpm_limit` | `int \| None` | `None` | Rate limit (requests/min) for embedding generation. |
 | `tracing_enabled` | `bool` | `False` | Whether Langfuse trace observability is activated. |
 | `tracing_tags` | `list[str]` | `[]` | Metadata tags attached to all traces (e.g. `["hermes-worker", "production"]`). |
 | `langfuse_public_key` | `str \| None` | `None` | Langfuse project public key. |
@@ -65,14 +59,28 @@ The library is configured via the frozen dataclass `AiConfig`:
 All external consumers interact with the high-level `HermesAi` facade:
 
 ```python
-from hermes_ai import AiConfig, ArticleInput, HermesAi
+from hermes_ai import AiConfig, ArticleInput, HermesAi, ModelRoute, ModelTarget
 
 config = AiConfig(
-    primary_model="mistral/ministral-8b-latest",
-    primary_api_key="...",
-    fallback_model="nvidia_nim/openai/gpt-oss-20b",
-    fallback_api_key="...",
+    routes={
+        "extractor": ModelRoute(
+            primary=ModelTarget(model="mistral/ministral-8b-latest", api_key="..."),
+            fallbacks=(
+                ModelTarget(model="nvidia_nim/openai/gpt-oss-20b", api_key="..."),
+            ),
+        ),
+        "embed": ModelRoute(
+            primary=ModelTarget(model="nvidia_nim/nvidia/nemotron-3-embed-1b", api_key="...", rpm=120),
+            fallbacks=(
+                ModelTarget(model="self_hosted/nvidia/nemotron-3-embed-1b", api_key="...", rpm=120),
+            ),
+        ),
+    },
     tracing_enabled=True,
+    tracing_tags=["hermes-api", "production"],
+    langfuse_public_key="pk-lf-...",
+    langfuse_secret_key="sk-lf-...",
+)
     tracing_tags=["hermes-api", "production"],
     langfuse_public_key="pk-lf-...",
     langfuse_secret_key="sk-lf-...",

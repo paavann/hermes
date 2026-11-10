@@ -1,7 +1,5 @@
 import logging
 
-from langfuse import observe
-
 from hermes_ai.exceptions import (
     ModelExecutionError,
     SchemaValidationError,
@@ -17,6 +15,7 @@ from hermes_ai.utils.prompts import (
     TL_SYSTEM_PROMPT,
     TL_TRIAGE_SYSTEM_PROMPT,
 )
+from hermes_ai.utils.tracing import observe
 
 
 logger = logging.getLogger(__name__)

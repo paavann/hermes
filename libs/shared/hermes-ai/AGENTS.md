@@ -29,4 +29,4 @@ Run commands from the workspace root using project `hermes-ai`. See root `AGENTS
 ## 4. Domain Triggers
 
 - **When modifying model routing, failover mechanisms, or geocoding architecture**: Read `libs/shared/hermes-ai/docs/architecture.md`.
-- **When modifying tracing, `@observe` decorators, or Langfuse SDK initialization**: Inspect `libs/shared/hermes-ai/src/hermes_ai/services/llm.py` and ensure `LlmService.aclose()` flush calls and privacy protections (`capture_input=False, capture_output=False`) are preserved.
+- **When modifying tracing, `@observe` decorators, or Langfuse SDK initialization**: Inspect `libs/shared/hermes-ai/src/hermes_ai/services/langfuse.py`, `libs/shared/hermes-ai/src/hermes_ai/services/llm.py`, and `libs/shared/hermes-ai/src/hermes_ai/utils/tracing.py` and ensure `LlmService.aclose()` flush calls and privacy protections (`capture_input=False, capture_output=False`) are preserved.

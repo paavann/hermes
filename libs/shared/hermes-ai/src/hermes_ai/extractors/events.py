@@ -1,8 +1,6 @@
 import logging
 from collections.abc import Callable, Sequence
 
-from langfuse import observe
-
 from hermes_ai.core.constants import (
     ARTICLE_BATCH_SIZE,
     DEFAULT_CATEGORY_COLOR,
@@ -21,6 +19,7 @@ from hermes_ai.models.events import (
 from hermes_ai.services.geocoding import GeocodingService
 from hermes_ai.services.llm import LlmService
 from hermes_ai.utils.prompts import ARTICLE_SYSTEM_PROMPT
+from hermes_ai.utils.tracing import observe
 
 
 logger = logging.getLogger(__name__)
@@ -37,7 +36,6 @@ def _build_events_prompt(
             f"Title: {item.title}\n"
             f"Content:\n{item.content}\n\n"
         )
-
     if existing_events:
         prompt += "# Existing active events (match if applicable)\n\n"
         for event in existing_events:
@@ -49,7 +47,6 @@ def _build_events_prompt(
             )
     else:
         prompt += "# Existing active events\n\nNone currently.\n"
-
     return prompt
 
 
