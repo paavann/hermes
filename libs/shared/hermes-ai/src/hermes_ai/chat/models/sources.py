@@ -19,8 +19,8 @@ class GroundingFlag(enum.StrEnum):
 
 
 class WebResult(BaseModel):
-    title: str = Field(min_length=1, max_length=300)
     url: str
+    title: str = Field(min_length=1, max_length=300)
     source_name: str | None = None
     published_at: datetime | None = None
     retrieved_at: datetime

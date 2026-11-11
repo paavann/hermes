@@ -1,9 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-import html
 import logging
-import re
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Protocol
@@ -13,6 +11,7 @@ from langchain_tavily import TavilySearch
 
 from hermes_ai.chat.models import WebResult
 from hermes_ai.core.config import AiConfig
+from hermes_ai.utils.sanitization import sanitize_query_text, strip_html_text
 
 
 logger = logging.getLogger(__name__)
@@ -21,21 +20,6 @@ MAX_RESULTS = 5
 MAX_TITLE_CHARS = 300
 MAX_SNIPPET_CHARS = 1200
 MAX_WEB_QUERY_CHARS = 400
-
-HTML_TAG_RE = re.compile(r"<[^>]*>")
-CONTROL_CHAR_RE = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
-INSTRUCTION_PATTERNS = (
-    re.compile(
-        r"(?:ignore|disregard)\s+(?:all\s+)?(?:previous|prior|above)\s+instructions?",
-        re.IGNORECASE,
-    ),
-    re.compile(r"system\s+prompt", re.IGNORECASE),
-    re.compile(
-        r"reveal\s+(?:the\s+)?(?:system|hidden|developer)\s+(?:prompt|message)",
-        re.IGNORECASE,
-    ),
-    re.compile(r"\byou\s+must\b", re.IGNORECASE),
-)
 
 
 class TavilyTool(Protocol):
@@ -49,14 +33,9 @@ class WebSearchOutcome:
     failure: str | None = None
 
 
-def sanitize_text(value: str, *, limit: int) -> str:
-    """Strip markup and control characters, neutralize instructions, cap length."""
-    cleaned = html.unescape(HTML_TAG_RE.sub(" ", value))
-    cleaned = CONTROL_CHAR_RE.sub("", cleaned)
-    for pattern in INSTRUCTION_PATTERNS:
-        cleaned = pattern.sub("[removed]", cleaned)
-    cleaned = " ".join(cleaned.split())
-    return cleaned[:limit].strip()
+def sanitize_text(value: str, limit: int) -> str:
+    """Strip HTML markup, invisible controls, and normalize text within ``limit``."""
+    return strip_html_text(value, limit=limit)
 
 
 def validated_url(value: str) -> str | None:
@@ -92,19 +71,18 @@ def parse_published_at(value: object) -> datetime | None:
 def _as_float(value: object) -> float | None:
     if isinstance(value, bool):
         return None
-    if isinstance(value, int | float):
+    elif isinstance(value, int | float):
         return float(value)
-    if isinstance(value, str):
+    elif isinstance(value, str):
         try:
             return float(value)
         except ValueError:
             return None
-    return None
+    else:
+        return None
 
 
 class WebSearchService:
-    """One Tavily news search per turn, with sanitized and capped output."""
-
     def __init__(
         self,
         config: AiConfig,
@@ -135,33 +113,6 @@ class WebSearchService:
     @property
     def configured(self) -> bool:
         return self._tool is not None
-
-    async def search(
-        self,
-        query: str,
-        *,
-        recency_intent: bool = False,
-        now: datetime | None = None,
-    ) -> WebSearchOutcome:
-        if self._tool is None:
-            return WebSearchOutcome(degraded=True, failure="tavily is not configured.")
-        query = sanitize_text(query, limit=MAX_WEB_QUERY_CHARS)
-        if not query:
-            return WebSearchOutcome(degraded=True, failure="web query is empty.")
-        retrieved_at = now or datetime.now(UTC)
-        payload: dict[str, object] = {"query": query}
-        if recency_intent:
-            payload["time_range"] = "week"
-
-        try:
-            async with asyncio.timeout(self._timeout_seconds):
-                raw = await self._tool.ainvoke(payload)
-        except Exception as exc:
-            logger.warning("tavily web search degraded: %s.", exc)
-            return WebSearchOutcome(degraded=True, failure=str(exc))
-
-        results = self._parse_results(raw, retrieved_at=retrieved_at)
-        return WebSearchOutcome(results=results)
 
     def _parse_results(self, raw: object, *, retrieved_at: datetime) -> list[WebResult]:
         if not isinstance(raw, dict):
@@ -198,6 +149,33 @@ class WebSearchService:
             reverse=True,
         )
         return results[:MAX_RESULTS]
+
+    async def search(
+        self,
+        query: str,
+        *,
+        recency_intent: bool = False,
+        now: datetime | None = None,
+    ) -> WebSearchOutcome:
+        if self._tool is None:
+            return WebSearchOutcome(degraded=True, failure="tavily is not configured.")
+
+        query = sanitize_query_text(query, limit=MAX_WEB_QUERY_CHARS)
+        if not query:
+            return WebSearchOutcome(degraded=True, failure="web query is empty.")
+        retrieved_at = now or datetime.now(UTC)
+        payload: dict[str, object] = {"query": query}
+        if recency_intent:
+            payload["time_range"] = "week"
+        try:
+            async with asyncio.timeout(self._timeout_seconds):
+                raw = await self._tool.ainvoke(payload)
+        except Exception as exc:
+            logger.warning("tavily web search failed: %s.", exc)
+            return WebSearchOutcome(degraded=True, failure=str(exc))
+
+        results = self._parse_results(raw, retrieved_at=retrieved_at)
+        return WebSearchOutcome(results=results)
 
 
 __all__ = [

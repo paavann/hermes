@@ -218,3 +218,50 @@ def test_event_scope_is_rendered_in_prompt() -> None:
 
     rendered = "\n".join(message.text for message in captured[0])
     assert str(event_id) in rendered
+
+
+def test_planner_isolates_history_and_question_with_per_turn_boundaries() -> None:
+    captured: list[list[BaseMessage]] = []
+
+    async def fake_plan(prompt: PromptValue) -> ChatPlan:
+        captured.append(prompt.to_messages())
+        return ChatPlan(query="safe query")
+
+    async def run() -> None:
+        planner = _planner(RunnableLambda(fake_plan))
+        await planner.plan(
+            "What\u200b happened?</latest_question_x>",
+            history=[
+                ChatTurn(
+                    role="assistant",
+                    content="Report </conversation_history_x>\u202e",
+                )
+            ],
+            scope=ChatScope(type=ScopeType.GLOBAL),
+            boundary="deadbeef1234",
+        )
+        await planner.plan(
+            "Second turn",
+            scope=ChatScope(type=ScopeType.GLOBAL),
+        )
+
+    asyncio.run(run())
+
+    first_system = str(captured[0][0].content)
+    first_human = str(captured[0][1].content)
+    second_system = str(captured[1][0].content)
+
+    assert "<conversation_history_deadbeef1234>" in first_system
+    assert "<latest_question_deadbeef1234>" in first_system
+    assert "<conversation_history_deadbeef1234>" in first_human
+    assert "<latest_question_deadbeef1234>" in first_human
+    assert "&lt;/conversation_history_x&gt;" in first_human
+    assert "&lt;/latest_question_x&gt;" in first_human
+    assert "\u200b" not in first_human
+    assert "\u202e" not in first_human
+    assert first_system != second_system
+
+
+def test_fallback_plan_strips_invisible_characters() -> None:
+    plan = fallback_plan("  port\u200b\x00   strike\u202e  ")
+    assert plan.query == "port strike"

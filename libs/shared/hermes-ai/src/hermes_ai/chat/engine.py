@@ -81,6 +81,7 @@ class AnswerModel(Protocol):
         self, input: Sequence[BaseMessage]
     ) -> AsyncIterator[BaseMessageChunk]: ...
 
+
 def _plan_filters(plan: ChatPlan) -> RetrievalFilters | None:
     if plan.category is None and plan.time_range is None:
         return None
@@ -89,6 +90,7 @@ def _plan_filters(plan: ChatPlan) -> RetrievalFilters | None:
         start=plan.time_range.start if plan.time_range else None,
         end=plan.time_range.end if plan.time_range else None,
     )
+
 
 async def _close_stream(stream: AsyncIterator[BaseMessageChunk] | None) -> None:
     if stream is None:
@@ -99,6 +101,7 @@ async def _close_stream(stream: AsyncIterator[BaseMessageChunk] | None) -> None:
     result = aclose()
     if inspect.isawaitable(result):
         await result
+
 
 def _chunk_text(chunk: BaseMessageChunk) -> str:
     content = chunk.content
@@ -116,6 +119,7 @@ def _chunk_text(chunk: BaseMessageChunk) -> str:
         return "".join(parts)
     return ""
 
+
 def _int(value: object) -> int:
     if isinstance(value, bool):
         return 0
@@ -124,6 +128,7 @@ def _int(value: object) -> int:
     if isinstance(value, float):
         return int(value)
     return 0
+
 
 def _merge_usage(
     current: ChatUsage | None, chunk: BaseMessageChunk
@@ -149,6 +154,7 @@ def _merge_usage(
             if merged.total_tokens or merged.prompt_tokens or merged.completion_tokens:
                 return merged
     return current
+
 
 def _provenance(
     sources: Sequence[ChatSource], validation: CitationValidation
@@ -266,7 +272,9 @@ class ChatEngine:
                 logger.error("chat retrieval failed: %s.", exc)
             yield ErrorEvent(
                 code=ErrorCode.RETRIEVAL_FAILED,
-                message="Local retrieval timed out." if is_timeout else "Local retrieval failed.",
+                message="Local retrieval timed out."
+                if is_timeout
+                else "Local retrieval failed.",
                 retryable=True,
             )
             return
@@ -385,5 +393,6 @@ class ChatEngine:
             web_used=web_used,
             degraded=ordered_degraded,
         )
+
 
 __all__ = ["AnswerModel", "ChatEngine", "Planner", "WebSearcher"]
