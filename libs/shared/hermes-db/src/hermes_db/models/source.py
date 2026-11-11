@@ -26,9 +26,9 @@ class Source(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     source_type: Mapped[SourceType] = mapped_column(default=SourceType.RSS)
     credibility: Mapped[CredibilityTier] = mapped_column(default=CredibilityTier.TIER_3)
 
-    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    is_active: Mapped[bool] = mapped_column(default=True)
     logo_url: Mapped[str | None] = mapped_column(Text)
     last_fetched_at: Mapped[datetime | None] = mapped_column()
-    fetch_interval_minutes: Mapped[int] = mapped_column(Integer, default=15)
+    fetch_interval_minutes: Mapped[int] = mapped_column(default=15)
 
     articles: Mapped[list[Article]] = relationship(back_populates="source")
