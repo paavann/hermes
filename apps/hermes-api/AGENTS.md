@@ -1,14 +1,6 @@
 # Hermes API (`apps/hermes-api`)
 
-Stateless FastAPI REST API and on-demand historical timeline synthesis engine.
-
-## 1. Commands
-
-Run all commands from the workspace root using project `hermes-api`. See root `AGENTS.md` Commands table for lint, typecheck, test, and format.
-
-| Task    | Command                   |
-| :------ | :------------------------ |
-| **Dev** | `npx nx serve hermes-api` |
+Stateless FastAPI REST API, conversational RAG endpoint, and on-demand historical timeline synthesis engine. Run all Nx commands from the workspace root using project `hermes-api`.
 
 ## 2. Invariants
 
@@ -19,7 +11,8 @@ Run all commands from the workspace root using project `hermes-api`. See root `A
 - **Graceful Degradation**: When LLM credentials are missing, keep the server operational for spatial queries and return HTTP 503 from timeline synthesis endpoints instead of crashing.
 - **Observability Lifecycle**: When Langfuse keys are configured, `AiService` initializes tracing tagged with `["hermes-api", ENV]`. Ensure `client.close()` is executed on application shutdown to flush queued telemetry before Uvicorn termination.
 - **No Local ORM Models**: All database models and migrations reside in `libs/shared/hermes-db`. Never define SQLAlchemy models in `hermes-api`.
+- **Chat Guardrails & Contracts**: Route all conversational RAG queries through `chat_guards.py` and `chat_service.py`; mirror any `schemas/chat.py` or `schemas/events.py` response changes in `libs/shared/util-types/src/lib/api-types.ts`.
 
-## 3. Domain Triggers
+## 3. Domain Triggers (Code Modifications Only)
 
-- **When modifying endpoints, timeline synthesis pipeline, or error handling**: Read `apps/hermes-api/docs/architecture.md`.
+- **When modifying endpoints, chat/timeline pipelines, or error handling**: Read `apps/hermes-api/docs/architecture.md`.

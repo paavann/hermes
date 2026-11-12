@@ -1,20 +1,53 @@
 {
+  "instructions": [
+    ".agents/rules/*.md"
+  ],
+  "skills": {
+    "paths": ["./.agents/skills"]
+  },
+  "references": {
+    "workflows": {
+      "path": "./.agents/workflows",
+      "description": "Shared multi-tool development workflows and execution checklists"
+    }
+  },
   "mcp": {
+    "timeout": {
+      "startup": 10000,
+      "catalog": 10000,
+      "execution": 30000
+    },
     "servers": {
       "docs-langchain": {
         "type": "remote",
-        "url": "https://docs.langchain.com/mcp"
+        "url": "https://docs.langchain.com/mcp",
+        "disabled": true
       },
       "reference-langchain": {
         "type": "remote",
-        "url": "https://reference.langchain.com/mcp"
+        "url": "https://reference.langchain.com/mcp",
+        "disabled": true
+      },
+      "langfuse-docs": {
+        "type": "remote",
+        "url": "https://langfuse.com/api/mcp",
+        "disabled": true
       }
     }
   },
-  "references": {
-    "project-skills": {
-      "path": "./.agents/skills",
-      "description": "Contains domain-specific agent skills, prompts, and tool descriptions for this repository."
-    }
+  "watcher": {
+    "ignore": [
+      "**/.git/**",
+      "**/.nx/**",
+      "**/.vscode/**",
+      "**/pytest_cache/**",
+      "**/dist/**",
+      "**/build/**",
+      "**/.kiro/**",
+      "**/.claude/**",
+      "**/.antigravity/**",
+      "**/node_modules/**",
+      "**/coverage/**"
+    ]
   }
 }

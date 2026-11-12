@@ -7,19 +7,14 @@ globs: **/*.py
 
 ## Coding Style & Conventions
 
-- **Strict PEP Adherence**: Agents MUST strictly consult and adhere to the official Python Enhancement Proposals documentation at [https://peps.python.org/](https://peps.python.org/) to follow established best practices, language idioms, and coding conventions for Python.
-- **Strict Type Hinting**: ALWAYS add explicit Python type hints for EVERY function argument and return type. Untyped functions are strictly forbidden. Use `snake_case` for Python variables and functions.
-- **Strict Prohibition of `Any`**: Using `Any` (from `typing` or any other module) is strictly prohibited across all functions, methods, models, schemas, and services. Code must always use concrete types, specific Pydantic models, `TypedDict`, generics, or explicit unions. If handling arbitrary, unvalidated data, use `object` with explicit type guards or validation instead.
-- **Strict Enum Usage**: ALWAYS use Python `enum.Enum` (specifically `(str, enum.Enum)`) wherever appropriate when handling a fixed set of status, scope, type, category, or tier values. Hardcoding raw string literals across services, models, schemas, or status updates is strictly forbidden.
-- **Python Imports**: Strictly use absolute imports in Python (e.g., `from src.services.db import get_db`) and avoid relative dot imports.
-- **Minimal Naming Conventions**: The naming of variables, functions, and other identifiers should be kept minimal and short. Use concise forms to keep the code clean.
-- **Function and Method Spacing**: Strictly adhere to PEP 8 and Ruff formatting standards: ALWAYS leave two blank lines between top-level functions and classes, and exactly one blank line between methods defined inside a class.
-- **Prohibition of Method and Function Aliasing**: Defining method or function aliases inside classes or modules (e.g., `call = call_llm` or `embed = gen_embeddings`) is strictly forbidden. Every method or function must have a single canonical name and be invoked using that exact canonical name. Aliasing creates ambiguity, hides intent, degrades static analysis, and reflects poor design taste.
-- **Configuration via Pydantic Settings**: Directly reading from or mutating the process environment via `os.environ` or `os.getenv` across application services, handlers, CLI commands, and core logic is strictly prohibited. All environment variables, credentials, and runtime parameters MUST be declared, validated, and accessed through strongly-typed Pydantic `BaseSettings` models (e.g., `hermes_worker.core.config.settings`). If a third-party SDK requires environment variables at initialization time, that bridge must be encapsulated within the internal client/service abstraction layer rather than leaking raw `os.environ` calls into business logic or worker setup files.
-- **Pragmatic DRY Principle**: Strictly follow and adhere to DRY (Don't Repeat Yourself) principles while writing code wherever possible, but avoid applying it in situations where it adds unnecessary complexity or seems not required.
+- **Strict Type Hinting & No `Any`**: Add explicit type hints for every function/method parameter and return type. Using `Any` is forbidden—use concrete types, Pydantic models, `TypedDict`, generics, or `object` with type guards.
+- **Strict Enum Usage**: Use `(str, enum.Enum)` for fixed sets of statuses, scopes, tiers, or categories. Never hardcode raw status string literals.
+- **Absolute Imports Only**: Use absolute imports (e.g., `from hermes_api.services.db import get_db`); avoid relative dot imports.
+- **Concise Naming & No Aliasing**: Keep variable and function names concise (`snake_case`). Never define method or function aliases (e.g., `call = call_llm`); invoke every symbol by its single canonical name.
+- **Configuration via Pydantic Settings**: Never call `os.environ` or `os.getenv` in application services, handlers, or CLI commands. Declare and validate env vars via typed `pydantic_settings.BaseSettings` in `core/config.py` (shared libraries under `libs/` must never read env vars directly; receive config via explicit parameters).
 
 ## Tooling & Logging
 
-- **Ruff Exclusivity**: Strictly adhere to the `ruff` configuration in `pyproject.toml`. Do not introduce `black`, `flake8`, or `isort`.
-- **Parameterized Logging**: ALWAYS use parameterized string formatting (e.g., `logger.info("Message %s", var)` or `logger.exception("Failed %s", var)`) across all logger levels (`debug`, `info`, `warning`, `error`, `exception`). Using f-strings or `.format()` inside logger calls is strictly forbidden to preserve deferred evaluation, performance short-circuiting, and structured log aggregation.
-- **Developer Log Formatting**: All internal developer log messages (which are for internal observability and never sent to API clients) MUST start with a lowercase letter (never capitalized) and MUST always end with a period (`.`). If a log message consists of multiple sentences, periods must be included in-between sentences as well (e.g., `logger.info("fetching event %s. timeline generation starting.", event_id)`).
+- **Ruff Exclusivity**: Follow the `ruff` configuration in `pyproject.toml`. Do not introduce `black`, `flake8`, or `isort`.
+- **Parameterized Logging**: Always use `%s`-style parameterized formatting (`logger.info("fetching event %s.", event_id)`), never f-strings or `.format()`.
+- **Developer Log Formatting**: Internal developer log messages must start with a lowercase letter and end with a period (`.`), including periods between multiple sentences.
