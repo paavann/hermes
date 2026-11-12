@@ -12,11 +12,16 @@ export function HeroSection(): React.JSX.Element {
         <div className="text-xs uppercase tracking-[0.2em] text-slate-muted/70 mb-4 flex items-center gap-2">
           <span className="text-neon-blue">■</span>
           <span>Hermes Intelligence</span>
+          <span className="hidden md:inline-flex items-center gap-1.5 ml-auto text-[10px] text-slate-muted/50">
+            <span className="w-1 h-1 bg-emerald-400 inline-block animate-pulse" />
+            <span>SYSTEM ONLINE</span>
+          </span>
         </div>
         <h1 className="text-3xl sm:text-4xl lg:text-5xl font-medium tracking-tight text-slate-muted leading-tight">
           Global event observability for{' '}
-          <span className="text-ivory font-bold">
+          <span className="text-ivory font-bold relative">
             the world's most critical decisions.
+            <span className="absolute -left-2 top-0 w-0.5 h-full bg-neon-blue/30 hidden lg:block" aria-hidden="true" />
           </span>
         </h1>
       </div>
@@ -32,6 +37,12 @@ export function HeroSection(): React.JSX.Element {
           />
           <div className="absolute inset-0 bg-linear-to-r from-obsidian/90 via-obsidian/40 to-transparent" />
           <div className="absolute inset-0 bg-linear-to-t from-obsidian via-transparent to-obsidian/30" />
+          
+          {/* Subtle Tactical Scan Lines */}
+          <div className="absolute inset-0 pointer-events-none opacity-5" aria-hidden="true">
+            <div className="absolute top-0 left-0 right-0 h-px bg-neon-blue" style={{ top: '33%' }} />
+            <div className="absolute top-0 left-0 right-0 h-px bg-neon-blue" style={{ top: '66%' }} />
+          </div>
 
           <div className="absolute inset-0 flex flex-col justify-between pl-5 md:pl-60 pr-5 md:pr-8 py-10 md:py-16 max-w-4xl z-10 pointer-events-auto">
             <div className="pt-2 md:pt-4">

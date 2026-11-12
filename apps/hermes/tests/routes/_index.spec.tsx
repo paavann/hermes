@@ -12,9 +12,24 @@ vi.mock('@clerk/react-router/server', () => ({
   getAuth: (...args: unknown[]) => mockGetAuth(...args),
 }));
 
-vi.mock('@hermes/map', () => ({
-  MapView: () => <div data-testid="map-view" />,
-  MapConfigProvider: ({ children }: { children: React.ReactNode }) => children,
+vi.mock('@hermes/map', () => {
+  const state = {
+    selectedEventId: null,
+    viewport: null,
+    isTlMode: false,
+    focusEvent: () => undefined,
+    setCitedEvents: () => undefined,
+  };
+  return {
+    MapView: () => <div data-testid="map-view" />,
+    MapConfigProvider: ({ children }: { children: React.ReactNode }) => children,
+    useMapStore: <T,>(selector: (value: typeof state) => T): T => selector(state),
+  };
+});
+
+vi.mock('@hermes/chat', () => ({
+  ChatConfigProvider: ({ children }: { children: React.ReactNode }) => children,
+  ChatPanel: () => <div data-testid="chat-panel" />,
 }));
 
 describe('Map Route', () => {

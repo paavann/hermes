@@ -80,6 +80,34 @@ export function ProblemSection(): React.JSX.Element {
             <div className="mt-4 text-[10px] text-slate-muted/50 tracking-widest font-mono">
               01 // THE PARADOX
             </div>
+            {/* Tactical Progress Indicator */}
+            <div className="mt-8 space-y-2">
+              {PROBLEM_STATEMENTS.map((_, idx) => (
+                <div
+                  key={idx}
+                  className="flex items-center gap-2"
+                >
+                  <div
+                    className={`h-0.5 transition-all duration-300 ${
+                      activeIdx === idx
+                        ? 'w-8 bg-neon-blue'
+                        : activeIdx > idx
+                          ? 'w-6 bg-slate-muted/40'
+                          : 'w-4 bg-slate-muted/20'
+                    }`}
+                  />
+                  <span
+                    className={`text-[9px] font-mono transition-colors duration-300 ${
+                      activeIdx === idx
+                        ? 'text-neon-blue'
+                        : 'text-slate-muted/30'
+                    }`}
+                  >
+                    {String(idx + 1).padStart(2, '0')}
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 

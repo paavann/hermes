@@ -125,6 +125,11 @@ export function CapabilitiesSection(): React.JSX.Element {
           <div className="mt-4 text-[10px] text-slate-muted/50 tracking-widest font-mono">
             02 // OPERATIONAL DOMAINS
           </div>
+          {/* Card Count Indicator */}
+          <div className="mt-8 flex items-center gap-2 text-[9px] text-slate-muted/40 font-mono">
+            <span className="text-neon-blue">■</span>
+            <span>{CAPABILITY_CARDS.length} DOMAINS</span>
+          </div>
         </div>
       </div>
 
@@ -137,8 +142,10 @@ export function CapabilitiesSection(): React.JSX.Element {
               cardRefs.current[idx] = el;
             }}
             style={{ zIndex: 10 + idx }}
-            className="sticky top-0 min-h-screen w-full flex flex-col justify-between border-t border-white/6 first:border-t-0 bg-obsidian overflow-hidden"
+            className="sticky top-0 min-h-screen w-full flex flex-col justify-between border-t border-white/6 first:border-t-0 bg-obsidian overflow-hidden relative group"
           >
+            {/* Subtle Left Accent Border */}
+            <div className="absolute left-0 top-0 bottom-0 w-px bg-neon-blue/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500" aria-hidden="true" />
             {/* Background Media Layer with Dark Gradient Tint & Scroll Parallax */}
             {card.bgImg && (
               <div

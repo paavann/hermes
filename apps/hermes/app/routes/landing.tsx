@@ -27,8 +27,16 @@ export const meta: MetaFunction = () => [
 export default function LandingRoute(): React.JSX.Element {
   return (
     <div className="relative min-h-screen bg-obsidian text-ivory font-mono selection:bg-neon-blue selection:text-black antialiased overflow-x-clip">
+      {/* Subtle Tactical Grid Overlay */}
       <div
-        className="fixed inset-0 pointer-events-none opacity-[0.035] z-0"
+        className="fixed inset-0 pointer-events-none opacity-[0.02] z-0"
+        style={{
+          backgroundImage: `
+            linear-gradient(to right, rgba(244, 244, 240, 0.1) 1px, transparent 1px),
+            linear-gradient(to bottom, rgba(244, 244, 240, 0.1) 1px, transparent 1px)
+          `,
+          backgroundSize: '80px 80px',
+        }}
         aria-hidden="true"
       />
 

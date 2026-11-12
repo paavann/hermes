@@ -48,30 +48,31 @@ export function Footer(): React.JSX.Element {
           <div className="space-y-6">
             <div className="flex items-center gap-2 text-[10px] tracking-widest uppercase text-slate-muted/80">
               <span className="w-1.5 h-1.5 bg-emerald-400 inline-block animate-pulse" />
-              <span>INFO</span>
+              <span>SYSTEM INFO</span>
             </div>
-            <div className="text-[10px] tracking-wider text-slate-muted/50 leading-relaxed font-mono">
-              HERMES
-              <br />
-              SPATIAL INTEL
-              <br />
-              SRID 4326
+            <div className="text-[10px] tracking-wider text-slate-muted/50 leading-relaxed font-mono space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="text-neon-blue text-[8px]">■</span>
+                <span>HERMES</span>
+              </div>
+              <div className="pl-3.5">SPATIAL INTEL</div>
+              <div className="pl-3.5">SRID 4326</div>
             </div>
             <div className="pt-4 flex flex-col gap-2 text-[11px] text-slate-muted/70 tracking-widest uppercase font-mono">
               <a
                 href="https://github.com/paavann/hermes"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="hover:text-ivory transition-colors flex items-center gap-1.5"
+                className="hover:text-ivory transition-colors flex items-center gap-1.5 group"
               >
-                <span className="text-neon-blue">/</span>
+                <span className="text-neon-blue group-hover:text-neon-blue/80 transition-colors">/</span>
                 <span>GITHUB ↗</span>
               </a>
               <Link
                 to="/map"
-                className="hover:text-ivory transition-colors flex items-center gap-1.5"
+                className="hover:text-ivory transition-colors flex items-center gap-1.5 group"
               >
-                <span className="text-neon-blue">/</span>
+                <span className="text-neon-blue group-hover:text-neon-blue/80 transition-colors">/</span>
                 <span>LIVE MAP ↗</span>
               </Link>
             </div>

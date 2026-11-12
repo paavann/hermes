@@ -86,6 +86,17 @@ export function ContactSection(): React.JSX.Element {
           <div className="mt-4 text-[10px] text-slate-muted/50 tracking-widest font-mono">
             03 // GET IN TOUCH
           </div>
+          {/* Comms Status Indicator */}
+          <div className="mt-8 space-y-2">
+            <div className="flex items-center gap-2 text-[9px] text-slate-muted/40 font-mono">
+              <span className="w-1 h-1 bg-emerald-400 inline-block animate-pulse" />
+              <span>COMMS ACTIVE</span>
+            </div>
+            <div className="flex items-center gap-2 text-[9px] text-slate-muted/30 font-mono">
+              <span className="w-1 h-1 bg-slate-muted/30 inline-block" />
+              <span>SECURE CHANNEL</span>
+            </div>
+          </div>
         </div>
       </div>
 

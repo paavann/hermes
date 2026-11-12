@@ -1,10 +1,12 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useCallback } from 'react';
 import type { LoaderFunctionArgs } from 'react-router';
 import { getAuth } from '@clerk/react-router/server';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import { LiveClock } from '@hermes/ui-components';
+import type { ChatSource } from '@hermes/util-types';
 
+import { citedEventsFromSources } from '../components/map/cited-sources';
 import type { Route } from './+types/map';
 
 export async function loader(args: LoaderFunctionArgs) {
@@ -26,20 +28,65 @@ export const meta: Route.MetaFunction = () => [
 ];
 
 /**
- * Dynamic client-only boundary for MapView and MapConfigProvider.
- * Shielding @hermes/map behind React.lazy ensures Mapbox GL JS is never evaluated
- * in Node.js server environments during SSR.
+ * Dynamic client-only boundary for MapView, ChatPanel, and their providers.
+ * Shielding @hermes/map and @hermes/chat behind React.lazy ensures Mapbox GL JS
+ * and browser-only chat APIs are never evaluated in Node.js server environments
+ * during SSR.
  */
 const DynamicMapContainer = lazy(async () => {
-  const { MapView, MapConfigProvider } = await import('@hermes/map');
-  return {
-    default: function DynamicMap(): React.JSX.Element {
-      return (
-        <MapConfigProvider config={MAP_CONFIG}>
+  const [
+    { MapView, MapConfigProvider, useMapStore },
+    { ChatConfigProvider, ChatPanel },
+  ] = await Promise.all([import('@hermes/map'), import('@hermes/chat')]);
+
+  function MapWithChat(): React.JSX.Element {
+    const selectedEventId = useMapStore((state) => state.selectedEventId);
+    const viewport = useMapStore((state) => state.viewport);
+    const isTimelineMode = useMapStore((state) => state.isTlMode);
+    const focusEvent = useMapStore((state) => state.focusEvent);
+    const setCitedEvents = useMapStore((state) => state.setCitedEvents);
+
+    const handleSources = useCallback(
+      (sources: ChatSource[]) => {
+        setCitedEvents(citedEventsFromSources(sources));
+      },
+      [setCitedEvents],
+    );
+
+    const handleCitationActivate = useCallback(
+      (source: ChatSource) => {
+        if (
+          source.event_id === null ||
+          source.latitude === null ||
+          source.longitude === null
+        ) {
+          return;
+        }
+        focusEvent(source.event_id, [source.longitude, source.latitude]);
+      },
+      [focusEvent],
+    );
+
+    return (
+      <MapConfigProvider config={MAP_CONFIG}>
+        <ChatConfigProvider
+          config={{ baseUrl: MAP_CONFIG.baseUrl, apiVer: MAP_CONFIG.apiVer }}
+        >
           <MapView />
-        </MapConfigProvider>
-      );
-    },
+          <div hidden={isTimelineMode}>
+            <ChatPanel
+              autoScope={{ eventId: selectedEventId, viewport }}
+              onSources={handleSources}
+              onCitationActivate={handleCitationActivate}
+            />
+          </div>
+        </ChatConfigProvider>
+      </MapConfigProvider>
+    );
+  }
+
+  return {
+    default: MapWithChat,
   };
 });
 

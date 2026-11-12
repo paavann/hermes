@@ -53,10 +53,16 @@
   ],
   "references": [
     {
-      "path": "../../libs/shared/ui-components/tsconfig.lib.json"
+      "path": "../../libs/shared/util-types/tsconfig.lib.json"
+    },
+    {
+      "path": "../../libs/chat/tsconfig.lib.json"
     },
     {
       "path": "../../libs/map/tsconfig.lib.json"
+    },
+    {
+      "path": "../../libs/shared/ui-components/tsconfig.lib.json"
     }
   ]
 }

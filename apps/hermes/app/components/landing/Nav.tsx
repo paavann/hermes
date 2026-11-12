@@ -114,9 +114,18 @@ export function Nav({ activeSection: controlledActiveSection }: NavProps): React
           <Link
             to="/"
             aria-label="Hermes Home"
-            className="font-bold tracking-[0.25em] text-sm text-ivory hover:text-white transition-colors"
+            className="group relative font-bold tracking-[0.25em] text-sm text-ivory hover:text-white transition-colors flex items-center gap-2"
           >
-            HERMES
+            <span className="relative">
+              <span className="absolute -left-2.5 top-1/2 -translate-y-1/2 w-1 h-1 bg-neon-blue opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              HERMES
+            </span>
+            <span 
+              className="text-[8px] text-neon-blue/70 tracking-wider font-normal opacity-60 group-hover:opacity-100 transition-opacity duration-300"
+              aria-hidden="true"
+            >
+              GEO
+            </span>
           </Link>
         </div>
 
