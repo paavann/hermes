@@ -3,13 +3,13 @@
 import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
-from hermes_api.services.ai_service import (
-    AiService,
-    TimelineSearchQuery,
+from hermes_ai.models.tl import (
     TlEdgeExtraction,
     TlExtractionResponse,
-    tlNodeExtraction,
+    TlNodeExtraction,
+    TlSearchQuery,
 )
+from hermes_api.services.ai_service import AiService
 
 
 @pytest.fixture
@@ -23,7 +23,7 @@ def ai_service(monkeypatch):
 
 class TestExtractTl:
     def test_returns_none_for_empty_prose(self, ai_service: AiService) -> None:
-        result = asyncio.run(ai_service.extract_tl("Title", "   "))
+        result = asyncio.run(ai_service.client.timelines.extract("Title", "   "))
         assert result is None
 
     @patch("litellm.Router.acompletion")
@@ -33,13 +33,13 @@ class TestExtractTl:
         response_json = TlExtractionResponse(
             tl_summary="Overarching historical arc.",
             nodes=[
-                tlNodeExtraction(
+                TlNodeExtraction(
                     date="2023-10-06",
                     headline="Event 0",
                     location_name="Location 0",
                     summary="Summary 0",
                 ),
-                tlNodeExtraction(
+                TlNodeExtraction(
                     date="2023-10-07",
                     headline="Event 1",
                     location_name="Location 1",
@@ -59,7 +59,9 @@ class TestExtractTl:
         mock_res.choices = [MagicMock(message=MagicMock(content=response_json))]
         mock_acompletion.return_value = mock_res
 
-        result = asyncio.run(ai_service.extract_tl("Timeline of X", "Prose text"))
+        result = asyncio.run(
+            ai_service.client.timelines.extract("Timeline of X", "Prose text")
+        )
 
         assert result is not None
         assert result.tl_summary == "Overarching historical arc."
@@ -82,7 +84,9 @@ class TestExtractTl:
         mock_acompletion.return_value = mock_res
 
         result = asyncio.run(
-            ai_service.extract_tl("Assassination of Jovenel Moïse", "Prose text")
+            ai_service.client.timelines.extract(
+                "Assassination of Jovenel Moïse", "Prose text"
+            )
         )
 
         assert result is not None
@@ -98,7 +102,7 @@ class TestAnalyzeTlContext:
     def test_successful_context_analysis(
         self, mock_acompletion: AsyncMock, ai_service: AiService
     ) -> None:
-        response_json = TimelineSearchQuery(
+        response_json = TlSearchQuery(
             is_tl_worthy=True,
             wiki_search_query="2022 Russian invasion of Ukraine",
         ).model_dump_json()
@@ -108,7 +112,7 @@ class TestAnalyzeTlContext:
         mock_acompletion.return_value = mock_res
 
         result = asyncio.run(
-            ai_service.analyze_tl_context("Missile strike reported near Kyiv")
+            ai_service.client.timelines.analyze("Missile strike reported near Kyiv")
         )
 
         assert result is not None
@@ -121,16 +125,17 @@ class TestAnalyzeTlContext:
     ) -> None:
         mock_acompletion.side_effect = Exception("Router timeout")
         result = asyncio.run(
-            ai_service.analyze_tl_context("Some routine news headline")
+            ai_service.client.timelines.analyze("Some routine news headline")
         )
         assert result is None
 
 
 class TestRouterFallback:
     def test_router_configuration(self, ai_service: AiService) -> None:
-        assert ai_service.client.config.primary_model == "mistral/ministral-8b-latest"
+        extractor_route = ai_service.client.config.routes["extractor"]
+        assert extractor_route.primary.model == "mistral/ministral-8b-latest"
+        assert len(extractor_route.fallbacks) == 1
         assert (
-            ai_service.client.config.fallback_model
+            extractor_route.fallbacks[0].model
             == "nvidia_nim/meta/llama-3.1-70b-instruct"
         )
-        assert ai_service.client.config.has_fallback is True

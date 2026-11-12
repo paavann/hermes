@@ -1,5 +1,6 @@
 import logging
 from fastapi import FastAPI, Request
+from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError, StarletteHTTPException
 from fastapi.responses import JSONResponse
 from hermes_api.core.exceptions import AppException
@@ -31,7 +32,7 @@ def register_err_handlers(app: FastAPI):
                 "err_msg": exc.message,
                 "details": exc.details,
             },
-            headers=_cors_headers(request),
+            headers={**_cors_headers(request), **exc.headers},
         )
 
     @app.exception_handler(RequestValidationError)
@@ -43,7 +44,7 @@ def register_err_handlers(app: FastAPI):
             content={
                 "err_code": "VALIDATION_ERROR",
                 "err_msg": "Invalid input data.",
-                "details": {"errors": exc.errors()},
+                "details": {"errors": jsonable_encoder(exc.errors())},
             },
             headers=_cors_headers(request),
         )

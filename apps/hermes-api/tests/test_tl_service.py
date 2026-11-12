@@ -103,10 +103,10 @@ def test_first_generation(
         mock_fetch.return_value = {"Timeline of Test": "Some prose."}
 
         mock_ai = mock_ai_cls.return_value
-        mock_ai.analyze_tl_context = AsyncMock(
+        mock_ai.client.timelines.analyze = AsyncMock(
             return_value=MagicMock(is_tl_worthy=True, wiki_search_query="Test Query")
         )
-        mock_ai.extract_tl = AsyncMock(return_value=mock_ai_extraction)
+        mock_ai.client.timelines.extract = AsyncMock(return_value=mock_ai_extraction)
 
         mock_geocoding.geocode.return_value = MagicMock(latitude=10.0, longitude=20.0)
 
@@ -207,7 +207,7 @@ def test_no_wikipedia_match(
 ):
     async def run_test():
         mock_ai = mock_ai_cls.return_value
-        mock_ai.analyze_tl_context = AsyncMock(
+        mock_ai.client.timelines.analyze = AsyncMock(
             return_value=MagicMock(is_tl_worthy=True, wiki_search_query="Test Query")
         )
         mock_search.return_value = []
@@ -255,10 +255,10 @@ def test_force_refresh_regenerates(
         mock_fetch.return_value = {"Timeline of Test": "Regenerated prose."}
 
         mock_ai = mock_ai_cls.return_value
-        mock_ai.analyze_tl_context = AsyncMock(
+        mock_ai.client.timelines.analyze = AsyncMock(
             return_value=MagicMock(is_tl_worthy=True, wiki_search_query="Test Query")
         )
-        mock_ai.extract_tl = AsyncMock(return_value=mock_ai_extraction)
+        mock_ai.client.timelines.extract = AsyncMock(return_value=mock_ai_extraction)
 
         mock_geocoding.geocode.return_value = None
 

@@ -122,7 +122,84 @@ sequenceDiagram
 
 ---
 
-## 4. Cloud Infrastructure & Production Hosting (Amazon Lightsail)
+## 4. Conversational RAG Pipeline (`POST /api/v1/chat`)
+
+The chat endpoint answers natural-language questions about events in a selected scope and streams the answer over Server-Sent Events (SSE). It is stateless: the client sends bounded history with each turn, and neither messages nor conversations are persisted.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Client as @hermes/chat
+    participant API as FastAPI (/api/v1/chat)
+    participant Guards as ChatGuards (in-memory)
+    participant Engine as ChatEngine (hermes-ai)
+    participant Retriever as DbChatRetriever (hermes-api)
+    participant Search as SearchService (hermes-db)
+    participant LLM as LiteLLM Router
+    participant Tavily as Tavily Search
+
+    Client->>API: POST { message, history, scope }
+    API->>Guards: sliding-window rate check
+    API->>Guards: reserve daily token budget
+    API->>Guards: acquire concurrency slot
+    alt preflight rejected
+        Guards-->>API: ChatRateLimitExceeded / ChatBudgetExhausted / ChatBusy
+        API-->>Client: HTTP 429/503 JSON (+ Retry-After)
+    else admitted
+        API-->>Client: 200 text/event-stream
+        API->>Engine: stream(message, history, scope)
+        Engine->>LLM: plan query (structured ChatPlan)
+        Engine->>Retriever: retrieve(query, scope, filters)
+        Retriever->>Search: hybrid lexical + semantic retrieval
+        Search-->>Retriever: ranked events + articles + timelines
+        Retriever-->>Engine: evidence (session closed)
+        opt coverage thin or recency stale, Tavily configured
+            Engine->>Tavily: news search (8s timeout)
+        end
+        Engine->>LLM: grounded answer prompt
+        LLM-->>Engine: token stream
+        Engine-->>API: status / token / sources / done
+        API-->>Client: SSE frames
+        API->>Guards: reconcile usage and release slot
+    end
+```
+
+### Scope Resolution & Retrieval
+
+- The request `scope` is a discriminated union: `event` (one `event_id`, bypasses hybrid ranking), `viewport` (a bounding box split at the antimeridian when needed), or `global`.
+- `DbChatRetriever` bridges `hermes-ai`'s `ChatRetriever` protocol to `SearchService`. It opens a short-lived `AsyncSessionLocal` per retrieval, loads the ranked events plus linked articles and ready timeline nodes, then closes the session **before** answer generation starts. No database session is held during streaming.
+- Lexical and semantic candidate branches are built directly over `Event` columns so the weighted `idx_events_fts` GIN index is used; semantic search uses the pgvector embedding column. Fusion uses reciprocal rank fusion with bounded recency/trending boosts. When the embedding call fails, retrieval degrades to lexical-only and reports `semantic_unavailable`.
+- Tavily is consulted only when local coverage is thin or recency-stale and only once per turn. Failures degrade to a local-only answer with `web_unavailable`.
+
+### SSE Contract
+
+`POST /api/v1/chat` returns `text/event-stream` with `Cache-Control: no-cache`, `Connection: keep-alive`, and `X-Accel-Buffering: no`. Event order:
+
+```text
+status(accepted) -> status(planning) -> status(retrieving)
+  -> [status(searching)] -> status(generating) -> token* -> sources -> done
+```
+
+- Each `data:` payload carries a `type` matching the event name.
+- `sources` contains only the sources actually cited, deduplicated in first-citation order.
+- `done` reports provenance counts, coverage, usage, `web_used`, and `degraded` flags.
+- `error` is terminal and may replace `done` after the stream opens (`RETRIEVAL_FAILED`, `MODEL_TIMEOUT`, `STREAM_TIMEOUT`, `MODEL_FAILED`, `INTERNAL_ERROR`, `CHAT_BUSY`).
+- Preflight failures (validation, rate, budget, concurrency, disabled chat) are JSON responses with the standard error envelope before the stream opens.
+- Keepalive comments (`: keepalive`) are emitted at most every 10 seconds while a stage is pending. On disconnect the generator stops, closes the source iterator, releases the concurrency slot, and reconciles the budget with known usage.
+
+### Guards and Kill Switch
+
+All guards live in `ChatGuards` and are process-local, matching the single-worker Phase 1 deployment:
+
+- **Per-client sliding window** keyed by a salted SHA-256 hash of the resolved client IP. `X-Forwarded-For` is trusted only when `TRUST_PROXY_HEADERS=true`.
+- **Daily token budget** with a pre-planning reservation (`ceil(prompt_chars / 4) + CHAT_MAX_OUTPUT_TOKENS`) reconciled to reported usage, or to the estimate when usage is unavailable after generation starts. `CHAT_DAILY_TOKEN_BUDGET=0` disables accounting.
+- **Concurrency semaphore** with a bounded queue wait. A timeout returns `503 CHAT_BUSY`.
+
+`CHAT_ENABLED=false`, or missing chat model credentials, makes `ChatRuntime.from_settings` return `None`. The lifespan stores `None` in `app.state.chat_runtime`, every chat request returns `503 CHAT_UNAVAILABLE`, and the map and timeline endpoints continue to work. No frontend redeploy is required for this rollback.
+
+---
+
+## 5. Cloud Infrastructure & Production Hosting (Amazon Lightsail)
 
 `hermes-api` is deployed as a managed container service on **Amazon Lightsail Container Services** (`hermes-api`).
 
@@ -197,7 +274,7 @@ The deployment pipeline defined in [`.github/workflows/cd-api.yml`](file:///home
 
 ---
 
-## 5. CORS Exception Handling Architecture
+## 6. CORS Exception Handling Architecture
 
 In Starlette and FastAPI, custom exception handlers registered via `@app.exception_handler(...)` construct `JSONResponse` objects directly inside Starlette's `ExceptionMiddleware`.
 
@@ -225,10 +302,10 @@ This guarantees that browser clients can always inspect error details (such as `
 
 ---
 
-## 6. Lifespan & Resilience Guarantees
+## 7. Lifespan & Resilience Guarantees
 
 - **Lifespan Management**: Application startup and teardown are governed by an `@asynccontextmanager` in [`main.py`](file:///home/pavan/proj/hermes/hermes/apps/hermes-api/src/hermes_api/main.py). Database connection pools are bound via `init_db()` on boot and cleanly closed via `close_db()` on SIGTERM/SIGINT.
-- **Graceful LLM Degradation**: When `LLM_API` or `LLM_MODEL` credentials are missing at boot, the server logs a warning and remains operational for spatial queries. Any calls to `/api/v1/events/tl/{id}` fail gracefully with `HTTP 503 Service Unavailable`, preventing total service failure.
+- **Graceful LLM Degradation**: When `LLM_API` or `LLM_MODEL` credentials are missing at boot, the server logs a warning and remains operational for spatial queries. Any calls to `/api/v1/events/tl/{id}` fail gracefully with `HTTP 503 Service Unavailable`, preventing total service failure. Chat follows the same rule: `ChatRuntime.from_settings` returns `None` and `/api/v1/chat` responds `503 CHAT_UNAVAILABLE` without affecting the map.
 - **Pure Asynchronous I/O**: Every I/O operation is strictly non-blocking:
   - Database access: `asyncpg` via SQLAlchemy 2.0 Async engine.
   - External HTTP: `httpx.AsyncClient` with timeouts.
@@ -236,7 +313,7 @@ This guarantees that browser clients can always inspect error details (such as `
 
 ---
 
-## 7. Observability & Langfuse Tracing
+## 8. Observability & Langfuse Tracing
 
 `hermes-api` integrates **Langfuse v3** through `libs/shared/hermes-ai` to provide end-to-end trace observability, latency tracking, and LLM token usage monitoring.
 
@@ -262,5 +339,8 @@ flowchart LR
 3. **Opt-in Activation & Graceful Degradation**:
    Tracing is active only if both `LANGFUSE_PUBLIC_KEY` and `LANGFUSE_SECRET_KEY` are populated. In environments without Langfuse credentials, the system runs with zero tracing overhead. No exceptions are raised if telemetry endpoints are unreachable.
 
-4. **Guaranteed Flush on Lifespan Teardown**:
-   FastAPI's lifespan shutdown sequence invokes `AiService.client.close()` -> `LlmService.aclose()`, which executes `get_client().flush()`. This drains in-flight span batches before Uvicorn shuts down the worker process, guaranteeing telemetry integrity during deployments or container recycling.
+4. **Chat Content Masking**:
+   Chat calls reuse the same `LlmService` client. When `LANGFUSE_MASK_CONTENT=true` (default), a key-based `mask` function redacts `input`, `output`, `content`, `messages`, `prompt`, `answer`, `snippet`, and `web_query`, and an export-stage `mask_otel_spans` hook scrubs raw OTel attributes such as `langfuse.observation.input/output`, `gen_ai.prompt`, and `gen_ai.completion`. Model names and timings remain observable.
+
+5. **Guaranteed Flush on Lifespan Teardown**:
+   FastAPI's lifespan shutdown sequence invokes `AiService.client.close()` -> `LlmService.aclose()`, which executes `get_client().flush()`. This drains in-flight span batches before Uvicorn shuts down the worker process, guaranteeing telemetry integrity during deployments or container recycling. The chat runtime owns its own `HermesAi` instance; `ChatRuntime.aclose()` flushes chat traces during the same lifespan teardown.

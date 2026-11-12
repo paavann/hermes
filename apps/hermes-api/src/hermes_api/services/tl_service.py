@@ -22,8 +22,13 @@ logger = logging.getLogger(__name__)
 
 
 class TlService:
-    def __init__(self, tl_db: EventTlService, geocoding: GeocodingService) -> None:
-        self._ai = AiService()
+    def __init__(
+        self,
+        tl_db: EventTlService,
+        geocoding: GeocodingService,
+        ai: AiService | None = None,
+    ) -> None:
+        self._ai = ai or AiService()
         self._geocoding = geocoding
         self._tl_db = tl_db
 
@@ -43,7 +48,7 @@ class TlService:
         )
 
     async def _exec_gen(self, event: Event, existing_tl: EventTl) -> TlResponse:
-        search_context = await self._ai.analyze_tl_context(event.ai_headline)
+        search_context = await self._ai.client.timelines.analyze(event.ai_headline)
         if (
             not search_context
             or not search_context.is_tl_worthy
@@ -80,10 +85,10 @@ class TlService:
 
             geo_cache: dict[str, GeocodingResult | None] = {}
             for page_title, prose in page_extracts.items():
-                if not prose.strip():
+                if not prose or not prose.strip():
                     continue
 
-                extraction = await self._ai.extract_tl(page_title, prose)
+                extraction = await self._ai.client.timelines.extract(page_title, prose)
                 if not extraction or not extraction.nodes:
                     continue
 

@@ -8,6 +8,8 @@ from hermes_api.api.v1.router import api_router
 from hermes_api.core.config import settings
 from hermes_api.core.errors import register_err_handlers
 from hermes_api.core.logger import setup_logging
+from hermes_api.services.ai_service import AiService
+from hermes_api.services.chat_service import ChatRuntime
 
 
 setup_logging()
@@ -24,14 +26,38 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     )
     await init_db(db_url=settings.db_url)
 
+    ai_service: AiService | None = None
+    try:
+        ai_service = AiService(settings)
+    except ValueError:
+        logger.warning(
+            "llm credentials not configured. timeline synthesis and chat will be unavailable."
+        )
+    app.state.ai_service = ai_service
+
+    chat_runtime: ChatRuntime | None = (
+        ChatRuntime.from_settings(settings, ai_service=ai_service)
+        if ai_service is not None
+        else None
+    )
+    if chat_runtime is None:
+        logger.warning(
+            "conversational chat is unavailable; /api/v1/chat/ will return 503."
+        )
+    app.state.chat_runtime = chat_runtime
+
     logger.info("hermes api running on port %s.", settings.API_PORT)
-    if not settings.LLM_API or not settings.LLM_MODEL:
+    if ai_service is None or "extractor" not in ai_service.client.config.routes:
         logger.warning(
             "llm credentials not configured. timeline synthesis will be unavailable."
         )
     yield
 
     logger.info("shutting down server...")
+    if chat_runtime is not None:
+        await chat_runtime.aclose()
+    if ai_service is not None:
+        await ai_service.aclose()
     await close_db()
 
 

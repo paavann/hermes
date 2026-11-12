@@ -21,23 +21,19 @@ class Settings(BaseSettings):
     # db credentials.
     DB_HOST: str = "localhost"
     DB_PORT: int = 5432
-    DB_USER: str = "postgres"
+    DB_USER: str
     DB_PASSWORD: str
-    DB_NAME: str = "hermes"
+    DB_NAME: str
 
-    # primary llm credentials.
+    # primary and fallback llm (secondary) credentials.
     LLM_API: str = ""
     LLM_MODEL: str = ""
-
-    # fallback llm credentials (secondary).
     LLM_API_1: str | None = None
     LLM_MODEL_1: str | None = None
 
-    # primary embedding llm credentials.
+    # primary and fallback embed model (secondary) credentials.
     EMBED_API: str = ""
     EMBED_MODEL: str = ""
-
-    # fallback embeddings llm credentials (secondary).
     EMBED_API_1: str | None = None
     EMBED_MODEL_1: str | None = None
 
@@ -50,11 +46,37 @@ class Settings(BaseSettings):
         "HermesGeospatialNews/1.0 (https://github.com/paavann/hermes)"
     )
 
-    # ingestion configuration.
-    RSS_FETCH_INTERVAL_MIN: int = 15
-    INGESTION_HEARTBEAT_MIN: int = 360
-    EVENT_STALE_HOURS: int = 24
-    EVENT_ARCHIVE_HOURS: int = 48
+    # chat configuration.
+    CHAT_ENABLED: bool = True
+    CHAT_MODEL: str = ""
+    CHAT_API: str = ""
+    CHAT_MODEL_1: str | None = None
+    CHAT_API_1: str | None = None
+    PLAN_MODEL: str = ""
+    PLAN_API: str = ""
+    PLAN_MODEL_1: str | None = None
+    PLAN_API_1: str | None = None
+    TAVILY_API_KEY: str = ""
+
+    # chat router and request guards.
+    CHAT_RPM_LIMIT: int = 60
+    CHAT_RATE_LIMIT_REQUESTS: int = 10
+    CHAT_RATE_LIMIT_WINDOW_SECONDS: int = 60
+    CHAT_DAILY_TOKEN_BUDGET: int = 500_000
+    CHAT_MAX_CONCURRENT: int = 4
+    CHAT_QUEUE_TIMEOUT_SECONDS: float = 5.0
+    TRUST_PROXY_HEADERS: bool = False
+
+    # chat retrieval and answer limits.
+    CHAT_RETRIEVAL_TOP_K: int = 8
+    CHAT_MIN_LOCAL_RESULTS: int = 2
+    CHAT_MIN_SEMANTIC_SIMILARITY: float = 0.20
+    CHAT_FRESHNESS_HOURS: int = 24
+    CHAT_MAX_MESSAGE_CHARS: int = 4000
+    CHAT_MAX_HISTORY_TURNS: int = 8
+    CHAT_MAX_OUTPUT_TOKENS: int = 1200
+    CHAT_WEB_TIMEOUT_SECONDS: float = 8.0
+    CHAT_STREAM_INCLUDE_USAGE: bool = True
 
     # cors configuration.
     CORS_ORIGINS: list[str] = ["*"]
@@ -67,6 +89,7 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("LANGFUSE_HOST", "LANGFUSE_BASE_URL"),
     )
     LANGFUSE_BASE_URL: str | None = None
+    LANGFUSE_MASK_CONTENT: bool = True
 
     # database connection url.
     @property
@@ -89,18 +112,17 @@ class Settings(BaseSettings):
 @lru_cache
 def get_settings() -> Settings:
     env = os.getenv("ENV", "development").lower()
-    return Settings(
-        _env_file=(
-            "../../.env",
-            f"../../.env.{env}",
-            "../../.env.local",
-            f"../../.env.{env}.local",
-            ".env",
-            f".env.{env}",
-            ".env.local",
-            f".env.{env}.local",
-        )
+    env_files = (
+        "../../.env",
+        f"../../.env.{env}",
+        "../../.env.local",
+        f"../../.env.{env}.local",
+        ".env",
+        f".env.{env}",
+        ".env.local",
+        f".env.{env}.local",
     )
+    return Settings(_env_file=env_files)  # pyright: ignore[reportCallIssue]
 
 
 settings = get_settings()
