@@ -1,9 +1,6 @@
 from fastapi import status
 
 
-Headers = dict[str, str]
-
-
 class AppException(Exception):
     status_code: int = status.HTTP_500_INTERNAL_SERVER_ERROR
     err_code: str = "INTERNAL_SERVER_ERROR"
@@ -13,7 +10,7 @@ class AppException(Exception):
         self,
         message: str | None = None,
         details: dict[str, object] | None = None,
-        headers: Headers | None = None,
+        headers: dict[str, str] | None = None,
     ):
         if message:
             self.message = message
@@ -60,7 +57,7 @@ class ChatRateLimitExceeded(AppException):
         *,
         limit: int | None = None,
         remaining: int = 0,
-        headers: Headers | None = None,
+        headers: dict[str, str] | None = None,
     ) -> None:
         retry_after = max(1, int(retry_after_seconds))
         merged = {
@@ -90,7 +87,7 @@ class ChatBudgetExhausted(AppException):
         limit: int | None = None,
         used: int | None = None,
         reserved: int | None = None,
-        headers: Headers | None = None,
+        headers: dict[str, str] | None = None,
     ) -> None:
         retry_after = max(1, int(retry_after_seconds))
         merged = {
@@ -118,7 +115,7 @@ class ChatUnavailable(AppException):
         self,
         reason: str | None = None,
         *,
-        headers: Headers | None = None,
+        headers: dict[str, str] | None = None,
     ) -> None:
         details: dict[str, object] = {}
         if reason:
@@ -135,7 +132,7 @@ class ChatBusy(AppException):
         self,
         retry_after_seconds: int = 1,
         *,
-        headers: Headers | None = None,
+        headers: dict[str, str] | None = None,
     ) -> None:
         retry_after = max(1, int(retry_after_seconds))
         merged = {"Retry-After": str(retry_after)}

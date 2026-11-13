@@ -24,6 +24,7 @@ readme = 'README.md'
 dependencies = [
   "hermes-db",
   "hermes-ai",
+  "utils-py",
   "asyncpg>=0.31.0",
   "fastapi[standard]>=0.128.8",
   "geoalchemy2>=0.17.1",
@@ -94,5 +95,6 @@ allow-star-arg-any = true
 [tool.uv.sources]
 hermes-db = { workspace = true }
 hermes-ai = { workspace = true }
+utils-py = { workspace = true }
 
 

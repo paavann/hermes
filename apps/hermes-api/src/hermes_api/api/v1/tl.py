@@ -20,25 +20,17 @@ async def get_tl_service(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ) -> TlService:
-    tl_db = EventTlService(db)
-    cache_service = GeocodeCacheService(db)
-    geocoding = GeocodingService(cache_service)
     ai_service: AiService | None = getattr(request.app.state, "ai_service", None)
-    try:
-        resolved_ai = ai_service or AiService()
-    except ValueError as exc:
-        logger.error("failed to initialize timeline service: %s.", exc)
-        raise HTTPException(
-            status_code=503,
-            detail="Timeline synthesis service is unavailable due to missing credentials.",
-        ) from exc
-    if "extractor" not in resolved_ai.client.config.routes:
-        logger.error("timeline extractor route is not configured.")
+    if ai_service is None or not ai_service.has_extractor:
+        logger.error("timeline service is unavailable due to missing credentials.")
         raise HTTPException(
             status_code=503,
             detail="Timeline synthesis service is unavailable due to missing credentials.",
         )
-    return TlService(tl_db, geocoding, ai=resolved_ai)
+    tl_db = EventTlService(db)
+    cache_service = GeocodeCacheService(db)
+    geocoding = GeocodingService(cache_service)
+    return TlService(tl_db, geocoding, ai=ai_service)
 
 
 @router.post("/{event_id}", response_model=TlResponse)

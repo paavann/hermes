@@ -79,10 +79,7 @@ class ChatViewportScope(BaseModel):
 class ChatGlobalScope(BaseModel):
     type: Literal["global"] = "global"
 
-ChatScope = Annotated[
-    ChatEventScope | ChatViewportScope | ChatGlobalScope,
-    Field(discriminator="type"),
-]
+ChatScope = ChatEventScope | ChatViewportScope | ChatGlobalScope
 
 
 class ChatHistoryMessage(BaseModel):

@@ -1,9 +1,12 @@
 import uuid
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from fastapi import APIRouter, Depends, HTTPException, Query
+
 from hermes_db.enums import EventScope, EventStatus
 from hermes_db.services.event import EventService
 from hermes_db.session import get_db
-from sqlalchemy.ext.asyncio import AsyncSession
+
 from hermes_api.schemas.events import (
     EventDetailResponse,
     EventResponse,

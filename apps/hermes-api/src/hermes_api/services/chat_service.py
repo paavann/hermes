@@ -78,8 +78,6 @@ async def _wait_disconnect(request: Request) -> None:
 
 @dataclass(slots=True)
 class PreparedTurn:
-    """A validated request with acquired budget and concurrency capacity."""
-
     message: str
     history: tuple[ChatTurn, ...]
     scope: ChatScope
@@ -88,7 +86,6 @@ class PreparedTurn:
     _settled: bool = field(default=False, init=False)
 
     def settle(self, actual_tokens: int | None) -> None:
-        """Release the stream slot and reconcile or release the reservation."""
         if self._settled:
             return
         self._settled = True
@@ -134,7 +131,6 @@ class ChatRuntime:
         *,
         ai_service: AiService | None = None,
     ) -> ChatRuntime | None:
-        """Build the runtime, or return ``None`` when chat cannot be served."""
         if not config.CHAT_ENABLED:
             logger.info("conversational chat is disabled by configuration.")
             return None
@@ -166,6 +162,7 @@ class ChatRuntime:
         except (ConfigurationError, ValueError) as exc:
             logger.error("chat runtime is unavailable: %s.", exc)
             return None
+
         guards = ChatGuards(
             rate_limit_requests=config.CHAT_RATE_LIMIT_REQUESTS,
             rate_limit_window_seconds=float(config.CHAT_RATE_LIMIT_WINDOW_SECONDS),
@@ -183,6 +180,7 @@ class ChatRuntime:
             plan_route,
             "enabled" if engine.web_configured else "disabled",
         )
+
         return cls(
             ai,
             engine,

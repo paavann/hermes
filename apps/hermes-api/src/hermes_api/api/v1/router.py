@@ -12,6 +12,6 @@ api_router = APIRouter(responses={
     500: {"model": ErrorResponseSchema, "description": "Internal Server Error"},
 })
 
-api_router.include_router(chat_router, prefix="/chat", tags=["chat"])
 api_router.include_router(events_router, prefix="/events", tags=["events"])
 api_router.include_router(tl_router, prefix="/events/tl", tags=["timeline"])
+api_router.include_router(chat_router, prefix="/chat", tags=["chat"])

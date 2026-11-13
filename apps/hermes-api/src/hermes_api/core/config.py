@@ -75,6 +75,8 @@ class Settings(BaseSettings):
     CHAT_MAX_MESSAGE_CHARS: int = 4000
     CHAT_MAX_HISTORY_TURNS: int = 8
     CHAT_MAX_OUTPUT_TOKENS: int = 1200
+    CHAT_MODEL_KWARGS: dict[str, object] = Field(default_factory=dict)
+    PLAN_MODEL_KWARGS: dict[str, object] = Field(default_factory=dict)
     CHAT_WEB_TIMEOUT_SECONDS: float = 8.0
     CHAT_STREAM_INCLUDE_USAGE: bool = True
 
@@ -112,7 +114,9 @@ class Settings(BaseSettings):
 @lru_cache
 def get_settings() -> Settings:
     env = os.getenv("ENV", "development").lower()
-    env_files = (
+    # Base directory for env files: fall back to project root, then try hermes-api app dir
+    # This allows per-app .env.development files (with LLM/CHAT vars) alongside project-level .env
+    project_env_files = (
         "../../.env",
         f"../../.env.{env}",
         "../../.env.local",
@@ -122,7 +126,17 @@ def get_settings() -> Settings:
         ".env.local",
         f".env.{env}.local",
     )
-    return Settings(_env_file=env_files)  # pyright: ignore[reportCallIssue]
+    # Additional: try the hermes-api app directory for app-specific .env files
+    # (e.g. LLM_API, CHAT_MODEL, PLAN_MODEL are typically kept here)
+    api_app_env_files = (
+        "apps/hermes-api/.env",
+        f"apps/hermes-api/.env.{env}",
+        "apps/hermes-api/.env.local",
+        f"apps/hermes-api/.env.{env}.local",
+    )
+    # Prepend app-specific files so they take precedence over project-level vars
+    all_env_files = api_app_env_files + project_env_files
+    return Settings(_env_file=all_env_files)  # pyright: ignore[reportCallIssue]
 
 
 settings = get_settings()

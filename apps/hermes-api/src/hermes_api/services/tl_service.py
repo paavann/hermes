@@ -26,9 +26,9 @@ class TlService:
         self,
         tl_db: EventTlService,
         geocoding: GeocodingService,
-        ai: AiService | None = None,
+        ai: AiService,
     ) -> None:
-        self._ai = ai or AiService()
+        self._ai = ai
         self._geocoding = geocoding
         self._tl_db = tl_db
 

@@ -52,7 +52,7 @@ def estimate_tokens(prompt_chars: int, max_output_tokens: int) -> int:
     return max(1, prompt_tokens + max(0, max_output_tokens))
 
 
-class SlidingWindowRateLimiter:
+class SWRateLimiter:
     def __init__(
         self,
         *,
@@ -115,8 +115,6 @@ class SlidingWindowRateLimiter:
 
 
 class BudgetReservation:
-    """A reserved share of the daily token budget for one chat turn."""
-
     def __init__(self, budget: DailyTokenBudget, tokens: int) -> None:
         self._budget = budget
         self._tokens = tokens
@@ -131,14 +129,12 @@ class BudgetReservation:
         return self._settled
 
     def reconcile(self, actual_tokens: int) -> None:
-        """Replace the estimate with reported usage and release the hold."""
         if self._settled:
             return
         self._settled = True
         self._budget._settle(self._tokens, max(0, int(actual_tokens)))
 
     def release(self) -> None:
-        """Release the hold without recording usage (failure/disconnect)."""
         if self._settled:
             return
         self._settled = True
@@ -146,8 +142,6 @@ class BudgetReservation:
 
 
 class DailyTokenBudget:
-    """Global daily token budget with reservations and UTC-midnight reset."""
-
     def __init__(
         self,
         limit: int,
@@ -186,7 +180,6 @@ class DailyTokenBudget:
         return self._limit == 0
 
     def reserve(self, estimated_tokens: int) -> BudgetReservation:
-        """Reserve an estimate or raise when the remaining budget is short."""
         self._roll()
         estimate = max(1, int(estimated_tokens))
         if self.disabled:
@@ -308,7 +301,7 @@ class ChatGuards:
         rate_clock: Callable[[], float] = time.monotonic,
         budget_clock: Callable[[], datetime] | None = None,
     ) -> None:
-        self.rate_limiter = SlidingWindowRateLimiter(
+        self.rate_limiter = SWRateLimiter(
             limit=rate_limit_requests,
             window_seconds=rate_limit_window_seconds,
             clock=rate_clock,
@@ -338,7 +331,6 @@ class ChatGuards:
         return hash_client_ip(ip, self._salt)
 
     def check_rate_limit(self, request: Request) -> str:
-        """Apply the per-client rate limit and return the hashed client key."""
         key = self.client_key(request)
         self.rate_limiter.check(key)
         return key
@@ -353,7 +345,7 @@ __all__ = [
     "ChatGuards",
     "ConcurrencyGuard",
     "DailyTokenBudget",
-    "SlidingWindowRateLimiter",
+    "SWRateLimiter",
     "estimate_tokens",
     "extract_client_ip",
     "hash_client_ip",

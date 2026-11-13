@@ -1,6 +1,8 @@
 from typing import Annotated
+
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import StreamingResponse
+
 from hermes_api.core.exceptions import ChatUnavailable
 from hermes_api.schemas.chat import ChatRequest
 from hermes_api.services.chat_service import ChatRuntime, ChatService

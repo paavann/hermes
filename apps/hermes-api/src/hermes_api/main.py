@@ -4,16 +4,37 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from hermes_db import close_db, init_db
+from utils_py import setup_logging
 from hermes_api.api.v1.router import api_router
 from hermes_api.core.config import settings
 from hermes_api.core.errors import register_err_handlers
-from hermes_api.core.logger import setup_logging
 from hermes_api.services.ai_service import AiService
 from hermes_api.services.chat_service import ChatRuntime
 
 
 setup_logging()
 logger = logging.getLogger(__name__)
+
+
+def create_ai_services() -> tuple[AiService | None, ChatRuntime | None]:
+    ai_service: AiService | None = None
+    chat_runtime: ChatRuntime | None = None
+    try:
+        ai_service = AiService(settings)
+        chat_runtime = (
+            ChatRuntime.from_settings(settings, ai_service=ai_service)
+            if ai_service is not None
+            else None
+        )
+        if chat_runtime is None:
+            logger.warning(
+                "conversational chat is unavailable and will return 503 error."
+            )
+    except Exception as exc:
+        logger.warning(
+            "failed to configure ai service. ai features will be unavailable. error: %s.", exc
+        )
+    return ai_service, chat_runtime
 
 
 @asynccontextmanager
@@ -26,31 +47,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     )
     await init_db(db_url=settings.db_url)
 
-    ai_service: AiService | None = None
-    try:
-        ai_service = AiService(settings)
-    except ValueError:
-        logger.warning(
-            "llm credentials not configured. timeline synthesis and chat will be unavailable."
-        )
+    ai_service, chat_runtime = create_ai_services()
     app.state.ai_service = ai_service
-
-    chat_runtime: ChatRuntime | None = (
-        ChatRuntime.from_settings(settings, ai_service=ai_service)
-        if ai_service is not None
-        else None
-    )
-    if chat_runtime is None:
-        logger.warning(
-            "conversational chat is unavailable; /api/v1/chat/ will return 503."
-        )
     app.state.chat_runtime = chat_runtime
 
     logger.info("hermes api running on port %s.", settings.API_PORT)
-    if ai_service is None or "extractor" not in ai_service.client.config.routes:
-        logger.warning(
-            "llm credentials not configured. timeline synthesis will be unavailable."
-        )
     yield
 
     logger.info("shutting down server...")
