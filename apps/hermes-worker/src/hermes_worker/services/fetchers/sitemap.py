@@ -5,7 +5,7 @@ import httpx
 import trafilatura
 from hermes_db.services.source import DueSource
 from hermes_db.utils.datetime import ensure_utc
-from hermes_worker.core.config import settings
+from hermes_worker.core.config import Settings, get_settings
 from hermes_worker.services.fetchers.base import BaseArticleFetcher, ParsedArticle
 
 
@@ -64,9 +64,11 @@ class SitemapFetcher(BaseArticleFetcher):
         self,
         client: httpx.AsyncClient | None = None,
         max_articles: int = 20,
+        settings: Settings | None = None
     ) -> None:
         self._client = client
         self._max_articles = max_articles
+        self._settings = settings or get_settings()
 
     async def fetch_articles(self, source: DueSource) -> list[ParsedArticle]:
         sitemap_url = source.feed_url
@@ -92,7 +94,7 @@ class SitemapFetcher(BaseArticleFetcher):
                     sitemap_url,
                     timeout=30.0,
                     follow_redirects=True,
-                    headers={"User-Agent": settings.NOMINATIM_USER_AGENT},
+                    headers={"User-Agent": self._settings.NOMINATIM_USER_AGENT},
                 )
                 res.raise_for_status()
                 xml_text = res.text
@@ -102,7 +104,7 @@ class SitemapFetcher(BaseArticleFetcher):
                         sitemap_url,
                         timeout=30.0,
                         follow_redirects=True,
-                        headers={"User-Agent": settings.NOMINATIM_USER_AGENT},
+                        headers={"User-Agent": self._settings.NOMINATIM_USER_AGENT},
                     )
                     res.raise_for_status()
                     xml_text = res.text
@@ -131,7 +133,7 @@ class SitemapFetcher(BaseArticleFetcher):
                         url,
                         timeout=15.0,
                         follow_redirects=True,
-                        headers={"User-Agent": settings.NOMINATIM_USER_AGENT},
+                        headers={"User-Agent": self._settings.NOMINATIM_USER_AGENT},
                     )
                 else:
                     async with httpx.AsyncClient() as client:
@@ -139,7 +141,7 @@ class SitemapFetcher(BaseArticleFetcher):
                             url,
                             timeout=15.0,
                             follow_redirects=True,
-                            headers={"User-Agent": settings.NOMINATIM_USER_AGENT},
+                            headers={"User-Agent": self._settings.NOMINATIM_USER_AGENT},
                         )
 
                 if html_res.status_code in (403, 429):

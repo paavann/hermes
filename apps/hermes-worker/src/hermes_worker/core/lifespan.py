@@ -2,14 +2,14 @@ import logging
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from hermes_db import close_db, init_db
-from hermes_worker.core.config import settings
-
+from hermes_worker.core.config import Settings, get_settings
 
 logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
 async def db_lifespan() -> AsyncGenerator[None]:
+    settings: Settings = get_settings()
     logger.info("initializing database connection for %s...", settings.APP)
     await init_db(db_url=settings.db_url)
     logger.info("database connection initialized.")

@@ -4,11 +4,12 @@ from datetime import UTC, datetime
 import feedparser
 import httpx
 from hermes_db.services.source import DueSource
-from hermes_worker.core.config import settings
+from hermes_worker.core.config import Settings, get_settings
 from hermes_worker.services.fetchers.base import BaseArticleFetcher, ParsedArticle
 
 
 logger = logging.getLogger(__name__)
+settings: Settings = get_settings()
 
 
 def _parse_date(entry: Mapping[str, object]) -> datetime | None:

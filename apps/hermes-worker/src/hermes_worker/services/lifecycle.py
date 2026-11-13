@@ -2,13 +2,13 @@ import logging
 
 from hermes_db.services import EventService
 from hermes_db.session import AsyncSessionLocal
-from hermes_worker.core.config import settings
+from hermes_worker.core.config import Settings
 
 
 logger = logging.getLogger(__name__)
 
 
-async def run_lifecycle() -> dict[str, int]:
+async def run_lifecycle(settings: Settings) -> dict[str, int]:
     logger.info("starting event lifecycle transitions...")
     try:
         async with AsyncSessionLocal() as session:

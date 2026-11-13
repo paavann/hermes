@@ -3,9 +3,11 @@ import enum
 import logging
 from hermes_worker.services.lifecycle import run_lifecycle
 from hermes_worker.services.sync import SyncService
+from hermes_worker.core.config import Settings, get_settings
 
 
 logger = logging.getLogger(__name__)
+settings: Settings = get_settings()
 
 
 class WorkerCmd(enum.StrEnum):
@@ -15,19 +17,19 @@ class WorkerCmd(enum.StrEnum):
 
 
 async def handle_sync(args: argparse.Namespace) -> None:
-    service = SyncService()
+    service = SyncService(settings=settings)
     stats = await service.sync_all_sources(force=args.force)
     logger.info("sync finished: %s.", stats)
 
 
 async def handle_lifecycle(_args: argparse.Namespace) -> None:
-    stats = await run_lifecycle()
+    stats = await run_lifecycle(settings)
     logger.info("lifecycle transitions finished: %s.", stats)
 
 
 async def handle_all(args: argparse.Namespace) -> None:
-    lifecycle_stats = await run_lifecycle()
+    lifecycle_stats = await run_lifecycle(settings)
     logger.info("lifecycle transitions finished: %s.", lifecycle_stats)
-    service = SyncService()
+    service = SyncService(settings=settings)
     sync_stats = await service.sync_all_sources(force=args.force)
     logger.info("sync finished: %s.", sync_stats)

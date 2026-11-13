@@ -16,6 +16,7 @@ from hermes_db.services import (
     SourceService,
 )
 from hermes_db.session import AsyncSessionLocal
+from hermes_worker.core.config import Settings, get_settings
 from hermes_worker.core.ai import create_ai_client
 from hermes_worker.services.fetchers import (
     BaseArticleFetcher,
@@ -36,11 +37,13 @@ class SyncService:
         rss_fetcher: BaseArticleFetcher | None = None,
         gdelt_fetcher: BaseArticleFetcher | None = None,
         sitemap_fetcher: BaseArticleFetcher | None = None,
+        settings: Settings | None = None
     ) -> None:
-        self._ai = ai_client or create_ai_client()
+        self._settings = settings or get_settings()
+        self._ai = ai_client or create_ai_client(self._settings)
         self._rss_fetcher = rss_fetcher or RSSFetcher()
-        self._gdelt_fetcher = gdelt_fetcher or GDELTFetcher()
-        self._sitemap_fetcher = sitemap_fetcher or SitemapFetcher()
+        self._gdelt_fetcher = gdelt_fetcher or GDELTFetcher(settings=self._settings)
+        self._sitemap_fetcher = sitemap_fetcher or SitemapFetcher(settings=self._settings)
 
     def _get_fetcher(self, source_type: SourceType) -> BaseArticleFetcher:
         if source_type == SourceType.GDELT:

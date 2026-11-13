@@ -6,7 +6,7 @@ import httpx
 from hermes_ai.utils.rate_limiter import TbRateLimiter
 from hermes_db.services.source import DueSource
 from hermes_db.utils.datetime import ensure_utc
-from hermes_worker.core.config import settings
+from hermes_worker.core.config import Settings, get_settings
 from hermes_worker.services.fetchers.base import BaseArticleFetcher, ParsedArticle
 
 
@@ -47,9 +47,11 @@ class GDELTFetcher(BaseArticleFetcher):
         self,
         rate_limiter: TbRateLimiter | None = None,
         client: httpx.AsyncClient | None = None,
+        settings: Settings | None = None
     ) -> None:
         self._limiter = rate_limiter or _DEFAULT_GDELT_LIMITER
         self._client = client
+        self._settings = settings or get_settings()
 
     async def fetch_articles(self, source: DueSource) -> list[ParsedArticle]:
         if self._limiter.is_circuit_open():
@@ -81,7 +83,7 @@ class GDELTFetcher(BaseArticleFetcher):
                     GDELT_DOC_API_URL,
                     params=params,
                     timeout=30.0,
-                    headers={"User-Agent": settings.NOMINATIM_USER_AGENT},
+                    headers={"User-Agent": self._settings.NOMINATIM_USER_AGENT},
                 )
             else:
                 async with httpx.AsyncClient() as client:
@@ -89,7 +91,7 @@ class GDELTFetcher(BaseArticleFetcher):
                         GDELT_DOC_API_URL,
                         params=params,
                         timeout=30.0,
-                        headers={"User-Agent": settings.NOMINATIM_USER_AGENT},
+                        headers={"User-Agent": self._settings.NOMINATIM_USER_AGENT},
                     )
 
             if res.status_code in (429, 403):
