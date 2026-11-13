@@ -1,6 +1,12 @@
 import { useState, useEffect } from 'react';
 
-export function LiveClock(): React.JSX.Element {
+import { cn } from './utils';
+
+export interface LiveClockProps {
+  className?: string;
+}
+
+export function LiveClock({ className }: LiveClockProps): React.JSX.Element {
   const [timeStr, setTimeStr] = useState('');
 
   useEffect(() => {
@@ -19,7 +25,10 @@ export function LiveClock(): React.JSX.Element {
   // Suppress hydration warnings since server/client time might mismatch slightly in SSR (if used)
   return (
     <div
-      className="fixed bottom-4 left-4 z-20 pointer-events-none select-none"
+      className={cn(
+        'fixed bottom-4 left-4 z-20 pointer-events-none select-none',
+        className,
+      )}
       suppressHydrationWarning
     >
       <div className="bg-[#08929c] text-[#000000] px-2 py-0.5 font-mono font-bold text-[10px] tracking-wider uppercase">

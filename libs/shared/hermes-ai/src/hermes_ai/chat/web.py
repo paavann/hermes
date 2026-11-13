@@ -34,7 +34,6 @@ class WebSearchOutcome:
 
 
 def sanitize_text(value: str, limit: int) -> str:
-    """Strip HTML markup, invisible controls, and normalize text within ``limit``."""
     return strip_html_text(value, limit=limit)
 
 

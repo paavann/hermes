@@ -28,6 +28,7 @@ class HermesAi:
 
     def create_chat_engine(self, retriever: ChatRetriever) -> ChatEngine:
         from langchain_litellm import ChatLiteLLMRouter
+
         from hermes_ai.chat.engine import ChatEngine
         from hermes_ai.chat.planner import ChatPlanner
         from hermes_ai.chat.web import WebSearchService
@@ -49,6 +50,7 @@ class HermesAi:
             temperature=0.2,
             max_tokens=self.config.chat_max_output_tokens,
             stream_options={"include_usage": self.config.chat_stream_include_usage},
+            model_kwargs=self.config.chat_model_kwargs,
         )
         web_search = (
             WebSearchService(self.config) if self.config.tavily_api_key else None

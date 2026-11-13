@@ -38,7 +38,6 @@ export function Nav({ activeSection: controlledActiveSection }: NavProps): React
   const [scrolled, setScrolled] = useState<boolean>(false);
   const [detectedActiveSection, setDetectedActiveSection] = useState<string>('home');
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
-  const [hoveredItem, setHoveredItem] = useState<string | null>(null);
 
   const activeSection = controlledActiveSection ?? detectedActiveSection;
 
@@ -101,27 +100,31 @@ export function Nav({ activeSection: controlledActiveSection }: NavProps): React
     <header
       id="site-header"
       role="banner"
-      className="fixed top-0 left-0 right-0 z-50 h-[62px] font-mono pointer-events-none"
+      className="fixed left-0 right-0 top-0 z-50 h-[62px] font-mono"
     >
-      <div className="w-full h-full flex items-center">
-        {/* Left column (matches fixed vertical grid line, NO bottom border so line runs seamlessly) */}
+      <div className="flex h-full w-full items-center">
         <div
           className={cn(
-            'w-[180px] md:w-[220px] shrink-0 h-full pl-5 md:pl-8 pr-4 flex items-center pointer-events-auto transition-colors duration-250',
-            scrolled ? 'bg-obsidian/90 backdrop-blur-md' : 'bg-transparent'
+            'flex h-full w-[150px] shrink-0 items-center border-r border-transparent pl-5 pr-4 transition-colors duration-150 sm:w-[180px] md:w-[220px] md:pl-8',
+            scrolled
+              ? 'border-border-subtle/60 bg-obsidian'
+              : 'bg-transparent',
           )}
         >
           <Link
             to="/"
             aria-label="Hermes Home"
-            className="group relative font-bold tracking-[0.25em] text-sm text-ivory hover:text-white transition-colors flex items-center gap-2"
+            className="group flex items-center gap-2.5 text-ivory transition-colors hover:text-white focus-visible:outline-1 focus-visible:outline-neon-blue focus-visible:outline-offset-4"
           >
-            <span className="relative">
-              <span className="absolute -left-2.5 top-1/2 -translate-y-1/2 w-1 h-1 bg-neon-blue opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            <span
+              className="h-1.5 w-1.5 bg-neon-blue transition-transform duration-150 group-hover:scale-125"
+              aria-hidden="true"
+            />
+            <span className="font-display text-[15px] font-semibold tracking-[0.2em]">
               HERMES
             </span>
-            <span 
-              className="text-[8px] text-neon-blue/70 tracking-wider font-normal opacity-60 group-hover:opacity-100 transition-opacity duration-300"
+            <span
+              className="hidden text-[8px] font-normal tracking-[0.16em] text-neon-blue/60 sm:inline"
               aria-hidden="true"
             >
               GEO
@@ -129,21 +132,20 @@ export function Nav({ activeSection: controlledActiveSection }: NavProps): React
           </Link>
         </div>
 
-        {/* Right column: Navigation links + Action buttons */}
         <div
           className={cn(
-            'flex-1 h-full pl-5 md:pl-8 pr-5 md:pr-8 flex items-center justify-between min-w-0 pointer-events-auto transition-colors duration-250',
+            'flex h-full flex-1 items-center justify-between gap-4 border-b border-transparent px-5 transition-colors duration-150 md:px-8',
             scrolled
-              ? 'bg-obsidian/85 backdrop-blur-md border-b border-border-subtle shadow-[0_4px_30px_rgba(0,0,0,0.5)]'
-              : 'bg-transparent'
+              ? 'border-border-subtle/60 bg-obsidian'
+              : 'bg-transparent',
           )}
         >
-          {/* Desktop Nav Links */}
-          <nav aria-label="Primary navigation" className="hidden md:flex items-center gap-2">
-            {NAV_ITEMS.map((item) => {
+          <nav
+            aria-label="Primary navigation"
+            className="hidden items-center gap-1 md:flex"
+          >
+            {NAV_ITEMS.map((item, idx) => {
               const isActive = activeSection === item.id;
-              const isHovered = hoveredItem === item.id;
-              const showSquare = isActive || isHovered;
 
               return (
                 <a
@@ -154,37 +156,44 @@ export function Nav({ activeSection: controlledActiveSection }: NavProps): React
                       setDetectedActiveSection(item.id);
                     }
                   }}
-                  onMouseEnter={() => setHoveredItem(item.id)}
-                  onMouseLeave={() => setHoveredItem(null)}
                   className={cn(
-                    'group flex items-center gap-1.5 px-3 py-1.5 text-xs uppercase tracking-wider transition-colors',
+                    'group flex items-center gap-2 px-3 py-1.5 text-[10px] uppercase tracking-[0.16em] transition-colors focus-visible:outline-1 focus-visible:outline-neon-blue focus-visible:outline-offset-2',
                     isActive
-                      ? 'text-ivory font-medium'
-                      : 'text-slate-muted hover:text-ivory'
+                      ? 'text-ivory'
+                      : 'text-slate-muted/65 hover:text-ivory',
                   )}
                 >
                   <span
                     className={cn(
-                      'text-[9px] transition-colors',
-                      showSquare ? 'text-neon-blue' : 'text-slate-muted/60'
+                      'tabular-nums text-[9px] transition-colors',
+                      isActive
+                        ? 'text-neon-blue'
+                        : 'text-slate-muted/30 group-hover:text-signal-amber',
                     )}
                     aria-hidden="true"
                   >
-                    {showSquare ? '■' : '/'}
+                    {String(idx + 1).padStart(2, '0')}
                   </span>
                   <span>{item.label}</span>
+                  <span
+                    className={cn(
+                      'h-1 w-1 transition-colors',
+                      isActive
+                        ? 'bg-neon-blue'
+                        : 'bg-transparent group-hover:bg-signal-amber/70',
+                    )}
+                    aria-hidden="true"
+                  />
                 </a>
               );
             })}
           </nav>
 
-          {/* Right Actions */}
-          <div className="flex items-center gap-5 ml-auto">
-            {/* Auth Status & Login / Logout Actions */}
+          <div className="ml-auto flex items-center gap-3 md:gap-5">
             <Show when="signed-out">
               <Link
                 to="/auth"
-                className="text-xs uppercase tracking-wider text-slate-muted hover:text-ivory transition-colors"
+                className="hidden text-[10px] uppercase tracking-[0.18em] text-slate-muted/65 transition-colors hover:text-ivory focus-visible:outline-1 focus-visible:outline-neon-blue focus-visible:outline-offset-4 md:inline"
               >
                 LOGIN
               </Link>
@@ -194,25 +203,23 @@ export function Nav({ activeSection: controlledActiveSection }: NavProps): React
               <SignOutButton redirectUrl="/auth">
                 <button
                   type="button"
-                  className="text-xs uppercase tracking-wider text-slate-muted hover:text-ivory transition-colors cursor-pointer"
+                  className="hidden cursor-pointer text-[10px] uppercase tracking-[0.18em] text-slate-muted/65 transition-colors hover:text-ivory focus-visible:outline-1 focus-visible:outline-neon-blue focus-visible:outline-offset-4 md:block"
                 >
                   LOGOUT
                 </button>
               </SignOutButton>
             </Show>
 
-            {/* Launch Map CTA with GSAP roll animation */}
-            <LaunchMapBtn />
+            <LaunchMapBtn className="hidden sm:inline-flex" />
 
-            {/* Mobile Menu Toggle Button */}
             <button
               type="button"
               onClick={() => setMobileMenuOpen((prev) => !prev)}
-              className="md:hidden flex items-center gap-1.5 px-2.5 py-1 text-xs text-slate-muted hover:text-ivory border border-border-subtle bg-black/40 transition-colors"
+              className="flex items-center gap-1.5 border border-border-subtle bg-black px-2.5 py-1.5 text-[10px] uppercase tracking-[0.14em] text-slate-muted transition-colors hover:border-border-bright hover:text-ivory focus-visible:outline-1 focus-visible:outline-neon-blue focus-visible:outline-offset-2 md:hidden"
               aria-label="Toggle navigation menu"
               aria-expanded={mobileMenuOpen}
             >
-              <span className="text-neon-blue text-[9px]" aria-hidden="true">
+              <span className="text-neon-blue text-[8px]" aria-hidden="true">
                 {mobileMenuOpen ? '■' : '/'}
               </span>
               <span>{mobileMenuOpen ? 'CLOSE' : 'MENU'}</span>
@@ -221,10 +228,9 @@ export function Nav({ activeSection: controlledActiveSection }: NavProps): React
         </div>
       </div>
 
-      {/* Mobile Drawer */}
-      {mobileMenuOpen && (
-        <div className="md:hidden border-b border-border-subtle bg-obsidian/95 backdrop-blur-xl px-5 py-4 flex flex-col gap-2 pointer-events-auto">
-          {NAV_ITEMS.map((item) => {
+      {mobileMenuOpen ? (
+        <div className="flex flex-col border-b border-border-subtle bg-obsidian px-5 py-3 md:hidden">
+          {NAV_ITEMS.map((item, idx) => {
             const isActive = activeSection === item.id;
             return (
               <a
@@ -237,30 +243,46 @@ export function Nav({ activeSection: controlledActiveSection }: NavProps): React
                   setMobileMenuOpen(false);
                 }}
                 className={cn(
-                  'flex items-center gap-2 py-2 text-xs uppercase tracking-wider border-b border-white/5 transition-colors',
-                  isActive ? 'text-ivory font-medium' : 'text-slate-muted hover:text-ivory'
+                  'flex items-center gap-3 border-b border-border-subtle/50 py-2.5 text-[10px] uppercase tracking-[0.16em] transition-colors',
+                  isActive
+                    ? 'text-ivory'
+                    : 'text-slate-muted/65 hover:text-ivory',
                 )}
               >
                 <span
                   className={cn(
-                    'text-[9px] transition-colors',
-                    isActive ? 'text-neon-blue' : 'text-slate-muted/60'
+                    'tabular-nums text-[9px]',
+                    isActive ? 'text-neon-blue' : 'text-slate-muted/30',
                   )}
-                  aria-hidden="true"
                 >
-                  {isActive ? '■' : '/'}
+                  {String(idx + 1).padStart(2, '0')}
                 </span>
                 <span>{item.label}</span>
+                <span
+                  className={cn(
+                    'ml-auto h-1 w-1',
+                    isActive ? 'bg-neon-blue' : 'bg-transparent',
+                  )}
+                  aria-hidden="true"
+                />
               </a>
             );
           })}
+          <Link
+            to="/map"
+            onClick={() => setMobileMenuOpen(false)}
+            className="mt-3 flex items-center justify-between bg-ivory px-3 py-2.5 text-[10px] font-bold uppercase tracking-[0.18em] text-obsidian transition-colors hover:bg-neon-blue focus-visible:outline-1 focus-visible:outline-neon-blue focus-visible:outline-offset-2"
+          >
+            <span>LAUNCH MAP</span>
+            <span aria-hidden="true">↗</span>
+          </Link>
           <Show when="signed-out">
             <Link
               to="/auth"
               onClick={() => setMobileMenuOpen(false)}
-              className="flex items-center gap-2 py-2 text-xs uppercase tracking-wider text-slate-muted hover:text-ivory"
+              className="flex items-center gap-3 py-2.5 text-[10px] uppercase tracking-[0.16em] text-slate-muted/65 hover:text-ivory"
             >
-              <span className="text-neon-blue text-[9px]">/</span>
+              <span className="tabular-nums text-[9px] text-slate-muted/30">05</span>
               <span>LOGIN</span>
             </Link>
           </Show>
@@ -269,15 +291,15 @@ export function Nav({ activeSection: controlledActiveSection }: NavProps): React
               <button
                 type="button"
                 onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center gap-2 py-2 text-xs uppercase tracking-wider text-slate-muted hover:text-ivory cursor-pointer w-full text-left"
+                className="flex w-full cursor-pointer items-center gap-3 py-2.5 text-left text-[10px] uppercase tracking-[0.16em] text-slate-muted/65 hover:text-ivory"
               >
-                <span className="text-neon-blue text-[9px]">/</span>
+                <span className="tabular-nums text-[9px] text-slate-muted/30">05</span>
                 <span>LOGOUT</span>
               </button>
             </SignOutButton>
           </Show>
         </div>
-      )}
+      ) : null}
     </header>
   );
 }

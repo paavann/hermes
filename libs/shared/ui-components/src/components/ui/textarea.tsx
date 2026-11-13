@@ -15,7 +15,7 @@ export function Textarea({
     <textarea
       ref={ref}
       className={cn(
-        'w-full bg-black/60 border border-white/10 px-4 py-3 text-sm text-ivory placeholder:text-slate-muted/30 focus:border-neon-blue focus:outline-none transition-colors font-mono rounded-none resize-none disabled:opacity-50 disabled:cursor-not-allowed',
+        'w-full bg-onyx border border-border-subtle px-3.5 py-3 text-sm leading-relaxed text-ivory placeholder:text-slate-muted/35 transition-colors hover:border-border-bright focus:border-neon-blue focus:outline-none focus-visible:outline-1 focus-visible:outline-neon-blue focus-visible:outline-offset-2 font-mono rounded-none resize-none disabled:opacity-50 disabled:cursor-not-allowed',
         className
       )}
       {...props}

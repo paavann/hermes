@@ -6,20 +6,53 @@
 @theme {
   --font-sans: 'JetBrains Mono', 'Fira Code', monospace;
   --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+  --font-display: 'Space Grotesk', 'Helvetica Neue', Arial, sans-serif;
 
-  --color-hud-bg: rgba(10, 15, 25, 0.85);
-  --color-hud-border: #1e3a8a;
-  --color-hud-glow: #3b82f6;
+  --color-hud-bg: #07080a;
+  --color-hud-border: #243037;
+  --color-hud-glow: #00f0ff;
   --color-neon-blue: #00f0ff;
   --color-warning-yellow: #fbbf24;
+  --color-signal-teal: #08929c;
+  --color-signal-teal-bright: #0aa5b1;
+  --color-signal-amber: #ffb454;
+  --color-signal-amber-dim: #7c5a2a;
+  --color-danger: #ef4444;
+  --color-danger-bright: #f87171;
 
-  --color-obsidian: #0a0d14;
-  --color-ivory: #f4f4f0;
-  --color-slate-muted: #8b939c;
-  --color-border-subtle: rgba(244, 244, 240, 0.1);
-  --color-border-bright: rgba(244, 244, 240, 0.25);
+  --color-obsidian: #07080a;
+  --color-onyx: #0b0d10;
+  --color-graphite: #12151a;
+  --color-ivory: #f1ede2;
+  --color-bone: #d7d0bf;
+  --color-slate-muted: #8c949c;
+  --color-border-subtle: rgba(241, 237, 226, 0.11);
+  --color-border-bright: rgba(241, 237, 226, 0.26);
 
   --radius-*: initial;
+}
+
+@utility bg-grid-hud {
+  background-image:
+    linear-gradient(to right, rgba(241, 237, 226, 0.045) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(241, 237, 226, 0.045) 1px, transparent 1px);
+  background-size: 80px 80px;
+}
+
+@utility bg-grid-fine {
+  background-image:
+    linear-gradient(to right, rgba(241, 237, 226, 0.035) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(241, 237, 226, 0.035) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+@utility bg-scanline {
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 3px,
+    rgba(0, 240, 255, 0.035) 4px
+  );
 }
 
 @layer base {
@@ -34,6 +67,10 @@
     min-height: 100dvh;
     background-color: #000000;
     color: #e2e8f0;
+  }
+  ::selection {
+    background-color: #00f0ff;
+    color: #000000;
   }
 }
 
@@ -50,8 +87,11 @@
   background: transparent;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #1e3a8a; /* hud-border */
+  background: #243037; /* hud-border */
   border-radius: 0px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #00f0ff;
 }
 
 /* Pattern divider random fade-in / fade-out animations */

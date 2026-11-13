@@ -1,6 +1,6 @@
 ---
 trigger: glob
-description: Minimalistic tactical mission-control UI standards, #00F0FF palette, GSAP/Tailwind motion, and HUD layout rules.
+description: Minimalistic tactical mission-control UI standards, cyan/bone/amber palette, Space Grotesk display type, GSAP/Tailwind motion, and HUD layout rules.
 globs: '**/*.tsx, **/*.css'
 ---
 
@@ -10,12 +10,14 @@ globs: '**/*.tsx, **/*.css'
 
 - **Minimalistic Tactical Aesthetic**: Terminal and military-grade analytical precision, kept clean and functional.
 - **No Fake Jargon or Decorative Fluff**: Never invent filler sci-fi labels, fake telemetry noise, or meaningless status codes to make the UI look "complex." Every label, readout, and control must represent real application data or actions.
-- **Strictly Solid Surfaces**: All panels, overlays, and containers must use opaque, solid background fills (`bg-black`, `bg-neutral-950`). Glassmorphism, `backdrop-blur`, translucent panels, drop shadows (`shadow-*`), and neon outer glows (`drop-shadow`, `box-shadow` glow) are strictly prohibited.
+- **Strictly Solid Surfaces**: All panels, overlays, and containers must use opaque, solid background fills (`bg-black`, `bg-obsidian`, `bg-onyx`). Glassmorphism, `backdrop-blur`, translucent panels, drop shadows (`shadow-*`), and neon outer glows (`drop-shadow`, `box-shadow` glow) are strictly prohibited.
 
 ## 2. Color Palette & Semantic Encoding
 
-- **Base Canvas & Surfaces**: Pure `#000000` canvas with dark neutral grays for elevated panels and `1px` hairline structural borders.
+- **Base Canvas & Surfaces**: Pure `#000000` canvas with layered solid neutrals: `obsidian` `#07080A`, `onyx` `#0B0D10`, `graphite` `#12151A`, separated by `1px` hairline structural borders.
 - **Primary Accent (`#00F0FF`)**: Electric cyan (`#00F0FF`) is the primary interactive accent for active selections, focus rings, active borders, and primary highlights—used flat without glow effects.
+- **Bone & Ivory Secondary**: Warm `ivory` `#F1EDE2` and `bone` `#D7D0BF` carry body copy, headlines, and structural labels instead of pure white.
+- **Warm Signal (`#FFB454`)**: Reserve `signal-amber` for a single secondary signal per surface—feed status, trend metrics, or live indicators. Never use it as a second primary accent.
 - **Semantic Color Coding**: Use strict, flat semantic tokens from `apps/hermes/styles.css` for geospatial event impact, velocity, status, and citation badges. Never hardcode arbitrary hex colors inside components.
 
 ## 3. Geometry, Borders & Elevation
@@ -25,7 +27,8 @@ globs: '**/*.tsx, **/*.css'
 
 ## 4. Typography & Data Formatting
 
-- **Universal Monospace**: Enforce `JetBrains Mono` (`font-mono`) across the entire application—UI chrome, HUD readouts, headers, forms, and long-form chat/timeline prose.
+- **Display Face for Headlines**: Use `Space Grotesk` (`font-display`) for hero headlines, section titles, card titles, popups, and the brand wordmark. Tighten tracking (`tracking-[-0.03em]`) and leading (`leading-[0.98]`) on large display type.
+- **Monospace for UI & Data**: Enforce `JetBrains Mono` (`font-mono`) for all UI chrome, HUD readouts, labels, buttons, forms, metadata, and long-form chat/timeline prose.
 - **Headers & Labels**: Style all section headers, panel titles, and category badges in `UPPERCASE` with `tracking-wider` and `text-xs`.
 - **Numeric Alignment**: Apply `tabular-nums` to all coordinates, timestamps, counters, and confidence/decay metrics.
 
@@ -37,6 +40,7 @@ globs: '**/*.tsx, **/*.css'
 ## 6. Map HUD Layout & Panel Behavior
 
 - **Full-Bleed Map Viewport**: On `/map`, the Mapbox canvas always occupies `100dvh` full-bleed; panels render as solid floating HUD overlays.
+- **Persistent Command Chrome**: Keep a compact solid `h-12` top command bar (identity, center coordinates, event/cited counts, feed status, UTC clock) and an `h-7` bottom status strip (SRID, projection, live category legend, viewport center). Every readout must derive from live map or feed state.
 - **Mutually Exclusive Panels**: Only one major drawer/panel (`ChatPanel` or `TlPanel`) may be open at a time—opening one automatically closes the other.
 - **Compact Panel Chrome**: Every open panel/overlay must include a compact `1px`-bordered header bar containing an `UPPERCASE` title and an explicit close trigger.
 

@@ -4,6 +4,7 @@ export * from './lib/LiveClock';
 export * from './lib/RollButton';
 export * from './lib/TacticalActionBtn';
 export * from './lib/HermesWordmark';
+export * from './lib/CornerReticle';
 export * from './lib/OAuthButtonGroup';
 export * from './lib/utils';
 

@@ -1,4 +1,4 @@
-import { SidebarSimple } from '@phosphor-icons/react';
+import { SidebarSimple, Trash, X } from '@phosphor-icons/react';
 import { useEffect } from 'react';
 
 import type { ChatSource } from '@hermes/util-types';
@@ -47,21 +47,25 @@ export function ChatPanel({
     return (
       <div
         data-testid="chat-rail"
-        className="absolute top-0 left-0 z-20 flex h-full w-12 flex-col items-center border-r border-hud-border bg-neutral-900 pt-4 font-mono select-none"
+        className="absolute bottom-7 left-0 top-12 z-20 flex w-12 flex-col items-center border-r border-border-subtle bg-neutral-900 pt-3 font-mono select-none"
       >
         <button
           type="button"
           onClick={chat.open}
           aria-label="Open chat"
-          className="flex h-10 w-10 cursor-pointer items-center justify-center text-white transition-colors hover:text-white focus-visible:outline-1 focus-visible:outline-neon-blue focus-visible:-outline-offset-2"
+          className="flex h-10 w-10 cursor-pointer items-center justify-center text-bone/70 transition-colors hover:text-white focus-visible:outline-1 focus-visible:outline-neon-blue focus-visible:-outline-offset-2"
         >
           <SidebarSimple size={18} weight="bold" aria-hidden="true" />
         </button>
-        <div className="mt-8 flex flex-col items-center gap-1.5 opacity-60 pointer-events-none">
-          <span className="text-[9px] font-bold tracking-[0.25em] text-slate-muted [writing-mode:vertical-lr] uppercase">
-            CHAT
+
+        <div className="mt-6 flex flex-col items-center gap-3">
+          <span className="h-6 w-px bg-border-subtle" aria-hidden="true" />
+          <span className="text-[9px] font-bold uppercase tracking-[0.28em] text-slate-muted/50 [writing-mode:vertical-lr]">
+            EXPLORE
           </span>
         </div>
+
+        <span className="mt-auto mb-3 h-1.5 w-1.5 bg-neon-blue/60" aria-hidden="true" />
       </div>
     );
   }
@@ -69,35 +73,38 @@ export function ChatPanel({
   return (
     <aside
       aria-label="Hermes chat"
-      className="absolute top-0 left-0 z-30 flex h-full w-full flex-col border-r border-hud-border bg-neutral-900 font-mono sm:w-96"
+      className="absolute bottom-7 left-0 top-12 z-30 flex w-full flex-col border-r border-border-subtle bg-neutral-900 font-mono sm:w-[24rem]"
     >
-      <header className="flex items-center justify-between gap-2 border-b border-hud-border bg-neutral-900 px-3 py-2.5">
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-bold tracking-[0.2em] text-ivory uppercase">
+      <header className="flex h-12 shrink-0 items-center justify-between gap-2 border-b border-border-subtle bg-black px-3">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <span className="h-1.5 w-1.5 bg-neon-blue" aria-hidden="true" />
+          <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-ivory">
             EXPLORE
           </span>
           {chat.messages.length > 0 ? (
-            <span className="border border-border-subtle bg-black px-1.5 py-0.5 text-[9px] font-bold text-slate-muted tabular-nums">
-              {chat.messages.length}
+            <span className="border border-border-subtle bg-onyx px-1.5 py-0.5 text-[9px] font-bold tabular-nums text-slate-muted">
+              {String(chat.messages.length).padStart(2, '0')}
             </span>
           ) : null}
         </div>
-        <div className="flex items-center gap-1.5">
+        <div className="flex shrink-0 items-center gap-1.5">
           <button
             type="button"
             onClick={chat.clear}
             aria-label="Clear conversation"
-            className="cursor-pointer border border-signal-teal bg-signal-teal px-2 py-1 text-[10px] font-bold tracking-wider text-black uppercase transition-colors hover:border-signal-teal-bright hover:bg-signal-teal-bright focus-visible:outline-1 focus-visible:outline-neon-blue focus-visible:outline-offset-2"
+            title="Clear conversation"
+            className="flex h-7 w-7 cursor-pointer items-center justify-center border border-signal-teal bg-signal-teal text-black uppercase transition-colors hover:border-signal-teal-bright hover:bg-signal-teal-bright focus-visible:outline-1 focus-visible:outline-neon-blue focus-visible:outline-offset-2"
           >
-            CLEAR
+            <Trash size={12} weight="bold" aria-hidden="true" />
           </button>
           <button
             type="button"
             onClick={chat.close}
             aria-label="Close chat"
-            className="cursor-pointer border border-danger bg-danger px-2 py-1 text-[10px] font-bold tracking-wider text-black uppercase transition-colors hover:border-danger-bright hover:bg-danger-bright focus-visible:outline-1 focus-visible:outline-neon-blue focus-visible:outline-offset-2"
+            title="Close chat"
+            className="flex h-7 w-7 cursor-pointer items-center justify-center border border-danger bg-danger text-black uppercase transition-colors hover:border-danger-bright hover:bg-danger-bright focus-visible:outline-1 focus-visible:outline-neon-blue focus-visible:outline-offset-2"
           >
-            CLOSE
+            <X size={12} weight="bold" aria-hidden="true" />
           </button>
         </div>
       </header>

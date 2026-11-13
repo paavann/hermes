@@ -3,9 +3,13 @@ import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { useMapStore } from '../store/store';
 import { useMapDataSync } from '../hooks/datasync';
+import { CornerReticle } from '@hermes/ui-components';
+
 import { EventPopup } from './components/EventPopup';
 import { TlPanel } from './components/TlPanel';
 import { EventsLoader } from './components/EventsLoader';
+import { MapHud } from './components/MapHud';
+import { createCitedGeoJson } from './cited-geojson';
 import type { FeatureCollection } from 'geojson';
 import type { MapEventResponse } from '@hermes/util-types';
 import { useMapConfig } from '../config-context';
@@ -48,6 +52,8 @@ export function MapView() {
   const setSelectedId = useMapStore((s) => s.setSelectedEventId);
 
   const isTimelineMode = useMapStore((s) => s.isTlMode);
+  const citedEvents = useMapStore((s) => s.citedEvents);
+  const focusRequest = useMapStore((s) => s.focusRequest);
 
   useEffect(() => {
     if (!mapContainer.current || map.current) return;
@@ -105,6 +111,28 @@ export function MapView() {
         if (map.current) map.current.getCanvas().style.cursor = '';
       });
 
+      map.current?.on('click', 'hermes-cited-points', (e) => {
+        if (e.features && e.features[0] && map.current) {
+          const eventId = e.features[0].properties?.id;
+          if (eventId) {
+            const lngLat: [number, number] = [e.lngLat.lng, e.lngLat.lat];
+            setSelectedId(eventId, lngLat);
+
+            map.current.easeTo({
+              center: lngLat,
+              duration: 800,
+              easing: (t) => t * (2 - t),
+            });
+          }
+        }
+      });
+      map.current?.on('mouseenter', 'hermes-cited-points', () => {
+        if (map.current) map.current.getCanvas().style.cursor = 'pointer';
+      });
+      map.current?.on('mouseleave', 'hermes-cited-points', () => {
+        if (map.current) map.current.getCanvas().style.cursor = '';
+      });
+
       // Cluster robotic zoom interaction
       map.current?.on('click', 'hermes-clusters', (e) => {
         const features = map.current?.queryRenderedFeatures(e.point, {
@@ -158,13 +186,14 @@ export function MapView() {
           'circle-color': [
             'step',
             ['zoom'],
-            '#808080', // Pure grey instead of slate navy
-            8, // At zoom level 8...
-            'rgba(0, 0, 0, 0)', // Become transparent (hollow outline)
+            '#0b0d10',
+            8,
+            'rgba(0, 0, 0, 0)',
           ],
           'circle-radius': ['step', ['get', 'point_count'], 20, 10, 30, 50, 40],
-          'circle-stroke-width': 2,
-          'circle-stroke-color': '#94a3b8',
+          'circle-stroke-width': 1.5,
+          'circle-stroke-color': '#00f0ff',
+          'circle-stroke-opacity': 0.75,
           'circle-emissive-strength': 1,
         },
       });
@@ -179,7 +208,7 @@ export function MapView() {
           'text-size': 12,
         },
         paint: {
-          'text-color': '#ffffff',
+          'text-color': '#00f0ff',
           'text-emissive-strength': 1,
         },
       });
@@ -191,9 +220,26 @@ export function MapView() {
         paint: {
           'circle-color': ['get', 'category_color'],
           'circle-radius': ['match', ['get', 'rank'], 1, 18, 2, 14, 3, 10, 6],
-          'circle-stroke-width': 1,
-          'circle-stroke-color': '#000000',
+          'circle-stroke-width': 1.5,
+          'circle-stroke-color': '#f1ede2',
+          'circle-stroke-opacity': 0.45,
           'circle-emissive-strength': 1,
+        },
+      });
+      map.current?.addSource('cited-events-source', {
+        type: 'geojson',
+        data: createCitedGeoJson([]),
+      });
+      map.current?.addLayer({
+        id: 'hermes-cited-points',
+        type: 'circle',
+        source: 'cited-events-source',
+        paint: {
+          'circle-radius': 22,
+          'circle-color': 'rgba(0, 0, 0, 0)',
+          'circle-stroke-width': 3,
+          'circle-stroke-color': '#00f0ff',
+          'circle-stroke-opacity': 0.95,
         },
       });
     });
@@ -226,6 +272,44 @@ export function MapView() {
     }
   }, [events]);
 
+  useEffect(() => {
+    if (!map.current) return;
+
+    const updateCitedSource = () => {
+      const source = map.current?.getSource(
+        'cited-events-source',
+      ) as mapboxgl.GeoJSONSource | undefined;
+      source?.setData(createCitedGeoJson(citedEvents));
+    };
+
+    if (map.current.isStyleLoaded()) {
+      updateCitedSource();
+    } else {
+      map.current.once('load', updateCitedSource);
+      map.current.once('style.load', updateCitedSource);
+    }
+  }, [citedEvents]);
+
+  useEffect(() => {
+    const mapInstance = map.current;
+    if (!mapInstance || focusRequest === null) return;
+
+    const flyToCitation = () => {
+      mapInstance.flyTo({
+        center: focusRequest.lngLat,
+        zoom: Math.max(mapInstance.getZoom(), 6),
+        duration: 1200,
+        essential: true,
+      });
+    };
+
+    if (mapInstance.isStyleLoaded()) {
+      flyToCitation();
+    } else {
+      mapInstance.once('load', flyToCitation);
+    }
+  }, [focusRequest]);
+
   // Toggle base layer visibility based on mode.
   // NOTE: We intentionally do NOT use map.isStyleLoaded() here. That returns false
   // whenever tiles are in flight (e.g. after panning), even though the style and
@@ -239,6 +323,7 @@ export function MapView() {
       'hermes-clusters',
       'hermes-cluster-count',
       'hermes-unclustered-point',
+      'hermes-cited-points',
     ].forEach((layer) => {
       if (map.current?.getLayer(layer)) {
         map.current.setLayoutProperty(layer, 'visibility', visibility);
@@ -248,7 +333,16 @@ export function MapView() {
 
   return (
     <>
-      <div ref={mapContainer} className="fixed inset-0 w-screen h-screen z-0" />
+      <div ref={mapContainer} className="fixed inset-0 z-0 h-screen w-screen" />
+
+      <CornerReticle
+        className="inset-x-3 bottom-10 top-15 z-10 opacity-45"
+        tone="bone"
+        size="sm"
+      />
+
+      <MapHud events={events ?? []} isFetching={isFetching} />
+
       {isMapReady && !isTimelineMode && <EventPopup map={map.current} />}
       {isMapReady && isTimelineMode && <TlPanel map={map.current} />}
 

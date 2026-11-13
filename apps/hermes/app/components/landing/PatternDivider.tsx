@@ -34,7 +34,7 @@ export function computePatternLayout(width: number, randomize = true): PatternLa
   const avgColWidth = width / colCount;
   const vh = !randomize || typeof window === 'undefined' ? 900 : window.innerHeight;
   const extraRowHeight = Math.round((vh * 0.035) / rowCount);
-  const baseRowHeight = Math.round(avgColWidth * 0.44) + extraRowHeight;
+  const baseRowHeight = Math.round(avgColWidth * 0.38) + extraRowHeight;
   const rowHeights = [baseRowHeight, baseRowHeight, baseRowHeight];
 
   const verticalPad = isDesktop ? 24 : 16;
@@ -218,7 +218,7 @@ export function PatternDivider(): React.JSX.Element {
               width: `${tile.width}px`,
               height: `${tile.height}px`,
             }}
-            className="absolute bg-white/[0.035] border border-white/[0.04] opacity-0 will-change-transform"
+            className="absolute border border-white/[0.08] bg-white/[0.05] opacity-0 will-change-transform"
           />
         ))}
       </div>

@@ -6,6 +6,8 @@ export interface NavItem {
 
 export interface ProblemStatement {
   readonly id: string;
+  readonly index: string;
+  readonly label: string;
   readonly text: string;
 }
 
@@ -24,11 +26,13 @@ export interface PatternLayout {
 
 export interface CapabilityCard {
   readonly id: string;
+  readonly domain: string;
   readonly tag: string;
   readonly prefix: string;
   readonly title: string;
   readonly description: string;
   readonly bgImg?: string;
   readonly telemetry: string;
+  readonly signals: readonly string[];
   readonly action?: string;
 }

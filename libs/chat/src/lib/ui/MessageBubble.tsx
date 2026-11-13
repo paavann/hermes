@@ -53,24 +53,31 @@ export function MessageBubble({
       data-status={message.status}
       data-streaming={isStreaming ? 'true' : 'false'}
     >
-      <div className="flex items-center gap-2 text-[10px] tracking-[0.2em] uppercase">
+      <div className="flex w-full items-center gap-2 text-[9px] uppercase tracking-[0.2em]">
         {isUser ? (
-          <span className="text-slate-muted">YOU</span>
+          <>
+            <span className="h-px flex-1 bg-border-subtle/50" aria-hidden="true" />
+            <span className="text-slate-muted/45">YOU</span>
+          </>
         ) : (
-          <span className="font-bold text-neon-blue">HERMES</span>
+          <>
+            <span className="h-1 w-1 bg-neon-blue" aria-hidden="true" />
+            <span className="font-bold text-neon-blue">HERMES</span>
+            <span className="h-px flex-1 bg-border-subtle/50" aria-hidden="true" />
+          </>
         )}
       </div>
 
       {isUser ? (
-        <div className="max-w-[90%] border border-border-subtle bg-neutral-900 px-3 py-2 text-xs leading-relaxed text-ivory whitespace-pre-wrap">
+        <div className="max-w-[92%] border border-border-bright bg-graphite px-3 py-2 text-[11px] leading-relaxed whitespace-pre-wrap text-ivory">
           {message.content}
         </div>
       ) : (
-        <div className="border border-border-subtle border-l-2 border-l-neon-blue bg-black px-3 py-2.5 text-xs leading-relaxed text-neutral-200">
+        <div className="border border-border-subtle border-l-2 border-l-neon-blue bg-black px-3 py-2.5 text-[11px] leading-relaxed text-bone/85">
           {isStreaming && message.content.length === 0 ? (
-            <div className="flex items-center gap-2 text-[11px] text-slate-muted">
-              <span className="inline-block h-1.5 w-1.5 animate-pulse bg-neon-blue" />
-              <span className="tracking-wider uppercase">SYNTHESIZING RESPONSE...</span>
+            <div className="flex items-center gap-2 text-[9px] uppercase tracking-[0.16em] text-slate-muted">
+              <span className="inline-block h-1.5 w-1.5 animate-pulse bg-neon-blue" aria-hidden="true" />
+              <span>SYNTHESIZING RESPONSE...</span>
               <span
                 className="inline-block h-3 w-1.5 animate-pulse bg-neon-blue align-middle"
                 aria-label="Assistant is responding"
@@ -99,15 +106,17 @@ export function MessageBubble({
       )}
 
       {message.status === 'error' && message.error !== null ? (
-        <div className="flex flex-col gap-2 border border-danger bg-black px-3 py-2">
-          <p className="text-[10px] font-bold tracking-wider text-danger-bright uppercase">
+        <div className="flex flex-col gap-2 border border-danger bg-black px-3 py-2.5">
+          <p className="text-[9px] font-bold uppercase tracking-[0.16em] text-danger-bright">
             {message.error.code}
           </p>
-          <p className="text-[11px] text-gray-300">{message.error.message}</p>
+          <p className="text-[10px] leading-relaxed text-bone/70">
+            {message.error.message}
+          </p>
           <button
             type="button"
             onClick={onRetry}
-            className="w-full cursor-pointer border border-signal-teal bg-signal-teal px-2 py-1 text-[10px] font-bold tracking-wider text-black uppercase transition-colors hover:border-signal-teal-bright hover:bg-signal-teal-bright focus-visible:outline-1 focus-visible:outline-neon-blue focus-visible:outline-offset-2"
+            className="w-full cursor-pointer border border-signal-teal bg-signal-teal px-2 py-1.5 text-[9px] font-bold uppercase tracking-[0.16em] text-black transition-colors hover:border-signal-teal-bright hover:bg-signal-teal-bright focus-visible:outline-1 focus-visible:outline-neon-blue focus-visible:outline-offset-2"
           >
             RETRY
           </button>
@@ -116,13 +125,13 @@ export function MessageBubble({
 
       {message.status === 'cancelled' ? (
         <div className="flex items-center justify-between gap-2 border border-border-subtle bg-black px-3 py-2">
-          <span className="text-[10px] tracking-wider text-slate-muted uppercase">
+          <span className="text-[9px] uppercase tracking-[0.16em] text-slate-muted/55">
             CANCELLED
           </span>
           <button
             type="button"
             onClick={onRetry}
-            className="cursor-pointer border border-signal-teal bg-signal-teal px-2 py-1 text-[10px] font-bold tracking-wider text-black uppercase transition-colors hover:border-signal-teal-bright hover:bg-signal-teal-bright focus-visible:outline-1 focus-visible:outline-neon-blue focus-visible:outline-offset-2"
+            className="cursor-pointer border border-signal-teal bg-signal-teal px-2 py-1 text-[9px] font-bold uppercase tracking-[0.16em] text-black transition-colors hover:border-signal-teal-bright hover:bg-signal-teal-bright focus-visible:outline-1 focus-visible:outline-neon-blue focus-visible:outline-offset-2"
           >
             RETRY
           </button>
@@ -130,43 +139,48 @@ export function MessageBubble({
       ) : null}
 
       {message.sources.length > 0 ? (
-        <div className="flex flex-col border border-border-subtle bg-black">
+        <div className="border border-border-subtle bg-black">
           <button
             type="button"
             onClick={() => setIsSourcesOpen(!isSourcesOpen)}
-            className="flex cursor-pointer items-center justify-between px-3 py-1.5 text-left transition-colors hover:bg-neutral-900 focus-visible:outline-1 focus-visible:outline-neon-blue"
+            className="flex w-full cursor-pointer items-center justify-between px-3 py-2 text-left transition-colors hover:bg-white/[0.02] focus-visible:outline-1 focus-visible:outline-neon-blue"
             aria-expanded={isSourcesOpen}
           >
-            <div className="flex items-center gap-1.5 text-[11px] font-bold tracking-wider text-neon-blue uppercase">
+            <div className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-[0.16em] text-neon-blue">
               {isSourcesOpen ? (
-                <CaretDown size={12} weight="bold" />
+                <CaretDown size={10} weight="bold" aria-hidden="true" />
               ) : (
-                <CaretRight size={12} weight="bold" />
+                <CaretRight size={10} weight="bold" aria-hidden="true" />
               )}
               <span>SOURCES ({message.sources.length})</span>
             </div>
-            <span className="text-[9px] tracking-wider text-slate-muted uppercase">
+            <span className="text-[8px] uppercase tracking-[0.14em] text-slate-muted/35">
               {isSourcesOpen ? 'COLLAPSE' : 'EXPAND'}
             </span>
           </button>
 
           {isSourcesOpen ? (
-            <div className="flex flex-col gap-2 border-t border-border-subtle px-3 py-2">
-              {message.sources.map((source) => {
+            <div className="flex flex-col border-t border-border-subtle">
+              {message.sources.map((source, idx) => {
                 const timestamp = sourceTimestamp(source);
                 return (
                   <button
                     key={`${source.kind}-${source.id}`}
                     type="button"
                     onClick={() => onCitationActivate?.(source)}
-                    className="flex cursor-pointer flex-col items-start gap-0.5 text-left transition-colors hover:text-neon-blue focus-visible:outline-1 focus-visible:outline-neon-blue"
+                    className="flex cursor-pointer items-start gap-2 border-b border-border-subtle/60 px-3 py-2 text-left transition-colors last:border-b-0 hover:bg-white/[0.02] focus-visible:outline-1 focus-visible:outline-neon-blue"
                   >
-                    <span className="w-full truncate text-[10px] text-gray-300">
-                      {source.title}
+                    <span className="mt-0.5 tabular-nums text-[8px] text-slate-muted/30">
+                      {String(idx + 1).padStart(2, '0')}
                     </span>
-                    <span className="text-[9px] tracking-wider text-slate-muted uppercase">
-                      {sourceLabel(source)}
-                      {timestamp !== null ? ` · ${timestamp}` : ''}
+                    <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                      <span className="w-full truncate text-[10px] text-bone/75">
+                        {source.title}
+                      </span>
+                      <span className="text-[8px] uppercase tracking-[0.12em] text-slate-muted/40">
+                        {sourceLabel(source)}
+                        {timestamp !== null ? ` · ${timestamp}` : ''}
+                      </span>
                     </span>
                   </button>
                 );
@@ -179,7 +193,7 @@ export function MessageBubble({
       {message.done !== null ? (
         <div
           data-testid="provenance-footer"
-          className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[9px] tracking-wider text-slate-muted uppercase tabular-nums"
+          className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[8px] uppercase tracking-[0.14em] text-slate-muted/40 tabular-nums"
         >
           <span>
             PLOTTED{' '}
@@ -187,13 +201,13 @@ export function MessageBubble({
               message.done.provenance.articles +
               message.done.provenance.timeline_nodes}
           </span>
-          <span>·</span>
+          <span className="text-border-bright">·</span>
           <span>WEB {message.done.provenance.web}</span>
-          <span>·</span>
+          <span className="text-border-bright">·</span>
           <span>BG {message.done.provenance.background ? 'YES' : 'NO'}</span>
           {hasMissingCitations ? (
             <>
-              <span>·</span>
+              <span className="text-border-bright">·</span>
               <span className="text-warning-yellow">UNGROUNDED ANSWER</span>
             </>
           ) : null}

@@ -3,7 +3,7 @@ import type { LoaderFunctionArgs } from 'react-router';
 import { getAuth } from '@clerk/react-router/server';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
-import { LiveClock } from '@hermes/ui-components';
+import { CornerReticle, HermesWordmark } from '@hermes/ui-components';
 import type { ChatSource } from '@hermes/util-types';
 
 import { citedEventsFromSources } from '../components/map/cited-sources';
@@ -97,13 +97,26 @@ const DynamicMapContainer = lazy(async () => {
 export function MapLoadingFallback(): React.JSX.Element {
   return (
     <div
-      className="relative w-full h-dvh overflow-hidden bg-black flex items-center justify-center font-mono select-none"
+      className="relative flex h-dvh w-full select-none items-center justify-center overflow-hidden bg-black font-mono"
       role="status"
       aria-live="polite"
     >
-      <span className="text-xs uppercase tracking-widest text-slate-muted animate-pulse">
-        Loading Map...
-      </span>
+      <div
+        className="pointer-events-none absolute inset-0 bg-grid-hud opacity-50"
+        aria-hidden="true"
+      />
+      <CornerReticle className="inset-6" tone="bone" size="lg" />
+
+      <div className="relative flex flex-col items-center gap-5">
+        <HermesWordmark className="w-40 text-bone/35" />
+        <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.24em] text-slate-muted">
+          <span className="h-1.5 w-1.5 animate-pulse bg-neon-blue" aria-hidden="true" />
+          <span>LOADING LIVE MAP</span>
+        </div>
+        <div className="h-px w-48 overflow-hidden bg-border-subtle" aria-hidden="true">
+          <div className="h-full w-1/3 animate-pulse bg-neon-blue" />
+        </div>
+      </div>
     </div>
   );
 }
@@ -119,7 +132,6 @@ export default function MapRoute(): React.JSX.Element {
         <Suspense fallback={<MapLoadingFallback />}>
           <DynamicMapContainer />
         </Suspense>
-        <LiveClock />
       </main>
     </QueryClientProvider>
   );

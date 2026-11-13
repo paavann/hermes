@@ -15,10 +15,10 @@ export function EventsLoader(): React.JSX.Element {
     <div
       role="status"
       aria-live="polite"
-      className="fixed top-4 right-4 z-10 pointer-events-none select-none bg-[#08929c] text-[#000000] font-mono font-bold text-[10px] tracking-wider px-2 py-0.5 uppercase"
+      className="pointer-events-none fixed right-3 top-16 z-30 border border-border-subtle bg-black px-2.5 py-1 font-mono text-[9px] font-bold uppercase tracking-[0.18em] text-neon-blue select-none"
     >
-      <span>LOADING</span>
-      <span aria-hidden="true" className="inline-block text-left">
+      <span>SYNCING</span>
+      <span aria-hidden="true" className="ml-1 inline-block text-left">
         <span
           className={`transition-opacity duration-150 ${
             step < 1 ? 'opacity-100' : 'opacity-0'

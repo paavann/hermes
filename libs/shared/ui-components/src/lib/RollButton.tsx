@@ -60,7 +60,7 @@ export function RollButton({
   );
 
   const combinedClassName = cn(
-    'group relative inline-flex items-center justify-center overflow-hidden bg-ivory text-obsidian px-4 py-1.5 font-mono text-xs font-bold uppercase tracking-wider transition-colors duration-200 hover:bg-white cursor-pointer select-none',
+    'group relative inline-flex items-center justify-center overflow-hidden bg-ivory text-obsidian px-4 py-1.5 font-mono text-xs font-bold uppercase tracking-wider transition-colors duration-200 hover:bg-neon-blue cursor-pointer select-none',
     className
   );
 

@@ -1,7 +1,10 @@
+import { useEffect, useRef, useState } from 'react';
+import { ArrowsClockwise, X } from '@phosphor-icons/react';
+import { cn } from '@hermes/ui-components';
+
 import { useMapStore } from '../../store/store';
 import { useTl } from '../../hooks/useTl';
-import { useEffect, useRef, useState } from 'react';
-import { Feature, FeatureCollection, LineString } from 'geojson';
+import type { Feature, FeatureCollection, LineString } from 'geojson';
 import type { MapLayerMouseEvent, MapMouseEvent } from 'mapbox-gl';
 
 const NODES_SOURCE = 'tl-nodes-source';
@@ -74,9 +77,9 @@ function addLayersToMap(map: mapboxgl.Map) {
       source: EDGES_SOURCE,
       paint: {
         'line-color': '#00f0ff',
-        'line-width': 2,
-        'line-opacity': 0.6,
-        'line-dasharray': [2, 2],
+        'line-width': 1.5,
+        'line-opacity': 0.55,
+        'line-dasharray': [2, 3],
         'line-emissive-strength': 1,
       },
     });
@@ -87,19 +90,15 @@ function addLayersToMap(map: mapboxgl.Map) {
       type: 'circle',
       source: NODES_SOURCE,
       paint: {
-        // 'coalesce' returns the first non-null value — the correct Mapbox idiom for
-        // "use this property if set, else fall back". The ['!=', ..., null] pattern
-        // does NOT work for JSON null properties in Mapbox GL JS.
         'circle-color': ['coalesce', ['get', 'category_color'], '#00f0ff'],
-        // 'to-boolean' converts null → false, any non-empty string → true.
         'circle-radius': [
           'case',
           ['to-boolean', ['get', 'category_color']],
           10,
           6,
         ],
-        'circle-stroke-width': 2,
-        'circle-stroke-color': '#000000',
+        'circle-stroke-width': 1.5,
+        'circle-stroke-color': '#07080a',
         'circle-emissive-strength': 1,
       },
     });
@@ -113,6 +112,25 @@ function removeLayersFromMap(map: mapboxgl.Map) {
   if (map.getSource(EDGES_SOURCE)) map.removeSource(EDGES_SOURCE);
 }
 
+function formatNodeDate(value: string): { label: string; full: string } {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return { label: value, full: value };
+  }
+  const full = new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    day: '2-digit',
+    year: 'numeric',
+  }).format(date);
+  const label = new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    year: 'numeric',
+  })
+    .format(date)
+    .toUpperCase();
+  return { label, full };
+}
+
 export function TlPanel({ map }: { map: mapboxgl.Map | null }) {
   const tlTargetId = useMapStore((s) => s.tlTargetId);
   const setTlMode = useMapStore((s) => s.setTlMode);
@@ -122,23 +140,15 @@ export function TlPanel({ map }: { map: mapboxgl.Map | null }) {
   const { query, regenerate, isRegenerating } = useTl(tlTargetId);
   const { data: tlData, isLoading, isError } = query;
 
-  // A new object created on every component mount. Because objects are compared
-  // by reference, including this in the dependency array guarantees the effect
-  // re-runs every time TlPanel mounts — even when `map` is the same stable ref
-  // passed from the parent (which is always the case after the first open).
   const mountId = useRef({});
 
-  // ─── Lifecycle effect: re-runs on every mount of TlPanel ─────────────────
   useEffect(() => {
     if (!map) return;
 
     const setup = () => {
-      // Tear down any stale layers left from a previous session
       removeLayersFromMap(map);
-      // Add fresh sources + layers
       addLayersToMap(map);
 
-      // If data is already in cache (second+ open), paint it immediately
       if (tlData?.status === 'READY') {
         const { nodesGeoJson, edgesGeoJson } = buildGeoJson(tlData);
         (map.getSource(NODES_SOURCE) as mapboxgl.GeoJSONSource)?.setData(
@@ -149,7 +159,6 @@ export function TlPanel({ map }: { map: mapboxgl.Map | null }) {
         );
       }
 
-      // ── Event handlers ───────────────────────────────────────────────
       const onNodeClick = (e: MapLayerMouseEvent) => {
         if (e.features?.[0]) setActiveNodeId(e.features[0].properties?.id);
       };
@@ -189,11 +198,10 @@ export function TlPanel({ map }: { map: mapboxgl.Map | null }) {
     // reliably re-runs on every TlPanel mount regardless of map ref stability.
   }, [map, mountId.current]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ─── Data sync: fires whenever tlData becomes READY ──────────────────────
   useEffect(() => {
     if (!map) return;
     if (tlData?.status !== 'READY') return;
-    if (!map.getSource(NODES_SOURCE)) return; // layers not ready yet
+    if (!map.getSource(NODES_SOURCE)) return;
 
     const { nodesGeoJson, edgesGeoJson } = buildGeoJson(tlData);
     (map.getSource(NODES_SOURCE) as mapboxgl.GeoJSONSource).setData(
@@ -204,19 +212,14 @@ export function TlPanel({ map }: { map: mapboxgl.Map | null }) {
     );
   }, [map, tlData]);
 
-  // ─── Styling: active node highlight ──────────────────────────────────────
   useEffect(() => {
     if (!map) return;
     if (!map.getLayer(NODES_LAYER)) return;
 
-    // Active node  → #0c828a (selected teal)
-    // Current-event node (has category_color) → its own category color
-    // Historical Wikipedia nodes → #00f0ff (timeline cyan)
-    // Non-active nodes when something IS selected → dimmed via opacity
     map.setPaintProperty(NODES_LAYER, 'circle-color', [
       'case',
       ['==', ['get', 'id'], activeNodeId ?? ''],
-      '#0c828a',
+      '#ffb454',
       ['to-boolean', ['get', 'category_color']],
       ['get', 'category_color'],
       '#00f0ff',
@@ -239,12 +242,11 @@ export function TlPanel({ map }: { map: mapboxgl.Map | null }) {
       map.setPaintProperty(
         EDGES_LAYER,
         'line-opacity',
-        activeNodeId ? 0.2 : 0.6,
+        activeNodeId ? 0.2 : 0.55,
       );
     }
   }, [map, activeNodeId]);
 
-  // ─── Auto-scroll sidebar entry into view ─────────────────────────────────
   useEffect(() => {
     if (activeNodeId) {
       document
@@ -259,130 +261,156 @@ export function TlPanel({ map }: { map: mapboxgl.Map | null }) {
   const isFailed = (isError || tlData?.status === 'FAILED') && !isGenerating;
 
   return (
-    <div className="absolute top-0 right-0 h-screen w-96 bg-hud-bg/95 backdrop-blur-md border-l border-hud-border flex flex-col font-mono z-20 shadow-[0_0_30px_rgba(0,0,0,0.8)]">
-      {/* Header */}
-      <div className="flex justify-between items-center p-4 border-b border-hud-border bg-black/60">
-        <div>
-          <h2 className="text-neon-blue font-bold tracking-[0.2em] text-sm uppercase">
-            Timeline Analysis
-          </h2>
-          <p className="text-[9px] text-gray-500 tracking-widest mt-1 uppercase">
-            Historical Context
-          </p>
+    <div className="absolute bottom-7 right-0 top-12 z-30 flex w-full flex-col border-l border-border-subtle bg-obsidian font-mono sm:w-[25rem]">
+      <div className="flex h-12 shrink-0 items-center justify-between gap-3 border-b border-border-subtle bg-black px-3">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <span className="h-1.5 w-1.5 bg-signal-amber" aria-hidden="true" />
+          <div className="min-w-0">
+            <h2 className="text-[10px] font-bold uppercase tracking-[0.2em] text-ivory">
+              TIMELINE
+            </h2>
+            <p className="mt-0.5 truncate text-[8px] uppercase tracking-[0.18em] text-slate-muted/40">
+              CAUSAL LINEAGE
+            </p>
+          </div>
         </div>
-        <div className="flex gap-4">
+        <div className="flex shrink-0 items-center gap-1.5">
           <button
+            type="button"
             onClick={() => regenerate()}
             disabled={isGenerating}
-            className="text-gray-400 hover:text-white cursor-pointer font-bold tracking-widest text-xs disabled:opacity-50"
+            className="flex cursor-pointer items-center gap-1.5 border border-border-subtle bg-onyx px-2 py-1 text-[9px] font-bold uppercase tracking-[0.14em] text-slate-muted/70 transition-colors hover:border-neon-blue hover:text-neon-blue focus-visible:outline-1 focus-visible:outline-neon-blue focus-visible:outline-offset-2 disabled:cursor-default disabled:opacity-40"
           >
-            REFRESH
+            <ArrowsClockwise size={10} weight="bold" aria-hidden="true" />
+            <span>REFRESH</span>
           </button>
           <button
+            type="button"
             onClick={() => setTlMode(false)}
-            className="text-red-500 hover:text-red-400 cursor-pointer font-bold tracking-widest text-xs"
+            aria-label="Exit timeline"
+            className="flex h-7 w-7 cursor-pointer items-center justify-center border border-danger bg-danger text-black transition-colors hover:border-danger-bright hover:bg-danger-bright focus-visible:outline-1 focus-visible:outline-neon-blue focus-visible:outline-offset-2"
           >
-            EXIT
+            <X size={12} weight="bold" aria-hidden="true" />
           </button>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto custom-scrollbar p-4 flex flex-col gap-4">
-        {isFailed && (
-          <div className="text-red-500 text-xs tracking-widest border border-red-500/30 p-4 bg-red-500/5 text-center mt-4 leading-relaxed">
+      <div className="custom-scrollbar flex flex-1 flex-col gap-4 overflow-y-auto p-4">
+        {isFailed ? (
+          <div className="border border-danger/40 bg-danger/5 p-4 text-center text-[10px] uppercase leading-relaxed tracking-[0.16em] text-danger-bright">
             ERROR GENERATING TIMELINE.
           </div>
-        )}
+        ) : null}
 
-        {isGenerating && !isFailed && (
-          <div className="text-neon-blue text-xs tracking-widest animate-pulse border border-neon-blue/30 p-4 bg-neon-blue/5 text-center mt-4 shadow-[0_0_15px_rgba(0,240,255,0.2)]">
-            GENERATING TIMELINE...
+        {isGenerating && !isFailed ? (
+          <div className="flex items-center justify-center gap-2 border border-neon-blue/30 bg-neon-blue/5 p-4 text-[10px] uppercase tracking-[0.16em] text-neon-blue">
+            <span className="h-1.5 w-1.5 animate-pulse bg-neon-blue" aria-hidden="true" />
+            <span>GENERATING TIMELINE...</span>
           </div>
-        )}
+        ) : null}
 
-        {noContent && !isGenerating && !isFailed && (
-          <div className="text-gray-400 text-xs tracking-widest border border-hud-border p-4 bg-black/30 text-center mt-4 leading-relaxed">
+        {noContent && !isGenerating && !isFailed ? (
+          <div className="border border-border-subtle p-4 text-center text-[10px] uppercase leading-relaxed tracking-[0.14em] text-slate-muted/55">
             NO HISTORICAL CONTEXT FOUND.
             <br />
-            (Insufficient data on Wikipedia)
+            <span className="text-slate-muted/35">
+              (INSUFFICIENT DATA ON WIKIPEDIA)
+            </span>
           </div>
-        )}
+        ) : null}
 
-        {tlData?.status === 'READY' && !isGenerating && !isFailed && (
+        {tlData?.status === 'READY' && !isGenerating && !isFailed ? (
           <>
-            {tlData.tl_summary && (
-              <div className="text-gray-300 text-xs italic mb-4 leading-relaxed border-b border-hud-border/50 pb-4">
-                "{tlData.tl_summary}"
-              </div>
-            )}
-            {[...tlData.nodes].reverse().map((node) => {
-              const d = new Date(node.date);
-              const formattedDate = isNaN(d.getTime())
-                ? node.date
-                : new Intl.DateTimeFormat('en-US', {
-                    month: 'short',
-                    day: '2-digit',
-                    year: 'numeric',
-                  }).format(d);
-
-              return (
-                <div
-                  key={node.id}
-                  id={`tl-node-${node.id}`}
-                  className={`relative pl-6 pb-6 border-l border-hud-border/50 cursor-pointer transition-colors group ${
-                    activeNodeId === node.id
-                      ? 'bg-white/10'
-                      : 'hover:bg-white/5'
-                  }`}
-                  onClick={() => {
-                    setActiveNodeId(node.id);
-                    if (node.longitude && node.latitude) {
-                      map?.flyTo({
-                        center: [node.longitude, node.latitude],
-                        zoom: 6,
-                        duration: 1500,
-                      });
-                    }
-                  }}
-                >
-                  <div
-                    className={`absolute -left-1.25 top-1 w-2.25 h-2.25 border border-black bg-neon-blue transition-transform shadow-[0_0_10px_rgba(0,240,255,0.4)] ${
-                      activeNodeId === node.id
-                        ? 'scale-150'
-                        : 'group-hover:scale-125'
-                    }`}
-                  />
-                  <div className="text-[10px] text-gray-400 mb-1 flex justify-between">
-                    <span className="text-neon-blue font-bold tracking-wider">
-                      {formattedDate}
-                    </span>
-                    {node.location_name && (
-                      <span className="truncate max-w-30 text-gray-500">
-                        {node.location_name}
-                      </span>
-                    )}
-                  </div>
-                  <h3 className="text-white text-sm font-bold leading-tight group-hover:text-neon-blue transition-colors mb-2">
-                    {node.headline}
-                  </h3>
-                  <p className="text-gray-400 text-xs leading-relaxed">
-                    {node.summary}
-                  </p>
+            {tlData.tl_summary ? (
+              <div className="border-l-2 border-signal-amber/70 bg-onyx p-3">
+                <div className="mb-1.5 text-[8px] uppercase tracking-[0.2em] text-signal-amber/70">
+                  LINEAGE SUMMARY
                 </div>
-              );
-            })}
+                <p className="text-[10px] leading-relaxed text-bone/75">
+                  {tlData.tl_summary}
+                </p>
+              </div>
+            ) : null}
+
+            <div className="flex flex-col">
+              {[...tlData.nodes].reverse().map((node) => {
+                const { full } = formatNodeDate(node.date);
+                const isActive = activeNodeId === node.id;
+
+                return (
+                  <button
+                    key={node.id}
+                    id={`tl-node-${node.id}`}
+                    type="button"
+                    onClick={() => {
+                      setActiveNodeId(node.id);
+                      if (node.longitude !== null && node.latitude !== null) {
+                        map?.flyTo({
+                          center: [node.longitude, node.latitude],
+                          zoom: 6,
+                          duration: 1500,
+                        });
+                      }
+                    }}
+                    className={cn(
+                      'group relative cursor-pointer border-l py-3.5 pl-5 pr-2 text-left transition-colors focus-visible:outline-1 focus-visible:outline-neon-blue focus-visible:outline-offset-2',
+                      isActive
+                        ? 'border-neon-blue bg-white/[0.04]'
+                        : 'border-border-subtle/60 hover:border-border-bright hover:bg-white/[0.02]',
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        'absolute -left-[4px] top-4 h-2 w-2 border border-obsidian transition-transform duration-150',
+                        isActive
+                          ? 'scale-150 bg-signal-amber'
+                          : 'bg-neon-blue group-hover:scale-125',
+                      )}
+                      aria-hidden="true"
+                    />
+
+                    <div className="flex items-start justify-between gap-3">
+                      <span
+                        className={cn(
+                          'tabular-nums text-[9px] uppercase tracking-[0.14em]',
+                          isActive ? 'text-signal-amber' : 'text-neon-blue/80',
+                        )}
+                      >
+                        {full}
+                      </span>
+                      {node.location_name ? (
+                        <span className="max-w-[9rem] truncate text-[9px] uppercase tracking-[0.1em] text-slate-muted/40">
+                          {node.location_name}
+                        </span>
+                      ) : null}
+                    </div>
+
+                    <h3
+                      className={cn(
+                        'mt-1.5 font-display text-[13px] font-medium leading-snug tracking-[-0.01em] transition-colors',
+                        isActive ? 'text-ivory' : 'text-bone/85 group-hover:text-ivory',
+                      )}
+                    >
+                      {node.headline}
+                    </h3>
+                    <p className="mt-1.5 text-[10px] leading-relaxed text-slate-muted/65">
+                      {node.summary}
+                    </p>
+                  </button>
+                );
+              })}
+            </div>
           </>
-        )}
+        ) : null}
       </div>
 
-      {/* Attribution */}
-      <div className="p-3 border-t border-hud-border bg-black/40 text-[9px] text-gray-500 tracking-wider">
+      <div className="shrink-0 border-t border-border-subtle bg-black px-3 py-2.5 text-[9px] uppercase tracking-[0.12em] text-slate-muted/40">
         Historical data reconstructed via{' '}
         <a
           href="https://wikipedia.org"
           target="_blank"
           rel="noreferrer"
-          className="text-neon-blue hover:underline"
+          className="text-neon-blue/80 transition-colors hover:text-neon-blue hover:underline"
         >
           Wikipedia
         </a>{' '}

@@ -1,12 +1,17 @@
 import { useState } from 'react';
 import type React from 'react';
 import { useForm, ValidationError } from '@formspree/react';
+import { ArrowUpRight } from '@phosphor-icons/react';
+import { Link } from 'react-router';
+
 import {
   Input,
   Textarea,
   Label,
   TacticalActionBtn,
 } from '@hermes/ui-components';
+
+import { SectionHeading, SectionRail } from './SectionChrome';
 
 export interface SendMessageBtnProps {
   readonly isSubmitting?: boolean;
@@ -39,6 +44,36 @@ export interface ContactFormData {
   readonly message: string;
 }
 
+const DIRECT_CHANNELS: readonly {
+  readonly index: string;
+  readonly label: string;
+  readonly detail: string;
+  readonly href: string;
+  readonly external: boolean;
+}[] = [
+  {
+    index: '01',
+    label: 'GITHUB',
+    detail: 'Source & engineering notes',
+    href: 'https://github.com/paavann/hermes',
+    external: true,
+  },
+  {
+    index: '02',
+    label: 'LIVE MAP',
+    detail: 'Observe the current event surface',
+    href: '/map',
+    external: false,
+  },
+  {
+    index: '03',
+    label: 'PRIVACY PROTOCOL',
+    detail: 'How data is handled',
+    href: '/privacy',
+    external: false,
+  },
+] as const;
+
 export function ContactSection(): React.JSX.Element {
   const [formData, setFormData] = useState<ContactFormData>({
     name: '',
@@ -51,11 +86,14 @@ export function ContactSection(): React.JSX.Element {
   const [state, handleSubmit, reset] = useForm('mqpppqar', {
     data: {
       _subject: () =>
-        formData.subject.trim() || `Inquiry from ${formData.name.trim() || 'Visitor'} via Hermes`,
+        formData.subject.trim() ||
+        `Inquiry from ${formData.name.trim() || 'Visitor'} via Hermes`,
     },
   });
 
-  const onSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
+  const onSubmit = async (
+    e: React.FormEvent<HTMLFormElement>,
+  ): Promise<void> => {
     e.preventDefault();
     if (!formData.name.trim() || !formData.email.trim() || !formData.message.trim()) {
       setClientError('Name, email, and message are required.');
@@ -72,197 +110,290 @@ export function ContactSection(): React.JSX.Element {
   };
 
   return (
-    <section id="contact" className="relative w-full border-b border-border-subtle bg-obsidian scroll-mt-16 pt-10">
-      {/* Anchor for backward compatibility if navigated from #access */}
+    <section
+      id="contact"
+      className="relative w-full border-b border-border-subtle bg-obsidian scroll-mt-16"
+    >
       <span id="access" className="absolute -top-20" aria-hidden="true" />
 
-      {/* Left Column (Sticky Sidebar Track aligned with 180px/220px vertical line) */}
-      <div className="hidden md:block absolute top-0 bottom-0 left-0 w-45 md:w-55 z-30 pointer-events-none mt-5">
-        <div className="sticky top-24 p-5 md:p-8 pointer-events-auto">
-          <h2 className="text-xs uppercase tracking-widest text-ivory flex items-center gap-2">
-            <span className="text-neon-blue">■</span>
-            <span>Contact</span>
-          </h2>
-          <div className="mt-4 text-[10px] text-slate-muted/50 tracking-widest font-mono">
-            03 // GET IN TOUCH
-          </div>
-          {/* Comms Status Indicator */}
-          <div className="mt-8 space-y-2">
-            <div className="flex items-center gap-2 text-[9px] text-slate-muted/40 font-mono">
-              <span className="w-1 h-1 bg-emerald-400 inline-block animate-pulse" />
-              <span>COMMS ACTIVE</span>
-            </div>
-            <div className="flex items-center gap-2 text-[9px] text-slate-muted/30 font-mono">
-              <span className="w-1 h-1 bg-slate-muted/30 inline-block" />
-              <span>SECURE CHANNEL</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Main Content Area */}
-      <div className="relative z-10 w-full pl-10 md:pl-60 ml-5 pr-5 md:pr-12 lg:pr-16 pt-10 md:pt-8 pb-16 md:pb-24 max-w-7xl">
-        {/* Mobile Section Header */}
-        <div className="md:hidden mb-6 flex items-center gap-2 text-xs uppercase tracking-widest text-ivory">
-          <span className="text-neon-blue">■</span>
-          <span>Contact</span>
-        </div>
-
-        {/* Section Tag */}
-        <div className="text-xs uppercase tracking-widest text-slate-muted/70 mb-6 md:mb-8 flex items-center gap-2">
-          <span className="text-neon-blue">■</span>
-          <span>03 // CONTACT</span>
-        </div>
-
-        {/* Two-Column Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-start">
-          {/* Left Column: Headline, Narrative & Security Badges */}
-          <div className="space-y-8 max-w-xl">
-            <h3 className="text-3xl sm:text-4xl md:text-5xl font-medium tracking-tight text-slate-muted leading-tight">
-              Have questions or feedback?{' '}
-              <span className="text-ivory font-bold block mt-2">
-                Get in touch with me.
-              </span>
-            </h3>
-
-            <p className="text-base sm:text-lg text-slate-muted leading-relaxed">
-              Whether you're interested in spatial data architecture, collaboration on Hermes,
-              research inquiries, or exploring the live maps—feel free to reach out. I read all
-              messages directly.
+      <div className="mx-auto flex w-full max-w-[1600px] flex-col md:flex-row">
+        <SectionRail index="04" label="Contact" meta="Direct channel">
+          <div className="mt-10 border-t border-border-subtle pt-4">
+            <p className="text-[9px] uppercase leading-relaxed tracking-[0.18em] text-slate-muted/45">
+              Messages are read directly. No routing layer, no queue.
             </p>
           </div>
+          <div className="mt-8 flex items-center gap-2 text-[9px] uppercase tracking-[0.18em] text-slate-muted/35">
+            <span className="h-1 w-1 bg-signal-amber" aria-hidden="true" />
+            <span>HTTPS / TLS</span>
+          </div>
+        </SectionRail>
 
-          {/* Right Column: Brutalist Tactical Form */}
-          <div className="w-full max-w-lg">
-            {state.succeeded ? (
-              <div className="border border-neon-blue/40 bg-neon-blue/5 p-6 md:p-8 space-y-5">
-                <div className="flex items-center gap-2 text-xs uppercase tracking-widest text-neon-blue">
-                  <span className="w-2 h-2 bg-neon-blue inline-block animate-pulse" />
-                  <span>MESSAGE RECEIVED</span>
+        <div className="min-w-0 flex-1 border-border-subtle/60 px-5 py-12 md:border-l md:py-16 md:pl-10 md:pr-12 lg:pl-14 lg:pr-16">
+          <SectionHeading
+            index="04"
+            label="Contact"
+            meta="Get in touch"
+            className="md:hidden"
+          />
+
+          <div className="mt-10 grid grid-cols-1 items-start gap-12 md:mt-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.9fr)] lg:gap-16">
+            <div className="space-y-9">
+              <h3 className="max-w-xl font-display text-[clamp(2.1rem,3.6vw,3.5rem)] font-medium leading-[1.02] tracking-[-0.03em] text-bone/55">
+                Have questions or feedback?{' '}
+                <span className="block text-ivory">
+                  Get in touch with me.
+                </span>
+              </h3>
+
+              <p className="max-w-lg text-sm leading-relaxed text-slate-muted">
+                Whether you&apos;re interested in spatial data architecture,
+                collaboration on Hermes, research inquiries, or exploring the
+                live maps — feel free to reach out. I read all messages
+                directly.
+              </p>
+
+              <div>
+                <div className="mb-3 flex items-center justify-between text-[9px] uppercase tracking-[0.18em] text-slate-muted/40">
+                  <span>DIRECT CHANNELS</span>
+                  <span>03</span>
                 </div>
-                <p className="text-sm text-ivory leading-relaxed">
-                  Thank you for reaching out! Your message has been received. I'll get back to you shortly at{' '}
-                  <strong className="text-neon-blue font-mono">{formData.email}</strong>.
-                </p>
-                <div className="pt-4 border-t border-neon-blue/20">
-                  <button
-                    type="button"
-                    onClick={handleReset}
-                    className="text-xs uppercase tracking-widest text-slate-muted hover:text-ivory transition-colors underline underline-offset-4 cursor-pointer"
-                  >
-                    Send another message →
-                  </button>
+                <div className="border-t border-border-subtle">
+                  {DIRECT_CHANNELS.map((channel) => {
+                    const content = (
+                      <>
+                        <span className="tabular-nums text-[9px] text-slate-muted/35">
+                          {channel.index}
+                        </span>
+                        <span className="flex min-w-0 flex-col">
+                          <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-ivory">
+                            {channel.label}
+                          </span>
+                          <span className="mt-0.5 text-[10px] leading-relaxed text-slate-muted/55">
+                            {channel.detail}
+                          </span>
+                        </span>
+                        <ArrowUpRight
+                          size={13}
+                          weight="bold"
+                          aria-hidden="true"
+                          className="ml-auto shrink-0 text-slate-muted/40 transition-colors group-hover:text-neon-blue"
+                        />
+                      </>
+                    );
+
+                    const className =
+                      'group flex items-center gap-4 border-b border-border-subtle/60 py-3.5 transition-colors hover:bg-white/[0.02] focus-visible:outline-1 focus-visible:outline-neon-blue focus-visible:outline-offset-2';
+
+                    return channel.external ? (
+                      <a
+                        key={channel.index}
+                        href={channel.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={className}
+                      >
+                        {content}
+                      </a>
+                    ) : (
+                      <Link key={channel.index} to={channel.href} className={className}>
+                        {content}
+                      </Link>
+                    );
+                  })}
                 </div>
               </div>
-            ) : (
-              <form onSubmit={onSubmit} className="space-y-5" noValidate>
-                {/* Honeypot anti-spam field (hidden from human visitors) */}
-                <input
-                  type="text"
-                  name="_gotcha"
-                  tabIndex={-1}
-                  autoComplete="off"
-                  className="hidden"
-                  aria-hidden="true"
-                />
+            </div>
 
-                <div>
-                  <Label htmlFor="contact-name">NAME *</Label>
-                  <Input
-                    id="contact-name"
-                    name="name"
-                    type="text"
-                    required
-                    value={formData.name}
-                    onChange={(e) =>
-                      setFormData((prev) => ({ ...prev, name: e.target.value }))
-                    }
-                    placeholder="Your name"
-                  />
-                  <ValidationError
-                    prefix="Name"
-                    field="name"
-                    errors={state.errors}
-                    className="text-xs text-rose-400 font-mono tracking-wide mt-1"
-                  />
+            <div className="w-full border border-border-subtle bg-onyx">
+              <div className="flex h-10 items-center justify-between border-b border-border-subtle bg-black px-4">
+                <div className="flex items-center gap-2 text-[9px] uppercase tracking-[0.2em] text-bone/60">
+                  <span className="h-1.5 w-1.5 bg-neon-blue" aria-hidden="true" />
+                  <span>SECURE TRANSMISSION</span>
                 </div>
+                <span className="text-[9px] uppercase tracking-[0.18em] text-slate-muted/35 tabular-nums">
+                  FORM / 01
+                </span>
+              </div>
 
-                <div>
-                  <Label htmlFor="contact-email">EMAIL ADDRESS *</Label>
-                  <Input
-                    id="contact-email"
-                    name="email"
-                    type="email"
-                    required
-                    value={formData.email}
-                    onChange={(e) =>
-                      setFormData((prev) => ({ ...prev, email: e.target.value }))
-                    }
-                    placeholder="name@example.com"
-                  />
-                  <ValidationError
-                    prefix="Email"
-                    field="email"
-                    errors={state.errors}
-                    className="text-xs text-rose-400 font-mono tracking-wide mt-1"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="contact-subject">SUBJECT</Label>
-                  <Input
-                    id="contact-subject"
-                    name="subject"
-                    type="text"
-                    value={formData.subject}
-                    onChange={(e) =>
-                      setFormData((prev) => ({ ...prev, subject: e.target.value }))
-                    }
-                    placeholder="e.g. Collaboration, Question, Feedback..."
-                  />
-                  <ValidationError
-                    prefix="Subject"
-                    field="subject"
-                    errors={state.errors}
-                    className="text-xs text-rose-400 font-mono tracking-wide mt-1"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="contact-message">MESSAGE *</Label>
-                  <Textarea
-                    id="contact-message"
-                    name="message"
-                    rows={4}
-                    required
-                    value={formData.message}
-                    onChange={(e) =>
-                      setFormData((prev) => ({ ...prev, message: e.target.value }))
-                    }
-                    placeholder="Write your message here..."
-                  />
-                  <ValidationError
-                    prefix="Message"
-                    field="message"
-                    errors={state.errors}
-                    className="text-xs text-rose-400 font-mono tracking-wide mt-1"
-                  />
-                </div>
-
-                {clientError && (
-                  <div className="text-xs text-rose-400 font-mono tracking-wide text-center">
-                    {clientError}
+              {state.succeeded ? (
+                <div className="space-y-5 p-6 md:p-8">
+                  <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-neon-blue">
+                    <span className="h-2 w-2 animate-pulse bg-neon-blue" aria-hidden="true" />
+                    <span>MESSAGE RECEIVED</span>
                   </div>
-                )}
+                  <p className="text-sm leading-relaxed text-ivory">
+                    Thank you for reaching out. Your message has been received.
+                    I&apos;ll get back to you shortly at{' '}
+                    <strong className="font-mono text-neon-blue">
+                      {formData.email}
+                    </strong>
+                    .
+                  </p>
+                  <div className="border-t border-border-subtle pt-4">
+                    <button
+                      type="button"
+                      onClick={handleReset}
+                      className="cursor-pointer text-[10px] uppercase tracking-[0.18em] text-slate-muted underline-offset-4 transition-colors hover:text-ivory hover:underline"
+                    >
+                      Send another message →
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <form onSubmit={onSubmit} className="space-y-5 p-5 md:p-6" noValidate>
+                  <input
+                    type="text"
+                    name="_gotcha"
+                    tabIndex={-1}
+                    autoComplete="off"
+                    className="hidden"
+                    aria-hidden="true"
+                  />
 
-                <ValidationError
-                  errors={state.errors}
-                  className="text-xs text-rose-400 font-mono tracking-wide text-center"
-                />
+                  <div>
+                    <Label
+                      htmlFor="contact-name"
+                      className="flex items-center justify-between"
+                    >
+                      <span>NAME *</span>
+                      <span className="font-normal tabular-nums text-slate-muted/30">
+                        01
+                      </span>
+                    </Label>
+                    <Input
+                      id="contact-name"
+                      name="name"
+                      type="text"
+                      required
+                      value={formData.name}
+                      onChange={(e) =>
+                        setFormData((prev) => ({ ...prev, name: e.target.value }))
+                      }
+                      placeholder="Your name"
+                    />
+                    <ValidationError
+                      prefix="Name"
+                      field="name"
+                      errors={state.errors}
+                      className="mt-1 font-mono text-[10px] tracking-wide text-danger-bright"
+                    />
+                  </div>
 
-                <SendMessageBtn isSubmitting={state.submitting} disabled={state.submitting} />
-              </form>
-            )}
+                  <div>
+                    <Label
+                      htmlFor="contact-email"
+                      className="flex items-center justify-between"
+                    >
+                      <span>EMAIL ADDRESS *</span>
+                      <span className="font-normal tabular-nums text-slate-muted/30">
+                        02
+                      </span>
+                    </Label>
+                    <Input
+                      id="contact-email"
+                      name="email"
+                      type="email"
+                      required
+                      value={formData.email}
+                      onChange={(e) =>
+                        setFormData((prev) => ({ ...prev, email: e.target.value }))
+                      }
+                      placeholder="name@example.com"
+                    />
+                    <ValidationError
+                      prefix="Email"
+                      field="email"
+                      errors={state.errors}
+                      className="mt-1 font-mono text-[10px] tracking-wide text-danger-bright"
+                    />
+                  </div>
+
+                  <div>
+                    <Label
+                      htmlFor="contact-subject"
+                      className="flex items-center justify-between"
+                    >
+                      <span>SUBJECT</span>
+                      <span className="font-normal tabular-nums text-slate-muted/30">
+                        03
+                      </span>
+                    </Label>
+                    <Input
+                      id="contact-subject"
+                      name="subject"
+                      type="text"
+                      value={formData.subject}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          subject: e.target.value,
+                        }))
+                      }
+                      placeholder="Collaboration, question, feedback..."
+                    />
+                    <ValidationError
+                      prefix="Subject"
+                      field="subject"
+                      errors={state.errors}
+                      className="mt-1 font-mono text-[10px] tracking-wide text-danger-bright"
+                    />
+                  </div>
+
+                  <div>
+                    <Label
+                      htmlFor="contact-message"
+                      className="flex items-center justify-between"
+                    >
+                      <span>MESSAGE *</span>
+                      <span className="font-normal tabular-nums text-slate-muted/30">
+                        04
+                      </span>
+                    </Label>
+                    <Textarea
+                      id="contact-message"
+                      name="message"
+                      rows={4}
+                      required
+                      value={formData.message}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          message: e.target.value,
+                        }))
+                      }
+                      placeholder="Write your message here..."
+                    />
+                    <ValidationError
+                      prefix="Message"
+                      field="message"
+                      errors={state.errors}
+                      className="mt-1 font-mono text-[10px] tracking-wide text-danger-bright"
+                    />
+                  </div>
+
+                  {clientError !== null ? (
+                    <div className="text-center font-mono text-[10px] tracking-wide text-danger-bright">
+                      {clientError}
+                    </div>
+                  ) : null}
+
+                  <ValidationError
+                    errors={state.errors}
+                    className="text-center font-mono text-[10px] tracking-wide text-danger-bright"
+                  />
+
+                  <SendMessageBtn
+                    isSubmitting={state.submitting}
+                    disabled={state.submitting}
+                  />
+
+                  <p className="text-[9px] uppercase tracking-[0.16em] text-slate-muted/35">
+                    TRANSMITTED OVER HTTPS
+                  </p>
+                </form>
+              )}
+            </div>
           </div>
         </div>
       </div>

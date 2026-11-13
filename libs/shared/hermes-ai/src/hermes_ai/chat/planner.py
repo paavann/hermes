@@ -147,6 +147,7 @@ class ChatPlanner:
                 model="plan",
                 streaming=False,
                 temperature=0,
+                model_kwargs=config.plan_model_kwargs,
             )
             self._runner = cast(
                 PlanRunner,

@@ -20,6 +20,9 @@
     },
     {
       "path": "./libs/shared/utils/ts"
+    },
+    {
+      "path": "./libs/chat"
     }
   ]
 }

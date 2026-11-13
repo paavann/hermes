@@ -1,10 +1,15 @@
-import type { MetaFunction } from 'react-router'
-import {
-  Nav, Footer,
-  HeroSection, ProblemSection, CapabilitiesSection, ContactSection,
-} from '../components/landing'
-export { LaunchMapBtn } from '../components/landing'
+import type { MetaFunction } from 'react-router';
 
+import {
+  Nav,
+  Footer,
+  HeroSection,
+  ProblemSection,
+  CapabilitiesSection,
+  ContactSection,
+} from '../components/landing';
+
+export { LaunchMapBtn } from '../components/landing';
 
 export const meta: MetaFunction = () => [
   { title: 'Hermes — Geospatial Intelligence Platform' },
@@ -16,45 +21,33 @@ export const meta: MetaFunction = () => [
   { property: 'og:title', content: 'Hermes — Geospatial Intelligence Platform' },
   {
     property: 'og:description',
-    content: 'Autonomous geospatial news intelligence with vector consensus and causal lineage.',
+    content:
+      'Autonomous geospatial news intelligence with vector consensus and causal lineage.',
   },
 ];
 
-
-
-
-
 export default function LandingRoute(): React.JSX.Element {
   return (
-    <div className="relative min-h-screen bg-obsidian text-ivory font-mono selection:bg-neon-blue selection:text-black antialiased overflow-x-clip">
-      {/* Subtle Tactical Grid Overlay */}
+    <div className="relative min-h-screen overflow-x-clip bg-obsidian font-mono text-ivory antialiased selection:bg-neon-blue selection:text-black">
       <div
-        className="fixed inset-0 pointer-events-none opacity-[0.02] z-0"
-        style={{
-          backgroundImage: `
-            linear-gradient(to right, rgba(244, 244, 240, 0.1) 1px, transparent 1px),
-            linear-gradient(to bottom, rgba(244, 244, 240, 0.1) 1px, transparent 1px)
-          `,
-          backgroundSize: '80px 80px',
-        }}
+        className="pointer-events-none fixed inset-0 z-0 bg-grid-hud opacity-[0.55]"
         aria-hidden="true"
       />
 
       <div
-        className="fixed inset-0 pointer-events-none z-20 flex justify-center max-w-360 mx-auto"
+        className="pointer-events-none fixed inset-0 z-20 mx-auto flex max-w-[1600px] justify-center"
         aria-hidden="true"
       >
-        <div className="w-full h-full relative">
-          <div className="absolute top-0 bottom-0 left-0 w-px bg-border-subtle/40" />
-          <div className="absolute top-0 bottom-0 left-45 md:left-55 w-px bg-border-subtle/50" />
-          <div className="absolute top-0 bottom-0 right-0 w-px bg-border-subtle/40" />
+        <div className="relative h-full w-full">
+          <div className="absolute bottom-0 left-0 top-0 w-px bg-border-subtle/40" />
+          <div className="absolute bottom-0 left-[180px] top-0 w-px bg-border-subtle/50 md:left-[220px]" />
+          <div className="absolute bottom-0 right-0 top-0 w-px bg-border-subtle/40" />
         </div>
       </div>
 
       <Nav />
 
-
-      <main id="main-content" className="pt-15.5">
+      <main id="main-content" className="relative z-10 pt-[62px]">
         <HeroSection />
         <ProblemSection />
         <CapabilitiesSection />

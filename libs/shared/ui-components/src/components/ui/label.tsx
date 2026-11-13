@@ -14,7 +14,7 @@ export function Label({
     <label
       ref={ref}
       className={cn(
-        'text-[10px] md:text-[11px] uppercase tracking-widest text-slate-muted/80 font-mono mb-2 block select-none',
+        'text-[9px] md:text-[10px] uppercase tracking-[0.18em] text-slate-muted/75 font-mono mb-2 block select-none',
         className
       )}
       {...props}

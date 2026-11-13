@@ -36,6 +36,8 @@ class AiConfig:
 
     chat_stream_include_usage: bool = True
     chat_max_output_tokens: int = 1200
+    chat_model_kwargs: dict[str, object] = field(default_factory=dict)
+    plan_model_kwargs: dict[str, object] = field(default_factory=dict)
     web_timeout_seconds: float = 8.0
     tavily_api_key: str | None = None
 
