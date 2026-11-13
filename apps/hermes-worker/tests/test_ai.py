@@ -72,13 +72,15 @@ class TestWorkerAiClientFactory:
         )
         monkeypatch.setattr(
             "hermes_worker.core.ai.settings.EMBED_MODEL",
-            "nvidia/nemotron-3-embed-1b",
+            "nvidia_nim/nvidia/nemotron-3-embed-1b",
         )
 
     def test_create_ai_client_success(self) -> None:
         client = create_ai_client()
         assert isinstance(client, HermesAi)
-        assert client.config.primary_model == "mistral/mistral-large"
+        assert (
+            client.config.routes["extractor"].primary.model == "mistral/mistral-large"
+        )
 
     def test_extract_events_empty_input(self) -> None:
         async def run() -> None:

@@ -5,6 +5,7 @@ from urllib.parse import urlparse
 import httpx
 from hermes_ai.utils.rate_limiter import TbRateLimiter
 from hermes_db.services.source import DueSource
+from hermes_db.utils.datetime import ensure_utc
 from hermes_worker.core.config import settings
 from hermes_worker.services.fetchers.base import BaseArticleFetcher, ParsedArticle
 
@@ -22,11 +23,11 @@ def _parse_gdelt_date(date_str: str) -> datetime | None:
         return None
     for fmt in ("%Y%m%dT%H%M%SZ", "%Y%m%d%H%M%S", "%Y-%m-%dT%H:%M:%SZ"):
         try:
-            return datetime.strptime(date_str, fmt)
+            return ensure_utc(datetime.strptime(date_str, fmt))
         except ValueError:
             continue
     try:
-        return datetime.fromisoformat(date_str)
+        return ensure_utc(datetime.fromisoformat(date_str))
     except ValueError:
         return None
 

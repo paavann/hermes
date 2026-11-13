@@ -1,6 +1,6 @@
 import logging
 from collections.abc import Mapping
-from datetime import datetime
+from datetime import UTC, datetime
 import feedparser
 import httpx
 from hermes_db.services.source import DueSource
@@ -15,7 +15,7 @@ def _parse_date(entry: Mapping[str, object]) -> datetime | None:
     parsed_time = entry.get("published_parsed")
     if parsed_time and isinstance(parsed_time, (tuple, list)):
         try:
-            return datetime(*parsed_time[:6])
+            return datetime(*parsed_time[:6], tzinfo=UTC)
         except ValueError, TypeError:
             return None
     return None

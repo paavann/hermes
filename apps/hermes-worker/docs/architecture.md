@@ -193,7 +193,7 @@ $$\Delta S = W_{\text{cred}}(a) \times F_{\text{synd}}(a) \times M_{\text{impact
 ## 5. Lifecycle Decay & Status Transitions
 
 - **Exponential Score Decay**: Event trending scores diminish over time based on an 18-hour half-life:
-  $$\text{decay\_factor} = 2^{-\frac{1}{18}} \approx 0.9622 \text{ per hour}$$
+  $$\lambda = 2^{-\frac{1}{18}} \approx 0.9622 \text{ per hour}$$
 - **State Progression**:
   - `ACTIVE` $\rightarrow$ `STALE`: Occurs when an event has received no new corroborating articles for $> 24$ hours (`EVENT_STALE_HOURS`).
   - `STALE` $\rightarrow$ `ARCHIVED`: Occurs when an event has remained stale for $> 48$ hours (`EVENT_ARCHIVE_HOURS`).

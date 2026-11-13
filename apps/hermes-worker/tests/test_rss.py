@@ -1,7 +1,7 @@
 import asyncio
 import time
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 import httpx
 from hermes_db.enums import CredibilityTier, SourceType
@@ -63,7 +63,7 @@ class TestRssHelpers:
         time_tuple = time.strptime("2026-10-03 12:00:00", "%Y-%m-%d %H:%M:%S")
         entry = {"published_parsed": time_tuple}
         parsed = _parse_date(entry)
-        assert parsed == datetime(2026, 10, 3, 12, 0, 0)
+        assert parsed == datetime(2026, 10, 3, 12, 0, 0, tzinfo=UTC)
 
     def test_parse_date_missing_or_invalid(self):
         assert _parse_date({}) is None

@@ -4,6 +4,7 @@ from datetime import datetime
 import httpx
 import trafilatura
 from hermes_db.services.source import DueSource
+from hermes_db.utils.datetime import ensure_utc
 from hermes_worker.core.config import settings
 from hermes_worker.services.fetchers.base import BaseArticleFetcher, ParsedArticle
 
@@ -45,7 +46,7 @@ def _extract_article_from_html(html: str, url: str) -> ParsedArticle | None:
     pub_at: datetime | None = None
     if meta and meta.date:
         try:
-            pub_at = datetime.fromisoformat(meta.date)
+            pub_at = ensure_utc(datetime.fromisoformat(meta.date))
         except ValueError:
             pub_at = None
 

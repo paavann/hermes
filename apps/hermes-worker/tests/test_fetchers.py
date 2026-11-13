@@ -1,7 +1,7 @@
 import asyncio
 import json
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock
 import httpx
 from hermes_ai.utils.rate_limiter import TbRateLimiter
@@ -29,10 +29,10 @@ def test_extract_domain() -> None:
 
 def test_parse_gdelt_date() -> None:
     dt1 = _parse_gdelt_date("20261018T183000Z")
-    assert dt1 == datetime(2026, 10, 18, 18, 30, 0)
+    assert dt1 == datetime(2026, 10, 18, 18, 30, 0, tzinfo=UTC)
 
     dt2 = _parse_gdelt_date("20261018183000")
-    assert dt2 == datetime(2026, 10, 18, 18, 30, 0)
+    assert dt2 == datetime(2026, 10, 18, 18, 30, 0, tzinfo=UTC)
 
     assert _parse_gdelt_date("") is None
     assert _parse_gdelt_date("invalid-date") is None
@@ -102,7 +102,7 @@ def test_gdelt_fetcher_success() -> None:
         assert len(articles) == 2
         assert articles[0].title == "Global Summit Begins in Geneva"
         assert articles[0].url == "https://www.reuters.com/world/summit-geneva-123"
-        assert articles[0].published_at == datetime(2026, 10, 18, 12, 0, 0)
+        assert articles[0].published_at == datetime(2026, 10, 18, 12, 0, 0, tzinfo=UTC)
         assert articles[0].source_country == "Switzerland"
 
         assert articles[1].title == "Trade Deal Signed"
