@@ -48,9 +48,9 @@
     "semantic_hash": ""
   },
   "apps/hermes-api/src/hermes_api/api/v1/chat.py": {
-    "mtime": 1794151377.4115665,
-    "seen": 1794227779.4147203,
-    "ast_hash": "6e911e27fc1e056b0ce45a6d18e024fa",
+    "mtime": 1794475252.322703,
+    "seen": 1794479095.3516924,
+    "ast_hash": "3876b949df39a2a4ea3c3838e1967006",
     "semantic_hash": ""
   },
   "apps/hermes-api/src/hermes_api/api/v1/events.py": {
@@ -60,21 +60,21 @@
     "semantic_hash": ""
   },
   "apps/hermes-api/src/hermes_api/api/v1/router.py": {
-    "mtime": 1794151366.109819,
-    "seen": 1794227779.4147363,
-    "ast_hash": "651c27bec3f94e5060703b62ff810dc4",
+    "mtime": 1794475561.9465706,
+    "seen": 1794479095.3517115,
+    "ast_hash": "d344b0468191c7a98d2ba21a1da18297",
     "semantic_hash": ""
   },
   "apps/hermes-api/src/hermes_api/api/v1/tl.py": {
-    "mtime": 1791894688.2218635,
-    "seen": 1794227779.4147456,
-    "ast_hash": "72f51c4ee776d7864a01d1bcec683c0a",
+    "mtime": 1794480125.4468927,
+    "seen": 1794480306.7541482,
+    "ast_hash": "3b3960cb5e6aa86a6e560ff6bef3e3e2",
     "semantic_hash": ""
   },
   "apps/hermes-api/src/hermes_api/core/config.py": {
-    "mtime": 1794046745.0272932,
-    "seen": 1794227779.4147534,
-    "ast_hash": "0373aaf176900f7f7cd8f25c044d90f3",
+    "mtime": 1794480153.4235346,
+    "seen": 1794480306.7541592,
+    "ast_hash": "2daee5cc776756b0f7ba4a1d4302bf77",
     "semantic_hash": ""
   },
   "apps/hermes-api/src/hermes_api/core/constants.py": {
@@ -102,9 +102,9 @@
     "semantic_hash": ""
   },
   "apps/hermes-api/src/hermes_api/main.py": {
-    "mtime": 1794151372.696518,
-    "seen": 1794227779.414791,
-    "ast_hash": "2647a5c4840fbcd618bd9616c0308402",
+    "mtime": 1794480130.3150046,
+    "seen": 1794480306.754243,
+    "ast_hash": "97a9cb939348faff3ac007d3b84a04b8",
     "semantic_hash": ""
   },
   "apps/hermes-api/src/hermes_api/schemas/__init__.py": {
@@ -114,9 +114,9 @@
     "semantic_hash": ""
   },
   "apps/hermes-api/src/hermes_api/schemas/chat.py": {
-    "mtime": 1794049307.3997726,
-    "seen": 1794227779.4148057,
-    "ast_hash": "a9efe53106543f2dd131d8e16167b8c4",
+    "mtime": 1794476250.455831,
+    "seen": 1794479095.3517854,
+    "ast_hash": "60eb9bbd661ce9716d266f74c9de844a",
     "semantic_hash": ""
   },
   "apps/hermes-api/src/hermes_api/schemas/errors.py": {
@@ -138,33 +138,33 @@
     "semantic_hash": ""
   },
   "apps/hermes-api/src/hermes_api/services/ai_service.py": {
-    "mtime": 1793965294.8496203,
-    "seen": 1794227779.414838,
-    "ast_hash": "3723d76169529f120b257e3a3d9ac1f6",
+    "mtime": 1794480101.7183466,
+    "seen": 1794480306.7542882,
+    "ast_hash": "b9178cf7e833452b26570c10783a1356",
     "semantic_hash": ""
   },
   "apps/hermes-api/src/hermes_api/services/chat_guards.py": {
-    "mtime": 1794151469.1637192,
-    "seen": 1794227779.4148455,
-    "ast_hash": "781fbd493805bb8e2062152d1c65bb45",
+    "mtime": 1794478284.0194132,
+    "seen": 1794479095.3518255,
+    "ast_hash": "f263a96957aaebbce0f649d7023e7e91",
     "semantic_hash": ""
   },
   "apps/hermes-api/src/hermes_api/services/chat_retriever.py": {
-    "mtime": 1794049520.4828544,
-    "seen": 1794227779.4148526,
-    "ast_hash": "72970bab4f0c94cca54664b21da4219e",
+    "mtime": 1794480199.3965847,
+    "seen": 1794480306.7543058,
+    "ast_hash": "d247b6cec5547f17a937e89aee9e6dda",
     "semantic_hash": ""
   },
   "apps/hermes-api/src/hermes_api/services/chat_service.py": {
-    "mtime": 1794151377.419565,
-    "seen": 1794227779.4148617,
-    "ast_hash": "113576ef76d62227346dc86d2fac8796",
+    "mtime": 1794480224.9691668,
+    "seen": 1794480306.7543147,
+    "ast_hash": "dbc77343df0628b8f1a278f3fa2bbf1b",
     "semantic_hash": ""
   },
   "apps/hermes-api/src/hermes_api/services/tl_service.py": {
-    "mtime": 1791894688.2218635,
-    "seen": 1794227779.4148693,
-    "ast_hash": "bae2b910651eb6e1566dc38146d04788",
+    "mtime": 1794480123.498848,
+    "seen": 1794480306.7543235,
+    "ast_hash": "08822475c535bcb6ef79151748818826",
     "semantic_hash": ""
   },
   "apps/hermes-api/src/hermes_api/services/wikipedia_service.py": {
@@ -198,9 +198,9 @@
     "semantic_hash": ""
   },
   "apps/hermes-api/tests/test_ai_service.py": {
-    "mtime": 1793965294.8496203,
-    "seen": 1794227779.4149175,
-    "ast_hash": "8676338c212379a21a4aced5586f4a96",
+    "mtime": 1794479211.6235402,
+    "seen": 1794480306.754371,
+    "ast_hash": "5447b2fcdbc1aaf7b2a72a31b976b4e0",
     "semantic_hash": ""
   },
   "apps/hermes-api/tests/test_chat_api.py": {
@@ -234,15 +234,15 @@
     "semantic_hash": ""
   },
   "apps/hermes-api/tests/test_chat_schemas.py": {
-    "mtime": 1794049307.4077728,
-    "seen": 1794227779.4149642,
-    "ast_hash": "e3b4e571d4cc4750fa1564141c0e9be4",
+    "mtime": 1794254902.1829555,
+    "seen": 1794254957.9189262,
+    "ast_hash": "af6c776d37686c1254e8084730613a86",
     "semantic_hash": ""
   },
   "apps/hermes-api/tests/test_chat_service.py": {
-    "mtime": 1794151493.4170215,
-    "seen": 1794227779.4149716,
-    "ast_hash": "1b756931df2fddc431cd3323645d494e",
+    "mtime": 1794308041.4974227,
+    "seen": 1794309386.7718902,
+    "ast_hash": "3d089dbbc4326a78d99a9ac97914b328",
     "semantic_hash": ""
   },
   "apps/hermes-api/tests/test_config.py": {
@@ -276,9 +276,9 @@
     "semantic_hash": ""
   },
   "apps/hermes-api/tests/test_tl_service.py": {
-    "mtime": 1791894688.2258637,
-    "seen": 1794227779.415022,
-    "ast_hash": "a56ebc4512236b9eac9877228075e14e",
+    "mtime": 1794479212.4275644,
+    "seen": 1794480306.7544665,
+    "ast_hash": "71813b3ba817069c7fb9cd12180f687e",
     "semantic_hash": ""
   },
   "apps/hermes-api/tests/test_wikipedia_service.py": {
@@ -354,9 +354,9 @@
     "semantic_hash": ""
   },
   "apps/hermes-worker/src/hermes_worker/core/ai.py": {
-    "mtime": 1793965294.8496203,
-    "seen": 1794227779.415121,
-    "ast_hash": "d2683c2a917aad5361124c633c015617",
+    "mtime": 1794259140.7438452,
+    "seen": 1794261540.7254481,
+    "ast_hash": "761859c1a85c1753b947df4e749a8310",
     "semantic_hash": ""
   },
   "apps/hermes-worker/src/hermes_worker/core/config.py": {
@@ -414,27 +414,27 @@
     "semantic_hash": ""
   },
   "apps/hermes-worker/src/hermes_worker/services/fetchers/gdelt.py": {
-    "mtime": 1793107546.5460095,
-    "seen": 1794227779.4151993,
-    "ast_hash": "c7c1bbd26116f71cd018c2f11482ab0a",
+    "mtime": 1794474839.2547352,
+    "seen": 1794474924.5538952,
+    "ast_hash": "7b7f482d6e492e80d6f3b732c7be29cb",
     "semantic_hash": ""
   },
   "apps/hermes-worker/src/hermes_worker/services/fetchers/rss.py": {
-    "mtime": 1793107546.5460095,
-    "seen": 1794227779.4152071,
-    "ast_hash": "8e40315e51767e457fc48eee51180320",
+    "mtime": 1794413909.0162637,
+    "seen": 1794417932.4641767,
+    "ast_hash": "c4ee7a28b52133e86c89d94870c7475b",
     "semantic_hash": ""
   },
   "apps/hermes-worker/src/hermes_worker/services/fetchers/sitemap.py": {
-    "mtime": 1793107546.5500097,
-    "seen": 1794227779.415215,
-    "ast_hash": "97ded6265fbf7be7745a5188585e46c3",
+    "mtime": 1794474842.4386265,
+    "seen": 1794474924.5539172,
+    "ast_hash": "b6bd6921de0797116a13501f672bb329",
     "semantic_hash": ""
   },
   "apps/hermes-worker/src/hermes_worker/services/lifecycle.py": {
-    "mtime": 1791894688.2298636,
-    "seen": 1794227779.4152222,
-    "ast_hash": "7a2bd7342ed4cdeea8aa55f42fe261cf",
+    "mtime": 1794417347.3275616,
+    "seen": 1794417932.4642015,
+    "ast_hash": "725ac897dfe673b63c4b16505610f931",
     "semantic_hash": ""
   },
   "apps/hermes-worker/src/hermes_worker/services/sync.py": {
@@ -456,9 +456,9 @@
     "semantic_hash": ""
   },
   "apps/hermes-worker/tests/test_ai.py": {
-    "mtime": 1793965294.8576224,
-    "seen": 1794227779.4152534,
-    "ast_hash": "e5239a039950e55c3a3f6090a0672fdc",
+    "mtime": 1794259142.8718872,
+    "seen": 1794261540.725614,
+    "ast_hash": "04a6272adc42142f8329ff6bfea9ab8e",
     "semantic_hash": ""
   },
   "apps/hermes-worker/tests/test_cli.py": {
@@ -474,9 +474,9 @@
     "semantic_hash": ""
   },
   "apps/hermes-worker/tests/test_fetchers.py": {
-    "mtime": 1793107546.5500097,
-    "seen": 1794227779.4152782,
-    "ast_hash": "3c0dbfef9c6f095b6166aa32e33b7976",
+    "mtime": 1794413637.8212905,
+    "seen": 1794417932.4642708,
+    "ast_hash": "7d422529f68cef30c7e952147bdcec27",
     "semantic_hash": ""
   },
   "apps/hermes-worker/tests/test_geocoding.py": {
@@ -498,9 +498,9 @@
     "semantic_hash": ""
   },
   "apps/hermes-worker/tests/test_rss.py": {
-    "mtime": 1793107546.5500097,
-    "seen": 1794227779.4153156,
-    "ast_hash": "93b52343720e25ed9be3f576a048af57",
+    "mtime": 1794413640.1856556,
+    "seen": 1794417932.4643111,
+    "ast_hash": "69979ddc9226abe44d82c0fb6b22d22c",
     "semantic_hash": ""
   },
   "apps/hermes-worker/tests/test_sync.py": {
@@ -828,9 +828,9 @@
     "semantic_hash": ""
   },
   "libs/chat/src/index.ts": {
-    "mtime": 1794153160.1146278,
-    "seen": 1794227779.4157703,
-    "ast_hash": "f7925498ceb4d8697e0c3723cfd0564d",
+    "mtime": 1794474775.0416312,
+    "seen": 1794474924.5545702,
+    "ast_hash": "a3fc941e819102118034c12166e477e2",
     "semantic_hash": ""
   },
   "libs/chat/src/lib/citations.spec.tsx": {
@@ -846,9 +846,9 @@
     "semantic_hash": ""
   },
   "libs/chat/src/lib/config-context.tsx": {
-    "mtime": 1794152321.5799556,
-    "seen": 1794227779.4157934,
-    "ast_hash": "c44c9ca5943c0f16bfac6018a4577f4b",
+    "mtime": 1794474791.9607193,
+    "seen": 1794474924.554601,
+    "ast_hash": "82a492b3d1138bd87bffb25258408903",
     "semantic_hash": ""
   },
   "libs/chat/src/lib/hooks/use-chat.spec.tsx": {
@@ -1098,9 +1098,9 @@
     "semantic_hash": ""
   },
   "libs/shared/hermes-ai/src/hermes_ai/__init__.py": {
-    "mtime": 1793965294.8816288,
-    "seen": 1794227779.4161212,
-    "ast_hash": "0e061c740c5d4d811df05ea9967f1602",
+    "mtime": 1794255167.3432105,
+    "seen": 1794256762.4134316,
+    "ast_hash": "d2439d7f16ff111123506dde2d324a71",
     "semantic_hash": ""
   },
   "libs/shared/hermes-ai/src/hermes_ai/chat/__init__.py": {
@@ -1109,16 +1109,10 @@
     "ast_hash": "ff76daa35eb5b112c005cbd644420fbe",
     "semantic_hash": ""
   },
-  "libs/shared/hermes-ai/src/hermes_ai/chat/citations.py": {
-    "mtime": 1794048731.2841654,
-    "seen": 1794227779.4161365,
-    "ast_hash": "b0374db201e0a87b5d412e5079c9d3f8",
-    "semantic_hash": ""
-  },
   "libs/shared/hermes-ai/src/hermes_ai/chat/engine.py": {
-    "mtime": 1794070610.5488317,
-    "seen": 1794227779.4161482,
-    "ast_hash": "47ed8209213b27fa94c2a0d97f10b65b",
+    "mtime": 1794476843.463378,
+    "seen": 1794479095.3530698,
+    "ast_hash": "d578838ccf101692513a8215d733f2e4",
     "semantic_hash": ""
   },
   "libs/shared/hermes-ai/src/hermes_ai/chat/models/__init__.py": {
@@ -1152,39 +1146,39 @@
     "semantic_hash": ""
   },
   "libs/shared/hermes-ai/src/hermes_ai/chat/models/sources.py": {
-    "mtime": 1794227389.0876791,
-    "seen": 1794227779.4162083,
-    "ast_hash": "5e5b2d9c99b322585030c35ab2fcd760",
+    "mtime": 1794390547.0391107,
+    "seen": 1794393117.3447301,
+    "ast_hash": "bbed611eb57a023607ca2b0e1202af30",
     "semantic_hash": ""
   },
   "libs/shared/hermes-ai/src/hermes_ai/chat/planner.py": {
-    "mtime": 1794218624.3312695,
-    "seen": 1794227779.416217,
-    "ast_hash": "71a701268a7fd8b549f82d3972dd663a",
+    "mtime": 1794392893.7660615,
+    "seen": 1794393117.3447418,
+    "ast_hash": "b62949022f969af1e49412c77c08c46c",
     "semantic_hash": ""
   },
   "libs/shared/hermes-ai/src/hermes_ai/chat/prompts.py": {
-    "mtime": 1794048750.6767485,
-    "seen": 1794227779.4162254,
-    "ast_hash": "8a3aadf0e13f63b3b272a4b0dddb5a5d",
+    "mtime": 1794392894.7820385,
+    "seen": 1794393117.3447547,
+    "ast_hash": "578e8d43263ad5c55d4bf0374e798a98",
     "semantic_hash": ""
   },
   "libs/shared/hermes-ai/src/hermes_ai/chat/retriever.py": {
-    "mtime": 1794049449.517707,
-    "seen": 1794227779.4162333,
-    "ast_hash": "af2d873f9b5c10f47d2694fd080da567",
+    "mtime": 1794308247.976654,
+    "seen": 1794309386.773026,
+    "ast_hash": "ffcd52446505ff8e9cee681e22240703",
     "semantic_hash": ""
   },
   "libs/shared/hermes-ai/src/hermes_ai/chat/web.py": {
-    "mtime": 1794048629.105084,
-    "seen": 1794227779.4162412,
-    "ast_hash": "c1ffc22c204ab1040a910e0d460b5f9d",
+    "mtime": 1794393342.3128445,
+    "seen": 1794417932.4653745,
+    "ast_hash": "3e9c5623b023a44673d27131e727b935",
     "semantic_hash": ""
   },
   "libs/shared/hermes-ai/src/hermes_ai/client.py": {
-    "mtime": 1794074417.5546484,
-    "seen": 1794227779.416249,
-    "ast_hash": "db22c361c3498e918cb4323ce89eadaf",
+    "mtime": 1794309627.1227145,
+    "seen": 1794390092.8203902,
+    "ast_hash": "7e176c7b91c06b78df4dad3b2273cac6",
     "semantic_hash": ""
   },
   "libs/shared/hermes-ai/src/hermes_ai/core/__init__.py": {
@@ -1194,9 +1188,9 @@
     "semantic_hash": ""
   },
   "libs/shared/hermes-ai/src/hermes_ai/core/config.py": {
-    "mtime": 1794046723.4787092,
-    "seen": 1794227779.4162643,
-    "ast_hash": "1c90df18f1eded5106563b269fbd0e6a",
+    "mtime": 1794258494.6367018,
+    "seen": 1794259120.3455458,
+    "ast_hash": "f5380f462031d2e04a0522ed15ff52ee",
     "semantic_hash": ""
   },
   "libs/shared/hermes-ai/src/hermes_ai/core/constants.py": {
@@ -1218,15 +1212,15 @@
     "semantic_hash": ""
   },
   "libs/shared/hermes-ai/src/hermes_ai/extractors/events.py": {
-    "mtime": 1794048347.2804723,
-    "seen": 1794227779.4162939,
-    "ast_hash": "421ecc455c2ca10d319c92673ab4cea5",
+    "mtime": 1794392899.0179439,
+    "seen": 1794393117.3449376,
+    "ast_hash": "753a343ae6ef7abcf28663698c27213a",
     "semantic_hash": ""
   },
   "libs/shared/hermes-ai/src/hermes_ai/extractors/tl.py": {
-    "mtime": 1794048347.2804723,
-    "seen": 1794227779.4163017,
-    "ast_hash": "98104db7708e63ef6281dace22fd0b44",
+    "mtime": 1794392900.741906,
+    "seen": 1794393117.34495,
+    "ast_hash": "65309a108cbbfcca56e5a420a9d9ad8d",
     "semantic_hash": ""
   },
   "libs/shared/hermes-ai/src/hermes_ai/models/__init__.py": {
@@ -1260,9 +1254,9 @@
     "semantic_hash": ""
   },
   "libs/shared/hermes-ai/src/hermes_ai/services/llm.py": {
-    "mtime": 1794047252.9262016,
-    "seen": 1794227779.416347,
-    "ast_hash": "82ae71ad175abfa967ad983041f1127b",
+    "mtime": 1794261841.8918374,
+    "seen": 1794262078.3527505,
+    "ast_hash": "e8bfba607d3b5158b0f3422c8a0a072e",
     "semantic_hash": ""
   },
   "libs/shared/hermes-ai/src/hermes_ai/utils/__init__.py": {
@@ -1278,9 +1272,9 @@
     "semantic_hash": ""
   },
   "libs/shared/hermes-ai/src/hermes_ai/utils/prompts.py": {
-    "mtime": 1793107546.5940115,
-    "seen": 1794227779.4163702,
-    "ast_hash": "65c3ec133c06fb290895cb6774150e98",
+    "mtime": 1794392684.1316125,
+    "seen": 1794393117.3450532,
+    "ast_hash": "1a42eb6ad5ae1774532f7f1bb2ea3afe",
     "semantic_hash": ""
   },
   "libs/shared/hermes-ai/src/hermes_ai/utils/rate_limiter.py": {
@@ -1290,9 +1284,9 @@
     "semantic_hash": ""
   },
   "libs/shared/hermes-ai/src/hermes_ai/utils/tracing.py": {
-    "mtime": 1794154708.4197214,
-    "seen": 1794227779.4163852,
-    "ast_hash": "341ae04b1e47c2c8578183f6e72248a5",
+    "mtime": 1794262182.3879216,
+    "seen": 1794302736.0696487,
+    "ast_hash": "f53371cc050f27a59a29e4ed4762a587",
     "semantic_hash": ""
   },
   "libs/shared/hermes-ai/tests/__init__.py": {
@@ -1314,27 +1308,27 @@
     "semantic_hash": ""
   },
   "libs/shared/hermes-ai/tests/test_chat_engine.py": {
-    "mtime": 1794049520.4828544,
-    "seen": 1794227779.4164157,
-    "ast_hash": "9aa02af6a05f9a36c2a8c595f8c4877f",
+    "mtime": 1794309426.847369,
+    "seen": 1794390092.8205302,
+    "ast_hash": "0b8412a607cbd1aafc1cafd660d4b9ea",
     "semantic_hash": ""
   },
   "libs/shared/hermes-ai/tests/test_chat_models.py": {
-    "mtime": 1794048296.5548992,
-    "seen": 1794227779.4164233,
-    "ast_hash": "6c23209864c79d2fa19834e238f5739d",
+    "mtime": 1794249111.6046648,
+    "seen": 1794249153.918527,
+    "ast_hash": "56b04db45136f43869d0b2205046c5b7",
     "semantic_hash": ""
   },
   "libs/shared/hermes-ai/tests/test_chat_planner.py": {
-    "mtime": 1794161027.0716853,
-    "seen": 1794227779.416431,
-    "ast_hash": "41a18c7e06e15b7f3e85e6169fbaf9a9",
+    "mtime": 1794392735.48728,
+    "seen": 1794393117.3451416,
+    "ast_hash": "b25756dc67a7123a27eb3c6c4ea22c04",
     "semantic_hash": ""
   },
   "libs/shared/hermes-ai/tests/test_chat_prompts.py": {
-    "mtime": 1794048790.8139534,
-    "seen": 1794227779.4164388,
-    "ast_hash": "0af00a315c387b17c9de1709adfeae35",
+    "mtime": 1794392906.7257771,
+    "seen": 1794393117.3451545,
+    "ast_hash": "5706af3a3fe8cc502a039d37acfb8ce4",
     "semantic_hash": ""
   },
   "libs/shared/hermes-ai/tests/test_chat_retriever.py": {
@@ -1344,57 +1338,57 @@
     "semantic_hash": ""
   },
   "libs/shared/hermes-ai/tests/test_chat_web.py": {
-    "mtime": 1794048642.473488,
-    "seen": 1794227779.416455,
-    "ast_hash": "89fff9628a88fc45d51fda6a6f4151ca",
+    "mtime": 1794392907.9097521,
+    "seen": 1794393117.345176,
+    "ast_hash": "7872724c317d36deaa6082cc1f669eec",
     "semantic_hash": ""
   },
   "libs/shared/hermes-ai/tests/test_chat_wiring.py": {
-    "mtime": 1794049117.1476834,
-    "seen": 1794227779.4164627,
-    "ast_hash": "38101093285bc74c4d42f41cb9e9c125",
+    "mtime": 1794309428.5074298,
+    "seen": 1794390092.8205678,
+    "ast_hash": "0a10a9b8990673bb64be98211cd3bdfd",
     "semantic_hash": ""
   },
   "libs/shared/hermes-ai/tests/test_client.py": {
-    "mtime": 1793965294.889631,
-    "seen": 1794227779.4164705,
-    "ast_hash": "e5dcbe48659186893997895479f4460c",
+    "mtime": 1794261762.1940134,
+    "seen": 1794262078.3529236,
+    "ast_hash": "df23481ec6fd871971308bad4810703c",
     "semantic_hash": ""
   },
   "libs/shared/hermes-ai/tests/test_foundation.py": {
-    "mtime": 1794046730.8509092,
-    "seen": 1794227779.4164777,
-    "ast_hash": "d0e2a41d2c7d257aa8d2649c51e69095",
+    "mtime": 1794259158.652199,
+    "seen": 1794261540.7271109,
+    "ast_hash": "2d79658653253a3f6b03dc723b2a5df1",
     "semantic_hash": ""
   },
   "libs/shared/hermes-ai/tests/test_geocoding.py": {
-    "mtime": 1793965294.889631,
-    "seen": 1794227779.4164855,
-    "ast_hash": "2b142fe60a8abdd6a34d0be2ec41697d",
+    "mtime": 1794259159.9522247,
+    "seen": 1794261540.727122,
+    "ast_hash": "8ced279ecc1f6d7acc941798c4d74506",
     "semantic_hash": ""
   },
   "libs/shared/hermes-ai/tests/test_import_isolation.py": {
-    "mtime": 1794047097.4927661,
-    "seen": 1794227779.4164934,
-    "ast_hash": "66a7a860132e0ffd901d8c23323c69eb",
+    "mtime": 1794309430.751512,
+    "seen": 1794390092.8205926,
+    "ast_hash": "4c9570f38d3a626fc94ce71cdd513292",
     "semantic_hash": ""
   },
   "libs/shared/hermes-ai/tests/test_llm_service.py": {
-    "mtime": 1794048347.2844725,
-    "seen": 1794227779.4165013,
-    "ast_hash": "2a827f42c0851f6e47968ecef233f5c6",
+    "mtime": 1794261763.454042,
+    "seen": 1794262078.3529682,
+    "ast_hash": "596602f98328250d9fe824458d8042be",
     "semantic_hash": ""
   },
   "libs/shared/hermes-ai/tests/test_rate_limiter.py": {
-    "mtime": 1793965294.889631,
-    "seen": 1794227779.416509,
-    "ast_hash": "a9b4f55dbc2c3fc833317f59a9b36dc1",
+    "mtime": 1794259162.7642803,
+    "seen": 1794261540.727154,
+    "ast_hash": "c9acab4bf4d391d4e72433f1346d540d",
     "semantic_hash": ""
   },
   "libs/shared/hermes-db/migrations/env.py": {
-    "mtime": 1791894688.253864,
-    "seen": 1794227779.4165168,
-    "ast_hash": "c9713c5e95698f495e4a1f960a40825e",
+    "mtime": 1794472003.0968409,
+    "seen": 1794472221.6361024,
+    "ast_hash": "d95136dc2345e8274ab1d6a094c53a98",
     "semantic_hash": ""
   },
   "libs/shared/hermes-db/migrations/versions/2ec3541646e8_initial_schema.py": {
@@ -1506,21 +1500,9 @@
     "semantic_hash": ""
   },
   "libs/shared/hermes-db/src/hermes_db/base.py": {
-    "mtime": 1791894688.257864,
-    "seen": 1794227779.4166615,
-    "ast_hash": "ad331d1c439130b91179f0613d58b631",
-    "semantic_hash": ""
-  },
-  "libs/shared/hermes-db/src/hermes_db/core/__init__.py": {
-    "mtime": 1791894688.257864,
-    "seen": 1794227779.4166694,
-    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
-    "semantic_hash": ""
-  },
-  "libs/shared/hermes-db/src/hermes_db/core/config.py": {
-    "mtime": 1791894688.257864,
-    "seen": 1794227779.4166768,
-    "ast_hash": "7a4ca2fc7ab6bc48a5cb9fb3deb957f4",
+    "mtime": 1794479184.8347259,
+    "seen": 1794479193.9530702,
+    "ast_hash": "51736baa71e77dcca0d9e85e11b16b5c",
     "semantic_hash": ""
   },
   "libs/shared/hermes-db/src/hermes_db/data/sources.json": {
@@ -1530,9 +1512,9 @@
     "semantic_hash": ""
   },
   "libs/shared/hermes-db/src/hermes_db/enums.py": {
-    "mtime": 1793107546.5940115,
-    "seen": 1794227779.416692,
-    "ast_hash": "61b3651cf645b4a90c77ecf98401a0f9",
+    "mtime": 1794417571.4729753,
+    "seen": 1794417932.4660065,
+    "ast_hash": "50c4daa94c46610290e0a0c038463417",
     "semantic_hash": ""
   },
   "libs/shared/hermes-db/src/hermes_db/models/__init__.py": {
@@ -1542,15 +1524,15 @@
     "semantic_hash": ""
   },
   "libs/shared/hermes-db/src/hermes_db/models/article.py": {
-    "mtime": 1793107546.5940115,
-    "seen": 1794227779.4167066,
-    "ast_hash": "2a945cf248aa2367e643f5d8978815fb",
+    "mtime": 1794417589.0137193,
+    "seen": 1794417932.4660275,
+    "ast_hash": "e79509d36d769884c768b9c96c6a0131",
     "semantic_hash": ""
   },
   "libs/shared/hermes-db/src/hermes_db/models/event.py": {
-    "mtime": 1794047831.1279018,
-    "seen": 1794227779.4167144,
-    "ast_hash": "b94eef6f8a86a3fb7da6a1a8d1bb68dc",
+    "mtime": 1794474668.3050497,
+    "seen": 1794474924.5561426,
+    "ast_hash": "8919f475916b0f5cc21c374b193d17c3",
     "semantic_hash": ""
   },
   "libs/shared/hermes-db/src/hermes_db/models/event_tl.py": {
@@ -1560,21 +1542,21 @@
     "semantic_hash": ""
   },
   "libs/shared/hermes-db/src/hermes_db/models/geocode_cache.py": {
-    "mtime": 1791894688.2618642,
-    "seen": 1794227779.4167302,
-    "ast_hash": "3b0b5d0c47037cc699ba753fed87bcbe",
+    "mtime": 1794417589.0137193,
+    "seen": 1794417932.4660592,
+    "ast_hash": "e91b4fb02c9172afa2943d2cee859916",
     "semantic_hash": ""
   },
   "libs/shared/hermes-db/src/hermes_db/models/source.py": {
-    "mtime": 1791894688.2618642,
-    "seen": 1794227779.4167378,
-    "ast_hash": "3b4fe18ed61390a1c6642c2440895c52",
+    "mtime": 1794417589.02572,
+    "seen": 1794417932.46607,
+    "ast_hash": "c9bd235631df078d111f087e1516d60b",
     "semantic_hash": ""
   },
   "libs/shared/hermes-db/src/hermes_db/protocols.py": {
-    "mtime": 1793107546.5980117,
-    "seen": 1794227779.4167452,
-    "ast_hash": "7c76af152e54e9806e5a7f5da4d27332",
+    "mtime": 1794413143.6814826,
+    "seen": 1794417932.4660802,
+    "ast_hash": "d42d7dad6fe18f48df667fac8c27abc8",
     "semantic_hash": ""
   },
   "libs/shared/hermes-db/src/hermes_db/services/__init__.py": {
@@ -1584,15 +1566,15 @@
     "semantic_hash": ""
   },
   "libs/shared/hermes-db/src/hermes_db/services/article.py": {
-    "mtime": 1791894688.2618642,
-    "seen": 1794227779.4167602,
-    "ast_hash": "fdfc4ab2f0b9d0d0492f38e1db7ca1a8",
+    "mtime": 1794474830.643043,
+    "seen": 1794474924.5562031,
+    "ast_hash": "df306cb6f91d9077463a3212c8a6a3ff",
     "semantic_hash": ""
   },
   "libs/shared/hermes-db/src/hermes_db/services/event.py": {
-    "mtime": 1793107546.5980117,
-    "seen": 1794227779.4167678,
-    "ast_hash": "1bbc7ec7011ebf7b823d6a68b0c31ede",
+    "mtime": 1794417571.4529746,
+    "seen": 1794417932.4661107,
+    "ast_hash": "2c99fa7dad560d520254e9c63aaa3377",
     "semantic_hash": ""
   },
   "libs/shared/hermes-db/src/hermes_db/services/geocode.py": {
@@ -1602,21 +1584,21 @@
     "semantic_hash": ""
   },
   "libs/shared/hermes-db/src/hermes_db/services/ranking.py": {
-    "mtime": 1793107546.5980117,
-    "seen": 1794227779.4167829,
-    "ast_hash": "0a0b8e719d82fb81e9f440aa011d7706",
+    "mtime": 1794474836.2348409,
+    "seen": 1794474924.5562334,
+    "ast_hash": "6cf45b8dc15b3176d93fc826ac50df99",
     "semantic_hash": ""
   },
   "libs/shared/hermes-db/src/hermes_db/services/search.py": {
-    "mtime": 1794216420.1180668,
-    "seen": 1794227779.4167905,
-    "ast_hash": "c362891278cb66594faeaec7ca9efe8f",
+    "mtime": 1794474806.8440127,
+    "seen": 1794474924.5562441,
+    "ast_hash": "b674e9b598929b0d3181204b58727131",
     "semantic_hash": ""
   },
   "libs/shared/hermes-db/src/hermes_db/services/source.py": {
-    "mtime": 1793107546.5980117,
-    "seen": 1794227779.4167979,
-    "ast_hash": "b20a659e166ad2033a1fcb6553dc8130",
+    "mtime": 1794474833.7629292,
+    "seen": 1794474924.5562549,
+    "ast_hash": "9b877337c6717ae8fb15e6f252f60494",
     "semantic_hash": ""
   },
   "libs/shared/hermes-db/src/hermes_db/services/tl.py": {
@@ -1626,9 +1608,9 @@
     "semantic_hash": ""
   },
   "libs/shared/hermes-db/src/hermes_db/session.py": {
-    "mtime": 1793107546.5980117,
-    "seen": 1794227779.4168127,
-    "ast_hash": "5ce19a699d5ea1cd913be2e0feac2910",
+    "mtime": 1794417571.464975,
+    "seen": 1794417932.4661715,
+    "ast_hash": "ad1bbd0e6950719d799c360d3d5b83c1",
     "semantic_hash": ""
   },
   "libs/shared/hermes-db/tests/__init__.py": {
@@ -1638,9 +1620,9 @@
     "semantic_hash": ""
   },
   "libs/shared/hermes-db/tests/conftest.py": {
-    "mtime": 1791894688.2618642,
-    "seen": 1794227779.4168284,
-    "ast_hash": "4b42cc05eabf0bef91c31ba7b55e6056",
+    "mtime": 1794417366.7443693,
+    "seen": 1794417932.4661934,
+    "ast_hash": "120c3da5771e87abedf9214f8db2152f",
     "semantic_hash": ""
   },
   "libs/shared/hermes-db/tests/test_article_service.py": {
@@ -1650,15 +1632,9 @@
     "semantic_hash": ""
   },
   "libs/shared/hermes-db/tests/test_base.py": {
-    "mtime": 1791894688.2618642,
-    "seen": 1794227779.4168434,
-    "ast_hash": "18548c65e8a16e775c20070e65ac084c",
-    "semantic_hash": ""
-  },
-  "libs/shared/hermes-db/tests/test_config.py": {
-    "mtime": 1791894688.2618642,
-    "seen": 1794227779.4168508,
-    "ast_hash": "592220da62d4516f9feaef757217235a",
+    "mtime": 1794474827.3991647,
+    "seen": 1794474924.5563352,
+    "ast_hash": "24d7a7652ed71a744e8c367aa2d7c525",
     "semantic_hash": ""
   },
   "libs/shared/hermes-db/tests/test_enums.py": {
@@ -1674,9 +1650,9 @@
     "semantic_hash": ""
   },
   "libs/shared/hermes-db/tests/test_event_service.py": {
-    "mtime": 1793107546.5980117,
-    "seen": 1794227779.4168742,
-    "ast_hash": "26915b4a291696e63cd5c90599c73119",
+    "mtime": 1794417571.468975,
+    "seen": 1794417932.4662516,
+    "ast_hash": "638eaca5eac83eddd39b2fa819dc8f0b",
     "semantic_hash": ""
   },
   "libs/shared/hermes-db/tests/test_geocode_service.py": {
@@ -1686,21 +1662,21 @@
     "semantic_hash": ""
   },
   "libs/shared/hermes-db/tests/test_models.py": {
-    "mtime": 1793107546.5980117,
-    "seen": 1794227779.4168894,
-    "ast_hash": "cc727ccac3b23ba774daa44bff9d1aec",
+    "mtime": 1794413728.4668937,
+    "seen": 1794417932.466271,
+    "ast_hash": "a80122b1ecbb6bddea13c20aafc3ff10",
     "semantic_hash": ""
   },
   "libs/shared/hermes-db/tests/test_ranking.py": {
-    "mtime": 1793107546.602012,
-    "seen": 1794227779.4168973,
-    "ast_hash": "28f7045ee36da487d2885f20b31d7622",
+    "mtime": 1794413467.2443855,
+    "seen": 1794417932.4662812,
+    "ast_hash": "e4d012d3e78767191cb654913cee305d",
     "semantic_hash": ""
   },
   "libs/shared/hermes-db/tests/test_search_service.py": {
-    "mtime": 1794216439.2305613,
-    "seen": 1794227779.4169054,
-    "ast_hash": "733e66b8a4351a3fb54e5a2395e03325",
+    "mtime": 1794474812.7637541,
+    "seen": 1794474924.556405,
+    "ast_hash": "8c95bec7469f592ff1378bcab1d34ebc",
     "semantic_hash": ""
   },
   "libs/shared/hermes-db/tests/test_services.py": {
@@ -1710,9 +1686,9 @@
     "semantic_hash": ""
   },
   "libs/shared/hermes-db/tests/test_session.py": {
-    "mtime": 1791894688.2658641,
-    "seen": 1794227779.4169211,
-    "ast_hash": "f2025a8f24c11fe1a20dfacbfc48465e",
+    "mtime": 1794417390.677367,
+    "seen": 1794417932.4663117,
+    "ast_hash": "0701ab4bd66a29a7188da96d5926a45c",
     "semantic_hash": ""
   },
   "libs/shared/hermes-db/tests/test_source_service.py": {
@@ -2058,9 +2034,9 @@
     "semantic_hash": ""
   },
   "opencode.json": {
-    "mtime": 1794152365.3696153,
-    "seen": 1794227779.4174395,
-    "ast_hash": "1c5ecd9bb6718a0c5c8222a1e8cccdb2",
+    "mtime": 1794249007.678807,
+    "seen": 1794249153.920752,
+    "ast_hash": "893097ca359105e2037caf3d722cf12c",
     "semantic_hash": ""
   },
   "openspec/changes/archive/2026-10-20-multi-source-ingestion-and-ranking/.openspec.yaml": {
@@ -2130,9 +2106,9 @@
     "semantic_hash": ""
   },
   ".agents/rules/explanations.md": {
-    "mtime": 1791894688.2138634,
-    "seen": 1794227779.4175503,
-    "ast_hash": "ceddd55ec40a161a0ba386f3e30bbe1e",
+    "mtime": 1794312655.8165216,
+    "seen": 1794390092.821446,
+    "ast_hash": "13ae4a14dd637d104c9bf917c0265f5f",
     "semantic_hash": ""
   },
   ".agents/rules/python-standards.md": {
@@ -2346,9 +2322,9 @@
     "semantic_hash": ""
   },
   "apps/hermes-worker/AGENTS.md": {
-    "mtime": 1794046277.982429,
-    "seen": 1794227779.417891,
-    "ast_hash": "470dc1405e2c1e006a547d38f6b3c52b",
+    "mtime": 1794417471.2767444,
+    "seen": 1794417932.4678679,
+    "ast_hash": "da37d3893c218b5d464e38cfaa745fee",
     "semantic_hash": ""
   },
   "apps/hermes-worker/README.md": {
@@ -2412,15 +2388,15 @@
     "semantic_hash": ""
   },
   "libs/shared/hermes-ai/AGENTS.md": {
-    "mtime": 1794046277.982429,
-    "seen": 1794227779.4179883,
-    "ast_hash": "dae7d57278b83122ade55f95ac8dde89",
+    "mtime": 1794251442.8894017,
+    "seen": 1794252483.137479,
+    "ast_hash": "7742798eb1b727090dd4ee60a60246e2",
     "semantic_hash": ""
   },
   "libs/shared/hermes-ai/README.md": {
-    "mtime": 1794046277.982429,
-    "seen": 1794227779.417998,
-    "ast_hash": "ca906f0f61507b5aeb96e686f2bcc2ff",
+    "mtime": 1794259147.9399872,
+    "seen": 1794261540.7292836,
+    "ast_hash": "b53b5072b43f4fb2e23a54f6c5d46673",
     "semantic_hash": ""
   },
   "libs/shared/hermes-db/.agents/rules/standards.md": {
@@ -2430,9 +2406,9 @@
     "semantic_hash": ""
   },
   "libs/shared/hermes-db/AGENTS.md": {
-    "mtime": 1793107546.5940115,
-    "seen": 1794227779.4180167,
-    "ast_hash": "f0b4cdb189d4dff7654457d1b2924207",
+    "mtime": 1794472032.2285376,
+    "seen": 1794472221.637001,
+    "ast_hash": "1feab0013f345bbef6d4b89e09a3b218",
     "semantic_hash": ""
   },
   "openspec/changes/archive/2026-10-20-multi-source-ingestion-and-ranking/design.md": {
@@ -2532,9 +2508,9 @@
     "semantic_hash": ""
   },
   "reports/apps/hermes-api/unittests/html/index.html": {
-    "mtime": 1794227635.686738,
-    "seen": 1794227779.4181902,
-    "ast_hash": "98e41fe7442c017d3ed77df802abc5db",
+    "mtime": 1794480272.8662527,
+    "seen": 1794480306.7572727,
+    "ast_hash": "426151355ac0f2b87de3aa1aa546c6f7",
     "semantic_hash": ""
   },
   "apps/hermes/app/assets/dark-texture.jpg": {
@@ -2559,6 +2535,78 @@
     "mtime": 1793107546.5620103,
     "seen": 1794227779.4182215,
     "ast_hash": "d5d0af140f62320d0340ea1babb99aa8",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-ai/src/hermes_ai/services/langfuse.py": {
+    "mtime": 1794302531.277462,
+    "seen": 1794302736.0696027,
+    "ast_hash": "c92f2b3c479c9ba435aa5cb5674ecd8d",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-ai/src/hermes_ai/chat/citations/__init__.py": {
+    "mtime": 1794389850.0490744,
+    "seen": 1794390092.820261,
+    "ast_hash": "7d9d2536a681abb3a9c88d68a1ee1b04",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-ai/src/hermes_ai/chat/citations/registry.py": {
+    "mtime": 1794392807.0924926,
+    "seen": 1794393117.3446305,
+    "ast_hash": "ed63f8504ed52696a1d5525e4bea41ab",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-ai/src/hermes_ai/chat/citations/stream.py": {
+    "mtime": 1794389844.274472,
+    "seen": 1794390092.8202794,
+    "ast_hash": "d91fc95d10722bc631f213724c4eeac8",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-ai/src/hermes_ai/chat/citations/types.py": {
+    "mtime": 1794392660.9344926,
+    "seen": 1794393117.3446565,
+    "ast_hash": "ad4cc130e701931e27b462d70200ca52",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-ai/src/hermes_ai/utils/sanitization.py": {
+    "mtime": 1794393100.4035642,
+    "seen": 1794393117.3450744,
+    "ast_hash": "872609d90ac9e7c79fd406d2212dae3b",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-ai/tests/test_sanitization.py": {
+    "mtime": 1794392950.5529547,
+    "seen": 1794393117.3452508,
+    "ast_hash": "4d9ae8542c7cf52529595793aea31e4b",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-db/migrations/versions/9e1bb45d1cba_harden_event_schema_indexes_and_.py": {
+    "mtime": 1794413901.28321,
+    "seen": 1794417932.4658115,
+    "ast_hash": "6a81797cc60ca1c93cadf491b1f93544",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-db/docs/architecture.md": {
+    "mtime": 1794472174.646376,
+    "seen": 1794472221.6370084,
+    "ast_hash": "f91b79ce1f3c7c64c6b29d3ce63cd4bb",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-db/src/hermes_db/utils/__init__.py": {
+    "mtime": 1794474787.2169628,
+    "seen": 1794474924.556284,
+    "ast_hash": "8539cbab8281cedf48af122eb89f12c0",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-db/src/hermes_db/utils/datetime.py": {
+    "mtime": 1794479166.6621664,
+    "seen": 1794479193.9532256,
+    "ast_hash": "8e3c7830da0bc1775a1a213fed86bd5e",
+    "semantic_hash": ""
+  },
+  "libs/shared/hermes-db/tests/test_utils.py": {
+    "mtime": 1794474790.448796,
+    "seen": 1794474924.5564456,
+    "ast_hash": "92c9038819fc575fd2716f0f0358d190",
     "semantic_hash": ""
   },
   "package-lock.json": {
