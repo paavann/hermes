@@ -180,14 +180,13 @@ describe('renderCitations', () => {
   });
 
   it('styles background knowledge as unverified and inert', () => {
-    const { container } = render(
-      <p>{renderCitations('Context [BG].', [])}</p>,
-    );
+    const { container } = render(<p>{renderCitations('Context [BG].', [])}</p>);
 
     const background = container.querySelector('[data-citation="BG"]');
     expect(background).not.toBeNull();
     expect(background?.tagName).toBe('SPAN');
-    expect(background?.className).toContain('text-warning-yellow');
+    expect(background?.className).toContain('bg-warning-yellow');
+    expect(background?.className).toContain('text-black');
     expect(screen.queryByRole('button')).toBeNull();
   });
 

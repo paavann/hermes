@@ -1,4 +1,10 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -90,9 +96,9 @@ function wrapper({ children }: { children: ReactNode }): React.JSX.Element {
   );
 }
 
-function renderPanel(
-  overrides: Partial<ChatPanelProps> = {},
-): ReturnType<typeof render> & {
+function renderPanel(overrides: Partial<ChatPanelProps> = {}): ReturnType<
+  typeof render
+> & {
   onSources: ReturnType<typeof vi.fn>;
   onCitationActivate: ReturnType<typeof vi.fn>;
 } {
@@ -144,7 +150,7 @@ beforeEach(() => {
 });
 
 describe('ChatPanel', () => {
-  it('dismisses to a tab and reopens', () => {
+  it('dismisses to a rail and reopens', () => {
     renderPanel();
 
     expect(screen.queryByLabelText('Hermes chat')).toBeNull();
@@ -156,6 +162,49 @@ describe('ChatPanel', () => {
     expect(screen.getByRole('button', { name: 'Open chat' })).toBeTruthy();
   });
 
+  it('uses a solid, minimal panel chrome', () => {
+    renderPanel();
+
+    const rail = screen.getByTestId('chat-rail');
+    expect(rail.className).toContain('w-12');
+    expect(rail.className).toContain('bg-neutral-900');
+    const openButton = screen.getByRole('button', { name: 'Open chat' });
+    expect(openButton.querySelector('svg')).not.toBeNull();
+    expect(openButton.className).toContain('hover:text-white');
+    expect(openButton.className).not.toContain('hover:bg-');
+
+    openPanel();
+
+    const panel = screen.getByLabelText('Hermes chat');
+    expect(panel.className).toContain('bg-neutral-900');
+    expect(panel.className).not.toContain('bg-black');
+    expect(screen.getByText('EXPLORE')).toBeTruthy();
+    expect(screen.queryByText('HERMES // CHAT')).toBeNull();
+    expect(document.querySelector('[class*="backdrop-blur"]')).toBeNull();
+    expect(document.querySelector('[class*="bg-hud-bg/95"]')).toBeNull();
+  });
+
+  it('renders solid accent controls without a resolved scope readout', () => {
+    renderPanel();
+    openPanel();
+
+    expect(
+      screen.getByRole('button', { name: 'Clear conversation' }).className,
+    ).toContain('bg-signal-teal');
+    expect(
+      screen.getByRole('button', { name: 'Close chat' }).className,
+    ).toContain('bg-danger');
+
+    expect(screen.getByRole('button', { name: 'auto' }).className).toContain(
+      'bg-signal-teal',
+    );
+    expect(
+      screen.getByRole('button', { name: 'viewport' }).className,
+    ).not.toContain('bg-signal-teal');
+
+    expect(screen.queryByText('GLOBAL')).toBeNull();
+  });
+
   it('preserves the conversation across close and reopen', async () => {
     const transport = deferredTransport();
     renderPanel({ transport: transport.stream });
@@ -163,7 +212,10 @@ describe('ChatPanel', () => {
     sendQuestion('What happened?');
 
     await waitFor(() => expect(transport.calls).toHaveLength(1));
-    completeTurn(transport, [{ type: 'token', text: 'Grounded answer.' }, done]);
+    completeTurn(transport, [
+      { type: 'token', text: 'Grounded answer.' },
+      done,
+    ]);
     await waitFor(() =>
       expect(screen.queryByTestId('streaming-cursor')).toBeNull(),
     );

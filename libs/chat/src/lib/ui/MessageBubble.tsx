@@ -1,3 +1,6 @@
+import { CaretDown, CaretRight } from '@phosphor-icons/react';
+import { useState } from 'react';
+
 import type { ChatSource } from '@hermes/util-types';
 
 import type { ChatMessage } from '../store/chat-store';
@@ -27,7 +30,7 @@ function sourceLabel(source: ChatSource): string {
   if (source.is_external) {
     parts.push('EXTERNAL');
   }
-  return parts.join(' // ');
+  return parts.join(' · ');
 }
 
 export function MessageBubble({
@@ -35,6 +38,7 @@ export function MessageBubble({
   onRetry,
   onCitationActivate,
 }: MessageBubbleProps): React.JSX.Element {
+  const [isSourcesOpen, setIsSourcesOpen] = useState(false);
   const isUser = message.role === 'user';
   const isStreaming = message.status === 'streaming';
   const hasMissingCitations =
@@ -42,50 +46,68 @@ export function MessageBubble({
 
   return (
     <article
-      className={`flex flex-col gap-2 ${
+      className={`flex flex-col gap-1.5 ${
         isUser ? 'items-end' : 'items-stretch'
       }`}
       data-role={message.role}
       data-status={message.status}
       data-streaming={isStreaming ? 'true' : 'false'}
     >
-      <div className="text-[9px] tracking-[0.2em] text-slate-muted uppercase">
-        {isUser ? 'YOU' : 'HERMES'}
+      <div className="flex items-center gap-2 text-[10px] tracking-[0.2em] uppercase">
+        {isUser ? (
+          <span className="text-slate-muted">YOU</span>
+        ) : (
+          <span className="font-bold text-neon-blue">HERMES</span>
+        )}
       </div>
 
       {isUser ? (
-        <p className="max-w-[85%] border border-border-subtle bg-black/50 px-3 py-2 text-xs leading-relaxed text-ivory whitespace-pre-wrap">
+        <div className="max-w-[90%] border border-border-subtle bg-neutral-900 px-3 py-2 text-xs leading-relaxed text-ivory whitespace-pre-wrap">
           {message.content}
-        </p>
+        </div>
       ) : (
-        <div className="border-l-2 border-neon-blue bg-black/40 px-3 py-2 text-xs leading-relaxed text-gray-300 whitespace-pre-wrap">
-          {message.content.length > 0 ? (
-            <MessageText
-              content={message.content}
-              sources={message.sources}
-              onCitationActivate={onCitationActivate}
-            />
+        <div className="border border-border-subtle border-l-2 border-l-neon-blue bg-black px-3 py-2.5 text-xs leading-relaxed text-neutral-200">
+          {isStreaming && message.content.length === 0 ? (
+            <div className="flex items-center gap-2 text-[11px] text-slate-muted">
+              <span className="inline-block h-1.5 w-1.5 animate-pulse bg-neon-blue" />
+              <span className="tracking-wider uppercase">SYNTHESIZING RESPONSE...</span>
+              <span
+                className="inline-block h-3 w-1.5 animate-pulse bg-neon-blue align-middle"
+                aria-label="Assistant is responding"
+                data-testid="streaming-cursor"
+              />
+            </div>
           ) : null}
-          {isStreaming ? (
-            <span
-              className="ml-0.5 inline-block h-3 w-1.5 animate-pulse bg-neon-blue align-middle"
-              aria-label="Assistant is responding"
-              data-testid="streaming-cursor"
-            />
+
+          {message.content.length > 0 ? (
+            <div>
+              <MessageText
+                content={message.content}
+                sources={message.sources}
+                onCitationActivate={onCitationActivate}
+              />
+              {isStreaming ? (
+                <span
+                  className="ml-0.5 inline-block h-3 w-1.5 animate-pulse bg-neon-blue align-middle"
+                  aria-label="Assistant is responding"
+                  data-testid="streaming-cursor"
+                />
+              ) : null}
+            </div>
           ) : null}
         </div>
       )}
 
       {message.status === 'error' && message.error !== null ? (
-        <div className="flex flex-col gap-2 border border-[#ef4444]/60 bg-[#ef4444]/10 px-3 py-2">
-          <p className="text-[10px] tracking-wider text-[#f87171] uppercase">
+        <div className="flex flex-col gap-2 border border-danger bg-black px-3 py-2">
+          <p className="text-[10px] font-bold tracking-wider text-danger-bright uppercase">
             {message.error.code}
           </p>
           <p className="text-[11px] text-gray-300">{message.error.message}</p>
           <button
             type="button"
             onClick={onRetry}
-            className="w-full cursor-pointer border border-[#ef4444]/60 px-2 py-1 text-[10px] font-bold tracking-widest text-[#f87171] uppercase transition-colors hover:bg-[#ef4444]/20"
+            className="w-full cursor-pointer border border-signal-teal bg-signal-teal px-2 py-1 text-[10px] font-bold tracking-wider text-black uppercase transition-colors hover:border-signal-teal-bright hover:bg-signal-teal-bright focus-visible:outline-1 focus-visible:outline-neon-blue focus-visible:outline-offset-2"
           >
             RETRY
           </button>
@@ -93,14 +115,14 @@ export function MessageBubble({
       ) : null}
 
       {message.status === 'cancelled' ? (
-        <div className="flex items-center justify-between gap-2 border border-border-subtle bg-black/30 px-3 py-2">
-          <span className="text-[10px] tracking-widest text-slate-muted uppercase">
+        <div className="flex items-center justify-between gap-2 border border-border-subtle bg-black px-3 py-2">
+          <span className="text-[10px] tracking-wider text-slate-muted uppercase">
             CANCELLED
           </span>
           <button
             type="button"
             onClick={onRetry}
-            className="cursor-pointer border border-border-subtle px-2 py-1 text-[10px] font-bold tracking-widest text-slate-muted uppercase transition-colors hover:text-neon-blue"
+            className="cursor-pointer border border-signal-teal bg-signal-teal px-2 py-1 text-[10px] font-bold tracking-wider text-black uppercase transition-colors hover:border-signal-teal-bright hover:bg-signal-teal-bright focus-visible:outline-1 focus-visible:outline-neon-blue focus-visible:outline-offset-2"
           >
             RETRY
           </button>
@@ -108,36 +130,56 @@ export function MessageBubble({
       ) : null}
 
       {message.sources.length > 0 ? (
-        <div className="flex flex-col gap-1 border border-border-subtle bg-black/30 px-3 py-2">
-          <span className="text-[9px] tracking-[0.2em] text-neon-blue uppercase">
-            SOURCES
-          </span>
-          {message.sources.map((source) => {
-            const timestamp = sourceTimestamp(source);
-            return (
-              <button
-                key={`${source.kind}-${source.id}`}
-                type="button"
-                onClick={() => onCitationActivate?.(source)}
-                className="flex cursor-pointer flex-col items-start gap-0.5 text-left transition-colors hover:text-neon-blue"
-              >
-                <span className="w-full truncate text-[10px] text-gray-300">
-                  {source.title}
-                </span>
-                <span className="text-[9px] tracking-wider text-slate-muted uppercase">
-                  {sourceLabel(source)}
-                  {timestamp !== null ? ` // ${timestamp}` : ''}
-                </span>
-              </button>
-            );
-          })}
+        <div className="flex flex-col border border-border-subtle bg-black">
+          <button
+            type="button"
+            onClick={() => setIsSourcesOpen(!isSourcesOpen)}
+            className="flex cursor-pointer items-center justify-between px-3 py-1.5 text-left transition-colors hover:bg-neutral-900 focus-visible:outline-1 focus-visible:outline-neon-blue"
+            aria-expanded={isSourcesOpen}
+          >
+            <div className="flex items-center gap-1.5 text-[11px] font-bold tracking-wider text-neon-blue uppercase">
+              {isSourcesOpen ? (
+                <CaretDown size={12} weight="bold" />
+              ) : (
+                <CaretRight size={12} weight="bold" />
+              )}
+              <span>SOURCES ({message.sources.length})</span>
+            </div>
+            <span className="text-[9px] tracking-wider text-slate-muted uppercase">
+              {isSourcesOpen ? 'COLLAPSE' : 'EXPAND'}
+            </span>
+          </button>
+
+          {isSourcesOpen ? (
+            <div className="flex flex-col gap-2 border-t border-border-subtle px-3 py-2">
+              {message.sources.map((source) => {
+                const timestamp = sourceTimestamp(source);
+                return (
+                  <button
+                    key={`${source.kind}-${source.id}`}
+                    type="button"
+                    onClick={() => onCitationActivate?.(source)}
+                    className="flex cursor-pointer flex-col items-start gap-0.5 text-left transition-colors hover:text-neon-blue focus-visible:outline-1 focus-visible:outline-neon-blue"
+                  >
+                    <span className="w-full truncate text-[10px] text-gray-300">
+                      {source.title}
+                    </span>
+                    <span className="text-[9px] tracking-wider text-slate-muted uppercase">
+                      {sourceLabel(source)}
+                      {timestamp !== null ? ` · ${timestamp}` : ''}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          ) : null}
         </div>
       ) : null}
 
       {message.done !== null ? (
         <div
           data-testid="provenance-footer"
-          className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[9px] tracking-wider text-slate-muted uppercase"
+          className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[9px] tracking-wider text-slate-muted uppercase tabular-nums"
         >
           <span>
             PLOTTED{' '}
@@ -145,10 +187,15 @@ export function MessageBubble({
               message.done.provenance.articles +
               message.done.provenance.timeline_nodes}
           </span>
+          <span>·</span>
           <span>WEB {message.done.provenance.web}</span>
+          <span>·</span>
           <span>BG {message.done.provenance.background ? 'YES' : 'NO'}</span>
           {hasMissingCitations ? (
-            <span className="text-warning-yellow">UNGROUNDED ANSWER</span>
+            <>
+              <span>·</span>
+              <span className="text-warning-yellow">UNGROUNDED ANSWER</span>
+            </>
           ) : null}
         </div>
       ) : null}

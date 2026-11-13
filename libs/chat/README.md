@@ -9,7 +9,7 @@ directly; it posts to `POST /api/{apiVer}/chat` and consumes the stream.
 
 ## Composition
 
-`ChatPanel` owns the `useChat` hook and renders its own closed-state tab. Mount
+`ChatPanel` owns the `useChat` hook and renders its own closed-state rail. Mount
 it inside a positioned map container and provide the API configuration through
 `ChatConfigProvider`.
 

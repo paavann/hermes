@@ -24,8 +24,7 @@ export interface CitationRenderOptions {
   onActivate?: (source: ChatSource) => void;
 }
 
-const MARKER_PATTERN =
-  /\[((?:BG|[EATW]\d+)(?:\s*,\s*(?:BG|[EATW]\d+))*)\]/gi;
+const MARKER_PATTERN = /\[((?:BG|[EATW]\d+)(?:\s*,\s*(?:BG|[EATW]\d+))*)\]/gi;
 
 const KIND_BY_PREFIX: Record<string, ChatSourceKind> = {
   E: 'event',
@@ -36,18 +35,17 @@ const KIND_BY_PREFIX: Record<string, ChatSourceKind> = {
 
 const CLICKABLE_CLASS: Record<ChatSourceKind, string> = {
   event:
-    'text-neon-blue hover:text-white underline decoration-dotted underline-offset-2 cursor-pointer',
+    'text-neon-blue hover:text-white underline decoration-dotted underline-offset-2 cursor-pointer focus-visible:outline-1 focus-visible:outline-neon-blue',
   article:
-    'text-neon-blue hover:text-white underline decoration-dotted underline-offset-2 cursor-pointer',
+    'text-neon-blue hover:text-white underline decoration-dotted underline-offset-2 cursor-pointer focus-visible:outline-1 focus-visible:outline-neon-blue',
   timeline:
-    'text-neon-blue hover:text-white underline decoration-dotted underline-offset-2 cursor-pointer',
-  web:
-    'text-warning-yellow hover:text-white underline decoration-dotted underline-offset-2 cursor-pointer',
+    'text-neon-blue hover:text-white underline decoration-dotted underline-offset-2 cursor-pointer focus-visible:outline-1 focus-visible:outline-neon-blue',
+  web: 'text-warning-yellow hover:text-white underline decoration-dotted underline-offset-2 cursor-pointer focus-visible:outline-1 focus-visible:outline-neon-blue',
 };
 
 const PLAIN_CLASS = 'text-slate-muted cursor-default';
 const BACKGROUND_CLASS =
-  'text-warning-yellow bg-warning-yellow/10 px-1 cursor-help';
+  'bg-warning-yellow px-1 font-bold text-black cursor-help';
 
 /** True when activating the citation can move the map or open a URL. */
 export function isFocusableSource(source: ChatSource | null): boolean {
@@ -164,7 +162,9 @@ export function citationClass(segment: CitationMarkerSegment): string {
   return CLICKABLE_CLASS[segment.kind];
 }
 
-export function citationTitle(segment: CitationMarkerSegment): string | undefined {
+export function citationTitle(
+  segment: CitationMarkerSegment,
+): string | undefined {
   if (segment.kind === 'background') {
     return 'Background knowledge, not derived from plotted evidence';
   }
