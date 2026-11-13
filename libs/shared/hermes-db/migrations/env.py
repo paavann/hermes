@@ -1,19 +1,53 @@
 import asyncio
+import os
 from logging.config import fileConfig
+from pathlib import Path
+
 from alembic import context
+from dotenv import load_dotenv
 from geoalchemy2 import alembic_helpers
-from sqlalchemy import pool
+from sqlalchemy import URL, pool
 from sqlalchemy.ext.asyncio import async_engine_from_config
+
 import hermes_db.models
-from hermes_db.core.config import settings
 from hermes_db.base import Base
+
+
+def _get_migration_db_url() -> URL:
+    root_dir = Path(__file__).resolve().parents[3]
+    env = os.getenv("ENV", "development").lower()
+
+    for env_name in (f".env.{env}.local", ".env.local", f".env.{env}", ".env"):
+        env_path = root_dir / env_name
+        if env_path.is_file():
+            load_dotenv(env_path)
+
+    host = os.getenv("DB_HOST", "localhost")
+    port = int(os.getenv("DB_PORT", "5432"))
+    name = os.getenv("DB_NAME", "hermes")
+    user = os.getenv("DB_USER", "postgres")
+    password = os.getenv("DB_PASSWORD", "")
+
+    query: dict[str, str] = {}
+    if host not in ("localhost", "127.0.0.1", "hermes-db"):
+        query["ssl"] = "require"
+
+    return URL.create(
+        drivername="postgresql+asyncpg",
+        username=user,
+        password=password,
+        host=host,
+        port=port,
+        database=name,
+        query=query,
+    )
 
 
 config = context.config
 
 config.set_main_option(
     "sqlalchemy.url",
-    settings.db_url.render_as_string(hide_password=False).replace("%", "%%"),
+    _get_migration_db_url().render_as_string(hide_password=False).replace("%", "%%"),
 )
 
 if config.config_file_name is not None:

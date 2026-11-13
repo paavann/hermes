@@ -9,12 +9,6 @@ constructed MagicMock / AsyncMock so that:
 * Side-effects (session.add, session.commit, …) are recorded and asserted.
 """
 
-import os
-
-
-# Set fallback test credentials before any hermes_db imports load settings
-os.environ.setdefault("DB_PASSWORD", "mock_test_password")
-
 import asyncio
 import uuid
 from datetime import UTC, datetime
@@ -36,8 +30,8 @@ def make_uuid() -> uuid.UUID:
 
 
 def utcnow() -> datetime:
-    """Return the current UTC time (tz-naive, matching the production code)."""
-    return datetime.now(UTC).replace(tzinfo=None)
+    """Return the current timezone-aware UTC time."""
+    return datetime.now(UTC)
 
 
 # ---------------------------------------------------------------------------

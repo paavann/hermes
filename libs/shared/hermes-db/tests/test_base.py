@@ -12,8 +12,9 @@ factories), we test it directly.
 """
 
 import uuid
+from datetime import datetime
 
-from sqlalchemy import inspect
+from sqlalchemy import DateTime, inspect
 from sqlalchemy.orm import DeclarativeBase
 
 from hermes_db.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
@@ -123,3 +124,13 @@ class TestTimestampMixin:
         """updated_at must carry an onupdate hook so it refreshes on writes."""
         col = inspect(_SampleModel).columns["updated_at"]
         assert col.onupdate is not None
+
+    def test_timestamp_columns_use_timezone_aware_datetime(self) -> None:
+        """created_at and updated_at must map to TIMESTAMPTZ via Base.type_annotation_map."""
+        assert isinstance(Base.type_annotation_map[datetime], DateTime)
+        assert Base.type_annotation_map[datetime].timezone is True
+        cols = inspect(_SampleModel).columns
+        assert isinstance(cols["created_at"].type, DateTime)
+        assert cols["created_at"].type.timezone is True
+        assert isinstance(cols["updated_at"].type, DateTime)
+        assert cols["updated_at"].type.timezone is True

@@ -214,6 +214,17 @@ class TestInitDb:
             )
             mock_factory.configure.assert_called_once_with(bind=new_engine)
 
+    def test_raises_value_error_when_no_url_and_uninitialized_engine(self):
+        """When db_url is None and engine is None, ValueError must be raised."""
+        with patch("hermes_db.session.engine", None):
+            from hermes_db.session import init_db
+
+            with pytest.raises(
+                ValueError,
+                match="db_url must be provided when database engine is not initialized",
+            ):
+                run(init_db())
+
 
 # ---------------------------------------------------------------------------
 # close_db

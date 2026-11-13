@@ -147,12 +147,14 @@ class TestEventModel:
         col = inspect(Event).columns["velocity"]
         assert col.default is not None
         assert col.default.arg == 1.0
+        assert col.server_default is not None
 
     def test_impact_level_default(self):
         """impact_level column default must be ImpactLevel.MODERATE."""
         col = inspect(Event).columns["impact_level"]
         assert col.default is not None
         assert col.default.arg == ImpactLevel.MODERATE
+        assert col.server_default is not None
 
     def test_article_count_default(self):
         """article_count column default must be 0."""
@@ -161,17 +163,28 @@ class TestEventModel:
         assert col.default.arg == 0
 
     def test_articles_relationship(self):
-        rels = {r.key for r in inspect(Event).relationships}
-        assert "articles" in rels
+        rel = inspect(Event).relationships["articles"]
+        assert rel.passive_deletes is True
+        assert rel.lazy == "raise"
 
     def test_indexes_defined(self):
-        """The gist, hnsw, and partial indexes must exist in __table_args__."""
-        index_names = {idx.name for idx in Event.__table__.indexes}
-        assert "idx_events_location" in index_names
-        assert "idx_events_embedding" in index_names
-        assert "idx_events_active_score" in index_names
-        assert "idx_events_scope" in index_names
-        assert "idx_events_country" in index_names
+        """The gist, hnsw, composite status/updated, and partial indexes must exist."""
+        indexes = {idx.name: idx for idx in Event.__table__.indexes}
+        assert "idx_events_location" in indexes
+        assert "idx_events_embedding" in indexes
+        assert "idx_events_active_score" in indexes
+        assert "idx_events_scope" in indexes
+        assert "idx_events_status_last_updated" in indexes
+        assert "idx_events_country" in indexes
+
+        active_score = indexes["idx_events_active_score"]
+        assert [c.name for c in active_score.columns] == ["trending_score"]
+
+        hnsw = indexes["idx_events_embedding"]
+        assert hnsw.dialect_options["postgresql"]["with"] == {
+            "m": 16,
+            "ef_construction": 64,
+        }
 
 
 # ---------------------------------------------------------------------------

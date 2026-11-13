@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from hermes_db.enums import CredibilityTier, SourceType
 from hermes_db.models.source import Source
+from hermes_db.utils.datetime import ensure_utc
 
 
 logger = logging.getLogger(__name__)
@@ -74,8 +75,7 @@ class SourceService:
                 )
                 continue
 
-            if last.tzinfo is None:
-                last = last.replace(tzinfo=UTC)
+            last = ensure_utc(last)
 
             delta = timedelta(minutes=source.fetch_interval_minutes)
             if force or now >= last + delta:
@@ -98,7 +98,7 @@ class SourceService:
     async def update_last_fetched(
         self, source_id: uuid.UUID, fetched_at: datetime | None = None
     ) -> None:
-        now = (fetched_at or datetime.now(UTC)).replace(tzinfo=None)
+        now = ensure_utc(fetched_at) if fetched_at is not None else datetime.now(UTC)
         stmt = update(Source).where(Source.id == source_id).values(last_fetched_at=now)
         await self._session.execute(stmt)
 

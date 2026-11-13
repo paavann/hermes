@@ -52,6 +52,7 @@ class _Extraction:
         category: str = "Politics",
         category_color: str | None = "#FF0000",
         location_name: str | None = "London, UK",
+        country_code: str | None = None,
         impact_level: str | None = "MODERATE",
     ) -> None:
         self.headline = headline
@@ -59,6 +60,7 @@ class _Extraction:
         self.category = category
         self.category_color = category_color
         self.location_name = location_name
+        self.country_code = country_code
         self.impact_level = impact_level
 
 
@@ -589,7 +591,7 @@ class TestTransitionEventStatus:
         session = make_async_session()
         session.execute = AsyncMock(return_value=cursor)
         svc = EventService(session)
-        now = datetime.now(UTC).replace(tzinfo=None)
+        now = datetime.now(UTC)
         count = run(
             svc._transition_event_status(
                 from_status=EventStatus.ACTIVE,
@@ -605,7 +607,7 @@ class TestTransitionEventStatus:
         session = make_async_session()
         session.execute = AsyncMock(return_value=non_cursor)
         svc = EventService(session)
-        now = datetime.now(UTC).replace(tzinfo=None)
+        now = datetime.now(UTC)
         count = run(
             svc._transition_event_status(
                 from_status=EventStatus.STALE,
@@ -676,6 +678,11 @@ class TestRunLifecycleTransitions:
         result = run(svc.run_lifecycle_transitions())
         assert result == {"staled": 0, "archived": 0}
 
+    def test_custom_cutoff_hours(self):
+        svc, _ = self._make_svc_with_rowcounts(stale_count=1, archived_count=1)
+        result = run(svc.run_lifecycle_transitions(stale_hours=12, archive_hours=24))
+        assert result == {"staled": 1, "archived": 1}
+
 
 # ---------------------------------------------------------------------------
 # Shannon diversity entropy
@@ -687,7 +694,6 @@ class TestCalculateShannonDiversity:
         assert calculate_shannon_diversity([]) == 1.0
         assert calculate_shannon_diversity([GeopoliticalBloc.NORTH_AMERICA]) == 1.0
 
-
     def test_homogeneous_blocs_returns_one(self) -> None:
         blocs = [
             GeopoliticalBloc.NORTH_AMERICA,
@@ -695,7 +701,6 @@ class TestCalculateShannonDiversity:
             GeopoliticalBloc.NORTH_AMERICA,
         ]
         assert calculate_shannon_diversity(blocs) == 1.0
-
 
     def test_distinct_blocs_amplifies_diversity(self) -> None:
         blocs = [
@@ -707,7 +712,6 @@ class TestCalculateShannonDiversity:
         # H = ln(3) ~ 1.0986, min(H, 1.0) = 1.0, D = 1.0 + 1.0 * 0.5 = 1.5
         assert diversity == 1.5
 
-
     def test_two_distinct_blocs(self) -> None:
         blocs = [
             GeopoliticalBloc.GLOBAL_WIRE,
@@ -717,12 +721,13 @@ class TestCalculateShannonDiversity:
         # H = ln(2) ~ 0.6931, D = 1.0 + 0.6931 * 0.5 ~ 1.3466
         assert diversity == pytest.approx(1.3466, abs=0.001)
 
-
     def test_accepts_strings_and_enums(self) -> None:
-        enum_diversity = calculate_shannon_diversity([
-            GeopoliticalBloc.GLOBAL_WIRE,
-            GeopoliticalBloc.EUROPE,
-        ])
+        enum_diversity = calculate_shannon_diversity(
+            [
+                GeopoliticalBloc.GLOBAL_WIRE,
+                GeopoliticalBloc.EUROPE,
+            ]
+        )
         str_diversity = calculate_shannon_diversity(["GLOBAL_WIRE", "EUROPE"])
         assert enum_diversity == str_diversity
 
@@ -734,26 +739,23 @@ class TestCalculateShannonDiversity:
 
 class TestCalculateVelocity:
     def test_single_article_returns_one(self) -> None:
-        now = datetime.now(UTC).replace(tzinfo=None)
+        now = datetime.now(UTC)
         assert calculate_velocity(1, now, now) == 1.0
 
-
     def test_rapid_articles_high_velocity(self) -> None:
-        now = datetime.now(UTC).replace(tzinfo=None)
+        now = datetime.now(UTC)
         first = now - timedelta(minutes=30)
         # 5 articles in 0.5 hours -> max(0.5, 1.0) = 1.0 -> 5.0 articles/hr
         assert calculate_velocity(5, first, now) == 5.0
 
-
     def test_spaced_articles_moderate_velocity(self) -> None:
-        now = datetime.now(UTC).replace(tzinfo=None)
+        now = datetime.now(UTC)
         first = now - timedelta(hours=5)
         # 5 articles in 5 hours -> 5 / 5.0 = 1.0 articles/hr
         assert calculate_velocity(5, first, now) == 1.0
 
-
     def test_slow_articles_low_velocity(self) -> None:
-        now = datetime.now(UTC).replace(tzinfo=None)
+        now = datetime.now(UTC)
         first = now - timedelta(hours=20)
         # 2 articles in 20 hours -> 2 / 20.0 = 0.1 articles/hr
         assert calculate_velocity(2, first, now) == 0.1
@@ -769,11 +771,9 @@ class TestCalculateVelocityMultiplier:
         assert calculate_velocity_multiplier(1.0) == 1.0
         assert calculate_velocity_multiplier(0.5) == 1.0
 
-
     def test_higher_velocity_boosts_multiplier(self) -> None:
         # velocity 2.0 -> 1.0 + min(1.0 * 0.2, 1.0) = 1.2
         assert calculate_velocity_multiplier(2.0) == 1.2
-
 
     def test_capped_at_maximum(self) -> None:
         # velocity 10.0 -> 1.0 + min(9.0 * 0.2, 1.0) = 2.0
@@ -786,21 +786,26 @@ class TestCalculateVelocityMultiplier:
 
 
 class TestEventScoringMultiFactor:
-    def _make_session_and_svc(self, event: MagicMock | None = None) -> tuple[AsyncMock, EventService]:
+    def _make_session_and_svc(
+        self, event: MagicMock | None = None
+    ) -> tuple[AsyncMock, EventService]:
         session = make_async_session(get_return=event)
         svc = EventService(session)
         return session, svc
 
-
     def test_create_event_with_impact_level_critical(self) -> None:
         session = make_async_session()
+
         async def _flush():
             pass
+
         session.flush = AsyncMock(side_effect=_flush)
         svc = EventService(session)
         extraction = _Extraction(impact_level=ImpactLevel.CRITICAL)
 
-        with patch.object(svc._article_service, "create_article", new_callable=AsyncMock):
+        with patch.object(
+            svc._article_service, "create_article", new_callable=AsyncMock
+        ):
             event = run(
                 svc.create_event_with_article(
                     extraction=extraction,
@@ -816,16 +821,19 @@ class TestEventScoringMultiFactor:
         # TIER_1 (3.0) * CRITICAL (2.0) = 6.0
         assert event.trending_score == pytest.approx(6.0)
 
-
     def test_create_event_with_impact_level_minor(self) -> None:
         session = make_async_session()
+
         async def _flush():
             pass
+
         session.flush = AsyncMock(side_effect=_flush)
         svc = EventService(session)
         extraction = _Extraction(impact_level=ImpactLevel.MINOR)
 
-        with patch.object(svc._article_service, "create_article", new_callable=AsyncMock):
+        with patch.object(
+            svc._article_service, "create_article", new_callable=AsyncMock
+        ):
             event = run(
                 svc.create_event_with_article(
                     extraction=extraction,
@@ -841,7 +849,6 @@ class TestEventScoringMultiFactor:
         # TIER_2 (2.0) * MINOR (0.8) = 1.6
         assert event.trending_score == pytest.approx(1.6)
 
-
     def test_add_article_syndicated_diminishing_returns(self) -> None:
         source_id = make_uuid()
         event = make_event(trending_score=3.0, article_count=1)
@@ -849,13 +856,17 @@ class TestEventScoringMultiFactor:
 
         # Mock execute to return 2 articles from the same source (this added article is the 2nd)
         result_mock = MagicMock()
-        result_mock.all = MagicMock(return_value=[
-            (source_id, "reuters-wire"),
-            (source_id, "reuters-wire"),
-        ])
+        result_mock.all = MagicMock(
+            return_value=[
+                (source_id, "reuters-wire"),
+                (source_id, "reuters-wire"),
+            ]
+        )
         session.execute = AsyncMock(return_value=result_mock)
 
-        with patch.object(svc._article_service, "create_article", new_callable=AsyncMock):
+        with patch.object(
+            svc._article_service, "create_article", new_callable=AsyncMock
+        ):
             run(
                 svc.add_article_to_event(
                     event_id=event.id,
@@ -869,7 +880,6 @@ class TestEventScoringMultiFactor:
         expected_added = 3.0 / math.sqrt(2)
         assert event.trending_score == pytest.approx(3.0 + expected_added)
 
-
     def test_add_article_cross_border_diversity_amplification(self) -> None:
         src_reuters = make_uuid()
         src_bbc = make_uuid()
@@ -879,14 +889,18 @@ class TestEventScoringMultiFactor:
 
         # 3 articles spanning 3 distinct geopolitical blocs: GLOBAL_WIRE, EUROPE, MIDDLE_EAST_AFRICA
         result_mock = MagicMock()
-        result_mock.all = MagicMock(return_value=[
-            (src_reuters, "reuters-wire"),
-            (src_bbc, "bbc-world"),
-            (src_aljazeera, "aljazeera"),
-        ])
+        result_mock.all = MagicMock(
+            return_value=[
+                (src_reuters, "reuters-wire"),
+                (src_bbc, "bbc-world"),
+                (src_aljazeera, "aljazeera"),
+            ]
+        )
         session.execute = AsyncMock(return_value=result_mock)
 
-        with patch.object(svc._article_service, "create_article", new_callable=AsyncMock):
+        with patch.object(
+            svc._article_service, "create_article", new_callable=AsyncMock
+        ):
             run(
                 svc.add_article_to_event(
                     event_id=event.id,
@@ -910,8 +924,82 @@ class TestLifecycleDecayConstants:
     def test_half_life_hours_is_eighteen(self) -> None:
         assert HALF_LIFE_HOURS == 18.0
 
-
     def test_hourly_decay_factor_yields_half_at_eighteen_hours(self) -> None:
-        assert pytest.approx(0.5) == (HOURLY_DECAY_FACTOR ** 18)
+        assert pytest.approx(0.5) == (HOURLY_DECAY_FACTOR**18)
         assert pytest.approx(0.962216, abs=0.0001) == HOURLY_DECAY_FACTOR
 
+
+class TestEventCreationNormalization:
+    def _make_svc(self) -> tuple[AsyncMock, EventService]:
+        session = make_async_session()
+        svc = EventService(session)
+        return session, svc
+
+    def test_wires_and_normalizes_valid_country_code(self) -> None:
+        session, svc = self._make_svc()
+        extraction = _Extraction(country_code=" fr ")
+        with patch.object(
+            svc._article_service, "create_article", new_callable=AsyncMock
+        ):
+            event = run(
+                svc.create_event_with_article(
+                    extraction=extraction,
+                    geocoding=_Geocoding(),
+                    article_title="Paris update",
+                    article_url="https://example.com/fr-1",
+                    source_id=make_uuid(),
+                    source_credibility=CredibilityTier.TIER_1,
+                )
+            )
+        assert event is not None
+        assert event.country_code == "FR"
+        assert event.first_reported_at.tzinfo is UTC
+        assert event.last_updated_at.tzinfo is UTC
+        assert session.commit.await_count == 1
+
+    def test_rejects_invalid_country_code_to_none(self) -> None:
+        _, svc = self._make_svc()
+        extraction = _Extraction(country_code="France")
+        with patch.object(
+            svc._article_service, "create_article", new_callable=AsyncMock
+        ):
+            event = run(
+                svc.create_event_with_article(
+                    extraction=extraction,
+                    geocoding=None,
+                    article_title="Update",
+                    article_url="https://example.com/fr-2",
+                    source_id=make_uuid(),
+                    source_credibility=CredibilityTier.TIER_2,
+                )
+            )
+        assert event is not None
+        assert event.country_code is None
+
+    def test_falls_back_to_default_category_color_and_truncates_strings(self) -> None:
+        _, svc = self._make_svc()
+        extraction = _Extraction(
+            headline="H" * 600,
+            category="C" * 150,
+            category_color="   ",
+            location_name="L" * 300,
+        )
+        with patch.object(
+            svc._article_service, "create_article", new_callable=AsyncMock
+        ):
+            event = run(
+                svc.create_event_with_article(
+                    extraction=extraction,
+                    geocoding=None,
+                    article_title="Long title",
+                    article_url="https://example.com/long-1",
+                    source_id=make_uuid(),
+                    source_credibility=CredibilityTier.TIER_2,
+                )
+            )
+        assert event is not None
+        assert event.category_color == "#6B7280"
+        assert len(event.ai_headline) == 500
+        assert len(event.category) == 100
+        assert event.location_name is not None
+        assert len(event.location_name) == 255

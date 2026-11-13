@@ -3,6 +3,7 @@ from collections.abc import Sequence
 from datetime import datetime
 
 from hermes_db.enums import CredibilityTier, GeopoliticalBloc, ImpactLevel
+from hermes_db.utils.datetime import ensure_utc
 
 
 CREDIBILITY_WEIGHTS: dict[CredibilityTier, float] = {
@@ -91,17 +92,8 @@ def calculate_velocity(
 ) -> float:
     if article_count <= 1:
         return 1.0
-
-    t1 = (
-        first_reported_at.replace(tzinfo=None)
-        if first_reported_at.tzinfo
-        else first_reported_at
-    )
-    t2 = (
-        last_reported_at.replace(tzinfo=None)
-        if last_reported_at.tzinfo
-        else last_reported_at
-    )
+    t1 = ensure_utc(first_reported_at)
+    t2 = ensure_utc(last_reported_at)
     delta_hours = max((t2 - t1).total_seconds() / 3600.0, 0.0)
     return round(article_count / max(delta_hours, 1.0), 2)
 

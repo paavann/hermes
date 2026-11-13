@@ -1,7 +1,7 @@
 from sqlalchemy import Float, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
-from hermes_db.base import Base, UUIDPrimaryKeyMixin, TimestampMixin
+from hermes_db.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
 
 
 class GeocodeCache(Base, UUIDPrimaryKeyMixin, TimestampMixin):

@@ -1,20 +1,26 @@
 from __future__ import annotations
 
 import enum
+import logging
 import math
 import uuid
-import logging
-from collections.abc import Mapping, Sequence
+from collections.abc import Sequence
 from datetime import UTC, datetime, timedelta
-from decimal import Decimal
-from typing import Self
+from typing import Annotated, Self
 
 from geoalchemy2.functions import ST_X, ST_Y, ST_MakeEnvelope, ST_Within
-from pydantic import BaseModel, Field, ValidationError, model_validator
+from pydantic import (
+    AfterValidator,
+    BaseModel,
+    BeforeValidator,
+    ConfigDict,
+    Field,
+    ValidationError,
+    model_validator,
+)
 from sqlalchemy import (
     Float,
     Integer,
-    Select,
     cast,
     func,
     literal,
@@ -23,13 +29,15 @@ from sqlalchemy import (
     select,
 )
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.sql.elements import ColumnElement
+from sqlalchemy.sql.elements import ColumnElement, SQLColumnExpression
+from sqlalchemy.sql.selectable import ExecutableReturnsRows
 
 from hermes_db.enums import EventStatus, EventTlStatus, ImpactLevel
 from hermes_db.models.article import Article
 from hermes_db.models.event import Event, event_fts_expression
 from hermes_db.models.event_tl import EventTl
 from hermes_db.models.source import Source
+from hermes_db.utils.datetime import ensure_utc
 
 
 logger = logging.getLogger(__name__)
@@ -120,7 +128,20 @@ class SearchTimeline(BaseModel):
     edges: list[SearchTimelineEdge] = Field(default_factory=list)
 
 
+def _reject_bool(value: object) -> object:
+    if isinstance(value, bool):
+        raise ValueError("expected a numeric value.")
+    return value
+
+
+NonBoolFloat = Annotated[float, BeforeValidator(_reject_bool)]
+NonBoolInt = Annotated[int, BeforeValidator(_reject_bool)]
+UtcDatetime = Annotated[datetime, AfterValidator(ensure_utc)]
+
+
 class SearchEvent(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: uuid.UUID
     ai_headline: str
     ai_summary: str | None = None
@@ -128,20 +149,20 @@ class SearchEvent(BaseModel):
     category_color: str
     impact_level: ImpactLevel
     status: EventStatus
-    trending_score: float
-    last_updated_at: datetime
-    first_reported_at: datetime
+    trending_score: NonBoolFloat
+    last_updated_at: UtcDatetime
+    first_reported_at: UtcDatetime
     location_name: str | None = None
-    latitude: float | None = None
-    longitude: float | None = None
-    lexical_rank: int | None = None
-    semantic_rank: int | None = None
-    semantic_similarity: float | None = None
-    rrf: float = 0.0
-    age_hours: float = 0.0
-    trending_norm: float = 0.0
-    boost: float = 1.0
-    score: float = 0.0
+    latitude: NonBoolFloat | None = None
+    longitude: NonBoolFloat | None = None
+    lexical_rank: NonBoolInt | None = None
+    semantic_rank: NonBoolInt | None = None
+    semantic_similarity: NonBoolFloat | None = None
+    rrf: NonBoolFloat = 0.0
+    age_hours: NonBoolFloat = 0.0
+    trending_norm: NonBoolFloat = 0.0
+    boost: NonBoolFloat = 1.0
+    score: NonBoolFloat = 0.0
     articles: list[SearchArticle] = Field(default_factory=list)
     timeline: SearchTimeline | None = None
 
@@ -182,9 +203,7 @@ def boost_multiplier(
 ) -> float:
     recency = math.exp(-max(age_hours, 0.0) / RECENCY_WINDOW_HOURS)
     trending_norm = (
-        min(1.0, trending_score / max_trending_score)
-        if max_trending_score > 0
-        else 0.0
+        min(1.0, trending_score / max_trending_score) if max_trending_score > 0 else 0.0
     )
     return 1.0 + RECENCY_WEIGHT * recency + TRENDING_WEIGHT * trending_norm
 
@@ -203,26 +222,19 @@ def classify_coverage(
         for event in events
         if event.semantic_similarity is not None
     ]
-    lexical = [
-        event.lexical_rank for event in events if event.lexical_rank is not None
-    ]
+    lexical = [event.lexical_rank for event in events if event.lexical_rank is not None]
     ages = [event.age_hours for event in events]
 
     best_semantic = max(semantics) if semantics else None
     best_lexical = min(lexical) if lexical else None
     newest_age = min(ages) if ages else None
     recency_stale = (
-        recency_intent
-        and newest_age is not None
-        and newest_age > freshness_hours
+        recency_intent and newest_age is not None and newest_age > freshness_hours
     )
 
-    strong = (
-        count >= min_local_results
-        and (
-            (best_semantic is not None and best_semantic >= min_semantic_similarity)
-            or (best_lexical is not None and best_lexical <= 3)
-        )
+    strong = count >= min_local_results and (
+        (best_semantic is not None and best_semantic >= min_semantic_similarity)
+        or (best_lexical is not None and best_lexical <= 3)
     )
     if count == 0:
         level = CoverageLevel.EMPTY
@@ -253,46 +265,36 @@ def _relaxed_query(query: str) -> str | None:
     return " or ".join(terms)[:MAX_QUERY_CHARS]
 
 
-def _naive_utc(value: datetime) -> datetime:
-    if value.tzinfo is None:
-        return value
-    return value.astimezone(UTC).replace(tzinfo=None)
+def _age_hours_expr(now: datetime) -> ColumnElement[float]:
+    return func.greatest(
+        0.0,
+        cast(
+            func.extract("epoch", literal(now) - Event.last_updated_at),
+            Float,
+        )
+        / 3600.0,
+    )
 
 
-def _as_float(value: object) -> float:
-    if isinstance(value, bool):
-        raise ValueError("expected a numeric value.")
-    if isinstance(value, int | float | Decimal):
-        return float(value)
-    if isinstance(value, str):
-        return float(value)
-    raise ValueError("expected a numeric value.")
-
-
-def _as_optional_float(value: object) -> float | None:
-    return None if value is None else _as_float(value)
-
-
-def _as_int(value: object) -> int:
-    if isinstance(value, bool):
-        raise ValueError("expected an integer value.")
-    if isinstance(value, int):
-        return value
-    if isinstance(value, Decimal):
-        return int(value)
-    if isinstance(value, str):
-        return int(value)
-    raise ValueError("expected an integer value.")
-
-
-def _as_optional_int(value: object) -> int | None:
-    return None if value is None else _as_int(value)
-
-
-def _as_datetime(value: object) -> datetime:
-    if not isinstance(value, datetime):
-        raise ValueError("expected a datetime value.")
-    return value
+def _event_columns(
+    age_hours: ColumnElement[float],
+) -> tuple[SQLColumnExpression[object], ...]:
+    return (
+        Event.id,
+        Event.ai_headline,
+        Event.ai_summary,
+        Event.category,
+        Event.category_color,
+        Event.impact_level,
+        Event.status,
+        Event.trending_score,
+        Event.last_updated_at,
+        Event.first_reported_at,
+        Event.location_name,
+        ST_Y(Event.location).label("latitude"),
+        ST_X(Event.location).label("longitude"),
+        age_hours.label("age_hours"),
+    )
 
 
 class SearchService:
@@ -323,6 +325,38 @@ class SearchService:
         self._articles_per_event = articles_per_event
         self._rrf_k = rrf_k
 
+    async def _load_context(self, events: list[SearchEvent]) -> None:
+        if not events:
+            return
+        event_ids = [event.id for event in events]
+        articles = await self._load_articles(event_ids)
+        timelines = await self._load_timelines(event_ids)
+        for event in events:
+            event.articles = articles.get(event.id, [])
+            event.timeline = timelines.get(event.id)
+
+    async def _retrieve_selected_event(
+        self,
+        *,
+        event_id: uuid.UUID | None,
+        now: datetime,
+        cutoff: datetime,
+        recency_intent: bool,
+    ) -> SearchResult:
+        if event_id is None:
+            raise ValueError("event scope requires event_id.")
+        stmt = (
+            select(*_event_columns(_age_hours_expr(now)))
+            .where(Event.id == event_id)
+            .where(Event.status.in_([EventStatus.ACTIVE, EventStatus.STALE]))
+            .where(Event.last_updated_at >= cutoff)
+        )
+        result = await self._session.execute(stmt)
+        row = result.mappings().first()
+        events = [SearchEvent.model_validate(row)] if row is not None else []
+        await self._load_context(events)
+        return self._build_result(events, recency_intent=recency_intent)
+
     async def retrieve(
         self,
         query: str,
@@ -340,7 +374,7 @@ class SearchService:
         query = query[:MAX_QUERY_CHARS]
         self._validate_scope(scope=scope, event_id=event_id, bbox=bbox)
 
-        now = datetime.now(UTC).replace(tzinfo=None)
+        now = datetime.now(UTC)
         cutoff = now - timedelta(days=self._lookback_days)
 
         if scope is SearchScope.EVENT:
@@ -379,13 +413,26 @@ class SearchService:
                 )
                 result = await self._session.execute(stmt)
                 rows = result.mappings().all()
-        events = [self._event_from_row(row) for row in rows]
+        events = [SearchEvent.model_validate(row) for row in rows]
         await self._load_context(events)
 
         degraded: list[SearchDegradedFlag] = []
         if not embedding:
             degraded.append(SearchDegradedFlag.SEMANTIC_UNAVAILABLE)
 
+        return self._build_result(
+            events,
+            recency_intent=recency_intent,
+            degraded=degraded,
+        )
+
+    def _build_result(
+        self,
+        events: list[SearchEvent],
+        *,
+        recency_intent: bool,
+        degraded: Sequence[SearchDegradedFlag] = (),
+    ) -> SearchResult:
         return SearchResult(
             events=events,
             coverage=classify_coverage(
@@ -395,74 +442,7 @@ class SearchService:
                 freshness_hours=self._freshness_hours,
                 recency_intent=recency_intent,
             ),
-            degraded=degraded,
-        )
-
-    async def _retrieve_selected_event(
-        self,
-        *,
-        event_id: uuid.UUID | None,
-        now: datetime,
-        cutoff: datetime,
-        recency_intent: bool,
-    ) -> SearchResult:
-        if event_id is None:
-            raise ValueError("event scope requires event_id.")
-        stmt = (
-            select(Event, ST_Y(Event.location), ST_X(Event.location))
-            .where(Event.id == event_id)
-            .where(Event.status.in_([EventStatus.ACTIVE, EventStatus.STALE]))
-            .where(Event.last_updated_at >= cutoff)
-        )
-        result = await self._session.execute(stmt)
-        row = result.first()
-        if row is None:
-            return SearchResult(
-                events=[],
-                coverage=classify_coverage(
-                    [],
-                    min_local_results=self._min_local_results,
-                    min_semantic_similarity=self._min_semantic_similarity,
-                    freshness_hours=self._freshness_hours,
-                    recency_intent=recency_intent,
-                ),
-            )
-
-        event, latitude, longitude = row
-        age_hours = max(
-            0.0, (now - _as_datetime(event.last_updated_at)).total_seconds() / 3600.0
-        )
-        search_event = SearchEvent(
-            id=event.id,
-            ai_headline=event.ai_headline,
-            ai_summary=event.ai_summary,
-            category=event.category,
-            category_color=event.category_color,
-            impact_level=ImpactLevel(event.impact_level),
-            status=EventStatus(event.status),
-            trending_score=float(event.trending_score),
-            last_updated_at=_as_datetime(event.last_updated_at),
-            first_reported_at=_as_datetime(event.first_reported_at),
-            location_name=event.location_name,
-            latitude=_as_optional_float(latitude),
-            longitude=_as_optional_float(longitude),
-            age_hours=age_hours,
-            boost=boost_multiplier(
-                age_hours,
-                float(event.trending_score),
-                max(float(event.trending_score), 1.0),
-            ),
-        )
-        await self._load_context([search_event])
-        return SearchResult(
-            events=[search_event],
-            coverage=classify_coverage(
-                [search_event],
-                min_local_results=self._min_local_results,
-                min_semantic_similarity=self._min_semantic_similarity,
-                freshness_hours=self._freshness_hours,
-                recency_intent=recency_intent,
-            ),
+            degraded=list(degraded),
         )
 
     def _validate_scope(
@@ -487,7 +467,7 @@ class SearchService:
         filters: SearchFilters | None,
         now: datetime,
         cutoff: datetime,
-    ) -> Select[tuple[object, ...]]:
+    ) -> ExecutableReturnsRows:
         conditions = self._eligibility_conditions(
             scope=scope,
             bbox=bbox,
@@ -501,8 +481,9 @@ class SearchService:
             Event.location_name,
             Event.category,
         )
-        ts_query = func.websearch_to_tsquery(REG_CONFIG, query)
-
+        ts_query = func.websearch_to_tsquery(
+            REG_CONFIG, query
+        )
         lexical = (
             select(
                 Event.id.label("id"),
@@ -543,38 +524,24 @@ class SearchService:
                     ).label("rrf"),
                 )
                 .select_from(
-                    lexical.join(
-                        semantic, lexical.c.id == semantic.c.id, full=True
-                    )
+                    lexical.join(semantic, lexical.c.id == semantic.c.id, full=True)
                 )
                 .cte("fused")
             )
         else:
-            fused = (
-                select(
-                    lexical.c.id.label("id"),
-                    lexical.c.rank.label("lexical_rank"),
-                    cast(literal(None), Integer).label("semantic_rank"),
-                    cast(literal(None), Float).label("semantic_similarity"),
-                    (1.0 / (self._rrf_k + lexical.c.rank)).label("rrf"),
-                )
-                .cte("fused")
-            )
+            fused = select(
+                lexical.c.id.label("id"),
+                lexical.c.rank.label("lexical_rank"),
+                cast(literal(None), Integer).label("semantic_rank"),
+                cast(literal(None), Float).label("semantic_similarity"),
+                (1.0 / (self._rrf_k + lexical.c.rank)).label("rrf"),
+            ).cte("fused")
 
         max_trending = func.max(Event.trending_score).over()
-        age_hours = (
-            cast(
-                func.extract(
-                    "epoch", literal(now) - Event.last_updated_at
-                ),
-                Float,
-            )
-            / 3600.0
-        )
+        age_hours = _age_hours_expr(now)
         trending_norm = func.least(
             1.0,
-            Event.trending_score
-            / func.greatest(max_trending, literal(1.0)),
+            Event.trending_score / func.greatest(max_trending, literal(1.0)),
         )
         boost = (
             1.0
@@ -585,24 +552,11 @@ class SearchService:
 
         return (
             select(
-                Event.id,
-                Event.ai_headline,
-                Event.ai_summary,
-                Event.category,
-                Event.category_color,
-                Event.impact_level,
-                Event.status,
-                Event.trending_score,
-                Event.last_updated_at,
-                Event.first_reported_at,
-                Event.location_name,
-                ST_Y(Event.location).label("latitude"),
-                ST_X(Event.location).label("longitude"),
+                *_event_columns(age_hours),
                 fused.c.lexical_rank,
                 fused.c.semantic_rank,
                 fused.c.semantic_similarity,
                 fused.c.rrf,
-                age_hours.label("age_hours"),
                 trending_norm.label("trending_norm"),
                 boost.label("boost"),
                 score.label("score"),
@@ -637,11 +591,13 @@ class SearchService:
                 )
             if filters.start:
                 conditions.append(
-                    Event.last_updated_at >= max(_naive_utc(filters.start), cutoff)
+                    Event.last_updated_at
+                    >= max(ensure_utc(filters.start), ensure_utc(cutoff))
                 )
             if filters.end:
                 conditions.append(
-                    Event.first_reported_at <= min(_naive_utc(filters.end), now)
+                    Event.first_reported_at
+                    <= min(ensure_utc(filters.end), ensure_utc(now))
                 )
 
         return conditions
@@ -662,16 +618,6 @@ class SearchService:
             Event.location,
             ST_MakeEnvelope(bbox.west, bbox.south, bbox.east, bbox.north, 4326),
         )
-
-    async def _load_context(self, events: list[SearchEvent]) -> None:
-        if not events:
-            return
-        event_ids = [event.id for event in events]
-        articles = await self._load_articles(event_ids)
-        timelines = await self._load_timelines(event_ids)
-        for event in events:
-            event.articles = articles.get(event.id, [])
-            event.timeline = timelines.get(event.id)
 
     async def _load_articles(
         self, event_ids: Sequence[uuid.UUID]
@@ -722,7 +668,9 @@ class SearchService:
                 event_id=event_id,
                 title=title,
                 url=url,
-                published_at=published_at,
+                published_at=(
+                    ensure_utc(published_at) if published_at is not None else None
+                ),
                 source_name=source_name,
             )
             grouped.setdefault(event_id, []).append(article)
@@ -793,33 +741,4 @@ class SearchService:
             summary=summary_text,
             nodes=parsed_nodes,
             edges=parsed_edges,
-        )
-
-    def _event_from_row(self, row: Mapping[str, object]) -> SearchEvent:
-        return SearchEvent(
-            id=uuid.UUID(str(row["id"])),
-            ai_headline=str(row["ai_headline"]),
-            ai_summary=(
-                None if row["ai_summary"] is None else str(row["ai_summary"])
-            ),
-            category=str(row["category"]),
-            category_color=str(row["category_color"]),
-            impact_level=ImpactLevel(str(row["impact_level"])),
-            status=EventStatus(str(row["status"])),
-            trending_score=_as_float(row["trending_score"]),
-            last_updated_at=_as_datetime(row["last_updated_at"]),
-            first_reported_at=_as_datetime(row["first_reported_at"]),
-            location_name=(
-                None if row["location_name"] is None else str(row["location_name"])
-            ),
-            latitude=_as_optional_float(row["latitude"]),
-            longitude=_as_optional_float(row["longitude"]),
-            lexical_rank=_as_optional_int(row["lexical_rank"]),
-            semantic_rank=_as_optional_int(row["semantic_rank"]),
-            semantic_similarity=_as_optional_float(row["semantic_similarity"]),
-            rrf=_as_float(row["rrf"]),
-            age_hours=_as_float(row["age_hours"]),
-            trending_norm=_as_float(row["trending_norm"]),
-            boost=_as_float(row["boost"]),
-            score=_as_float(row["score"]),
         )

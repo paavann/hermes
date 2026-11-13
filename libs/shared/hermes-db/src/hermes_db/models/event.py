@@ -5,7 +5,7 @@ from geoalchemy2 import Geometry, WKBElement
 from pgvector.sqlalchemy import HALFVEC
 from sqlalchemy import Float, Index, Integer, String, Text, func, literal_column, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy.sql.elements import ColumnElement
+from sqlalchemy.sql.elements import ColumnElement, SQLColumnExpression
 
 from hermes_db.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
 from hermes_db.enums import EventScope, EventStatus, ImpactLevel
@@ -16,10 +16,10 @@ if TYPE_CHECKING:
 
 
 def event_fts_expression(
-    headline: ColumnElement[str],
-    summary: ColumnElement[str | None],
-    location_name: ColumnElement[str | None],
-    category: ColumnElement[str],
+    headline: SQLColumnExpression[str],
+    summary: SQLColumnExpression[str | None],
+    location_name: SQLColumnExpression[str | None],
+    category: SQLColumnExpression[str],
 ) -> ColumnElement[str]:
     regconfig = literal_column("'english'::regconfig")
     empty = literal_column("''")

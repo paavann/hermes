@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 from sqlalchemy import ForeignKey, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from hermes_db.base import Base, UUIDPrimaryKeyMixin, TimestampMixin
+from hermes_db.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
 
 
 if TYPE_CHECKING:

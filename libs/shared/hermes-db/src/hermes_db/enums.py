@@ -50,4 +50,3 @@ class GeopoliticalBloc(enum.StrEnum):
     MIDDLE_EAST_AFRICA = "MIDDLE_EAST_AFRICA"
     LATIN_AMERICA = "LATIN_AMERICA"
     GLOBAL_WIRE = "GLOBAL_WIRE"
-

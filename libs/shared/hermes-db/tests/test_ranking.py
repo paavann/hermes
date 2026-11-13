@@ -24,6 +24,7 @@ class DummyExtraction:
     category: str = "WORLD"
     category_color: str | None = "#ff0000"
     location_name: str | None = "Paris"
+    country_code: str | None = None
     impact_level: str | None = "MAJOR"
 
 

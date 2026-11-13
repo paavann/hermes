@@ -7,6 +7,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from hermes_db.models.article import Article
+from hermes_db.utils.datetime import ensure_utc
 
 
 logger = logging.getLogger(__name__)
@@ -36,7 +37,9 @@ class ArticleService:
                 source_id=source_id,
                 title=title,
                 url=url,
-                published_at=published_at,
+                published_at=(
+                    ensure_utc(published_at) if published_at is not None else None
+                ),
             )
             .on_conflict_do_nothing(index_elements=["url"])
             .returning(Article)

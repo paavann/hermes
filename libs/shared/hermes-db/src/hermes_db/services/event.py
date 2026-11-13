@@ -10,7 +10,6 @@ from sqlalchemy.engine import CursorResult
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from hermes_db.core.config import settings
 from hermes_db.enums import (
     CredibilityTier,
     EventScope,
@@ -37,6 +36,8 @@ from hermes_db.services.ranking import (
 
 __all__ = [
     "CREDIBILITY_WEIGHTS",
+    "DEFAULT_EVENT_ARCHIVE_HRS",
+    "DEFAULT_EVENT_STALE_HRS",
     "HALF_LIFE_HOURS",
     "HOURLY_DECAY_FACTOR",
     "IMPACT_MULTIPLIERS",
@@ -51,6 +52,23 @@ __all__ = [
 
 
 logger = logging.getLogger(__name__)
+DEFAULT_CATEGORY_COLOR: str = "#6B7280"
+DEFAULT_EVENT_STALE_HRS: int = 24
+DEFAULT_EVENT_ARCHIVE_HRS: int = 48
+
+
+def _normalize_category_color(raw_color: str | None) -> str:
+    if not raw_color:
+        return DEFAULT_CATEGORY_COLOR
+    cleaned = raw_color.strip()
+    return cleaned[:7] if cleaned else DEFAULT_CATEGORY_COLOR
+
+
+def _normalize_country_code(raw_code: str | None) -> str | None:
+    if not raw_code:
+        return None
+    cleaned = raw_code.strip().upper()
+    return cleaned if len(cleaned) == 2 and cleaned.isalpha() else None
 
 
 class EventService:
@@ -75,7 +93,7 @@ class EventService:
                 f"SRID=4326;POINT({geocoding.longitude} {geocoding.latitude})"
             )
 
-        now = datetime.now(UTC).replace(tzinfo=None)
+        now = datetime.now(UTC)
         raw_impact = getattr(extraction, "impact_level", ImpactLevel.MODERATE)
         impact = (
             ImpactLevel(raw_impact)
@@ -85,15 +103,21 @@ class EventService:
         impact_mult = IMPACT_MULTIPLIERS.get(impact, 1.0)
         base_score = CREDIBILITY_WEIGHTS.get(source_credibility, 1.0)
         initial_score = base_score * impact_mult
+        location_name = (
+            extraction.location_name[:255]
+            if extraction.location_name is not None
+            else None
+        )
 
         event = Event(
-            ai_headline=extraction.headline,
+            ai_headline=extraction.headline[:500],
             ai_summary=extraction.summary,
-            category=extraction.category,
-            category_color=extraction.category_color,
+            category=extraction.category[:100],
+            category_color=_normalize_category_color(extraction.category_color),
             impact_level=impact,
             location=location_wkt,
-            location_name=extraction.location_name,
+            location_name=location_name,
+            country_code=_normalize_country_code(extraction.country_code),
             embedding=embedding,
             trending_score=initial_score,
             velocity=1.0,
@@ -124,7 +148,6 @@ class EventService:
         logger.info("created event '%s' with 1 article.", event.ai_headline)
         return event
 
-
     async def add_article_to_event(
         self,
         event_id: uuid.UUID,
@@ -154,7 +177,7 @@ class EventService:
             return None
 
         event.article_count += 1
-        now = datetime.now(UTC).replace(tzinfo=None)
+        now = datetime.now(UTC)
         event.last_updated_at = now
 
         # query sources for syndication count and geopolitical bloc diversity.
@@ -214,7 +237,6 @@ class EventService:
         )
         return event
 
-
     async def get_events(
         self,
         status: EventStatus | None = EventStatus.ACTIVE,
@@ -230,7 +252,6 @@ class EventService:
         stmt = stmt.order_by(Event.trending_score.desc()).limit(limit)
         result = await self._session.execute(stmt)
         return list(result.scalars().all())
-
 
     async def get_events_by_bbox(
         self, north: float, south: float, east: float, west: float
@@ -251,7 +272,6 @@ class EventService:
         result = await self._session.execute(stmt)
         return result.all()
 
-
     async def get_event_by_id(self, event_id: uuid.UUID) -> Event | None:
         stmt = (
             select(Event)
@@ -260,7 +280,6 @@ class EventService:
         )
         result = await self._session.execute(stmt)
         return result.scalar_one_or_none()
-
 
     async def get_active_events(self) -> list[dict[str, str]]:
         stmt = (
@@ -284,7 +303,6 @@ class EventService:
             }
             for event_id, headline, location_name, category in result.all()
         ]
-
 
     async def get_active_events_by_embeddings(
         self, embeddings: Sequence[Sequence[float] | None]
@@ -321,10 +339,8 @@ class EventService:
 
         return list(unique_events.values())
 
-
     async def article_url_exists(self, url: str) -> bool:
         return await self._article_service.article_url_exists(url)
-
 
     async def _transition_event_status(
         self, from_status: EventStatus, to_status: EventStatus, cutoff: datetime
@@ -340,11 +356,14 @@ class EventService:
             return result.rowcount
         return 0
 
-
-    async def run_lifecycle_transitions(self) -> dict[str, int]:
-        now = datetime.now(UTC).replace(tzinfo=None)
-        stale_cutoff = now - timedelta(hours=settings.EVENT_STALE_HRS)
-        archive_cutoff = now - timedelta(hours=settings.EVENT_ARCHIVE_HRS)
+    async def run_lifecycle_transitions(
+        self,
+        stale_hours: int = DEFAULT_EVENT_STALE_HRS,
+        archive_hours: int = DEFAULT_EVENT_ARCHIVE_HRS,
+    ) -> dict[str, int]:
+        now = datetime.now(UTC)
+        stale_cutoff = now - timedelta(hours=stale_hours)
+        archive_cutoff = now - timedelta(hours=archive_hours)
 
         # decay event scores using continuous exponential half-life (18h half-life).
         decay_stmt = (

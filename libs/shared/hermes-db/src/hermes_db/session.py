@@ -9,24 +9,14 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 
-from hermes_db.core.config import settings
 from hermes_db.services import sync_sources_from_config
 
 
 logger = logging.getLogger(__name__)
 
 
-engine: AsyncEngine = create_async_engine(
-    settings.db_url,
-    echo=False,
-    pool_size=5,
-    pool_pre_ping=True,
-    max_overflow=10,
-    connect_args={"statement_cache_size": 0},
-)
-
-AsyncSessionLocal = async_sessionmaker(
-    bind=engine,
+engine: AsyncEngine | None = None
+AsyncSessionLocal: async_sessionmaker[AsyncSession] = async_sessionmaker(
     expire_on_commit=False,
 )
 
@@ -55,6 +45,10 @@ async def init_db(db_url: URL | str | None = None) -> None:
             connect_args={"statement_cache_size": 0},
         )
         AsyncSessionLocal.configure(bind=engine)
+    elif engine is None:
+        raise ValueError(
+            "db_url must be provided when database engine is not initialized."
+        )
 
     try:
         async with engine.begin() as conn:
@@ -72,6 +66,8 @@ async def init_db(db_url: URL | str | None = None) -> None:
 
 
 async def close_db() -> None:
+    global engine
     if engine is not None:
         await engine.dispose()
+        engine = None
     logger.info("database connection closed.")
