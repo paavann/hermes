@@ -1,0 +1,61 @@
+{
+  "type": "sources",
+  "sources": [
+    {
+      "kind": "event",
+      "id": "E1",
+      "event_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+      "title": "Ceasefire talks resume in Geneva",
+      "url": null,
+      "source_name": null,
+      "published_at": null,
+      "retrieved_at": null,
+      "latitude": 46.2044,
+      "longitude": 6.1432,
+      "is_external": false,
+      "snippet": "Delegations met on Tuesday."
+    },
+    {
+      "kind": "article",
+      "id": "A1",
+      "event_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+      "title": "Talks resume",
+      "url": "https://example.com/talks",
+      "source_name": "Example News",
+      "published_at": "2026-11-07T10:00:00Z",
+      "retrieved_at": null,
+      "latitude": null,
+      "longitude": null,
+      "is_external": false,
+      "snippet": "Negotiators returned to the table."
+    },
+    {
+      "kind": "timeline",
+      "id": "T1",
+      "event_id": null,
+      "title": "2024 ceasefire",
+      "url": null,
+      "source_name": null,
+      "published_at": null,
+      "retrieved_at": null,
+      "latitude": null,
+      "longitude": null,
+      "is_external": false,
+      "snippet": null
+    },
+    {
+      "kind": "web",
+      "id": "W1",
+      "event_id": null,
+      "title": "Regional update",
+      "url": "https://news.example.com/update",
+      "source_name": "news.example.com",
+      "published_at": null,
+      "retrieved_at": "2026-11-08T09:00:00Z",
+      "latitude": null,
+      "longitude": null,
+      "is_external": true,
+      "snippet": "A weekly roundup."
+    }
+  ]
+}

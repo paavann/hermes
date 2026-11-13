@@ -1,0 +1,26 @@
+{
+  "type": "done",
+  "provenance": {
+    "events": 1,
+    "articles": 1,
+    "timeline_nodes": 1,
+    "web": 1,
+    "background": false,
+    "grounding": []
+  },
+  "coverage": {
+    "level": "sufficient",
+    "result_count": 3,
+    "best_semantic_similarity": 0.82,
+    "best_lexical_rank": 1,
+    "newest_age_hours": 2.5,
+    "recency_stale": false
+  },
+  "usage": {
+    "prompt_tokens": 900,
+    "completion_tokens": 120,
+    "total_tokens": 1020
+  },
+  "web_used": true,
+  "degraded": ["planner_fallback"]
+}

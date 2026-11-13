@@ -1,0 +1,22 @@
+{
+  "message": "What changed in the ceasefire talks this week?",
+  "history": [
+    {
+      "role": "user",
+      "content": "What is happening in the region?"
+    },
+    {
+      "role": "assistant",
+      "content": "Talks resumed on Tuesday [E1]."
+    }
+  ],
+  "scope": {
+    "type": "viewport",
+    "bbox": {
+      "north": 60.0,
+      "south": 30.0,
+      "east": 60.0,
+      "west": 20.0
+    }
+  }
+}

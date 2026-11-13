@@ -1,0 +1,6 @@
+{
+  "type": "error",
+  "code": "MODEL_TIMEOUT",
+  "message": "The answer model timed out.",
+  "retryable": true
+}

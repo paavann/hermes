@@ -1,0 +1,6 @@
+{
+  "message": "What are the biggest global stories today?",
+  "scope": {
+    "type": "global"
+  }
+}
