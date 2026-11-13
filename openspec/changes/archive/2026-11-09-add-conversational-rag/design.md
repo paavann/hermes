@@ -165,7 +165,7 @@ Key properties:
 - **The two rankings are never compared by raw score.** Reciprocal rank fusion (`k = 60`) uses only ranks. A missing branch contributes zero.
 - **The embedding branch is optional.** `gen_embeddings` returns `None` on failure. When it does, the search runs lexical-only and reports `semantic_unavailable` as a degraded flag.
 - **The FTS expression must be immutable.** Use `to_tsvector('english'::regconfig, ...)`, `coalesce`, and the `||` operator. Do not use `concat_ws` or `concat`, which are stable rather than immutable and cannot back an expression index.
-- **The query uses the same expression as the index.** `websearch_to_tsquery('english'::regconfig, :query)` handles quoted phrases and OR terms; the query is capped at 400 characters.
+- **The query uses the same expression as the index.** `websearch_to_tsquery('english'::regconfig, :query)` handles quoted phrases and OR terms; the query is capped at 400 characters. If a multi-term query matches no events at all, the service retries once with the terms joined by `OR` so verbose planner rewrites still retrieve relevant local evidence.
 - **Boosts are bounded.** After fusion:
 
   ```text
