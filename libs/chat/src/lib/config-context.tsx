@@ -1,21 +1,21 @@
-import { createContext, useContext } from 'react'
-import type { ReactNode } from 'react'
+import { createContext, useContext, type ReactNode } from 'react'
 
 export interface ChatConfig {
   baseUrl: string
   apiVer: string
 }
 
-const ChatConfigContext = createContext<ChatConfig | null>(null)
-
 interface ChatConfigProviderProps {
   config: ChatConfig
   children: ReactNode
 }
 
+
+
+const ChatConfigContext = createContext<ChatConfig | null>(null)
+
 export function ChatConfigProvider({
-  config,
-  children,
+  config, children,
 }: ChatConfigProviderProps): React.JSX.Element {
   return (
     <ChatConfigContext.Provider value={config}>

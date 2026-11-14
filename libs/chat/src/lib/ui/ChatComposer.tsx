@@ -1,5 +1,5 @@
-import { Lightning } from '@phosphor-icons/react';
-import { useEffect, useRef, useState } from 'react';
+import { Lightning } from '@phosphor-icons/react'
+import { useEffect, useRef, useState } from 'react'
 
 export interface ChatComposerProps {
   isStreaming: boolean;
@@ -81,7 +81,7 @@ export function ChatComposer({
           <span>SUMMARIZE EVENTS</span>
         </button>
 
-        <span className="hidden text-[8px] uppercase tracking-[0.1em] text-slate-muted/30 select-none sm:inline">
+        <span className="hidden text-[8px] uppercase tracking-widest text-slate-muted/30 select-none sm:inline">
           ENTER: SEND · SHIFT+ENTER: NEWLINE
         </span>
       </div>

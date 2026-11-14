@@ -1,11 +1,10 @@
 import { create } from 'zustand';
-
 import type {
   ChatDone,
   ChatError,
   ChatHistoryMessage,
-  ChatStreamEvent,
   ChatSource,
+  ChatStreamEvent,
 } from '@hermes/util-types';
 
 export type ChatScopeMode = 'auto' | 'event' | 'viewport' | 'global';
@@ -27,7 +26,6 @@ export interface ChatState {
   scopeOverride: ChatScopeMode;
   isStreaming: boolean;
   activeId: string | null;
-
   setOpen: (open: boolean) => void;
   toggleOpen: () => void;
   setScopeOverride: (mode: ChatScopeMode) => void;
@@ -42,8 +40,16 @@ export interface ChatState {
 export const MAX_HISTORY_MESSAGES = 16;
 export const MAX_HISTORY_CONTENT = 8000;
 
-const CITATION_PATTERN =
-  /\[(?:BG|(?:E|A|T|W)\d+(?:\s*,\s*(?:E|A|T|W)\d+)*)\]/g;
+export const CITATION_MARKER_PATTERN =
+  /\[((?:BG|[EATW]\d+)(?:\s*,\s*(?:BG|[EATW]\d+))*)\]/gi;
+
+export const INITIAL_CHAT_STATE = {
+  messages: [] as ChatMessage[],
+  isOpen: false,
+  scopeOverride: 'auto' as ChatScopeMode,
+  isStreaming: false,
+  activeId: null as string | null,
+};
 
 let sequence = 0;
 
@@ -52,7 +58,7 @@ function createId(role: ChatMessage['role']): string {
   return `${role}-${Date.now()}-${sequence}`;
 }
 
-function assistantMessage(): ChatMessage {
+function createAssistantMessage(): ChatMessage {
   return {
     id: createId('assistant'),
     role: 'assistant',
@@ -67,14 +73,16 @@ function assistantMessage(): ChatMessage {
 /** Remove inline citation markers so stale IDs never leak into request history. */
 export function stripCitations(content: string): string {
   return content
-    .replace(CITATION_PATTERN, '')
+    .replace(CITATION_MARKER_PATTERN, '')
     .replace(/[ \t]{2,}/g, ' ')
     .replace(/\s+([.,!?;:])/g, '$1')
     .trim();
 }
 
 /** Build the bounded, citation-free history payload for the next request. */
-export function buildHistory(messages: ChatMessage[]): ChatHistoryMessage[] {
+export function buildHistory(
+  messages: readonly ChatMessage[],
+): ChatHistoryMessage[] {
   return messages
     .filter(
       (message) =>
@@ -86,6 +94,15 @@ export function buildHistory(messages: ChatMessage[]): ChatHistoryMessage[] {
       content: stripCitations(message.content).slice(0, MAX_HISTORY_CONTENT),
     }))
     .filter((message) => message.content.length > 0);
+}
+
+export function findLastUserIndex(messages: readonly ChatMessage[]): number {
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    if (messages[index].role === 'user') {
+      return index;
+    }
+  }
+  return -1;
 }
 
 function updateMessage(
@@ -101,147 +118,122 @@ function updateMessage(
   );
 }
 
-function findLastUser(messages: ChatMessage[]): ChatMessage | null {
-  let lastUser: ChatMessage | null = null;
-  for (const message of messages) {
-    if (message.role === 'user') {
-      lastUser = message;
-    }
-  }
-  return lastUser;
-}
-
-export const useChatStore = create<ChatState>((set, get) => ({
-  messages: [],
-  isOpen: false,
-  scopeOverride: 'auto',
-  isStreaming: false,
-  activeId: null,
-
-  setOpen: (isOpen) => set({ isOpen }),
-  toggleOpen: () => set((state) => ({ isOpen: !state.isOpen })),
-  setScopeOverride: (scopeOverride) => set({ scopeOverride }),
-
-  send: (content) => {
-    const trimmed = content.trim();
-    if (!trimmed || get().isStreaming) {
-      return null;
-    }
-
-    const assistant = assistantMessage();
+export const useChatStore = create<ChatState>((set, get) => {
+  const updateActive = (
+    updater: (message: ChatMessage) => ChatMessage,
+    storePatch: Partial<ChatState> = {},
+  ): void => {
     set((state) => ({
-      messages: [
-        ...state.messages,
-        {
-          id: createId('user'),
-          role: 'user',
-          content: trimmed,
-          status: 'complete',
-          sources: [],
-          done: null,
-          error: null,
-        },
-        assistant,
-      ],
-      isStreaming: true,
-      activeId: assistant.id,
+      ...storePatch,
+      messages: updateMessage(state.messages, state.activeId, updater),
     }));
-    return assistant.id;
-  },
+  };
 
-  retry: () => {
-    const state = get();
-    if (state.isStreaming) {
-      return null;
-    }
-
-    const lastUser = findLastUser(state.messages);
-    if (!lastUser) {
-      return null;
-    }
-
-    const assistant = assistantMessage();
-    const messages = state.messages.filter(
-      (message, index) =>
-        index < state.messages.length - 1 || message.role === 'user',
+  const failActive = (error: ChatError): void => {
+    updateActive(
+      (message) => ({ ...message, status: 'error', error }),
+      { isStreaming: false, activeId: null },
     );
+  };
 
-    set({
-      messages: [...messages, assistant],
-      isStreaming: true,
-      activeId: assistant.id,
-      isOpen: true,
-    });
-    return assistant.id;
-  },
+  return {
+    ...INITIAL_CHAT_STATE,
 
-  cancel: () =>
-    set((state) => ({
-      messages: updateMessage(state.messages, state.activeId, (message) => ({
-        ...message,
-        status: 'cancelled',
-      })),
-      isStreaming: false,
-      activeId: null,
-    })),
+    setOpen: (isOpen) => set({ isOpen }),
+    toggleOpen: () => set((state) => ({ isOpen: !state.isOpen })),
+    setScopeOverride: (scopeOverride) => set({ scopeOverride }),
 
-  clear: () => set({ messages: [], isStreaming: false, activeId: null }),
+    send: (content) => {
+      const trimmed = content.trim();
+      if (!trimmed || get().isStreaming) {
+        return null;
+      }
+      const assistant = createAssistantMessage();
+      set((state) => ({
+        messages: [
+          ...state.messages,
+          {
+            id: createId('user'),
+            role: 'user',
+            content: trimmed,
+            status: 'complete',
+            sources: [],
+            done: null,
+            error: null,
+          },
+          assistant,
+        ],
+        isStreaming: true,
+        activeId: assistant.id,
+      }));
+      return assistant.id;
+    },
 
-  applyEvent: (event) => {
-    const state = get();
-    switch (event.type) {
-      case 'status':
-        return;
-      case 'token':
-        set({
-          messages: updateMessage(state.messages, state.activeId, (message) => ({
+    retry: () => {
+      const state = get();
+      if (state.isStreaming) {
+        return null;
+      }
+      const lastUserIdx = findLastUserIndex(state.messages);
+      if (lastUserIdx < 0) {
+        return null;
+      }
+      const assistant = createAssistantMessage();
+      set({
+        messages: [...state.messages.slice(0, lastUserIdx + 1), assistant],
+        isStreaming: true,
+        activeId: assistant.id,
+        isOpen: true,
+      });
+      return assistant.id;
+    },
+
+    cancel: () => {
+      updateActive(
+        (message) => ({ ...message, status: 'cancelled' }),
+        { isStreaming: false, activeId: null },
+      );
+    },
+
+    clear: () => set({ messages: [], isStreaming: false, activeId: null }),
+
+    applyEvent: (event) => {
+      switch (event.type) {
+        case 'status':
+          return;
+        case 'token':
+          updateActive((message) => ({
             ...message,
             content: message.content + event.text,
-          })),
-        });
-        return;
-      case 'sources':
-        set({
-          messages: updateMessage(state.messages, state.activeId, (message) => ({
+          }));
+          return;
+        case 'sources':
+          updateActive((message) => ({
             ...message,
             sources: event.sources,
-          })),
-        });
-        return;
-      case 'done':
-        set({
-          messages: updateMessage(state.messages, state.activeId, (message) => ({
-            ...message,
-            status: 'complete',
-            done: event,
-            error: null,
-          })),
-          isStreaming: false,
-          activeId: null,
-        });
-        return;
-      case 'error':
-        set({
-          messages: updateMessage(state.messages, state.activeId, (message) => ({
-            ...message,
-            status: 'error',
-            error: event,
-          })),
-          isStreaming: false,
-          activeId: null,
-        });
-        return;
-    }
-  },
+          }));
+          return;
+        case 'done':
+          updateActive(
+            (message) => ({
+              ...message,
+              status: 'complete',
+              done: event,
+              error: null,
+            }),
+            { isStreaming: false, activeId: null },
+          );
+          return;
+        case 'error':
+          failActive({
+            code: event.code,
+            message: event.message,
+            retryable: event.retryable,
+          });
+          return;
+      }
+    },
 
-  fail: (error) =>
-    set((state) => ({
-      messages: updateMessage(state.messages, state.activeId, (message) => ({
-        ...message,
-        status: 'error',
-        error,
-      })),
-      isStreaming: false,
-      activeId: null,
-    })),
-}));
+    fail: failActive,
+  };
+});

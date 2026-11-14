@@ -77,7 +77,7 @@ export function ChatPanel({
     >
       <header className="flex h-12 shrink-0 items-center justify-between gap-2 border-b border-border-subtle bg-black px-3">
         <div className="flex min-w-0 items-center gap-2.5">
-          <span className="h-1.5 w-1.5 bg-neon-blue" aria-hidden="true" />
+          {/* <span className="h-1.5 w-1.5 bg-neon-blue" aria-hidden="true" /> */}
           <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-ivory">
             EXPLORE
           </span>

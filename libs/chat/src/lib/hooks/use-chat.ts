@@ -1,24 +1,25 @@
 import { useCallback, useEffect, useRef } from 'react';
-
 import type {
   ChatBoundingBox,
+  ChatError,
   ChatRequest,
   ChatScope,
   ChatSource,
 } from '@hermes/util-types';
-
+import { isFocusableSource } from '../citations';
 import { useChatConfig } from '../config-context';
 import {
   buildHistory,
+  findLastUserIndex,
   useChatStore,
 } from '../store/chat-store';
 import type { ChatMessage, ChatScopeMode } from '../store/chat-store';
 import {
-  ChatTransportError,
+  ChatTransportErr,
   chatErrorFromTransport,
   streamChat,
 } from '../transport/sse';
-import type { StreamChatOptions } from '../transport/sse';
+import type { StreamChatOptions } from '../types/sse.types';
 
 export interface AutoScope {
   eventId: string | null;
@@ -54,39 +55,27 @@ export interface UseChatResult {
 /** Resolve the request scope from the session mode and current map defaults. */
 export function resolveScope(
   mode: ChatScopeMode,
-  auto: AutoScope,
+  { eventId, viewport: bbox }: AutoScope,
 ): ChatScope {
-  const eventId = auto.eventId;
-  const bbox = auto.viewport;
-
-  if (mode === 'global') {
-    return { type: 'global' };
-  }
-  if (mode === 'event') {
-    if (eventId !== null) {
-      return { type: 'event', event_id: eventId };
-    }
-    return bbox !== null
-      ? { type: 'viewport', bbox }
-      : { type: 'global' };
-  }
-  if (mode === 'viewport') {
-    return bbox !== null ? { type: 'viewport', bbox } : { type: 'global' };
-  }
-
-  if (eventId !== null) {
+  if ((mode === 'auto' || mode === 'event') && eventId !== null) {
     return { type: 'event', event_id: eventId };
   }
-  return bbox !== null ? { type: 'viewport', bbox } : { type: 'global' };
+  if (mode !== 'global' && bbox !== null) {
+    return { type: 'viewport', bbox };
+  }
+  return { type: 'global' };
 }
 
-function lastUserIndex(messages: ChatMessage[]): number {
-  for (let index = messages.length - 1; index >= 0; index -= 1) {
-    if (messages[index].role === 'user') {
-      return index;
-    }
+function normalizeTransportError(error: unknown): ChatError {
+  if (error instanceof ChatTransportErr) {
+    return chatErrorFromTransport(error);
   }
-  return -1;
+  return {
+    code: 'INTERNAL_ERROR',
+    message:
+      error instanceof Error ? error.message : 'The chat request failed.',
+    retryable: true,
+  };
 }
 
 export function useChat({
@@ -97,6 +86,11 @@ export function useChat({
 }: UseChatOptions): UseChatResult {
   const config = useChatConfig();
   const abortRef = useRef<AbortController | null>(null);
+  const latestRef = useRef({ autoScope, onSources, onCitationActivate });
+
+  useEffect(() => {
+    latestRef.current = { autoScope, onSources, onCitationActivate };
+  });
 
   const messages = useChatStore((state) => state.messages);
   const isOpen = useChatStore((state) => state.isOpen);
@@ -104,9 +98,14 @@ export function useChat({
   const scopeMode = useChatStore((state) => state.scopeOverride);
   const scope = resolveScope(scopeMode, autoScope);
 
+  const abortStream = useCallback(() => {
+    abortRef.current?.abort();
+    abortRef.current = null;
+  }, []);
+
   const run = useCallback(
     async (payload: ChatRequest) => {
-      abortRef.current?.abort();
+      abortStream();
       const controller = new AbortController();
       abortRef.current = controller;
       const stream = transport ?? streamChat;
@@ -119,7 +118,7 @@ export function useChat({
           onEvent: (event) => {
             useChatStore.getState().applyEvent(event);
             if (event.type === 'sources') {
-              onSources?.(event.sources);
+              latestRef.current.onSources?.(event.sources);
             }
           },
         });
@@ -127,27 +126,14 @@ export function useChat({
         if (controller.signal.aborted) {
           return;
         }
-        const failure: ChatTransportError | null =
-          error instanceof ChatTransportError ? error : null;
-        useChatStore.getState().fail(
-          failure
-            ? chatErrorFromTransport(failure)
-            : {
-                code: 'INTERNAL_ERROR',
-                message:
-                  error instanceof Error
-                    ? error.message
-                    : 'The chat request failed.',
-                retryable: true,
-              },
-        );
+        useChatStore.getState().fail(normalizeTransportError(error));
       } finally {
         if (abortRef.current === controller) {
           abortRef.current = null;
         }
       }
     },
-    [config.apiVer, config.baseUrl, onSources, transport],
+    [abortStream, config.apiVer, config.baseUrl, transport],
   );
 
   const send = useCallback(
@@ -156,19 +142,17 @@ export function useChat({
       if (store.isStreaming || !content.trim()) {
         return;
       }
-
-      const history = buildHistory(store.messages);
       const payload: ChatRequest = {
         message: content.trim(),
-        history,
-        scope: resolveScope(store.scopeOverride, autoScope),
+        history: buildHistory(store.messages),
+        scope: resolveScope(store.scopeOverride, latestRef.current.autoScope),
       };
       if (!store.send(content)) {
         return;
       }
       void run(payload);
     },
-    [autoScope, run],
+    [run],
   );
 
   const retry = useCallback(() => {
@@ -176,39 +160,35 @@ export function useChat({
     if (store.isStreaming) {
       return;
     }
-
-    const index = lastUserIndex(store.messages);
+    const index = findLastUserIndex(store.messages);
     if (index < 0) {
       return;
     }
-    const userMessage = store.messages[index];
     const payload: ChatRequest = {
-      message: userMessage.content,
+      message: store.messages[index].content,
       history: buildHistory(store.messages.slice(0, index)),
-      scope: resolveScope(store.scopeOverride, autoScope),
+      scope: resolveScope(store.scopeOverride, latestRef.current.autoScope),
     };
     if (!store.retry()) {
       return;
     }
     void run(payload);
-  }, [autoScope, run]);
+  }, [run]);
 
   const cancel = useCallback(() => {
-    abortRef.current?.abort();
-    abortRef.current = null;
+    abortStream();
     useChatStore.getState().cancel();
-    onSources?.([]);
-  }, [onSources]);
+    latestRef.current.onSources?.([]);
+  }, [abortStream]);
 
   const close = useCallback(() => {
     if (useChatStore.getState().isStreaming) {
-      abortRef.current?.abort();
-      abortRef.current = null;
+      abortStream();
       useChatStore.getState().cancel();
     }
     useChatStore.getState().setOpen(false);
-    onSources?.([]);
-  }, [onSources]);
+    latestRef.current.onSources?.([]);
+  }, [abortStream]);
 
   const open = useCallback(() => {
     useChatStore.getState().setOpen(true);
@@ -223,41 +203,28 @@ export function useChat({
   }, [close, open]);
 
   const clear = useCallback(() => {
-    abortRef.current?.abort();
-    abortRef.current = null;
-    useChatStore.getState().cancel();
+    abortStream();
     useChatStore.getState().clear();
-    onSources?.([]);
-  }, [onSources]);
+    latestRef.current.onSources?.([]);
+  }, [abortStream]);
 
   const setScopeOverride = useCallback((mode: ChatScopeMode) => {
     useChatStore.getState().setScopeOverride(mode);
   }, []);
 
-  const activateCitation = useCallback(
-    (source: ChatSource) => {
-      if (source.kind === 'web') {
-        if (source.url) {
-          window.open(source.url, '_blank', 'noopener,noreferrer');
-        }
-        return;
+  const activateCitation = useCallback((source: ChatSource) => {
+    if (source.kind === 'web') {
+      if (source.url) {
+        window.open(source.url, '_blank', 'noopener,noreferrer');
       }
-      if (
-        source.event_id !== null &&
-        source.latitude !== null &&
-        source.longitude !== null
-      ) {
-        onCitationActivate?.(source);
-      }
-    },
-    [onCitationActivate],
-  );
-
-  useEffect(() => {
-    return () => {
-      abortRef.current?.abort();
-    };
+      return;
+    }
+    if (isFocusableSource(source)) {
+      latestRef.current.onCitationActivate?.(source);
+    }
   }, []);
+
+  useEffect(() => abortStream, [abortStream]);
 
   return {
     messages,

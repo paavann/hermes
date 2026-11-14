@@ -111,12 +111,12 @@ export function MessageList({
                 type="button"
                 onClick={() => onSendPrompt?.(item.prompt)}
                 disabled={isStreaming}
-                className="group flex w-full cursor-pointer items-center gap-3 border-b border-border-subtle/60 px-1 py-2.5 text-left transition-colors hover:bg-white/[0.02] focus-visible:outline-1 focus-visible:outline-neon-blue focus-visible:outline-offset-2 disabled:cursor-default disabled:opacity-50"
+                className="group flex w-full cursor-pointer items-center gap-3 border-b border-border-subtle/60 px-1 py-2.5 text-left transition-colors hover:bg-white/2 focus-visible:outline-1 focus-visible:outline-neon-blue focus-visible:outline-offset-2 disabled:cursor-default disabled:opacity-50"
               >
                 <span className="tabular-nums text-[9px] text-slate-muted/30">
                   {item.index}
                 </span>
-                <span className="min-w-0 flex-1 truncate text-[10px] uppercase tracking-[0.1em] text-bone/70 transition-colors group-hover:text-ivory">
+                <span className="min-w-0 flex-1 truncate text-[10px] uppercase tracking-widest text-bone/70 transition-colors group-hover:text-ivory">
                   {item.label}
                 </span>
                 <span className="text-[10px] text-slate-muted/30 transition-colors group-hover:text-neon-blue">

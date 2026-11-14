@@ -1,7 +1,6 @@
-import type { ChatSource } from '@hermes/util-types';
-
-import { citationClass, citationTitle } from '../citations';
-import type { CitationMarkerSegment } from '../citations';
+import { citationClass, citationTitle } from '../citations'
+import type { CitationMarkerSegment } from '../types/citations.types'
+import type { ChatSource } from '@hermes/util-types'
 
 export interface CitationChipProps {
   segment: CitationMarkerSegment;
@@ -9,8 +8,7 @@ export interface CitationChipProps {
 }
 
 export function CitationChip({
-  segment,
-  onActivate,
+  segment, onActivate,
 }: CitationChipProps): React.JSX.Element {
   const className = citationClass(segment);
   const title = citationTitle(segment);
@@ -24,13 +22,18 @@ export function CitationChip({
   }
 
   const source = segment.source;
+  const actionLabel =
+    segment.kind === 'web'
+      ? `Open external source: ${source.title}`
+      : `Open source: ${source.title}`;
+
   return (
     <button
       type="button"
       className={className}
       title={title}
       data-citation={segment.marker}
-      aria-label={`Open source: ${source.title}`}
+      aria-label={actionLabel}
       onClick={() => onActivate?.(source)}
     >
       [{segment.marker}]

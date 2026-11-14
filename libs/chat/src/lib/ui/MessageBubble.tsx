@@ -143,7 +143,7 @@ export function MessageBubble({
           <button
             type="button"
             onClick={() => setIsSourcesOpen(!isSourcesOpen)}
-            className="flex w-full cursor-pointer items-center justify-between px-3 py-2 text-left transition-colors hover:bg-white/[0.02] focus-visible:outline-1 focus-visible:outline-neon-blue"
+            className="flex w-full cursor-pointer items-center justify-between px-3 py-2 text-left transition-colors hover:bg-white/2 focus-visible:outline-1 focus-visible:outline-neon-blue"
             aria-expanded={isSourcesOpen}
           >
             <div className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-[0.16em] text-neon-blue">
@@ -168,7 +168,7 @@ export function MessageBubble({
                     key={`${source.kind}-${source.id}`}
                     type="button"
                     onClick={() => onCitationActivate?.(source)}
-                    className="flex cursor-pointer items-start gap-2 border-b border-border-subtle/60 px-3 py-2 text-left transition-colors last:border-b-0 hover:bg-white/[0.02] focus-visible:outline-1 focus-visible:outline-neon-blue"
+                    className="flex cursor-pointer items-start gap-2 border-b border-border-subtle/60 px-3 py-2 text-left transition-colors last:border-b-0 hover:bg-white/2 focus-visible:outline-1 focus-visible:outline-neon-blue"
                   >
                     <span className="mt-0.5 tabular-nums text-[8px] text-slate-muted/30">
                       {String(idx + 1).padStart(2, '0')}
