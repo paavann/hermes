@@ -3,6 +3,8 @@
 import uuid
 from datetime import UTC, datetime
 
+from langchain_core.messages import AIMessage, HumanMessage
+
 from hermes_ai.chat.citations import CitationRegistry
 from hermes_ai.chat.models import (
     ChatScope,
@@ -18,6 +20,7 @@ from hermes_ai.chat.models import (
 )
 from hermes_ai.chat.prompts import (
     ANSWER_SYSTEM_PROMPT,
+    TOOL_GUIDANCE,
     build_answer_messages,
     clean_xml_text,
     format_evidence,
@@ -265,3 +268,48 @@ def test_answer_messages_note_unavailable_web() -> None:
     human = str(messages[1].content)
     assert '<web_evidence available="false">' in human
     assert "External search was unavailable" in human
+
+
+def test_answer_messages_insert_history_before_the_current_question() -> None:
+    registry = CitationRegistry.build([_event()])
+
+    messages = build_answer_messages(
+        registry=registry,
+        message="follow up",
+        scope=ChatScope(type=ScopeType.GLOBAL),
+        web_available=False,
+        history=[
+            HumanMessage(content="first question"),
+            AIMessage(content="first answer"),
+        ],
+        now=NOW,
+    )
+
+    assert isinstance(messages[1], HumanMessage)
+    assert messages[1].content == "first question"
+    assert isinstance(messages[2], AIMessage)
+    assert messages[2].content == "first answer"
+    assert "<user_question_" in str(messages[3].content)
+
+
+def test_answer_messages_add_tool_guidance_only_when_tools_are_bound() -> None:
+    registry = CitationRegistry.build([_event()])
+
+    with_tools = build_answer_messages(
+        registry=registry,
+        message="question",
+        scope=ChatScope(type=ScopeType.GLOBAL),
+        web_available=False,
+        tools_available=True,
+        now=NOW,
+    )
+    without_tools = build_answer_messages(
+        registry=registry,
+        message="question",
+        scope=ChatScope(type=ScopeType.GLOBAL),
+        web_available=False,
+        now=NOW,
+    )
+
+    assert TOOL_GUIDANCE in str(with_tools[0].content)
+    assert TOOL_GUIDANCE not in str(without_tools[0].content)

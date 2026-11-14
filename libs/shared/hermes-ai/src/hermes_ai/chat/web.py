@@ -33,6 +33,15 @@ class WebSearchOutcome:
     failure: str | None = None
 
 
+class WebSearcher(Protocol):
+    async def search(
+        self,
+        query: str,
+        *,
+        recency_intent: bool = False,
+    ) -> WebSearchOutcome: ...
+
+
 def sanitize_text(value: str, limit: int) -> str:
     return strip_html_text(value, limit=limit)
 
@@ -181,6 +190,7 @@ __all__ = [
     "TavilyTool",
     "WebSearchOutcome",
     "WebSearchService",
+    "WebSearcher",
     "parse_published_at",
     "sanitize_text",
     "source_name_from_url",

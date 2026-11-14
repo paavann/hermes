@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 from types import TracebackType
-from typing import TYPE_CHECKING, Self
+from typing import TYPE_CHECKING, Self, cast
 
 from hermes_ai.core.config import AiConfig
 from hermes_ai.extractors.events import EventExtractor
@@ -11,8 +11,9 @@ from hermes_ai.services.llm import LlmService
 
 
 if TYPE_CHECKING:
-    from hermes_ai.chat.engine import ChatEngine
-    from hermes_ai.chat.retriever import ChatRetriever
+    from langgraph.checkpoint.base import BaseCheckpointSaver
+    from hermes_ai.chat.engine import AnswerModel, ChatEngine
+    from hermes_ai.chat.models.retrieval import ChatRetriever
 
 
 logger = logging.getLogger(__name__)
@@ -26,11 +27,16 @@ class HermesAi:
         self.timelines = TlExtractor(self.llm)
         logger.info("hermes ai initialized.")
 
-    def create_chat_engine(self, retriever: ChatRetriever) -> ChatEngine:
+    def create_chat_engine(
+        self,
+        retriever: ChatRetriever,
+        *,
+        checkpointer: BaseCheckpointSaver[str] | None = None,
+    ) -> ChatEngine:
         from langchain_litellm import ChatLiteLLMRouter
-
         from hermes_ai.chat.engine import ChatEngine
         from hermes_ai.chat.planner import ChatPlanner
+        from hermes_ai.chat.tools import build_tools
         from hermes_ai.chat.web import WebSearchService
         from hermes_ai.exceptions import ConfigurationError
 
@@ -43,7 +49,11 @@ class HermesAi:
                 "conversational chat requires a configured plan model group."
             )
         planner = ChatPlanner(self.llm, self.config)
-        answer_model = ChatLiteLLMRouter(
+        web_search = (
+            WebSearchService(self.config) if self.config.tavily_api_key else None
+        )
+        tools = build_tools(retriever, web_search)
+        router_model = ChatLiteLLMRouter(
             router=self.llm.router,
             model="chat",
             streaming=True,
@@ -52,16 +62,24 @@ class HermesAi:
             stream_options={"include_usage": self.config.chat_stream_include_usage},
             model_kwargs=self.config.chat_model_kwargs,
         )
-        web_search = (
-            WebSearchService(self.config) if self.config.tavily_api_key else None
-        )
+        answer_model: AnswerModel = router_model
+        if tools:
+            try:
+                answer_model = cast("AnswerModel", router_model.bind_tools(tools))
+            except Exception as exc:
+                logger.warning(
+                    "chat model cannot bind tools; tool use is disabled: %s.", exc
+                )
+                tools = []
         return ChatEngine(
             self.llm,
             self.config,
             retriever=retriever,
             planner=planner,
             answer_model=answer_model,
+            tools=tools,
             web_search=web_search,
+            checkpointer=checkpointer,
         )
 
     async def __aenter__(self) -> Self:

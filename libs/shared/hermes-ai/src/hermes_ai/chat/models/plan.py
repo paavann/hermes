@@ -1,9 +1,30 @@
 from __future__ import annotations
 
-from datetime import datetime
 from typing import Self
-
+from typing import Protocol
+from datetime import datetime
+from collections.abc import Sequence
+from dataclasses import dataclass
 from pydantic import BaseModel, Field, field_validator, model_validator
+
+from hermes_ai.chat.models.scopes import ChatTurn, ChatScope
+
+
+@dataclass(frozen=True, slots=True)
+class PlannerOutcome:
+    plan: ChatPlan
+    degraded: bool = False
+    failure: str | None = None
+
+
+class Planner(Protocol):
+    async def plan(
+        self,
+        message: str,
+        *,
+        history: Sequence[ChatTurn] = (),
+        scope: ChatScope,
+    ) -> PlannerOutcome: ...
 
 
 class PlanTimeRange(BaseModel):

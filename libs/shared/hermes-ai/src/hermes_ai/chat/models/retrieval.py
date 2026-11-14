@@ -3,9 +3,21 @@ from __future__ import annotations
 import enum
 import uuid
 from datetime import datetime
-from typing import Self
-
+from typing import Self, Protocol
 from pydantic import BaseModel, Field, model_validator
+
+from hermes_ai.chat.models.scopes import ChatScope
+
+
+class ChatRetriever(Protocol):
+    async def retrieve(
+        self,
+        query: str,
+        *,
+        scope: ChatScope,
+        filters: RetrievalFilters | None = None,
+        recency_intent: bool = False,
+    ) -> RetrievalResult: ...
 
 
 class CoverageLevel(enum.StrEnum):

@@ -7,10 +7,12 @@ from datetime import UTC, datetime
 
 import pytest
 from langchain_core.messages import AIMessageChunk, BaseMessage, BaseMessageChunk
+from langchain_core.tools import BaseTool
 
 from hermes_ai.chat.engine import ChatEngine
 from hermes_ai.chat.models import (
     ChatPlan,
+    ChatRole,
     ChatScope,
     ChatSourceKind,
     ChatStage,
@@ -37,6 +39,7 @@ from hermes_ai.chat.models import (
     WebResult,
 )
 from hermes_ai.chat.planner import PlannerOutcome
+from hermes_ai.chat.tools import build_tools
 from hermes_ai.chat.web import WebSearchOutcome
 from hermes_ai.core.config import AiConfig, ModelRoute, ModelTarget
 from hermes_ai.services.llm import LlmService
@@ -170,6 +173,42 @@ class FakeWeb:
         return self.outcome
 
 
+class SequencedRetriever(FakeRetriever):
+    def __init__(self, results: Sequence[RetrievalResult]) -> None:
+        super().__init__(results[0])
+        self.results = list(results)
+
+    async def retrieve(
+        self,
+        query: str,
+        *,
+        scope: ChatScope,
+        filters: RetrievalFilters | None = None,
+        recency_intent: bool = False,
+    ) -> RetrievalResult:
+        result = self.results[min(len(self.calls), len(self.results) - 1)]
+        self.calls.append((query, scope, filters, recency_intent))
+        return result
+
+
+class ToolAnswer:
+    def __init__(self, script: Sequence[Sequence[AIMessageChunk]]) -> None:
+        self.script = list(script)
+        self.calls = 0
+        self.messages: list[Sequence[BaseMessage]] = []
+
+    def astream(self, input: Sequence[BaseMessage]) -> AsyncIterator[BaseMessageChunk]:
+        self.messages.append(input)
+        index = min(self.calls, len(self.script) - 1)
+        self.calls += 1
+
+        async def generate() -> AsyncIterator[BaseMessageChunk]:
+            for chunk in self.script[index]:
+                yield chunk
+
+        return generate()
+
+
 class FakeAnswer:
     def __init__(
         self,
@@ -203,6 +242,7 @@ def _engine(
     retriever: FakeRetriever,
     answer: FakeAnswer,
     web: FakeWeb | None = None,
+    tools: Sequence[BaseTool] = (),
     config: AiConfig | None = None,
     retrieval_timeout_seconds: float = 1.0,
     first_token_timeout_seconds: float = 1.0,
@@ -214,6 +254,7 @@ def _engine(
         retriever=retriever,
         planner=planner,
         answer_model=answer,
+        tools=tools,
         web_search=web,
         retrieval_timeout_seconds=retrieval_timeout_seconds,
         first_token_timeout_seconds=first_token_timeout_seconds,
@@ -225,13 +266,17 @@ def _collect(
     *,
     message: str = "What happened?",
     scope: ChatScope | None = None,
+    thread_id: str = "test-thread",
+    retry: bool = False,
 ) -> list[EngineEvent]:
     async def run() -> list[EngineEvent]:
         return [
             event
             async for event in engine.stream(
                 message,
+                thread_id=thread_id,
                 scope=scope or ChatScope(type=ScopeType.GLOBAL),
+                retry=retry,
             )
         ]
 
@@ -512,6 +557,7 @@ def test_closing_stream_stops_without_error_or_done() -> None:
         events: list[EngineEvent] = []
         stream = engine.stream(
             "What happened?",
+            thread_id="test-thread",
             scope=ChatScope(type=ScopeType.GLOBAL),
         )
         async for event in stream:
@@ -536,3 +582,103 @@ def test_missing_retriever_raises_type_error() -> None:
             planner=FakePlanner(ChatPlan(query="flooding")),
             answer_model=FakeAnswer([]),
         )
+
+
+def test_tool_call_retrieves_additional_evidence() -> None:
+    retriever = SequencedRetriever(
+        [
+            _result(events=[_event("Initial")]),
+            _result(events=[_event("Extra")]),
+        ]
+    )
+    answer = ToolAnswer(
+        [
+            [
+                AIMessageChunk(
+                    content="",
+                    tool_call_chunks=[
+                        {
+                            "name": "retrieve_events",
+                            "args": '{"query": "extra flooding"}',
+                            "id": "call-1",
+                            "index": 0,
+                        }
+                    ],
+                )
+            ],
+            [AIMessageChunk(content="[E1] Initial and [E2] extra.")],
+        ]
+    )
+    engine = _engine(
+        planner=FakePlanner(ChatPlan(query="flooding")),
+        retriever=retriever,
+        answer=answer,
+        tools=build_tools(retriever),
+    )
+
+    events = _collect(engine)
+
+    assert answer.calls == 2
+    sources = next(event for event in events if isinstance(event, SourcesEvent))
+    assert [source.kind for source in sources.sources] == [
+        ChatSourceKind.EVENT,
+        ChatSourceKind.EVENT,
+    ]
+    done = next(event for event in events if isinstance(event, DoneEvent))
+    assert done.provenance.events == 2
+    assert "<E2>" in "".join(str(message.content) for message in answer.messages[1])
+
+
+def test_thread_memory_is_replayed_to_planner_and_answer() -> None:
+    planner = FakePlanner(ChatPlan(query="flooding"))
+    answer = FakeAnswer([AIMessageChunk(content="[E1] First answer.")])
+    engine = _engine(
+        planner=planner,
+        retriever=FakeRetriever(_result(events=[_event()])),
+        answer=answer,
+    )
+
+    _collect(engine, message="First question?")
+    _collect(engine, message="Second question?")
+
+    assert [(turn.role, turn.content) for turn in planner.calls[1][1]] == [
+        (ChatRole.USER, "First question?"),
+        (ChatRole.ASSISTANT, "First answer."),
+    ]
+    second_prompt = list(answer.messages[1])
+    assert str(second_prompt[1].content) == "First question?"
+    assert str(second_prompt[2].content) == "First answer."
+    assert "<user_question_" in str(second_prompt[3].content)
+
+
+def test_retry_discards_last_turn_from_the_checkpoint() -> None:
+    planner = FakePlanner(ChatPlan(query="flooding"))
+    answer = FakeAnswer([AIMessageChunk(content="[E1] Answer.")])
+    engine = _engine(
+        planner=planner,
+        retriever=FakeRetriever(_result(events=[_event()])),
+        answer=answer,
+    )
+
+    _collect(engine, message="First question?")
+    _collect(engine, message="Second question?")
+    _collect(engine, message="Second question?", retry=True)
+
+    assert [(turn.role, turn.content) for turn in planner.calls[2][1]] == [
+        (ChatRole.USER, "First question?"),
+        (ChatRole.ASSISTANT, "Answer."),
+    ]
+
+    async def snapshot() -> Sequence[BaseMessage]:
+        state = await engine._graph.aget_state(
+            {"configurable": {"thread_id": "test-thread"}}
+        )
+        return state.values["messages"]
+
+    messages = asyncio.run(snapshot())
+    assert [type(message).__name__ for message in messages] == [
+        "HumanMessage",
+        "AIMessage",
+        "HumanMessage",
+        "AIMessage",
+    ]

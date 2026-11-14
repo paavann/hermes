@@ -1,10 +1,9 @@
 from __future__ import annotations
 
+import re
 import asyncio
 import logging
-import re
 from collections.abc import Sequence
-from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Protocol, cast
 
@@ -13,6 +12,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import Runnable
 from langchain_litellm import ChatLiteLLMRouter
 
+from hermes_ai.chat.models.plan import PlannerOutcome
 from hermes_ai.chat.models import ChatPlan, ChatScope, ChatTurn
 from hermes_ai.core.config import AiConfig
 from hermes_ai.core.constants import PREDEFINED_CATEGORIES
@@ -38,7 +38,7 @@ CITATION_MARKER_RE = re.compile(r"\[(?:BG|[EATW]\d+)(?:\s*,\s*(?:BG|[EATW]\d+))*
 PLANNER_SYSTEM_PROMPT = """You are the retrieval planner for a geospatial news \
 assistant. Rewrite the user's latest question into one standalone search query.
 Resolve pronouns and references using the conversation history. Do not answer the
-question. Do not emit latitude or longitude values. Do not call any tools.
+question. Do not emit latitude or longitude values.
 
 Today is {today}. The active map scope is {scope}.
 
@@ -82,11 +82,7 @@ class PlanRunner(Protocol):
     async def ainvoke(self, input: LanguageModelInput) -> ChatPlan: ...
 
 
-@dataclass(frozen=True, slots=True)
-class PlannerOutcome:
-    plan: ChatPlan
-    degraded: bool = False
-    failure: str | None = None
+
 
 
 def sanitize_history(history: Sequence[ChatTurn]) -> list[ChatTurn]:
