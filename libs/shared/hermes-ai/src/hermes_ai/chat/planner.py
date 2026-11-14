@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-import re
 import asyncio
 import logging
+import re
 from collections.abc import Sequence
 from datetime import UTC, datetime
 from typing import Protocol, cast
@@ -12,8 +12,8 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import Runnable
 from langchain_litellm import ChatLiteLLMRouter
 
-from hermes_ai.chat.models.plan import PlannerOutcome
 from hermes_ai.chat.models import ChatPlan, ChatScope, ChatTurn
+from hermes_ai.chat.models.plan import PlannerOutcome
 from hermes_ai.core.config import AiConfig
 from hermes_ai.core.constants import PREDEFINED_CATEGORIES
 from hermes_ai.exceptions import ConfigurationError

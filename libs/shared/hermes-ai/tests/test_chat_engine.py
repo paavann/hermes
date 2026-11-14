@@ -619,6 +619,15 @@ def test_tool_call_retrieves_additional_evidence() -> None:
     events = _collect(engine)
 
     assert answer.calls == 2
+    assert _statuses(events) == [
+        ChatStage.ACCEPTED,
+        ChatStage.PLANNING,
+        ChatStage.RETRIEVING,
+        ChatStage.GENERATING,
+        ChatStage.RETRIEVING,
+        ChatStage.GENERATING,
+        ChatStage.FINALIZING,
+    ]
     sources = next(event for event in events if isinstance(event, SourcesEvent))
     assert [source.kind for source in sources.sources] == [
         ChatSourceKind.EVENT,

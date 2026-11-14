@@ -12,6 +12,7 @@ from hermes_ai.services.llm import LlmService
 
 if TYPE_CHECKING:
     from langgraph.checkpoint.base import BaseCheckpointSaver
+
     from hermes_ai.chat.engine import AnswerModel, ChatEngine
     from hermes_ai.chat.models.retrieval import ChatRetriever
 
@@ -34,6 +35,7 @@ class HermesAi:
         checkpointer: BaseCheckpointSaver[str] | None = None,
     ) -> ChatEngine:
         from langchain_litellm import ChatLiteLLMRouter
+
         from hermes_ai.chat.engine import ChatEngine
         from hermes_ai.chat.planner import ChatPlanner
         from hermes_ai.chat.tools import build_tools

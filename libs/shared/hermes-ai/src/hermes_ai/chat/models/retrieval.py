@@ -3,7 +3,8 @@ from __future__ import annotations
 import enum
 import uuid
 from datetime import datetime
-from typing import Self, Protocol
+from typing import Protocol, Self
+
 from pydantic import BaseModel, Field, model_validator
 
 from hermes_ai.chat.models.scopes import ChatScope

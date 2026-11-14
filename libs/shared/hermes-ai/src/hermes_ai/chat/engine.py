@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-import time
-import uuid
 import asyncio
 import inspect
 import logging
+import time
+import uuid
 from collections import Counter
 from collections.abc import AsyncIterator, Sequence
 from typing import Protocol
@@ -28,7 +28,6 @@ from langgraph.graph.state import CompiledStateGraph
 from langgraph.prebuilt import ToolNode
 from langgraph.types import Overwrite
 
-from hermes_ai.chat.models.plan import Planner
 from hermes_ai.chat.citations import (
     CitationRegistry,
     CitationStreamFilter,
@@ -47,8 +46,9 @@ from hermes_ai.chat.models.events import (
     StatusEvent,
     TokenEvent,
 )
-from hermes_ai.chat.models.plan import ChatPlan
+from hermes_ai.chat.models.plan import ChatPlan, Planner
 from hermes_ai.chat.models.retrieval import (
+    ChatRetriever,
     Coverage,
     CoverageLevel,
     DegradedFlag,
@@ -68,7 +68,6 @@ from hermes_ai.chat.planner import (
     MAX_HISTORY_TURNS,
 )
 from hermes_ai.chat.prompts import build_answer_messages
-from hermes_ai.chat.models.retrieval import ChatRetriever
 from hermes_ai.chat.state import ChatState
 from hermes_ai.chat.web import WebSearcher
 from hermes_ai.core.config import AiConfig

@@ -2,16 +2,22 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import Annotated
 from collections.abc import Sequence
+from typing import Annotated
 
-from langgraph.types import Command
-from langgraph.prebuilt import InjectedState
 from langchain_core.messages import ToolMessage
 from langchain_core.tools import BaseTool, InjectedToolCallId, tool
+from langgraph.config import get_stream_writer
+from langgraph.prebuilt import InjectedState
+from langgraph.types import Command
 
+from hermes_ai.chat.models.events import ChatStage, StatusEvent
+from hermes_ai.chat.models.retrieval import (
+    ChatRetriever,
+    DegradedFlag,
+    RetrievedEvidence,
+)
 from hermes_ai.chat.models.scopes import ChatScope
-from hermes_ai.chat.models.retrieval import DegradedFlag, RetrievedEvidence, ChatRetriever
 from hermes_ai.chat.state import ChatState
 from hermes_ai.chat.web import WebSearcher
 
@@ -29,12 +35,15 @@ def _evidence_message(evidence: Sequence[RetrievedEvidence]) -> str:
 
 
 def _retrieval_tool(retriever: ChatRetriever) -> BaseTool:
-    @tool(description="Search plotted news events. Use a short, standalone search query.")
+    @tool(
+        description="Search plotted news events. Use a short, standalone search query."
+    )
     async def retrieve_events(
         query: str,
         state: Annotated[ChatState, InjectedState],
         tool_call_id: Annotated[str, InjectedToolCallId],
     ) -> Command:
+        get_stream_writer()(StatusEvent(stage=ChatStage.RETRIEVING))
         scope = ChatScope.model_validate(state["scope"])
         try:
             async with asyncio.timeout(TIMEOUT_SECS):
@@ -82,11 +91,14 @@ def _retrieval_tool(retriever: ChatRetriever) -> BaseTool:
 
 
 def _web_tool(web: WebSearcher) -> BaseTool:
-    @tool(description="Search the web for very recent external news that local events miss.")
+    @tool(
+        description="Search the web for very recent external news that local events miss."
+    )
     async def web_search(
         query: str,
         tool_call_id: Annotated[str, InjectedToolCallId],
     ) -> Command:
+        get_stream_writer()(StatusEvent(stage=ChatStage.SEARCHING))
         outcome = await web.search(query, recency_intent=True)
         if outcome.degraded:
             return Command(
@@ -139,7 +151,8 @@ def _web_tool(web: WebSearcher) -> BaseTool:
 
 
 def build_tools(
-    retriever: ChatRetriever, web: WebSearcher | None = None,
+    retriever: ChatRetriever,
+    web: WebSearcher | None = None,
 ) -> list[BaseTool]:
     tools = [_retrieval_tool(retriever)]
     if web is not None:

@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-from typing import Self
-from typing import Protocol
-from datetime import datetime
 from collections.abc import Sequence
 from dataclasses import dataclass
+from datetime import datetime
+from typing import Protocol, Self
+
 from pydantic import BaseModel, Field, field_validator, model_validator
 
-from hermes_ai.chat.models.scopes import ChatTurn, ChatScope
+from hermes_ai.chat.models.scopes import ChatScope, ChatTurn
 
 
 @dataclass(frozen=True, slots=True)
