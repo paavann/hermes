@@ -4,6 +4,7 @@ import inspect
 import logging
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
 from fastapi import Request
 from hermes_ai import HermesAi
 from hermes_ai.chat.engine import ChatEngine
@@ -11,10 +12,8 @@ from hermes_ai.chat.models import (
     BoundingBox as EngineBoundingBox,
 )
 from hermes_ai.chat.models import (
-    ChatRole,
     ChatScope,
     ChatStage,
-    ChatTurn,
     DoneEvent,
     EngineEvent,
     ErrorCode,
@@ -37,7 +36,6 @@ from hermes_api.schemas.chat import (
     ChatDoneEvent,
     ChatErrorEvent,
     ChatEventScope,
-    ChatHistoryMessage,
     ChatProvenance,
     ChatRequest,
     ChatSource,
@@ -54,6 +52,10 @@ from hermes_api.services.chat_guards import (
     estimate_tokens,
 )
 from hermes_api.services.chat_retriever import DbChatRetriever
+
+
+if TYPE_CHECKING:
+    from langgraph.checkpoint.base import BaseCheckpointSaver
 
 
 logger = logging.getLogger(__name__)
@@ -79,7 +81,8 @@ async def _wait_disconnect(request: Request) -> None:
 @dataclass(slots=True)
 class PreparedTurn:
     message: str
-    history: tuple[ChatTurn, ...]
+    thread_id: str
+    retry: bool
     scope: ChatScope
     reservation: BudgetReservation
     guards: ChatGuards
@@ -130,6 +133,7 @@ class ChatRuntime:
         config: Settings,
         *,
         ai_service: AiService | None = None,
+        checkpointer: BaseCheckpointSaver[str] | None = None,
     ) -> ChatRuntime | None:
         if not config.CHAT_ENABLED:
             logger.info("conversational chat is disabled by configuration.")
@@ -158,7 +162,7 @@ class ChatRuntime:
                 min_semantic_similarity=config.CHAT_MIN_SEMANTIC_SIMILARITY,
                 freshness_hours=float(config.CHAT_FRESHNESS_HOURS),
             )
-            engine = ai.create_chat_engine(retriever)
+            engine = ai.create_chat_engine(retriever, checkpointer=checkpointer)
         except (ConfigurationError, ValueError) as exc:
             logger.error("chat runtime is unavailable: %s.", exc)
             return None
@@ -206,10 +210,9 @@ class ChatService:
         guards = self._runtime.guards
         guards.check_rate_limit(request)
 
-        prompt_chars = len(payload.message) + sum(
-            len(message.content) for message in payload.history
+        estimate = estimate_tokens(
+            len(payload.message), self._runtime.max_output_tokens
         )
-        estimate = estimate_tokens(prompt_chars, self._runtime.max_output_tokens)
         reservation = guards.budget.reserve(estimate)
 
         try:
@@ -219,7 +222,8 @@ class ChatService:
             raise
         return PreparedTurn(
             message=payload.message,
-            history=tuple(_history_turn(item) for item in payload.history),
+            thread_id=str(payload.thread_id),
+            retry=payload.retry,
             scope=_engine_scope(payload),
             reservation=reservation,
             guards=guards,
@@ -228,8 +232,9 @@ class ChatService:
     async def stream(self, turn: PreparedTurn, request: Request) -> AsyncIterator[str]:
         iterator = self._runtime.engine.stream(
             turn.message,
-            history=turn.history,
+            thread_id=turn.thread_id,
             scope=turn.scope,
+            retry=turn.retry,
         )
         pending: asyncio.Task[EngineEvent] | None = None
         disconnect_task: asyncio.Task[None] = asyncio.create_task(
@@ -311,10 +316,6 @@ class ChatService:
                     turn.settle(turn.reservation.tokens)
                 else:
                     turn.settle(None)
-
-
-def _history_turn(message: ChatHistoryMessage) -> ChatTurn:
-    return ChatTurn(role=ChatRole(message.role), content=message.content)
 
 
 def _engine_scope(payload: ChatRequest) -> ChatScope:

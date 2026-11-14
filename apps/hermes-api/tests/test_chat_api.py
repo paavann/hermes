@@ -11,6 +11,9 @@ from hermes_api.core.exceptions import (
 )
 
 
+THREAD_ID = "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+
+
 class FakeChatService:
     def __init__(
         self,
@@ -44,10 +47,19 @@ def _app(service: FakeChatService | None = None) -> FastAPI:
 
 def test_chat_route_rejects_invalid_body_with_422() -> None:
     with TestClient(_app(FakeChatService())) as client:
-        response = client.post("/api/v1/chat", json={"message": ""})
+        response = client.post(
+            "/api/v1/chat", json={"message": "", "thread_id": THREAD_ID}
+        )
 
     assert response.status_code == 422
     assert response.json()["err_code"] == "VALIDATION_ERROR"
+
+
+def test_chat_route_rejects_missing_thread_id_with_422() -> None:
+    with TestClient(_app(FakeChatService())) as client:
+        response = client.post("/api/v1/chat", json={"message": "question"})
+
+    assert response.status_code == 422
 
 
 def test_chat_route_rejects_malformed_bbox() -> None:
@@ -56,6 +68,7 @@ def test_chat_route_rejects_malformed_bbox() -> None:
             "/api/v1/chat",
             json={
                 "message": "flooding",
+                "thread_id": THREAD_ID,
                 "scope": {
                     "type": "viewport",
                     "bbox": {
@@ -74,7 +87,9 @@ def test_chat_route_rejects_malformed_bbox() -> None:
 def test_chat_route_returns_429_with_retry_after() -> None:
     service = FakeChatService(prepare_error=ChatRateLimitExceeded(30, limit=10))
     with TestClient(_app(service)) as client:
-        response = client.post("/api/v1/chat", json={"message": "question"})
+        response = client.post(
+            "/api/v1/chat", json={"message": "question", "thread_id": THREAD_ID}
+        )
 
     assert response.status_code == 429
     assert response.json()["err_code"] == "CHAT_RATE_LIMIT_EXCEEDED"
@@ -83,7 +98,9 @@ def test_chat_route_returns_429_with_retry_after() -> None:
 
 def test_chat_route_is_503_when_runtime_is_missing() -> None:
     with TestClient(_app()) as client:
-        response = client.post("/api/v1/chat", json={"message": "question"})
+        response = client.post(
+            "/api/v1/chat", json={"message": "question", "thread_id": THREAD_ID}
+        )
 
     assert response.status_code == 503
     assert response.json()["err_code"] == "CHAT_UNAVAILABLE"
@@ -102,7 +119,11 @@ def test_chat_route_streams_events_in_order() -> None:
 
     with (
         TestClient(_app(service)) as client,
-        client.stream("POST", "/api/v1/chat", json={"message": "question"}) as response,
+        client.stream(
+            "POST",
+            "/api/v1/chat",
+            json={"message": "question", "thread_id": THREAD_ID},
+        ) as response,
     ):
         body = "".join(response.iter_text())
 

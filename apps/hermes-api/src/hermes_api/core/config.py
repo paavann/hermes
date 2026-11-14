@@ -24,6 +24,7 @@ class Settings(BaseSettings):
     DB_USER: str
     DB_PASSWORD: str
     DB_NAME: str
+    CHECKPOINT_DB_URL: str = ""
 
     # primary and fallback llm (secondary) credentials.
     LLM_API: str = ""
@@ -73,7 +74,6 @@ class Settings(BaseSettings):
     CHAT_MIN_SEMANTIC_SIMILARITY: float = 0.20
     CHAT_FRESHNESS_HOURS: int = 24
     CHAT_MAX_MESSAGE_CHARS: int = 4000
-    CHAT_MAX_HISTORY_TURNS: int = 8
     CHAT_MAX_OUTPUT_TOKENS: int = 1200
     CHAT_MODEL_KWARGS: dict[str, object] = Field(default_factory=dict)
     PLAN_MODEL_KWARGS: dict[str, object] = Field(default_factory=dict)
@@ -108,6 +108,18 @@ class Settings(BaseSettings):
             port=self.DB_PORT,
             database=self.DB_NAME,
             query=query,
+        )
+
+    @property
+    def checkpoint_db_url(self) -> str:
+        """psycopg connection string for the LangGraph checkpointer."""
+        if self.CHECKPOINT_DB_URL.strip():
+            return self.CHECKPOINT_DB_URL
+        query = dict(self.db_url.query)
+        if "ssl" in query:
+            query["sslmode"] = query.pop("ssl")
+        return self.db_url.set(drivername="postgresql", query=query).render_as_string(
+            hide_password=False
         )
 
 

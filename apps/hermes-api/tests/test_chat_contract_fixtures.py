@@ -41,6 +41,7 @@ def test_shared_chat_requests_validate(name: str, scope_type: str) -> None:
     request = ChatRequest.model_validate(_load(name))
 
     assert request.message
+    assert request.thread_id.int != 0
     assert request.scope.type == scope_type
 
 

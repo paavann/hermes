@@ -1,9 +1,11 @@
 import logging
 from collections.abc import AsyncGenerator
-from contextlib import asynccontextmanager
+from contextlib import AsyncExitStack, asynccontextmanager
+from typing import TYPE_CHECKING
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from hermes_db import close_db, init_db
+from langgraph.checkpoint.memory import InMemorySaver
 from utils_py import setup_logging
 from hermes_api.api.v1.router import api_router
 from hermes_api.core.config import settings
@@ -12,17 +14,27 @@ from hermes_api.services.ai_service import AiService
 from hermes_api.services.chat_service import ChatRuntime
 
 
+if TYPE_CHECKING:
+    from langgraph.checkpoint.base import BaseCheckpointSaver
+
+
 setup_logging()
 logger = logging.getLogger(__name__)
 
 
-def create_ai_services() -> tuple[AiService | None, ChatRuntime | None]:
+def create_ai_services(
+    checkpointer: BaseCheckpointSaver[str] | None = None,
+) -> tuple[AiService | None, ChatRuntime | None]:
     ai_service: AiService | None = None
     chat_runtime: ChatRuntime | None = None
     try:
         ai_service = AiService(settings)
         chat_runtime = (
-            ChatRuntime.from_settings(settings, ai_service=ai_service)
+            ChatRuntime.from_settings(
+                settings,
+                ai_service=ai_service,
+                checkpointer=checkpointer,
+            )
             if ai_service is not None
             else None
         )
@@ -32,9 +44,30 @@ def create_ai_services() -> tuple[AiService | None, ChatRuntime | None]:
             )
     except Exception as exc:
         logger.warning(
-            "failed to configure ai service. ai features will be unavailable. error: %s.", exc
+            "failed to configure ai service. ai features will be unavailable. error: %s.",
+            exc,
         )
     return ai_service, chat_runtime
+
+
+async def _open_checkpointer(
+    stack: AsyncExitStack,
+) -> BaseCheckpointSaver[str]:
+    try:
+        from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
+
+        saver = await stack.enter_async_context(
+            AsyncPostgresSaver.from_conn_string(settings.checkpoint_db_url)
+        )
+        await saver.setup()
+        logger.info("langgraph checkpointer initialized.")
+        return saver
+    except Exception as exc:
+        logger.warning(
+            "langgraph checkpointer unavailable; chat memory will not persist across restarts: %s.",
+            exc,
+        )
+        return InMemorySaver()
 
 
 @asynccontextmanager
@@ -47,19 +80,22 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     )
     await init_db(db_url=settings.db_url)
 
-    ai_service, chat_runtime = create_ai_services()
-    app.state.ai_service = ai_service
-    app.state.chat_runtime = chat_runtime
+    async with AsyncExitStack() as stack:
+        checkpointer = await _open_checkpointer(stack)
+        ai_service, chat_runtime = create_ai_services(checkpointer)
+        app.state.ai_service = ai_service
+        app.state.chat_runtime = chat_runtime
 
-    logger.info("hermes api running on port %s.", settings.API_PORT)
-    yield
-
-    logger.info("shutting down server...")
-    if chat_runtime is not None:
-        await chat_runtime.aclose()
-    if ai_service is not None:
-        await ai_service.aclose()
-    await close_db()
+        logger.info("hermes api running on port %s.", settings.API_PORT)
+        try:
+            yield
+        finally:
+            logger.info("shutting down server...")
+            if chat_runtime is not None:
+                await chat_runtime.aclose()
+            if ai_service is not None:
+                await ai_service.aclose()
+            await close_db()
 
 
 app = FastAPI(title="hermes api", version=settings.VERSION, lifespan=lifespan)

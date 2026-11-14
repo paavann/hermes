@@ -29,12 +29,12 @@ def test_settings_load_without_chat_variables() -> None:
     assert cfg.CHAT_MIN_SEMANTIC_SIMILARITY == 0.20
     assert cfg.CHAT_FRESHNESS_HOURS == 24
     assert cfg.CHAT_MAX_MESSAGE_CHARS == 4000
-    assert cfg.CHAT_MAX_HISTORY_TURNS == 8
     assert cfg.CHAT_MAX_OUTPUT_TOKENS == 1200
     assert cfg.CHAT_WEB_TIMEOUT_SECONDS == 8.0
     assert cfg.CHAT_STREAM_INCLUDE_USAGE is True
     assert cfg.LANGFUSE_MASK_CONTENT is True
     assert cfg.TRUST_PROXY_HEADERS is False
+    assert cfg.CHECKPOINT_DB_URL == ""
 
 
 def test_settings_with_chat_variables() -> None:
@@ -67,3 +67,36 @@ def test_chat_can_be_disabled(monkeypatch) -> None:
     monkeypatch.setenv("CHAT_ENABLED", "false")
     cfg = _settings()
     assert cfg.CHAT_ENABLED is False
+
+
+def test_checkpoint_url_derives_from_db_settings() -> None:
+    cfg = _settings(
+        DB_HOST="db.example.com",
+        DB_PORT=6543,
+        DB_USER="hermes",
+        DB_NAME="hermes",
+    )
+
+    url = cfg.checkpoint_db_url
+
+    assert url.startswith("postgresql://hermes:")
+    assert "@db.example.com:6543/hermes" in url
+    assert "sslmode=require" in url
+
+
+def test_checkpoint_url_uses_local_db_without_ssl() -> None:
+    cfg = _settings(DB_HOST="localhost")
+
+    url = cfg.checkpoint_db_url
+
+    assert url.startswith("postgresql://")
+    assert "@localhost:5432/" in url
+    assert "sslmode" not in url
+
+
+def test_checkpoint_url_honors_explicit_override() -> None:
+    cfg = _settings(
+        CHECKPOINT_DB_URL="postgresql://other:secret@checkpoints:5432/state"
+    )
+
+    assert cfg.checkpoint_db_url == "postgresql://other:secret@checkpoints:5432/state"

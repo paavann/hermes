@@ -9,7 +9,6 @@ from hermes_api.schemas.chat import (
     ChatErrorEvent,
     ChatEventScope,
     ChatGlobalScope,
-    ChatHistoryMessage,
     ChatProvenance,
     ChatRequest,
     ChatSource,
@@ -23,54 +22,52 @@ from hermes_api.schemas.chat import (
 
 
 STREAM_EVENT = TypeAdapter(ChatStreamEvent)
+THREAD_ID = "3fa85f64-5717-4562-b3fc-2c963f66afa6"
 
 
-def test_request_requires_message() -> None:
+def test_request_requires_message_and_thread_id() -> None:
     with pytest.raises(ValidationError):
         ChatRequest.model_validate({})
-
-
-def test_request_rejects_bad_role() -> None:
     with pytest.raises(ValidationError):
-        ChatRequest.model_validate(
-            {
-                "message": "question",
-                "history": [{"role": "system", "content": "bad"}],
-            }
-        )
+        ChatRequest.model_validate({"message": "question"})
 
 
-def test_request_rejects_oversized_message_and_history_content() -> None:
+def test_request_rejects_malformed_thread_id() -> None:
     with pytest.raises(ValidationError):
-        ChatRequest(message="x" * 4001)
-    with pytest.raises(ValidationError):
-        ChatHistoryMessage(role="user", content="x" * 8001)
+        ChatRequest.model_validate({"message": "question", "thread_id": "not-a-uuid"})
 
 
-def test_request_rejects_more_than_sixteen_messages() -> None:
+def test_request_rejects_oversized_message() -> None:
     with pytest.raises(ValidationError):
-        ChatRequest(
-            message="question",
-            history=[
-                {"role": "user", "content": f"turn {index}"} for index in range(17)
-            ],
-        )
+        ChatRequest(message="x" * 4001, thread_id=THREAD_ID)
 
 
 def test_request_strips_and_rejects_blank_message() -> None:
-    assert ChatRequest(message="  hello  ").message == "hello"
+    assert ChatRequest(message="  hello  ", thread_id=THREAD_ID).message == "hello"
     with pytest.raises(ValidationError, match="message must not be blank"):
-        ChatRequest(message="   ")
+        ChatRequest(message="   ", thread_id=THREAD_ID)
 
 
-def test_request_defaults_to_global_scope() -> None:
-    request = ChatRequest(message="question")
+def test_request_defaults_to_global_scope_and_no_retry() -> None:
+    request = ChatRequest(message="question", thread_id=THREAD_ID)
     assert isinstance(request.scope, ChatGlobalScope)
+    assert request.retry is False
+
+
+def test_request_accepts_retry() -> None:
+    request = ChatRequest(message="question", thread_id=THREAD_ID, retry=True)
+    assert request.retry is True
 
 
 def test_event_scope_requires_event_id() -> None:
     with pytest.raises(ValidationError):
-        ChatRequest.model_validate({"message": "question", "scope": {"type": "event"}})
+        ChatRequest.model_validate(
+            {
+                "message": "question",
+                "thread_id": THREAD_ID,
+                "scope": {"type": "event"},
+            }
+        )
 
 
 def test_viewport_scope_requires_valid_box() -> None:
@@ -90,6 +87,7 @@ def test_discriminated_scope_parses_each_variant() -> None:
     viewport = ChatRequest.model_validate(
         {
             "message": "question",
+            "thread_id": THREAD_ID,
             "scope": {
                 "type": "viewport",
                 "bbox": {"north": 60, "south": 30, "east": 60, "west": 20},
@@ -99,6 +97,7 @@ def test_discriminated_scope_parses_each_variant() -> None:
     event = ChatRequest.model_validate(
         {
             "message": "question",
+            "thread_id": THREAD_ID,
             "scope": {
                 "type": "event",
                 "event_id": "00000000-0000-0000-0000-000000000001",
@@ -114,7 +113,7 @@ def test_request_json_snapshot() -> None:
     request = ChatRequest.model_validate(
         {
             "message": "What changed?",
-            "history": [{"role": "user", "content": "Earlier question."}],
+            "thread_id": THREAD_ID,
             "scope": {
                 "type": "viewport",
                 "bbox": {"north": 60, "south": 30, "east": 60, "west": 20},
@@ -124,7 +123,8 @@ def test_request_json_snapshot() -> None:
 
     assert request.model_dump(mode="json") == {
         "message": "What changed?",
-        "history": [{"role": "user", "content": "Earlier question."}],
+        "thread_id": THREAD_ID,
+        "retry": False,
         "scope": {
             "type": "viewport",
             "bbox": {"north": 60.0, "south": 30.0, "east": 60.0, "west": 20.0},

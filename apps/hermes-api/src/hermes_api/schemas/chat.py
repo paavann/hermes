@@ -4,15 +4,7 @@ from typing import Annotated, Literal, Self
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 
-MessageRole = Literal[
-    "user",
-    "assistant"
-]
-ScopeType = Literal[
-    "event",
-    "viewport",
-    "global"
-]
+ScopeType = Literal["event", "viewport", "global"]
 Stage = Literal[
     "accepted",
     "planning",
@@ -21,26 +13,15 @@ Stage = Literal[
     "generating",
     "finalizing",
 ]
-CoverageLevel = Literal[
-    "empty",
-    "thin",
-    "sufficient"
-]
+CoverageLevel = Literal["empty", "thin", "sufficient"]
 DegradedFlag = Literal[
     "planner_fallback",
     "semantic_unavailable",
     "web_unavailable",
     "missing_citations",
 ]
-GroundingFlag = Literal[
-    "missing_citations"
-]
-SourceKind = Literal[
-    "event",
-    "article",
-    "timeline",
-    "web"
-]
+GroundingFlag = Literal["missing_citations"]
+SourceKind = Literal["event", "article", "timeline", "web"]
 ErrorCode = Literal[
     "RETRIEVAL_FAILED",
     "MODEL_TIMEOUT",
@@ -72,32 +53,23 @@ class ChatEventScope(BaseModel):
     type: Literal["event"] = "event"
     event_id: uuid.UUID
 
+
 class ChatViewportScope(BaseModel):
     type: Literal["viewport"] = "viewport"
     bbox: ChatBoundingBox
 
+
 class ChatGlobalScope(BaseModel):
     type: Literal["global"] = "global"
+
 
 ChatScope = ChatEventScope | ChatViewportScope | ChatGlobalScope
 
 
-class ChatHistoryMessage(BaseModel):
-    role: MessageRole
-    content: str = Field(min_length=1, max_length=8000)
-
-    @field_validator("content")
-    @classmethod
-    def _strip_content(cls, value: str) -> str:
-        stripped = value.strip()
-        if not stripped:
-            raise ValueError("content must not be blank.")
-        return stripped
-
-
 class ChatRequest(BaseModel):
     message: str = Field(min_length=1, max_length=4000)
-    history: list[ChatHistoryMessage] = Field(default_factory=list, max_length=16)
+    thread_id: uuid.UUID
+    retry: bool = False
     scope: ChatScope = Field(default_factory=ChatGlobalScope)
 
     @field_validator("message")
@@ -204,7 +176,6 @@ __all__ = [
     "ChatErrorEvent",
     "ChatEventScope",
     "ChatGlobalScope",
-    "ChatHistoryMessage",
     "ChatProvenance",
     "ChatRequest",
     "ChatScope",

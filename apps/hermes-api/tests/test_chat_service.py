@@ -12,7 +12,6 @@ from hermes_ai.chat.models import (
     ChatSource,
     ChatSourceKind,
     ChatStage,
-    ChatTurn,
     ChatUsage,
     Coverage,
     CoverageLevel,
@@ -64,14 +63,16 @@ class FakeEngine:
         self,
         message: str,
         *,
-        history: tuple[ChatTurn, ...] = (),
+        thread_id: str,
         scope: ChatScope,
+        retry: bool = False,
     ):
         self.calls.append(
             {
                 "message": message,
-                "history": history,
+                "thread_id": thread_id,
                 "scope": scope,
+                "retry": retry,
             }
         )
         if self.delay_seconds:
@@ -141,17 +142,18 @@ def _frames(frame: str) -> tuple[str, dict[str, object]]:
     return event, data
 
 
-def test_prepare_maps_scope_history_and_reserves_capacity() -> None:
+THREAD_ID = "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+
+
+def test_prepare_maps_scope_thread_and_reserves_capacity() -> None:
     async def run() -> None:
         guards = _guards()
         service = _service(FakeEngine([]), guards)
         event_id = uuid.uuid4()
         payload = ChatRequest(
             message="what happened?",
-            history=[
-                {"role": "user", "content": "earlier question"},
-                {"role": "assistant", "content": "earlier answer [E1]"},
-            ],
+            thread_id=THREAD_ID,
+            retry=True,
             scope=ChatEventScope(event_id=event_id),
         )
 
@@ -159,10 +161,8 @@ def test_prepare_maps_scope_history_and_reserves_capacity() -> None:
 
         assert turn.scope.type is ScopeType.EVENT
         assert turn.scope.event_id == event_id
-        assert [item.role.value for item in turn.history] == [
-            "user",
-            "assistant",
-        ]
+        assert turn.thread_id == THREAD_ID
+        assert turn.retry is True
         assert guards.budget.reserved > 0
         assert guards.concurrency.available == 1
 
@@ -179,6 +179,7 @@ def test_prepare_maps_viewport_bounds() -> None:
         service = _service(FakeEngine([]), _guards())
         payload = ChatRequest(
             message="flooding",
+            thread_id=THREAD_ID,
             scope=ChatViewportScope(
                 bbox={"north": 51.0, "south": 40.0, "east": 10.0, "west": -10.0}
             ),
@@ -210,7 +211,7 @@ def test_stream_emits_ordered_sse_and_reconciles_usage() -> None:
         )
         service = _service(engine, guards)
         turn = await service.prepare(
-            FakeRequest(), ChatRequest(message="what happened?")
+            FakeRequest(), ChatRequest(message="what happened?", thread_id=THREAD_ID)
         )
 
         frames = [frame async for frame in service.stream(turn, FakeRequest())]
@@ -251,7 +252,9 @@ def test_stream_emits_keepalive_while_waiting(
             ),
             _guards(),
         )
-        turn = await service.prepare(FakeRequest(), ChatRequest(message="question"))
+        turn = await service.prepare(
+            FakeRequest(), ChatRequest(message="question", thread_id=THREAD_ID)
+        )
         return [frame async for frame in service.stream(turn, FakeRequest())]
 
     frames = asyncio.run(run())
@@ -273,7 +276,9 @@ def test_closing_the_stream_releases_guards() -> None:
             ),
             guards,
         )
-        turn = await service.prepare(FakeRequest(), ChatRequest(message="question"))
+        turn = await service.prepare(
+            FakeRequest(), ChatRequest(message="question", thread_id=THREAD_ID)
+        )
         stream = service.stream(turn, FakeRequest())
 
         first = await anext(stream)
@@ -303,7 +308,9 @@ def test_error_after_generation_charges_estimate_and_closes() -> None:
             ),
             guards,
         )
-        turn = await service.prepare(FakeRequest(), ChatRequest(message="question"))
+        turn = await service.prepare(
+            FakeRequest(), ChatRequest(message="question", thread_id=THREAD_ID)
+        )
         estimated = turn.reservation.tokens
         frames = [frame async for frame in service.stream(turn, FakeRequest())]
         assert guards.budget.used == estimated
@@ -324,7 +331,9 @@ def test_missing_terminal_event_emits_internal_error() -> None:
             FakeEngine([StatusEvent(stage=ChatStage.ACCEPTED)]),
             _guards(),
         )
-        turn = await service.prepare(FakeRequest(), ChatRequest(message="question"))
+        turn = await service.prepare(
+            FakeRequest(), ChatRequest(message="question", thread_id=THREAD_ID)
+        )
         return [frame async for frame in service.stream(turn, FakeRequest())]
 
     frames = asyncio.run(run())
@@ -340,10 +349,14 @@ def test_prepare_enforces_rate_limit_before_reserving() -> None:
         guards = _guards(rate_limit_requests=1)
         service = _service(FakeEngine([]), guards)
         request = FakeRequest()
-        turn = await service.prepare(request, ChatRequest(message="one"))
+        turn = await service.prepare(
+            request, ChatRequest(message="one", thread_id=THREAD_ID)
+        )
 
         with pytest.raises(ChatRateLimitExceeded):
-            await service.prepare(request, ChatRequest(message="two"))
+            await service.prepare(
+                request, ChatRequest(message="two", thread_id=THREAD_ID)
+            )
 
         assert guards.budget.reserved > 0
         turn.settle(None)
@@ -359,7 +372,9 @@ def test_prepare_releases_budget_when_concurrency_queue_times_out() -> None:
         await guards.concurrency.acquire()
 
         with pytest.raises(ChatBusy):
-            await service.prepare(FakeRequest(), ChatRequest(message="question"))
+            await service.prepare(
+                FakeRequest(), ChatRequest(message="question", thread_id=THREAD_ID)
+            )
 
         assert guards.budget.reserved == 0
         assert guards.budget.used == 0
@@ -387,7 +402,9 @@ def test_client_disconnect_cancels_stream_and_releases_guards(
             delay_seconds=0.1,
         )
         service = _service(engine, guards)
-        turn = await service.prepare(FakeRequest(), ChatRequest(message="question"))
+        turn = await service.prepare(
+            FakeRequest(), ChatRequest(message="question", thread_id=THREAD_ID)
+        )
         stream = service.stream(turn, FakeRequest(disconnected=True))
         frames = [frame async for frame in stream]
 

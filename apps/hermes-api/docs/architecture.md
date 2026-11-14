@@ -124,7 +124,7 @@ sequenceDiagram
 
 ## 4. Conversational RAG Pipeline (`POST /api/v1/chat`)
 
-The chat endpoint answers natural-language questions about events in a selected scope and streams the answer over Server-Sent Events (SSE). It is stateless: the client sends bounded history with each turn, and neither messages nor conversations are persisted.
+The chat endpoint answers natural-language questions about events in a selected scope and streams the answer over Server-Sent Events (SSE). Conversation turns are checkpointed per `thread_id` by LangGraph's `AsyncPostgresSaver`; the client sends only the new message and the current scope.
 
 ```mermaid
 sequenceDiagram
@@ -133,12 +133,13 @@ sequenceDiagram
     participant API as FastAPI (/api/v1/chat)
     participant Guards as ChatGuards (in-memory)
     participant Engine as ChatEngine (hermes-ai)
+    participant CP as AsyncPostgresSaver
     participant Retriever as DbChatRetriever (hermes-api)
     participant Search as SearchService (hermes-db)
     participant LLM as LiteLLM Router
     participant Tavily as Tavily Search
 
-    Client->>API: POST { message, history, scope }
+    Client->>API: POST { message, thread_id, scope }
     API->>Guards: sliding-window rate check
     API->>Guards: reserve daily token budget
     API->>Guards: acquire concurrency slot
@@ -147,8 +148,9 @@ sequenceDiagram
         API-->>Client: HTTP 429/503 JSON (+ Retry-After)
     else admitted
         API-->>Client: 200 text/event-stream
-        API->>Engine: stream(message, history, scope)
-        Engine->>LLM: plan query (structured ChatPlan)
+        API->>Engine: stream(message, thread_id, scope)
+        Engine->>CP: load thread state
+        Engine->>LLM: plan query (structured ChatPlan, history-aware)
         Engine->>Retriever: retrieve(query, scope, filters)
         Retriever->>Search: hybrid lexical + semantic retrieval
         Search-->>Retriever: ranked events + articles + timelines
@@ -156,20 +158,34 @@ sequenceDiagram
         opt coverage thin or recency stale, Tavily configured
             Engine->>Tavily: news search (8s timeout)
         end
-        Engine->>LLM: grounded answer prompt
+        Engine->>LLM: grounded answer prompt + bound tools
+        opt model calls retrieve_events or web_search
+            Engine->>Retriever: retrieve additional evidence
+            Engine->>Tavily: external search
+            Engine->>LLM: answer with the expanded evidence
+        end
         LLM-->>Engine: token stream
+        Engine->>CP: persist messages for the thread
         Engine-->>API: status / token / sources / done
         API-->>Client: SSE frames
         API->>Guards: reconcile usage and release slot
     end
 ```
 
+### Conversation Memory & Tools
+
+- `ChatEngine` compiles a LangGraph `StateGraph` over `ChatState`, which extends `MessagesState`. Only `messages` survives between turns; per-turn channels (`plan`, `retrieval`, `web_results`, `extra_evidence`, `degraded`, `usage`) are reset by the plan node using `Overwrite`.
+- The graph shape is `START -> plan -> retrieve -> (search | generate) -> [tools -> generate] -> finalize -> END`. The planner and answer model both read prior text turns from the checkpointed messages; assistant history has citation markers stripped.
+- `thread_id` is the checkpointer key. `retry=true` removes the trailing user turn with `RemoveMessage` before re-running it.
+- `retrieve_events` and `web_search` are bound only on the generation node. They return `Command` updates that append evidence to the graph state and answer the tool call. `ToolNode` turns tool failures into `ToolMessage`s, and the graph recursion limit is 12.
+- Checkpoint tables are created by `AsyncPostgresSaver.setup()` during the API lifespan. If the checkpointer cannot initialize, the API logs a warning and falls back to `InMemorySaver`; chat still works, but memory does not survive a restart.
+
 ### Scope Resolution & Retrieval
 
 - The request `scope` is a discriminated union: `event` (one `event_id`, bypasses hybrid ranking), `viewport` (a bounding box split at the antimeridian when needed), or `global`.
 - `DbChatRetriever` bridges `hermes-ai`'s `ChatRetriever` protocol to `SearchService`. It opens a short-lived `AsyncSessionLocal` per retrieval, loads the ranked events plus linked articles and ready timeline nodes, then closes the session **before** answer generation starts. No database session is held during streaming.
 - Lexical and semantic candidate branches are built directly over `Event` columns so the weighted `idx_events_fts` GIN index is used; semantic search uses the pgvector embedding column. Fusion uses reciprocal rank fusion with bounded recency/trending boosts. When the embedding call fails, retrieval degrades to lexical-only and reports `semantic_unavailable`.
-- Tavily is consulted only when local coverage is thin or recency-stale and only once per turn. Failures degrade to a local-only answer with `web_unavailable`.
+- Tavily is consulted by the search node when local coverage is thin or recency-stale. The answer model may also call the `web_search` tool when the supplied evidence is insufficient. Failures degrade to a local-only answer with `web_unavailable`.
 
 ### SSE Contract
 
@@ -177,10 +193,15 @@ sequenceDiagram
 
 ```text
 status(accepted) -> status(planning) -> status(retrieving)
-  -> [status(searching)] -> status(generating) -> token* -> sources -> done
+  -> [status(searching)] -> status(generating)
+  -> [status(retrieving) | status(searching)] -> status(generating)
+  -> token* -> status(finalizing) -> sources -> done
 ```
 
 - Each `data:` payload carries a `type` matching the event name.
+- `status.stage` is forwarded verbatim and drives the UI waiting label before the
+  first token. Tool invocations re-emit `retrieving` or `searching` before the
+  model resumes `generating`.
 - `sources` contains only the sources actually cited, deduplicated in first-citation order.
 - `done` reports provenance counts, coverage, usage, `web_used`, and `degraded` flags.
 - `error` is terminal and may replace `done` after the stream opens (`RETRIEVAL_FAILED`, `MODEL_TIMEOUT`, `STREAM_TIMEOUT`, `MODEL_FAILED`, `INTERNAL_ERROR`, `CHAT_BUSY`).

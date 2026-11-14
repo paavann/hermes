@@ -20,7 +20,7 @@
 - **Grounded Geocoding**: The API never prompts LLMs for geographic coordinates. Historical and event locations are resolved strictly through [`GeocodingService`](file:///home/pavan/proj/hermes/libs/shared/hermes-ai/src/hermes_ai/services/geocoding.py) (OpenStreetMap Nominatim with negative caching).
 - **CORS Error Handling**: Custom exception handlers in [`core/errors.py`](file:///home/pavan/proj/hermes/apps/hermes-api/src/hermes_api/core/errors.py) explicitly inject origin headers (`_cors_headers(request)`) to prevent Starlette's `ExceptionMiddleware` from masking internal errors behind opaque browser CORS failures.
 - **Graceful Degradation**: If LLM credentials are unconfigured, the server remains operational for spatial queries and gracefully returns `HTTP 503` from timeline synthesis and chat endpoints instead of crashing.
-- **Stateless Conversational RAG**: `POST /api/v1/chat` streams grounded answers over Server-Sent Events. Conversations are never persisted; each request carries its own bounded history and map scope, and retrieval opens a short-lived database session that is closed before generation starts.
+- **Conversational RAG**: `POST /api/v1/chat` streams grounded answers over Server-Sent Events. Conversation memory lives in LangGraph checkpoints keyed by `thread_id`; each request carries only its message and map scope, and retrieval opens a short-lived database session that is closed before generation starts.
 
 > [!NOTE]
 > For in-depth architectural sequence diagrams, state machine transitions, and design tradeoffs, see [apps/hermes-api/docs/architecture.md](docs/architecture.md).
@@ -79,7 +79,7 @@ curl -X POST "http://localhost:8000/api/v1/events/tl/3fa85f64-5717-4562-b3fc-2c9
 - `FAILED`: Upstream extraction or Wikipedia search failed.
 
 #### 4. Conversational Chat (`POST /api/v1/chat`)
-Streams a grounded answer about events in the requested map scope. The endpoint is stateless: history is supplied by the client and nothing is persisted.
+Streams a grounded answer about events in the requested map scope. Conversation memory is keyed by `thread_id` and stored in LangGraph checkpoints in PostgreSQL. Send the same `thread_id` on every turn; the client starts a new thread when the user clears the conversation.
 
 ```bash
 curl -N -X POST "http://localhost:8000/api/v1/chat" \
@@ -87,10 +87,7 @@ curl -N -X POST "http://localhost:8000/api/v1/chat" \
   -H "Accept: text/event-stream" \
   -d '{
     "message": "What changed in the ceasefire talks this week?",
-    "history": [
-      { "role": "user", "content": "What is happening in the region?" },
-      { "role": "assistant", "content": "Talks resumed on Tuesday [E1]." }
-    ],
+    "thread_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
     "scope": {
       "type": "viewport",
       "bbox": { "north": 60, "south": 30, "east": 60, "west": 20 }
@@ -100,7 +97,8 @@ curl -N -X POST "http://localhost:8000/api/v1/chat" \
 
 **Request limits**:
 - `message`: 1–4,000 characters, stripped.
-- `history`: at most 16 messages (eight user/assistant turns), each 1–8,000 characters.
+- `thread_id`: UUID that identifies the server-side conversation.
+- `retry`: when `true`, the server removes the last user turn from the thread before answering again.
 - `scope`: discriminated union of `event` (`event_id`), `viewport` (`bbox` with `north`/`south`/`east`/`west`), or `global` (default).
 
 **SSE event order**:
@@ -154,6 +152,7 @@ Settings are managed via `pydantic-settings` in [`core/config.py`](file:///home/
 | `DB_USER` | `postgres` | Database username. |
 | `DB_PASSWORD` | *Required* | Database password. |
 | `DB_NAME` | `hermes` | Database name. |
+| `CHECKPOINT_DB_URL` | `""` | Optional psycopg URL for LangGraph checkpoints. Defaults to the `DB_*` settings with `ssl` mapped to `sslmode`. |
 | `LLM_API` | `""` | Primary LLM API key (e.g. Mistral). |
 | `LLM_MODEL` | `""` | Primary LLM identifier (e.g. `mistral/ministral-8b-latest`). |
 | `LLM_API_1` | `None` | Fallback LLM API key (e.g. NVIDIA NIM). |
@@ -178,7 +177,6 @@ Settings are managed via `pydantic-settings` in [`core/config.py`](file:///home/
 | `CHAT_MIN_SEMANTIC_SIMILARITY` | `0.2` | Minimum semantic similarity for the semantic retrieval branch. |
 | `CHAT_FRESHNESS_HOURS` | `24` | Age after which coverage is marked recency-stale. |
 | `CHAT_MAX_MESSAGE_CHARS` | `4000` | Maximum current-message length. |
-| `CHAT_MAX_HISTORY_TURNS` | `8` | Maximum user/assistant turns accepted in history. |
 | `CHAT_MAX_OUTPUT_TOKENS` | `1200` | Answer completion budget and budget-reservation component. |
 | `CHAT_WEB_TIMEOUT_SECONDS` | `8` | Tavily request timeout. |
 | `CHAT_STREAM_INCLUDE_USAGE` | `true` | Request token usage in the answer stream. |
