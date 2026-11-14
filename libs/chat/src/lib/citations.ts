@@ -5,6 +5,7 @@ import type {
   CitationMarkerSegment,
   CitationRenderOptions,
   CitationSegment,
+  CitationSourceMap,
 } from './types/citations.types';
 
 export type * from './types/citations.types';
@@ -20,7 +21,7 @@ const KIND_BY_PREFIX: Record<string, ChatSourceKind> = {
 };
 
 const BASE_CLICKABLE_CLASS =
-  'hover:text-white underline decoration-dotted underline-offset-2 cursor-pointer focus-visible:outline-1 focus-visible:outline-neon-blue';
+  'hover:text-[#ffb454] underline decoration-dotted underline-offset-2 cursor-pointer focus-visible:outline-1 focus-visible:outline-neon-blue';
 
 const CLICKABLE_CLASS: Record<ChatSourceKind, string> = {
   event: `text-neon-blue ${BASE_CLICKABLE_CLASS}`,
@@ -72,8 +73,7 @@ function groupSourcesByKind(
 
 function parseMarkerToken(
   rawToken: string,
-  sourcesByKind: Record<ChatSourceKind, ChatSource[]>,
-  counts: Record<ChatSourceKind, number>,
+  sourceMap: CitationSourceMap,
 ): CitationSegment {
   const marker = rawToken.trim().toUpperCase();
   const kind = kindForMarker(marker);
@@ -89,9 +89,7 @@ function parseMarkerToken(
       focusable: false,
     };
   }
-  const index = counts[kind];
-  counts[kind] += 1;
-  const source = sourcesByKind[kind][index] ?? null;
+  const source = sourceMap.get(marker) ?? null;
   return {
     type: 'citation',
     marker,
@@ -102,14 +100,15 @@ function parseMarkerToken(
 }
 
 /**
- * Split answer text into plain text and citation markers.
- * The `sources` event lists cited sources in first-citation order, so the
- * n-th marker of a given kind maps to the n-th source of that kind.
+ * Resolve every marker in `content` to its source.
+ * The `sources` event lists cited sources deduplicated in first-citation order,
+ * so the first distinct marker of a kind maps to the first source of that kind.
+ * Repeats of a marker reuse its original source.
  */
-export function parseCitations(
+export function resolveCitationSources(
   content: string,
   sources: readonly ChatSource[] = [],
-): CitationSegment[] {
+): CitationSourceMap {
   const sourcesByKind = groupSourcesByKind(sources);
   const counts: Record<ChatSourceKind, number> = {
     event: 0,
@@ -117,6 +116,32 @@ export function parseCitations(
     timeline: 0,
     web: 0,
   };
+  const sourceMap = new Map<string, ChatSource | null>();
+
+  for (const match of content.matchAll(CITATION_MARKER_PATTERN)) {
+    for (const rawToken of (match[1] ?? '').split(',')) {
+      const marker = rawToken.trim().toUpperCase();
+      const kind = kindForMarker(marker);
+      if (kind === null || kind === 'background' || sourceMap.has(marker)) {
+        continue;
+      }
+      sourceMap.set(marker, sourcesByKind[kind][counts[kind]] ?? null);
+      counts[kind] += 1;
+    }
+  }
+  return sourceMap;
+}
+
+/**
+ * Split answer text into plain text and citation markers.
+ * Pass the map from `resolveCitationSources` when parsing a fragment of a
+ * larger message so marker numbers stay aligned with the full answer.
+ */
+export function parseCitations(
+  content: string,
+  sources: readonly ChatSource[] = [],
+  sourceMap: CitationSourceMap = resolveCitationSources(content, sources),
+): CitationSegment[] {
   const segments: CitationSegment[] = [];
   let cursor = 0;
 
@@ -127,7 +152,7 @@ export function parseCitations(
     }
     const markerGroup = match[1] ?? '';
     for (const rawToken of markerGroup.split(',')) {
-      segments.push(parseMarkerToken(rawToken, sourcesByKind, counts));
+      segments.push(parseMarkerToken(rawToken, sourceMap));
     }
     cursor = start + match[0].length;
   }

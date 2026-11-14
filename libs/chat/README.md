@@ -73,16 +73,22 @@ The underlying event ID and bounding box keep following the map, so an explicit
 
 ## Store
 
-`useChatStore` is a module-level Zustand store:
+`useChatStore` is a module-level Zustand store persisted to `localStorage`
+under the `hermes-chat` key:
 
-- `messages`: `{ id, role, content, status, sources, done, error }[]`
+- `messages`: `{ id, role, content, status, stage, sources, done, error }[]`
+- `threadId`: server-side conversation key, sent as `thread_id`
 - `isOpen`, `isStreaming`, `activeId`, `scopeOverride`
 - `send`, `retry`, `cancel`, `clear`, `setOpen`, `toggleOpen`,
   `setScopeOverride`, `applyEvent`, `fail`
 
-`buildHistory` sends at most the last 16 completed messages (eight turns),
-strips `[E#]`, `[A#]`, `[T#]`, `[W#]`, and `[BG]` markers, and caps each
-message at 8,000 characters.
+Only `threadId` and `messages` are persisted. Stale `streaming` messages
+rehydrate as `cancelled`. `clear` empties the conversation and generates a new
+`threadId`, so the server starts a fresh memory thread.
+
+`stage` mirrors the latest `status` event (`accepted`, `planning`, `retrieving`,
+`searching`, `generating`, `finalizing`). The bubble shows it as a waiting label
+until the first token arrives; `done`, `error`, and `cancelled` clear it.
 
 ## Transport
 
@@ -100,9 +106,10 @@ A stream that ends without `done` or `error` is rejected as incomplete.
 
 `parseCitations(text, sources)` maps `[E#]`, `[A#]`, `[T#]`, and `[W#]` markers
 to the `sources` event records in first-citation order, and treats `[BG]` as
-background knowledge. `CitationChip` renders focusable sources as buttons,
-marks web evidence as external, and leaves unresolved or coordinate-less
-sources inert.
+background knowledge. The first distinct marker of each kind maps to the first
+source of that kind, and repeated markers resolve to the same source.
+`resolveCitationSources(content, sources)` builds the message-wide marker map so
+per-line rendering of a long answer keeps marker numbers aligned.
 
 ## Testing
 

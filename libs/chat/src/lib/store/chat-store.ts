@@ -1,20 +1,32 @@
 import { create } from 'zustand';
+import { createJSONStorage, persist } from 'zustand/middleware';
+
 import type {
   ChatDone,
   ChatError,
-  ChatHistoryMessage,
   ChatSource,
+  ChatStage,
   ChatStreamEvent,
 } from '@hermes/util-types';
 
 export type ChatScopeMode = 'auto' | 'event' | 'viewport' | 'global';
 export type ChatMessageStatus = 'streaming' | 'complete' | 'error' | 'cancelled';
 
+const CHAT_STAGES = [
+  'accepted',
+  'planning',
+  'retrieving',
+  'searching',
+  'generating',
+  'finalizing',
+] as const satisfies readonly ChatStage[];
+
 export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant';
   content: string;
   status: ChatMessageStatus;
+  stage: ChatStage | null;
   sources: ChatSource[];
   done: ChatDone | null;
   error: ChatError | null;
@@ -22,6 +34,7 @@ export interface ChatMessage {
 
 export interface ChatState {
   messages: ChatMessage[];
+  threadId: string;
   isOpen: boolean;
   scopeOverride: ChatScopeMode;
   isStreaming: boolean;
@@ -37,14 +50,29 @@ export interface ChatState {
   fail: (error: ChatError) => void;
 }
 
-export const MAX_HISTORY_MESSAGES = 16;
-export const MAX_HISTORY_CONTENT = 8000;
+interface ChatPersistedState {
+  threadId: string;
+  messages: PersistedChatMessage[];
+}
 
-export const CITATION_MARKER_PATTERN =
-  /\[((?:BG|[EATW]\d+)(?:\s*,\s*(?:BG|[EATW]\d+))*)\]/gi;
+function fallbackUuid(): string {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (char) => {
+    const random = Math.floor(Math.random() * 16);
+    const value = char === 'x' ? random : (random & 0x3) | 0x8;
+    return value.toString(16);
+  });
+}
+
+export function createThreadId(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return fallbackUuid();
+}
 
 export const INITIAL_CHAT_STATE = {
   messages: [] as ChatMessage[],
+  threadId: createThreadId(),
   isOpen: false,
   scopeOverride: 'auto' as ChatScopeMode,
   isStreaming: false,
@@ -64,36 +92,11 @@ function createAssistantMessage(): ChatMessage {
     role: 'assistant',
     content: '',
     status: 'streaming',
+    stage: null,
     sources: [],
     done: null,
     error: null,
   };
-}
-
-/** Remove inline citation markers so stale IDs never leak into request history. */
-export function stripCitations(content: string): string {
-  return content
-    .replace(CITATION_MARKER_PATTERN, '')
-    .replace(/[ \t]{2,}/g, ' ')
-    .replace(/\s+([.,!?;:])/g, '$1')
-    .trim();
-}
-
-/** Build the bounded, citation-free history payload for the next request. */
-export function buildHistory(
-  messages: readonly ChatMessage[],
-): ChatHistoryMessage[] {
-  return messages
-    .filter(
-      (message) =>
-        message.status !== 'streaming' && message.content.trim().length > 0,
-    )
-    .slice(-MAX_HISTORY_MESSAGES)
-    .map((message) => ({
-      role: message.role,
-      content: stripCitations(message.content).slice(0, MAX_HISTORY_CONTENT),
-    }))
-    .filter((message) => message.content.length > 0);
 }
 
 export function findLastUserIndex(messages: readonly ChatMessage[]): number {
@@ -103,6 +106,47 @@ export function findLastUserIndex(messages: readonly ChatMessage[]): number {
     }
   }
   return -1;
+}
+
+type PersistedChatMessage = Omit<ChatMessage, 'stage'> & {
+  stage?: ChatStage | null;
+};
+
+function isChatStage(value: unknown): value is ChatStage {
+  return CHAT_STAGES.some((stage) => stage === value);
+}
+
+function isPersistedMessage(value: unknown): value is PersistedChatMessage {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+  return (
+    'id' in value &&
+    typeof value.id === 'string' &&
+    'role' in value &&
+    (value.role === 'user' || value.role === 'assistant') &&
+    'content' in value &&
+    typeof value.content === 'string' &&
+    'status' in value &&
+    typeof value.status === 'string' &&
+    (!('stage' in value) || value.stage === null || isChatStage(value.stage)) &&
+    'sources' in value &&
+    Array.isArray(value.sources) &&
+    'done' in value &&
+    'error' in value
+  );
+}
+
+function isPersistedState(value: unknown): value is ChatPersistedState {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+  return (
+    'threadId' in value &&
+    typeof value.threadId === 'string' &&
+    'messages' in value &&
+    Array.isArray(value.messages)
+  );
 }
 
 function updateMessage(
@@ -118,122 +162,164 @@ function updateMessage(
   );
 }
 
-export const useChatStore = create<ChatState>((set, get) => {
-  const updateActive = (
-    updater: (message: ChatMessage) => ChatMessage,
-    storePatch: Partial<ChatState> = {},
-  ): void => {
-    set((state) => ({
-      ...storePatch,
-      messages: updateMessage(state.messages, state.activeId, updater),
-    }));
-  };
+export const useChatStore = create<ChatState>()(
+  persist(
+    (set, get) => {
+      const updateActive = (
+        updater: (message: ChatMessage) => ChatMessage,
+        storePatch: Partial<ChatState> = {},
+      ): void => {
+        set((state) => ({
+          ...storePatch,
+          messages: updateMessage(state.messages, state.activeId, updater),
+        }));
+      };
 
-  const failActive = (error: ChatError): void => {
-    updateActive(
-      (message) => ({ ...message, status: 'error', error }),
-      { isStreaming: false, activeId: null },
-    );
-  };
+      const failActive = (error: ChatError): void => {
+        updateActive(
+          (message) => ({ ...message, status: 'error', error, stage: null }),
+          { isStreaming: false, activeId: null },
+        );
+      };
 
-  return {
-    ...INITIAL_CHAT_STATE,
+      return {
+        ...INITIAL_CHAT_STATE,
 
-    setOpen: (isOpen) => set({ isOpen }),
-    toggleOpen: () => set((state) => ({ isOpen: !state.isOpen })),
-    setScopeOverride: (scopeOverride) => set({ scopeOverride }),
+        setOpen: (isOpen) => set({ isOpen }),
+        toggleOpen: () => set((state) => ({ isOpen: !state.isOpen })),
+        setScopeOverride: (scopeOverride) => set({ scopeOverride }),
 
-    send: (content) => {
-      const trimmed = content.trim();
-      if (!trimmed || get().isStreaming) {
-        return null;
-      }
-      const assistant = createAssistantMessage();
-      set((state) => ({
-        messages: [
-          ...state.messages,
-          {
-            id: createId('user'),
-            role: 'user',
-            content: trimmed,
-            status: 'complete',
-            sources: [],
-            done: null,
-            error: null,
-          },
-          assistant,
-        ],
-        isStreaming: true,
-        activeId: assistant.id,
-      }));
-      return assistant.id;
-    },
-
-    retry: () => {
-      const state = get();
-      if (state.isStreaming) {
-        return null;
-      }
-      const lastUserIdx = findLastUserIndex(state.messages);
-      if (lastUserIdx < 0) {
-        return null;
-      }
-      const assistant = createAssistantMessage();
-      set({
-        messages: [...state.messages.slice(0, lastUserIdx + 1), assistant],
-        isStreaming: true,
-        activeId: assistant.id,
-        isOpen: true,
-      });
-      return assistant.id;
-    },
-
-    cancel: () => {
-      updateActive(
-        (message) => ({ ...message, status: 'cancelled' }),
-        { isStreaming: false, activeId: null },
-      );
-    },
-
-    clear: () => set({ messages: [], isStreaming: false, activeId: null }),
-
-    applyEvent: (event) => {
-      switch (event.type) {
-        case 'status':
-          return;
-        case 'token':
-          updateActive((message) => ({
-            ...message,
-            content: message.content + event.text,
+        send: (content) => {
+          const trimmed = content.trim();
+          if (!trimmed || get().isStreaming) {
+            return null;
+          }
+          const assistant = createAssistantMessage();
+          set((state) => ({
+            messages: [
+              ...state.messages,
+              {
+                id: createId('user'),
+                role: 'user',
+                content: trimmed,
+                status: 'complete',
+                stage: null,
+                sources: [],
+                done: null,
+                error: null,
+              },
+              assistant,
+            ],
+            isStreaming: true,
+            activeId: assistant.id,
           }));
-          return;
-        case 'sources':
-          updateActive((message) => ({
-            ...message,
-            sources: event.sources,
-          }));
-          return;
-        case 'done':
+          return assistant.id;
+        },
+
+        retry: () => {
+          const state = get();
+          if (state.isStreaming) {
+            return null;
+          }
+          const lastUserIdx = findLastUserIndex(state.messages);
+          if (lastUserIdx < 0) {
+            return null;
+          }
+          const assistant = createAssistantMessage();
+          set({
+            messages: [...state.messages.slice(0, lastUserIdx + 1), assistant],
+            isStreaming: true,
+            activeId: assistant.id,
+            isOpen: true,
+          });
+          return assistant.id;
+        },
+
+        cancel: () => {
           updateActive(
-            (message) => ({
-              ...message,
-              status: 'complete',
-              done: event,
-              error: null,
-            }),
+            (message) => ({ ...message, status: 'cancelled', stage: null }),
             { isStreaming: false, activeId: null },
           );
-          return;
-        case 'error':
-          failActive({
-            code: event.code,
-            message: event.message,
-            retryable: event.retryable,
-          });
-          return;
-      }
-    },
+        },
 
-    fail: failActive,
-  };
-});
+        clear: () =>
+          set({
+            messages: [],
+            threadId: createThreadId(),
+            isStreaming: false,
+            activeId: null,
+          }),
+
+        applyEvent: (event) => {
+          switch (event.type) {
+            case 'status':
+              updateActive((message) => ({ ...message, stage: event.stage }));
+              return;
+            case 'token':
+              updateActive((message) => ({
+                ...message,
+                content: message.content + event.text,
+              }));
+              return;
+            case 'sources':
+              updateActive((message) => ({
+                ...message,
+                sources: event.sources,
+              }));
+              return;
+            case 'done':
+              updateActive(
+                (message) => ({
+                  ...message,
+                  status: 'complete',
+                  stage: null,
+                  done: event,
+                  error: null,
+                }),
+                { isStreaming: false, activeId: null },
+              );
+              return;
+            case 'error':
+              failActive({
+                code: event.code,
+                message: event.message,
+                retryable: event.retryable,
+              });
+              return;
+          }
+        },
+
+        fail: failActive,
+      };
+    },
+    {
+      name: 'hermes-chat',
+      version: 1,
+      storage: createJSONStorage<ChatPersistedState>(() => localStorage),
+      partialize: (state) => ({
+        threadId: state.threadId,
+        messages: state.messages,
+      }),
+      merge: (persisted, current) => {
+        if (!isPersistedState(persisted)) {
+          return current;
+        }
+        return {
+          ...current,
+          threadId: persisted.threadId || current.threadId,
+          messages: persisted.messages
+            .filter(isPersistedMessage)
+            .map((message) => ({
+              ...message,
+              stage: isChatStage(message.stage) ? message.stage : null,
+              status:
+                message.status === 'streaming'
+                  ? ('cancelled' as const)
+                  : message.status,
+            })),
+        };
+      },
+      skipHydration: true,
+    },
+  ),
+);

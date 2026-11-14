@@ -8,6 +8,7 @@ import {
   parseCitations,
   renderCitations,
 } from './citations';
+import { MessageText } from './ui/MessageText';
 
 const eventSource: ChatSource = {
   kind: 'event',
@@ -22,6 +23,15 @@ const eventSource: ChatSource = {
   longitude: 6.1432,
   is_external: false,
   snippet: null,
+};
+
+const secondEventSource: ChatSource = {
+  ...eventSource,
+  id: 'second-event-uuid',
+  event_id: 'second-event-uuid',
+  title: 'Aid convoy reaches the border',
+  latitude: 47.3769,
+  longitude: 8.5417,
 };
 
 const articleSource: ChatSource = {
@@ -147,6 +157,17 @@ describe('parseCitations', () => {
     expect(segments[2]).toMatchObject({ source: null, focusable: false });
   });
 
+  it('maps repeated markers to their original source', () => {
+    const segments = parseCitations('[E1] then [E1] then [E2]', [
+      eventSource,
+      secondEventSource,
+    ]);
+
+    expect(segments[0]).toMatchObject({ source: eventSource });
+    expect(segments[2]).toMatchObject({ source: eventSource });
+    expect(segments[4]).toMatchObject({ source: secondEventSource });
+  });
+
   it('treats sources without coordinates or URLs as non-focusable', () => {
     const unplotted: ChatSource = {
       ...eventSource,
@@ -205,5 +226,25 @@ describe('renderCitations', () => {
       name: 'Open source: Regional update',
     });
     expect(button.className).toContain('text-warning-yellow');
+  });
+});
+
+describe('MessageText', () => {
+  it('keeps marker numbering aligned across lines', () => {
+    render(
+      <MessageText
+        content={'First event [E1].\nSecond event [E2].'}
+        sources={[eventSource, secondEventSource]}
+      />,
+    );
+
+    const buttons = screen.getAllByRole('button');
+    expect(buttons.map((button) => button.textContent)).toEqual(['[E1]', '[E2]']);
+    expect(buttons[0].getAttribute('aria-label')).toBe(
+      `Open source: ${eventSource.title}`,
+    );
+    expect(buttons[1].getAttribute('aria-label')).toBe(
+      `Open source: ${secondEventSource.title}`,
+    );
   });
 });

@@ -304,10 +304,6 @@ export function EventPopup({ map }: { map: mapboxgl.Map | null }) {
                 >
                   {event.category}
                 </span>
-                <span className="flex items-center gap-1.5 text-[9px] uppercase tracking-[0.16em] text-signal-amber/80">
-                  <Crosshair size={11} weight="bold" aria-hidden="true" />
-                  <span className="tabular-nums">TREND {trendScore}</span>
-                </span>
               </div>
 
               <div>

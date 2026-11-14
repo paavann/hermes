@@ -1,7 +1,7 @@
 import { CaretDown, CaretRight } from '@phosphor-icons/react';
 import { useState } from 'react';
 
-import type { ChatSource } from '@hermes/util-types';
+import type { ChatSource, ChatStage } from '@hermes/util-types';
 
 import type { ChatMessage } from '../store/chat-store';
 import { MessageText } from './MessageText';
@@ -10,6 +10,21 @@ export interface MessageBubbleProps {
   message: ChatMessage;
   onRetry: () => void;
   onCitationActivate?: (source: ChatSource) => void;
+}
+
+const STAGE_LABELS: Record<ChatStage, string> = {
+  accepted: 'ACCEPTING REQUEST...',
+  planning: 'PLANNING QUERY...',
+  retrieving: 'RETRIEVING EVENTS...',
+  searching: 'SEARCHING WEB...',
+  generating: 'SYNTHESIZING RESPONSE...',
+  finalizing: 'FINALIZING ANSWER...',
+};
+
+const DEFAULT_STAGE_LABEL = STAGE_LABELS.generating;
+
+function stageLabel(stage: ChatStage | null): string {
+  return stage === null ? DEFAULT_STAGE_LABEL : STAGE_LABELS[stage];
 }
 
 function sourceTimestamp(source: ChatSource): string | null {
@@ -75,13 +90,20 @@ export function MessageBubble({
       ) : (
         <div className="border border-border-subtle border-l-2 border-l-neon-blue bg-black px-3 py-2.5 text-[11px] leading-relaxed text-bone/85">
           {isStreaming && message.content.length === 0 ? (
-            <div className="flex items-center gap-2 text-[9px] uppercase tracking-[0.16em] text-slate-muted">
-              <span className="inline-block h-1.5 w-1.5 animate-pulse bg-neon-blue" aria-hidden="true" />
-              <span>SYNTHESIZING RESPONSE...</span>
+            <div
+              role="status"
+              aria-live="polite"
+              className="flex items-center gap-2 text-[9px] uppercase tracking-[0.16em] text-slate-muted"
+            >
+              <span
+                className="inline-block h-1.5 w-1.5 animate-pulse bg-neon-blue"
+                aria-hidden="true"
+              />
+              <span data-testid="stream-stage">{stageLabel(message.stage)}</span>
               <span
                 className="inline-block h-3 w-1.5 animate-pulse bg-neon-blue align-middle"
-                aria-label="Assistant is responding"
                 data-testid="streaming-cursor"
+                aria-hidden="true"
               />
             </div>
           ) : null}

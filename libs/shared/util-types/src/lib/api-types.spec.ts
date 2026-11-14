@@ -37,10 +37,7 @@ const globalScope: ChatGlobalScope = { type: 'global' };
 
 const request: ChatRequest = {
   message: 'What changed in the ceasefire talks this week?',
-  history: [
-    { role: 'user', content: 'What is happening in the region?' },
-    { role: 'assistant', content: 'Talks resumed on Tuesday [E1].' },
-  ],
+  thread_id: '3fa85f64-5717-4562-b3fc-2c963f66afa6',
   scope: viewportScope,
 };
 

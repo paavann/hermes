@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { ChatRequest, ChatStreamEvent } from '@hermes/util-types';
 
 import {
-  ChatTransportError,
+  ChatTransportErr,
   chatErrorFromTransport,
   parseSseStream,
   streamChat,
@@ -11,6 +11,7 @@ import {
 
 const payload: ChatRequest = {
   message: 'What happened?',
+  thread_id: '3fa85f64-5717-4562-b3fc-2c963f66afa6',
   scope: { type: 'global' },
 };
 
@@ -96,7 +97,7 @@ describe('SSE parser', () => {
   it('rejects malformed JSON', async () => {
     await expect(
       collect(['event: token\ndata: not-json\n\n']),
-    ).rejects.toBeInstanceOf(ChatTransportError);
+    ).rejects.toBeInstanceOf(ChatTransportErr);
   });
 });
 
@@ -202,7 +203,7 @@ describe('streamChat', () => {
   });
 
   it('maps unknown transport codes to INTERNAL_ERROR', () => {
-    const error = new ChatTransportError('nope', {
+    const error = new ChatTransportErr('nope', {
       status: 500,
       code: 'SOMETHING_ELSE',
       retryAfter: null,

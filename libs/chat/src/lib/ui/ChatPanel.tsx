@@ -64,8 +64,6 @@ export function ChatPanel({
             EXPLORE
           </span>
         </div>
-
-        <span className="mt-auto mb-3 h-1.5 w-1.5 bg-neon-blue/60" aria-hidden="true" />
       </div>
     );
   }

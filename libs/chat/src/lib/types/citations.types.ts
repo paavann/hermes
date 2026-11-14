@@ -19,6 +19,9 @@ export type CitationTextSegment = {
 
 export type CitationSegment = CitationTextSegment | CitationMarkerSegment
 
+/** Resolved marker-to-source lookup, keyed by normalized marker (e.g. `E2`). */
+export type CitationSourceMap = ReadonlyMap<string, ChatSource | null>;
+
 export interface CitationRenderOptions {
   onActivate?: (source: ChatSource) => void;
 }

@@ -67,7 +67,6 @@ export interface TlResponse {
   generated_at: string | null;
 }
 
-export type ChatMessageRole = 'user' | 'assistant';
 export type ChatStage =
   | 'accepted'
   | 'planning'
@@ -114,14 +113,10 @@ export interface ChatGlobalScope {
 
 export type ChatScope = ChatEventScope | ChatViewportScope | ChatGlobalScope;
 
-export interface ChatHistoryMessage {
-  role: ChatMessageRole;
-  content: string;
-}
-
 export interface ChatRequest {
   message: string;
-  history?: ChatHistoryMessage[];
+  thread_id: string;
+  retry?: boolean;
   scope?: ChatScope;
 }
 

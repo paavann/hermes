@@ -39,7 +39,7 @@ export function HeroSection(): React.JSX.Element {
               <span className="h-px w-6 bg-border-bright" />
               <span>OVERVIEW</span>
             </div>
-            <p className="max-w-[9rem] text-[10px] uppercase leading-relaxed tracking-[0.18em] text-slate-muted/45">
+            <p className="max-w-36 text-[10px] uppercase leading-relaxed tracking-[0.18em] text-slate-muted/45">
               Live geospatial intelligence
             </p>
           </div>

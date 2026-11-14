@@ -2,12 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 
 import type { ChatDoneEvent, ChatSource } from '@hermes/util-types';
 
-import {
-  buildHistory,
-  stripCitations,
-  useChatStore,
-} from './chat-store';
-import type { ChatMessage } from './chat-store';
+import { createThreadId, useChatStore } from './chat-store';
 
 const source: ChatSource = {
   kind: 'event',
@@ -50,23 +45,13 @@ const done: ChatDoneEvent = {
 function reset(): void {
   useChatStore.setState({
     messages: [],
+    threadId: createThreadId(),
     isOpen: false,
     scopeOverride: 'auto',
     isStreaming: false,
     activeId: null,
   });
-}
-
-function completedMessages(count: number): ChatMessage[] {
-  return Array.from({ length: count }, (_, index) => ({
-    id: `message-${index}`,
-    role: index % 2 === 0 ? 'user' : 'assistant',
-    content: `message ${index} [E${index}]`,
-    status: 'complete' as const,
-    sources: [],
-    done: null,
-    error: null,
-  }));
+  localStorage.clear();
 }
 
 beforeEach(reset);
@@ -92,6 +77,26 @@ describe('chat store', () => {
     expect(state.isStreaming).toBe(true);
   });
 
+  it('tracks the latest stream stage and clears it on completion', () => {
+    useChatStore.getState().send('question');
+
+    useChatStore.getState().applyEvent({
+      type: 'status',
+      stage: 'retrieving',
+    });
+    expect(useChatStore.getState().messages[1].stage).toBe('retrieving');
+
+    useChatStore.getState().applyEvent({ type: 'status', stage: 'searching' });
+    expect(useChatStore.getState().messages[1].stage).toBe('searching');
+
+    useChatStore.getState().applyEvent(done);
+
+    expect(useChatStore.getState().messages[1]).toMatchObject({
+      status: 'complete',
+      stage: null,
+    });
+  });
+
   it('ignores blank input and concurrent sends', () => {
     expect(useChatStore.getState().send('   ')).toBeNull();
 
@@ -100,22 +105,64 @@ describe('chat store', () => {
     expect(useChatStore.getState().messages).toHaveLength(2);
   });
 
-  it('builds a bounded history payload with citations stripped', () => {
-    const history = buildHistory(completedMessages(20));
+  it('keeps one thread id across turns', () => {
+    const threadId = useChatStore.getState().threadId;
 
-    expect(history).toHaveLength(16);
-    expect(history[0]).toEqual({ role: 'user', content: 'message 4' });
-    expect(history[15]).toEqual({ role: 'assistant', content: 'message 19' });
-    expect(history.every((message) => !message.content.includes('[E'))).toBe(
-      true,
-    );
+    useChatStore.getState().send('first');
+    useChatStore.getState().applyEvent(done);
+    useChatStore.getState().send('second');
+
+    expect(useChatStore.getState().threadId).toBe(threadId);
   });
 
-  it('strips background and grouped citation markers', () => {
-    expect(stripCitations('Fact [E1, A2] plus context [BG].')).toBe(
-      'Fact plus context.',
+  it('starts a new thread when the conversation is cleared', () => {
+    useChatStore.getState().send('question');
+    const threadId = useChatStore.getState().threadId;
+
+    useChatStore.getState().clear();
+
+    expect(useChatStore.getState().messages).toEqual([]);
+    expect(useChatStore.getState().threadId).not.toBe(threadId);
+  });
+
+  it('rehydrates a persisted thread and cancels stale streams', async () => {
+    localStorage.setItem(
+      'hermes-chat',
+      JSON.stringify({
+        version: 1,
+        state: {
+          threadId: 'persisted-thread',
+          messages: [
+            {
+              id: 'user-1',
+              role: 'user',
+              content: 'older question',
+              status: 'complete',
+              sources: [],
+              done: null,
+              error: null,
+            },
+            {
+              id: 'assistant-1',
+              role: 'assistant',
+              content: 'partial',
+              status: 'streaming',
+              sources: [],
+              done: null,
+              error: null,
+            },
+          ],
+        },
+      }),
     );
-    expect(stripCitations('No citations here.')).toBe('No citations here.');
+
+    await useChatStore.persist.rehydrate();
+
+    const state = useChatStore.getState();
+    expect(state.threadId).toBe('persisted-thread');
+    expect(state.messages).toHaveLength(2);
+    expect(state.messages[1].status).toBe('cancelled');
+    expect(state.isStreaming).toBe(false);
   });
 
   it('retries by replacing the last assistant response', () => {

@@ -67,17 +67,13 @@ export function MapHud({ events, isFetching }: MapHudProps): React.JSX.Element {
             aria-label="Hermes home"
             className="group flex items-center gap-2.5 transition-colors focus-visible:outline-1 focus-visible:outline-neon-blue focus-visible:outline-offset-4"
           >
-            <span className="h-1.5 w-1.5 bg-neon-blue transition-transform duration-150 group-hover:scale-125" aria-hidden="true" />
             <span className="font-display text-[13px] font-semibold tracking-[0.18em] text-ivory">
               HERMES
-            </span>
-            <span className="hidden text-[8px] tracking-[0.16em] text-neon-blue/60 sm:inline">
-              GEOINT
             </span>
           </a>
           <span className="h-4 w-px bg-border-subtle" aria-hidden="true" />
           <span className="hidden items-center gap-2 text-[9px] uppercase tracking-[0.18em] text-slate-muted/55 sm:flex">
-            <span className="h-1 w-1 bg-signal-amber" aria-hidden="true" />
+            <span className="h-1 w-1 bg-emerald-500 mb-0.5" aria-hidden="true" />
             <span>LIVE MAP</span>
           </span>
         </div>
@@ -102,16 +98,16 @@ export function MapHud({ events, isFetching }: MapHudProps): React.JSX.Element {
               {String(events.length).padStart(3, '0')}
             </span>
           </span>
-          <span className="flex items-center gap-1.5">
+          {/* <span className="flex items-center gap-1.5">
             <span className="text-slate-muted/35">CITED</span>
             <span className="tabular-nums text-signal-amber">
               {String(citedCount).padStart(2, '0')}
             </span>
-          </span>
+          </span> */}
         </div>
 
         <div className="flex shrink-0 items-center gap-3">
-          <span className="flex items-center gap-1.5 text-[9px] uppercase tracking-[0.18em] text-slate-muted/60">
+          {/* <span className="flex items-center gap-1.5 text-[9px] uppercase tracking-[0.18em] text-slate-muted/60">
             <span
               className={cn(
                 'h-1.5 w-1.5',
@@ -121,7 +117,7 @@ export function MapHud({ events, isFetching }: MapHudProps): React.JSX.Element {
             />
             <span>{isFetching ? 'SYNCING' : 'LIVE'}</span>
           </span>
-          <span className="h-3 w-px bg-border-subtle" aria-hidden="true" />
+          <span className="h-3 w-px bg-border-subtle" aria-hidden="true" /> */}
           <span className="tabular-nums text-[10px] tracking-[0.12em] text-bone/80">
             {clock}
           </span>
@@ -130,12 +126,12 @@ export function MapHud({ events, isFetching }: MapHudProps): React.JSX.Element {
 
       <footer className="pointer-events-auto absolute inset-x-0 bottom-0 z-40 flex h-7 items-center justify-between gap-3 border-t border-border-subtle bg-black px-3 font-mono text-[9px] uppercase tracking-[0.14em] text-slate-muted/50">
         <div className="flex min-w-0 items-center gap-3 overflow-hidden">
-          <span className="shrink-0 text-slate-muted/35">SRID 4326</span>
-          <span className="h-2.5 w-px shrink-0 bg-border-subtle" aria-hidden="true" />
+          {/* <span className="shrink-0 text-slate-muted/35">SRID 4326</span> */}
+          {/* <span className="h-2.5 w-px shrink-0 bg-border-subtle" aria-hidden="true" /> */}
           <span className="hidden shrink-0 sm:inline">MERCATOR</span>
           <span className="h-2.5 w-px shrink-0 bg-border-subtle sm:hidden" aria-hidden="true" />
           {categories.length > 0 ? (
-            <div className="flex min-w-0 items-center gap-3 overflow-hidden">
+            <div className="flex min-w-0 items-center gap-3 overflow-hidden ml-5">
               {categories.map(([category, color]) => (
                 <span
                   key={category}
@@ -143,7 +139,7 @@ export function MapHud({ events, isFetching }: MapHudProps): React.JSX.Element {
                   title={category}
                 >
                   <span
-                    className="h-1.5 w-1.5"
+                    className="h-1.5 w-1.5 mb-0.5"
                     style={{ backgroundColor: color }}
                     aria-hidden="true"
                   />
@@ -159,13 +155,13 @@ export function MapHud({ events, isFetching }: MapHudProps): React.JSX.Element {
           )}
         </div>
 
-        <div className="flex shrink-0 items-center gap-2 tabular-nums">
+        {/* <div className="flex shrink-0 items-center gap-2 tabular-nums">
           <span className="hidden text-slate-muted/35 sm:inline">VIEWPORT</span>
           <span className="text-bone/70">
             {formatDegrees(centerLat, 'N', 'S')} /{' '}
             {formatDegrees(centerLng, 'E', 'W')}
           </span>
-        </div>
+        </div> */}
       </footer>
     </>
   );

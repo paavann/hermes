@@ -8,11 +8,7 @@ import type {
 } from '@hermes/util-types';
 import { isFocusableSource } from '../citations';
 import { useChatConfig } from '../config-context';
-import {
-  buildHistory,
-  findLastUserIndex,
-  useChatStore,
-} from '../store/chat-store';
+import { findLastUserIndex, useChatStore } from '../store/chat-store';
 import type { ChatMessage, ChatScopeMode } from '../store/chat-store';
 import {
   ChatTransportErr,
@@ -92,6 +88,12 @@ export function useChat({
     latestRef.current = { autoScope, onSources, onCitationActivate };
   });
 
+  useEffect(() => {
+    if (!useChatStore.persist.hasHydrated()) {
+      void useChatStore.persist.rehydrate();
+    }
+  }, []);
+
   const messages = useChatStore((state) => state.messages);
   const isOpen = useChatStore((state) => state.isOpen);
   const isStreaming = useChatStore((state) => state.isStreaming);
@@ -144,7 +146,7 @@ export function useChat({
       }
       const payload: ChatRequest = {
         message: content.trim(),
-        history: buildHistory(store.messages),
+        thread_id: store.threadId,
         scope: resolveScope(store.scopeOverride, latestRef.current.autoScope),
       };
       if (!store.send(content)) {
@@ -166,7 +168,8 @@ export function useChat({
     }
     const payload: ChatRequest = {
       message: store.messages[index].content,
-      history: buildHistory(store.messages.slice(0, index)),
+      thread_id: store.threadId,
+      retry: true,
       scope: resolveScope(store.scopeOverride, latestRef.current.autoScope),
     };
     if (!store.retry()) {

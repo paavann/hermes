@@ -1,6 +1,7 @@
 import type { ChatSource } from '@hermes/util-types';
 
-import { parseCitations } from '../citations';
+import { parseCitations, resolveCitationSources } from '../citations';
+import type { CitationSourceMap } from '../citations';
 import { CitationChip } from './CitationChip';
 
 export interface MessageTextProps {
@@ -15,10 +16,10 @@ export interface MessageTextProps {
  */
 function renderInlineContent(
   text: string,
-  sources: readonly ChatSource[],
+  sourceMap: CitationSourceMap,
   onCitationActivate?: (source: ChatSource) => void,
 ): React.JSX.Element[] {
-  const segments = parseCitations(text, sources);
+  const segments = parseCitations(text, [], sourceMap);
 
   return segments.map((segment, segIdx) => {
     if (segment.type === 'citation') {
@@ -74,6 +75,8 @@ export function MessageText({
 }: MessageTextProps): React.JSX.Element {
   const lines = content.split('\n');
   const elements: React.JSX.Element[] = [];
+  const citationScope = content.replace(/```[\s\S]*?```/g, '');
+  const sourceMap = resolveCitationSources(citationScope, sources);
 
   let inCodeBlock = false;
   let codeBuffer: string[] = [];
@@ -111,7 +114,7 @@ export function MessageText({
           key={`header-${i}`}
           className="mt-2.5 mb-1 font-bold text-xs uppercase tracking-wider text-ivory"
         >
-          {renderInlineContent(headerMatch[2], sources, onCitationActivate)}
+          {renderInlineContent(headerMatch[2], sourceMap, onCitationActivate)}
         </div>,
       );
       continue;
@@ -123,7 +126,7 @@ export function MessageText({
         <div key={`bullet-${i}`} className="my-0.5 flex items-start gap-1.5 pl-1">
           <span className="select-none text-neon-blue">▸</span>
           <span className="flex-1">
-            {renderInlineContent(bulletMatch[1], sources, onCitationActivate)}
+            {renderInlineContent(bulletMatch[1], sourceMap, onCitationActivate)}
           </span>
         </div>,
       );
@@ -138,7 +141,7 @@ export function MessageText({
             {numMatch[1]}.
           </span>
           <span className="flex-1">
-            {renderInlineContent(numMatch[2], sources, onCitationActivate)}
+            {renderInlineContent(numMatch[2], sourceMap, onCitationActivate)}
           </span>
         </div>,
       );
@@ -152,7 +155,7 @@ export function MessageText({
 
     elements.push(
       <p key={`p-${i}`} className="leading-relaxed">
-        {renderInlineContent(line, sources, onCitationActivate)}
+        {renderInlineContent(line, sourceMap, onCitationActivate)}
       </p>,
     );
   }

@@ -17,7 +17,7 @@ import type {
 import { ChatConfigProvider } from '../config-context';
 import { useChatStore } from '../store/chat-store';
 import type { ChatStreamFn } from '../hooks/use-chat';
-import type { StreamChatOptions } from '../transport/sse';
+import type { StreamChatOptions } from '../types/sse.types';
 import { ChatPanel } from './ChatPanel';
 import type { ChatPanelProps } from './ChatPanel';
 
@@ -239,6 +239,29 @@ describe('ChatPanel', () => {
     fireEvent.click(screen.getByRole('button', { name: 'STOP' }));
     expect(screen.queryByTestId('streaming-cursor')).toBeNull();
     expect(screen.getByText('CANCELLED')).toBeTruthy();
+  });
+
+  it('shows the active pipeline stage before the first token', async () => {
+    const transport = deferredTransport();
+    renderPanel({ transport: transport.stream });
+    openPanel();
+    sendQuestion('Question');
+
+    await waitFor(() => expect(transport.calls).toHaveLength(1));
+    act(() => transport.emit({ type: 'status', stage: 'searching' }));
+
+    expect(screen.getByTestId('stream-stage').textContent).toBe(
+      'SEARCHING WEB...',
+    );
+
+    completeTurn(transport, [
+      { type: 'token', text: 'Update [W1].' },
+      done,
+    ]);
+
+    await waitFor(() =>
+      expect(screen.queryByTestId('stream-stage')).toBeNull(),
+    );
   });
 
   it('renders citation chips and forwards activation', async () => {

@@ -10,10 +10,10 @@ import type {
 } from '@hermes/util-types';
 
 import { ChatConfigProvider } from '../config-context';
-import { useChatStore } from '../store/chat-store';
+import { createThreadId, useChatStore } from '../store/chat-store';
 import { useChat, resolveScope } from './use-chat';
 import type { AutoScope, ChatStreamFn } from './use-chat';
-import type { StreamChatOptions } from '../transport/sse';
+import type { StreamChatOptions } from '../types/sse.types';
 
 const viewport: ChatBoundingBox = {
   north: 60,
@@ -110,11 +110,13 @@ function createTransport(
 function resetStore(): void {
   useChatStore.setState({
     messages: [],
+    threadId: createThreadId(),
     isOpen: false,
     scopeOverride: 'auto',
     isStreaming: false,
     activeId: null,
   });
+  localStorage.clear();
 }
 
 beforeEach(resetStore);
@@ -160,12 +162,13 @@ describe('resolveScope', () => {
 });
 
 describe('useChat', () => {
-  it('sends history and the resolved scope, then applies the stream', async () => {
+  it('sends the thread id and resolved scope, then applies the stream', async () => {
     const { stream, calls } = createTransport();
     const { result } = renderHook(
       () => useChat({ autoScope, transport: stream }),
       { wrapper },
     );
+    const threadId = useChatStore.getState().threadId;
 
     act(() => {
       result.current.send('What changed?');
@@ -177,7 +180,7 @@ describe('useChat', () => {
     expect(calls[0].url).toBe('http://api.test/api/v1/chat');
     expect(calls[0].payload).toEqual({
       message: 'What changed?',
-      history: [],
+      thread_id: threadId,
       scope: { type: 'event', event_id: eventSource.event_id },
     });
     expect(result.current.messages[1]).toMatchObject({
@@ -187,7 +190,7 @@ describe('useChat', () => {
     });
   });
 
-  it('includes earlier completed messages as citation-free history', async () => {
+  it('reuses the same thread id across turns', async () => {
     const { stream, calls } = createTransport();
     const { result } = renderHook(
       () => useChat({ autoScope, transport: stream }),
@@ -204,13 +207,14 @@ describe('useChat', () => {
     });
     await waitFor(() => expect(result.current.isStreaming).toBe(false));
 
-    expect(calls[1].payload.history).toEqual([
-      { role: 'user', content: 'first question' },
-      { role: 'assistant', content: 'Grounded answer.' },
-    ]);
+    expect(calls[1].payload.thread_id).toBe(calls[0].payload.thread_id);
+    expect(calls[1].payload.thread_id).toBe(
+      useChatStore.getState().threadId,
+    );
+    expect(calls[1].payload.retry).toBeUndefined();
   });
 
-  it('retries the last user message without duplicating it', async () => {
+  it('retries the last user message on the same thread', async () => {
     const { stream, calls } = createTransport();
     const { result } = renderHook(
       () => useChat({ autoScope, transport: stream }),
@@ -228,9 +232,27 @@ describe('useChat', () => {
     await waitFor(() => expect(result.current.isStreaming).toBe(false));
 
     expect(calls[1].payload.message).toBe('question');
-    expect(calls[1].payload.history).toEqual([]);
+    expect(calls[1].payload.thread_id).toBe(calls[0].payload.thread_id);
+    expect(calls[1].payload.retry).toBe(true);
     expect(result.current.messages).toHaveLength(2);
     expect(result.current.messages[1].status).toBe('complete');
+  });
+
+  it('rehydrates persisted chat state on mount', async () => {
+    const hydratedSpy = vi
+      .spyOn(useChatStore.persist, 'hasHydrated')
+      .mockReturnValue(false);
+    const rehydrateSpy = vi
+      .spyOn(useChatStore.persist, 'rehydrate')
+      .mockResolvedValue(undefined);
+    const { stream } = createTransport();
+
+    renderHook(() => useChat({ autoScope, transport: stream }), { wrapper });
+
+    await waitFor(() => expect(rehydrateSpy).toHaveBeenCalledTimes(1));
+
+    hydratedSpy.mockRestore();
+    rehydrateSpy.mockRestore();
   });
 
   it('aborts the active request when cancelled', async () => {
