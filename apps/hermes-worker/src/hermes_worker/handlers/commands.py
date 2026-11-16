@@ -1,9 +1,9 @@
 import argparse
 import enum
 import logging
+from hermes_worker.core.config import Settings, get_settings
 from hermes_worker.services.lifecycle import run_lifecycle
 from hermes_worker.services.sync import SyncService
-from hermes_worker.core.config import Settings, get_settings
 
 
 logger = logging.getLogger(__name__)

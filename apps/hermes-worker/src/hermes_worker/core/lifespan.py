@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from hermes_db import close_db, init_db
 from hermes_worker.core.config import Settings, get_settings
 
+
 logger = logging.getLogger(__name__)
 
 

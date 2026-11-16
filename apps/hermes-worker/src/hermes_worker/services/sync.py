@@ -16,8 +16,8 @@ from hermes_db.services import (
     SourceService,
 )
 from hermes_db.session import AsyncSessionLocal
-from hermes_worker.core.config import Settings, get_settings
 from hermes_worker.core.ai import create_ai_client
+from hermes_worker.core.config import Settings, get_settings
 from hermes_worker.services.fetchers import (
     BaseArticleFetcher,
     GDELTFetcher,

@@ -1,11 +1,11 @@
-import sys
 import argparse
 import asyncio
 import logging
+import sys
 from collections.abc import Awaitable, Callable
 from utils_py import setup_logging
-from hermes_worker.core.lifespan import db_lifespan
 from hermes_worker.core.config import Settings, get_settings
+from hermes_worker.core.lifespan import db_lifespan
 from hermes_worker.handlers.parser import build_parser
 
 

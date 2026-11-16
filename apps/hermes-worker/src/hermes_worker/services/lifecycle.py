@@ -1,5 +1,4 @@
 import logging
-
 from hermes_db.services import EventService
 from hermes_db.session import AsyncSessionLocal
 from hermes_worker.core.config import Settings

@@ -3,7 +3,6 @@
 import pytest
 from pydantic import ValidationError
 from sqlalchemy import URL
-
 from hermes_worker.core.config import Settings, get_settings
 
 

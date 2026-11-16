@@ -1,6 +1,6 @@
-from pydantic import SecretStr
 from hermes_ai import AiConfig, HermesAi, ModelRoute, ModelTarget
-from hermes_worker.core.config import Settings, get_settings
+from pydantic import SecretStr
+from hermes_worker.core.config import Settings
 
 
 def _to_target(

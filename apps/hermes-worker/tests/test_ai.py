@@ -2,9 +2,7 @@
 
 import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
-
 import pytest
-
 from hermes_ai.client import HermesAi
 from hermes_ai.models.events import ArticleInput, ExtractedEvent
 from hermes_ai.utils.coercion import coerce_to_str

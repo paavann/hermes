@@ -1,8 +1,6 @@
 import asyncio
 from unittest.mock import AsyncMock, patch
-
 import pytest
-
 from hermes_worker.core.config import Settings
 from hermes_worker.services.lifecycle import run_lifecycle
 
