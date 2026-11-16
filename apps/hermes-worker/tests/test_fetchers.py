@@ -2,7 +2,7 @@ import asyncio
 import json
 import uuid
 from datetime import UTC, datetime
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 import httpx
 from hermes_ai.utils.rate_limiter import TbRateLimiter
 from hermes_db.enums import CredibilityTier, SourceType
@@ -81,7 +81,7 @@ def test_gdelt_fetcher_success() -> None:
         mock_resp = AsyncMock(spec=httpx.Response)
         mock_resp.status_code = 200
         mock_resp.json.return_value = mock_response_data
-        mock_resp.raise_for_status = AsyncMock()
+        mock_resp.raise_for_status = MagicMock()
         mock_client.get.return_value = mock_resp
 
         limiter = TbRateLimiter(req_per_min=120, max_burst=10.0)
@@ -148,7 +148,7 @@ def test_gdelt_fetcher_malformed_json() -> None:
         mock_resp = AsyncMock(spec=httpx.Response)
         mock_resp.status_code = 200
         mock_resp.json.side_effect = json.JSONDecodeError("Expecting value", "doc", 0)
-        mock_resp.raise_for_status = AsyncMock()
+        mock_resp.raise_for_status = MagicMock()
         mock_client.get.return_value = mock_resp
 
         limiter = TbRateLimiter(req_per_min=120, max_burst=10.0)
@@ -241,12 +241,12 @@ def test_sitemap_fetcher_success() -> None:
         sitemap_resp = AsyncMock(spec=httpx.Response)
         sitemap_resp.status_code = 200
         sitemap_resp.text = sitemap_xml
-        sitemap_resp.raise_for_status = AsyncMock()
+        sitemap_resp.raise_for_status = MagicMock()
 
         html_resp = AsyncMock(spec=httpx.Response)
         html_resp.status_code = 200
         html_resp.text = article_html
-        html_resp.raise_for_status = AsyncMock()
+        html_resp.raise_for_status = MagicMock()
 
         async def _mock_get(url: str, **kwargs: object) -> AsyncMock:
             if "sitemap" in url:
@@ -288,7 +288,7 @@ def test_sitemap_fetcher_rate_limited_or_forbidden() -> None:
         sitemap_resp = AsyncMock(spec=httpx.Response)
         sitemap_resp.status_code = 200
         sitemap_resp.text = sitemap_xml
-        sitemap_resp.raise_for_status = AsyncMock()
+        sitemap_resp.raise_for_status = MagicMock()
 
         blocked_resp = AsyncMock(spec=httpx.Response)
         blocked_resp.status_code = 403

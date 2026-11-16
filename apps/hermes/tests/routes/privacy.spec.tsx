@@ -70,7 +70,11 @@ describe('Privacy Route', () => {
     render(<ReactRouterStub initialEntries={['/privacy']} />);
 
     expect(screen.getByRole('link', { name: 'Hermes Home' })).toBeTruthy();
-    expect(screen.getByText('LAUNCH MAP')).toBeTruthy();
+    expect(screen.getAllByText('LAUNCH MAP').length).toBeGreaterThan(0);
+    expect(
+      screen.getAllByRole('link', { name: /Launch (the )?intelligence map/i })
+        .length,
+    ).toBeGreaterThan(0);
 
     // Footer
     expect(screen.getByText(/HERMES GEOINT INC/)).toBeTruthy();

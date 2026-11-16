@@ -11,16 +11,17 @@ describe('EventsLoader', () => {
     vi.useRealTimers();
   });
 
-  it('renders loading badge with role="status", solid #08929c bg, #000000 text, and no glow', () => {
+  it('renders a solid sync badge with no glow or pulse animation', () => {
     render(<EventsLoader />);
 
     const badge = screen.getByRole('status');
     expect(badge).toBeTruthy();
-    expect(badge.className).toContain('bg-[#08929c]');
-    expect(badge.className).toContain('text-[#000000]');
+    expect(badge.className).toContain('bg-black');
+    expect(badge.className).toContain('text-neon-blue');
     expect(badge.className).not.toContain('shadow');
+    expect(badge.className).not.toContain('backdrop-blur');
     expect(badge.className).not.toContain('animate-pulse');
-    expect(badge.textContent).toContain('LOADING');
+    expect(badge.textContent).toContain('SYNCING');
   });
 
   it('cycles three dots disappearing sequentially from left to right', () => {

@@ -203,7 +203,7 @@ def test_llm_service_call_llm_raises_model_execution_error(
     svc = LlmService(base_config)
     mock_acompletion.side_effect = RuntimeError("Provider 503 outage")
 
-    with pytest.raises(ModelExecutionError, match="all router deployments failed"):
+    with pytest.raises(ModelExecutionError, match="llm call failed for triage"):
         asyncio.run(
             svc.call_llm(
                 sys_prompt="system",
@@ -225,7 +225,7 @@ def test_llm_service_call_llm_raises_schema_validation_error(
 
     with pytest.raises(
         SchemaValidationError,
-        match="output validation failed across primary and fallback",
+        match="llm output validation failed for triage",
     ):
         asyncio.run(
             svc.call_llm(

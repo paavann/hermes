@@ -10,10 +10,10 @@ import MapRoute, {
 describe('map route SSR', () => {
   it('renders the loading fallbacks without evaluating browser map code', () => {
     expect(renderToStaticMarkup(<MapLoadingFallback />)).toContain(
-      'Loading Map...',
+      'LOADING LIVE MAP',
     );
     expect(renderToStaticMarkup(<HydrateFallback />)).toContain(
-      'Loading Map...',
+      'LOADING LIVE MAP',
     );
     expect(typeof MapRoute).toBe('function');
   });

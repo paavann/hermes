@@ -14,7 +14,7 @@ from hermes_api.services.chat_guards import (
     ChatGuards,
     ConcurrencyGuard,
     DailyTokenBudget,
-    SlidingWindowRateLimiter,
+    SWRateLimiter,
     estimate_tokens,
     extract_client_ip,
     hash_client_ip,
@@ -51,7 +51,7 @@ def _request(
 
 def test_rate_limiter_rejects_with_retry_after() -> None:
     clock = FakeClock()
-    limiter = SlidingWindowRateLimiter(limit=2, window_seconds=60.0, clock=clock)
+    limiter = SWRateLimiter(limit=2, window_seconds=60.0, clock=clock)
 
     assert limiter.check("client-a") == 1
     assert limiter.check("client-a") == 0
@@ -74,7 +74,7 @@ def test_rate_limiter_rejects_with_retry_after() -> None:
 
 
 def test_rate_limiter_is_per_key() -> None:
-    limiter = SlidingWindowRateLimiter(limit=1, window_seconds=60.0, clock=FakeClock())
+    limiter = SWRateLimiter(limit=1, window_seconds=60.0, clock=FakeClock())
 
     limiter.check("client-a")
     assert limiter.check("client-b") == 0

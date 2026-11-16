@@ -209,7 +209,7 @@ def test_ai_config_without_extractor_succeeds() -> None:
 
 
 def test_ai_config_rejects_empty_routes() -> None:
-    with pytest.raises(ConfigurationError, match="routes cannot be empty in AiConfig"):
+    with pytest.raises(ConfigurationError, match="routes are required in AiConfig"):
         AiConfig(routes={})
 
 

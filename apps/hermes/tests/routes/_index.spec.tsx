@@ -1,9 +1,12 @@
+import type { ReactNode } from 'react';
 import { createRoutesStub } from 'react-router';
 import { render, screen, waitFor } from '@testing-library/react';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
+
 import MapRoute, {
   loader as mapLoader,
   HydrateFallback,
+  MapLoadingFallback,
 } from '../../app/routes/map';
 
 const mockGetAuth = vi.fn();
@@ -22,13 +25,14 @@ vi.mock('@hermes/map', () => {
   };
   return {
     MapView: () => <div data-testid="map-view" />,
-    MapConfigProvider: ({ children }: { children: React.ReactNode }) => children,
-    useMapStore: <T,>(selector: (value: typeof state) => T): T => selector(state),
+    MapConfigProvider: ({ children }: { children: ReactNode }) => children,
+    useMapStore: <T,>(selector: (value: typeof state) => T): T =>
+      selector(state),
   };
 });
 
 vi.mock('@hermes/chat', () => ({
-  ChatConfigProvider: ({ children }: { children: React.ReactNode }) => children,
+  ChatConfigProvider: ({ children }: { children: ReactNode }) => children,
   ChatPanel: () => <div data-testid="chat-panel" />,
 }));
 
@@ -46,7 +50,7 @@ describe('Map Route', () => {
     },
   ]);
 
-  it('renders map route with tactical hud and map view for authenticated users', async () => {
+  it('renders the map and chat shells for authenticated users', async () => {
     mockGetAuth.mockResolvedValueOnce({
       userId: 'user_operator_123',
       isAuthenticated: true,
@@ -57,13 +61,15 @@ describe('Map Route', () => {
     await waitFor(
       () => {
         expect(screen.getByTestId('map-view')).toBeTruthy();
-        expect(screen.getByText(/UTC/)).toBeTruthy();
+        expect(screen.getByTestId('chat-panel')).toBeTruthy();
       },
       { timeout: 5000 },
     );
-  }, 15000);
 
-  it('renders map route without redirection for unauthenticated visitors', async () => {
+    expect(mockGetAuth).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders without redirection for unauthenticated visitors', async () => {
     mockGetAuth.mockResolvedValueOnce({ userId: null, isAuthenticated: false });
 
     render(<ReactRouterStub initialEntries={['/map']} />);
@@ -71,9 +77,19 @@ describe('Map Route', () => {
     await waitFor(
       () => {
         expect(screen.getByTestId('map-view')).toBeTruthy();
-        expect(screen.getByText(/UTC/)).toBeTruthy();
       },
       { timeout: 5000 },
     );
-  }, 15000);
+
+    expect(screen.getByTestId('chat-panel')).toBeTruthy();
+  });
+
+  it('renders the loading fallbacks without touching map state', () => {
+    render(<MapLoadingFallback />);
+    expect(screen.getByRole('status')).toBeTruthy();
+    expect(screen.getByText('LOADING LIVE MAP')).toBeTruthy();
+
+    render(<HydrateFallback />);
+    expect(screen.getAllByRole('status')).toHaveLength(2);
+  });
 });

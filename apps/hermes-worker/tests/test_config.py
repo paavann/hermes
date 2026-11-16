@@ -1,20 +1,28 @@
 """Unit tests for hermes_worker.core.config Settings and db_url generation."""
 
 import pytest
+from pydantic import ValidationError
 from sqlalchemy import URL
+
 from hermes_worker.core.config import Settings, get_settings
 
 
-def _make_settings(**overrides) -> Settings:
-    defaults = {
+def _make_settings(**overrides: object) -> Settings:
+    defaults: dict[str, object] = {
         "DB_PASSWORD": "worker-secret-pass",
         "DB_USER": "postgres",
         "DB_HOST": "localhost",
         "DB_PORT": 5432,
         "DB_NAME": "hermes",
+        "DB_SSL_MODE": None,
+        "ENV": "development",
+        "LLM_API": "",
+        "LLM_MODEL": "",
+        "EMBED_API": "",
+        "EMBED_MODEL": "",
     }
     defaults.update(overrides)
-    return Settings(**defaults)
+    return Settings(_env_file=None, **defaults)
 
 
 class TestWorkerSettingsDefaults:
@@ -48,11 +56,20 @@ class TestWorkerSettingsDefaults:
         assert s.EVENT_ARCHIVE_HOURS == 48
 
     def test_db_password_is_required(self, monkeypatch):
-        from pydantic import ValidationError
-
         monkeypatch.delenv("DB_PASSWORD", raising=False)
         with pytest.raises(ValidationError):
             Settings(_env_file=None)
+
+    def test_archive_cutoff_must_follow_stale_cutoff(self):
+        with pytest.raises(ValidationError, match="EVENT_ARCHIVE_HOURS"):
+            _make_settings(EVENT_STALE_HOURS=48, EVENT_ARCHIVE_HOURS=24)
+
+        with pytest.raises(ValidationError, match="EVENT_ARCHIVE_HOURS"):
+            _make_settings(EVENT_STALE_HOURS=24, EVENT_ARCHIVE_HOURS=24)
+
+    def test_production_requires_llm_credentials(self):
+        with pytest.raises(ValidationError, match="Missing required production settings"):
+            _make_settings(ENV="production")
 
 
 class TestWorkerDbUrl:
@@ -66,15 +83,29 @@ class TestWorkerDbUrl:
         assert s.db_url.port == 5432
         assert s.db_url.database == "hermes"
 
-    def test_ssl_query_parameter_logic(self):
-        # Local hosts do not require ssl
-        for host in ["localhost", "127.0.0.1", "hermes-db"]:
+    def test_development_does_not_force_ssl(self):
+        for host in ["localhost", "127.0.0.1", "hermes-db", "db.aws.neon.tech"]:
             s = _make_settings(DB_HOST=host)
             assert "ssl" not in s.db_url.query
 
-        # Remote host requires ssl
-        remote_s = _make_settings(DB_HOST="db.aws.neon.tech")
-        assert remote_s.db_url.query.get("ssl") == "require"
+    def test_non_development_requires_ssl_by_default(self):
+        s = _make_settings(ENV="staging")
+        assert s.db_url.query.get("ssl") == "require"
+
+    def test_explicit_ssl_mode_overrides_environment(self):
+        for mode in ("disable", "allow", "prefer", "require"):
+            s = _make_settings(ENV="staging", DB_SSL_MODE=mode)
+            assert s.db_url.query.get("ssl") == mode
+
+    def test_production_with_credentials_still_requires_ssl(self):
+        s = _make_settings(
+            ENV="production",
+            LLM_API="llm-key",
+            LLM_MODEL="mistral/mistral-large",
+            EMBED_API="embed-key",
+            EMBED_MODEL="nvidia_nim/nvidia/nemotron-3-embed-1b",
+        )
+        assert s.db_url.query.get("ssl") == "require"
 
 
 class TestGetSettings:

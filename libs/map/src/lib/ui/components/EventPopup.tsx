@@ -1,7 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import {
   ArrowSquareOut,
-  Crosshair,
   X,
 } from '@phosphor-icons/react';
 

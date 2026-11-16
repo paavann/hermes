@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 
 import type { MapEventResponse } from '@hermes/util-types';
-import { cn } from '@hermes/ui-components';
 
 import { useMapStore } from '../../store/store';
 
@@ -44,7 +43,6 @@ function useUtcClock(): string {
  */
 export function MapHud({ events, isFetching }: MapHudProps): React.JSX.Element {
   const viewport = useMapStore((state) => state.viewport);
-  const citedCount = useMapStore((state) => state.citedEvents.length);
   const clock = useUtcClock();
 
   const centerLat =
