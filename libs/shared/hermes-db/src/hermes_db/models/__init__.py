@@ -5,6 +5,8 @@ is fully populated. alembic reads this to discover all tables.
 """
 
 from .article import Article
+from .article_embedding import ArticleEmbedding
+from .article_label import ArticleLabel
 from .event import Event
 from .event_tl import EventTl
 from .geocode_cache import GeocodeCache
@@ -13,6 +15,8 @@ from .source import Source
 
 __all__ = [
     "Article",
+    "ArticleEmbedding",
+    "ArticleLabel",
     "Event",
     "EventTl",
     "Source",

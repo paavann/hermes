@@ -9,11 +9,13 @@ require no mocking or async machinery.
 import pytest
 
 from hermes_db.enums import (
+    ArticleType,
     CredibilityTier,
     EventScope,
     EventStatus,
     EventTlStatus,
     ImpactLevel,
+    IngestStatus,
     SourceType,
 )
 
@@ -154,3 +156,64 @@ class TestCredibilityTier:
         """Tiers are named in descending credibility order (TIER_1 is best)."""
         tiers = [t.value for t in CredibilityTier]
         assert tiers.index("TIER_1") < tiers.index("TIER_4")
+
+
+# ---------------------------------------------------------------------------
+# IngestStatus
+# ---------------------------------------------------------------------------
+
+
+class TestIngestStatus:
+    def test_all_members_present(self):
+        expected = {"NEW", "NORMALIZED", "LABELED", "CLUSTERED", "REJECTED"}
+        assert {m.value for m in IngestStatus} == expected
+
+    @pytest.mark.parametrize(
+        "value",
+        ["NEW", "NORMALIZED", "LABELED", "CLUSTERED", "REJECTED"],
+    )
+    def test_string_equality(self, value: str):
+        assert IngestStatus(value) == value
+
+    def test_new_is_default(self):
+        assert IngestStatus.NEW == "NEW"
+
+
+# ---------------------------------------------------------------------------
+# ArticleType
+# ---------------------------------------------------------------------------
+
+
+class TestArticleType:
+    def test_all_members_present(self):
+        expected = {
+            "BREAKING",
+            "DEVELOPMENT",
+            "ANALYSIS",
+            "FEATURE",
+            "OPINION",
+            "LISTICLE",
+            "OTHER",
+        }
+        assert {m.value for m in ArticleType} == expected
+
+    @pytest.mark.parametrize(
+        "value",
+        [
+            "BREAKING",
+            "DEVELOPMENT",
+            "ANALYSIS",
+            "FEATURE",
+            "OPINION",
+            "LISTICLE",
+            "OTHER",
+        ],
+    )
+    def test_string_equality(self, value: str):
+        assert ArticleType(value) == value
+
+    def test_non_event_types_available(self):
+        """Feature, opinion, and listicle must be available for PRIMARY gating."""
+        assert ArticleType.FEATURE
+        assert ArticleType.OPINION
+        assert ArticleType.LISTICLE

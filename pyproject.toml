@@ -8,7 +8,8 @@ dependencies = [
   "hermes-worker",
   "hermes-db",
   "hermes-ai",
-  "utils-py"
+  "utils-py",
+  "alembic>=1.20.0",
 ]
 
 [tool.uv.sources.hermes-api]

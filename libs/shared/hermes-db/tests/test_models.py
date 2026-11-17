@@ -13,17 +13,21 @@ do **not** require a live database connection.  We inspect:
 
 import uuid
 
-from sqlalchemy import inspect
+from sqlalchemy import String, inspect
 
 from hermes_db.enums import (
+    ArticleType,
     CredibilityTier,
     EventScope,
     EventStatus,
     EventTlStatus,
     ImpactLevel,
+    IngestStatus,
     SourceType,
 )
 from hermes_db.models.article import Article
+from hermes_db.models.article_embedding import ArticleEmbedding
+from hermes_db.models.article_label import ArticleLabel
 from hermes_db.models.event import Event
 from hermes_db.models.event_tl import EventTl
 from hermes_db.models.geocode_cache import GeocodeCache
@@ -41,8 +45,46 @@ class TestArticleModel:
 
     def test_required_columns_present(self):
         cols = {c.name for c in inspect(Article).columns}
-        required = {"id", "event_id", "source_id", "title", "url"}
+        required = {
+            "id",
+            "event_id",
+            "source_id",
+            "title",
+            "url",
+            "canonical_url",
+            "feed_summary",
+            "feed_content",
+            "content_hash",
+            "title_simhash",
+            "language",
+            "ingest_status",
+        }
         assert required.issubset(cols)
+
+    def test_ledger_columns_are_nullable_before_normalization(self):
+        cols = inspect(Article).columns
+        for name in (
+            "canonical_url",
+            "feed_summary",
+            "feed_content",
+            "content_hash",
+            "title_simhash",
+            "language",
+        ):
+            assert cols[name].nullable, f"{name} should be nullable"
+
+    def test_title_simhash_is_hex_string(self):
+        """A 64-bit SimHash is stored as a 16-char hex string to avoid overflow."""
+        col = inspect(Article).columns["title_simhash"]
+        assert isinstance(col.type, String)
+        assert col.type.length == 16
+
+    def test_ingest_status_default(self):
+        col = inspect(Article).columns["ingest_status"]
+        assert col.default is not None
+        assert col.default.arg == IngestStatus.NEW
+        assert col.server_default is not None
+        assert col.server_default.arg == IngestStatus.NEW.value
 
     def test_url_is_unique(self):
         col = inspect(Article).columns["url"]
@@ -73,10 +115,142 @@ class TestArticleModel:
         assert isinstance(col.default.arg(None), uuid.UUID)
 
     def test_relationships_declared(self):
-        """event and source back-references must be mapped."""
+        """event, source, labels, and embedding back-references must be mapped."""
         rels = {r.key for r in inspect(Article).relationships}
         assert "event" in rels
         assert "source" in rels
+        assert "labels" in rels
+        assert "embedding_record" in rels
+
+    def test_labels_relationship_cascades(self):
+        rel = inspect(Article).relationships["labels"]
+        assert rel.passive_deletes is True
+        assert rel.lazy == "raise"
+
+    def test_embedding_relationship_is_one_to_one(self):
+        rel = inspect(Article).relationships["embedding_record"]
+        assert rel.uselist is False
+        assert rel.passive_deletes is True
+        assert rel.lazy == "raise"
+
+    def test_ledger_indexes_defined(self):
+        indexes = {idx.name: idx for idx in Article.__table__.indexes}
+        assert "idx_articles_content_hash" in indexes
+        assert "idx_articles_canonical_url" in indexes
+        assert "idx_articles_ingest_status_published_at" in indexes
+
+
+# ---------------------------------------------------------------------------
+# ArticleLabel
+# ---------------------------------------------------------------------------
+
+
+class TestArticleLabelModel:
+    def test_tablename(self):
+        assert ArticleLabel.__tablename__ == "article_labels"
+
+    def test_required_columns_present(self):
+        cols = {c.name for c in inspect(ArticleLabel).columns}
+        required = {
+            "id",
+            "article_id",
+            "prompt_version",
+            "model",
+            "is_event",
+            "article_type",
+            "event_time",
+            "severity",
+            "scope",
+            "confidence",
+            "entities",
+            "locations",
+            "labeled_at",
+        }
+        assert required.issubset(cols)
+
+    def test_article_id_foreign_key_cascades(self):
+        fk = next(iter(inspect(ArticleLabel).columns["article_id"].foreign_keys))
+        assert fk.target_fullname == "articles.id"
+        assert fk.ondelete == "CASCADE"
+
+    def test_article_prompt_version_is_unique(self):
+        constraints = {c.name for c in ArticleLabel.__table__.constraints}
+        assert "uq_article_labels_article_prompt" in constraints
+
+    def test_severity_and_confidence_checks(self):
+        constraints = {c.name for c in ArticleLabel.__table__.constraints}
+        assert "ck_article_labels_severity_range" in constraints
+        assert "ck_article_labels_confidence_range" in constraints
+
+    def test_optional_label_fields_are_nullable(self):
+        cols = inspect(ArticleLabel).columns
+        for name in ("event_time", "severity", "scope", "confidence"):
+            assert cols[name].nullable, f"{name} should be nullable"
+
+    def test_article_type_default(self):
+        col = inspect(ArticleLabel).columns["article_type"]
+        assert col.default is not None
+        assert col.default.arg == ArticleType.OTHER
+        assert col.server_default is not None
+        assert col.server_default.arg == ArticleType.OTHER.value
+
+    def test_entities_and_locations_default_to_empty_lists(self):
+        cols = inspect(ArticleLabel).columns
+        for name in ("entities", "locations"):
+            assert cols[name].default is not None
+            assert cols[name].default.arg(None) == []
+
+    def test_article_relationship(self):
+        rel = inspect(ArticleLabel).relationships["article"]
+        assert rel.lazy == "raise"
+
+    def test_is_event_index_present(self):
+        indexes = {idx.name for idx in ArticleLabel.__table__.indexes}
+        assert "idx_article_labels_is_event_labeled" in indexes
+
+
+# ---------------------------------------------------------------------------
+# ArticleEmbedding
+# ---------------------------------------------------------------------------
+
+
+class TestArticleEmbeddingModel:
+    def test_tablename(self):
+        assert ArticleEmbedding.__tablename__ == "article_embeddings"
+
+    def test_required_columns_present(self):
+        cols = {c.name for c in inspect(ArticleEmbedding).columns}
+        required = {"article_id", "model", "embedding", "created_at", "updated_at"}
+        assert required.issubset(cols)
+
+    def test_article_id_is_primary_key(self):
+        assert inspect(ArticleEmbedding).columns["article_id"].primary_key
+
+    def test_article_id_foreign_key_cascades(self):
+        fk = next(iter(inspect(ArticleEmbedding).columns["article_id"].foreign_keys))
+        assert fk.target_fullname == "articles.id"
+        assert fk.ondelete == "CASCADE"
+
+    def test_embedding_is_not_nullable(self):
+        assert not inspect(ArticleEmbedding).columns["embedding"].nullable
+
+    def test_embedding_index_is_hnsw(self):
+        indexes = {idx.name: idx for idx in ArticleEmbedding.__table__.indexes}
+        assert "idx_article_embeddings_embedding" in indexes
+        hnsw = indexes["idx_article_embeddings_embedding"]
+        assert hnsw.dialect_options["postgresql"]["using"] == "hnsw"
+        assert hnsw.dialect_options["postgresql"]["with"] == {
+            "m": 16,
+            "ef_construction": 64,
+        }
+
+    def test_retention_index_present(self):
+        indexes = {idx.name for idx in ArticleEmbedding.__table__.indexes}
+        assert "idx_article_embeddings_created_at" in indexes
+
+    def test_article_relationship(self):
+        rel = inspect(ArticleEmbedding).relationships["article"]
+        assert rel.lazy == "raise"
 
 
 # ---------------------------------------------------------------------------
@@ -386,19 +560,37 @@ class TestModelsPackage:
     def test_all_models_exported(self):
         from hermes_db import models
 
-        for name in ("Article", "Event", "EventTl", "Source", "GeocodeCache"):
+        for name in (
+            "Article",
+            "ArticleEmbedding",
+            "ArticleLabel",
+            "Event",
+            "EventTl",
+            "Source",
+            "GeocodeCache",
+        ):
             assert hasattr(models, name), f"{name} not exported from hermes_db.models"
 
     def test_exported_names_are_orm_classes(self):
         from hermes_db import models
 
-        for name in ("Article", "Event", "EventTl", "Source", "GeocodeCache"):
+        for name in (
+            "Article",
+            "ArticleEmbedding",
+            "ArticleLabel",
+            "Event",
+            "EventTl",
+            "Source",
+            "GeocodeCache",
+        ):
             cls = getattr(models, name)
             # Every model must be registered in Base.metadata.
             assert cls.__tablename__ in {
                 t
                 for t in [
                     "articles",
+                    "article_embeddings",
+                    "article_labels",
                     "events",
                     "event_timelines",
                     "sources",

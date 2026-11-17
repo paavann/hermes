@@ -15,6 +15,24 @@ class EventScope(enum.StrEnum):
     LOCAL = "LOCAL"
 
 
+class IngestStatus(enum.StrEnum):
+    NEW = "NEW"
+    NORMALIZED = "NORMALIZED"
+    LABELED = "LABELED"
+    CLUSTERED = "CLUSTERED"
+    REJECTED = "REJECTED"
+
+
+class ArticleType(enum.StrEnum):
+    BREAKING = "BREAKING"
+    DEVELOPMENT = "DEVELOPMENT"
+    ANALYSIS = "ANALYSIS"
+    FEATURE = "FEATURE"
+    OPINION = "OPINION"
+    LISTICLE = "LISTICLE"
+    OTHER = "OTHER"
+
+
 class EventTlStatus(enum.StrEnum):
     READY = "READY"
     GENERATING = "GENERATING"
