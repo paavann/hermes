@@ -11,6 +11,7 @@ from .event import Event
 from .event_tl import EventTl
 from .geocode_cache import GeocodeCache
 from .source import Source
+from .thread import Thread
 
 
 __all__ = [
@@ -20,5 +21,6 @@ __all__ = [
     "Event",
     "EventTl",
     "Source",
+    "Thread",
     "GeocodeCache",
 ]

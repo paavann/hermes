@@ -16,7 +16,11 @@ from hermes_db.enums import (
     EventTlStatus,
     ImpactLevel,
     IngestStatus,
+    SelectionTier,
     SourceType,
+    ThreadKind,
+    ThreadStatus,
+    VerificationStatus,
 )
 
 
@@ -217,3 +221,47 @@ class TestArticleType:
         assert ArticleType.FEATURE
         assert ArticleType.OPINION
         assert ArticleType.LISTICLE
+
+
+# ---------------------------------------------------------------------------
+# SelectionTier
+# ---------------------------------------------------------------------------
+
+
+class TestSelectionTier:
+    def test_all_members_present(self):
+        assert {m.value for m in SelectionTier} == {"PRIMARY", "FILLER", "DROP"}
+
+    def test_drop_is_safe_default(self):
+        assert SelectionTier.DROP == "DROP"
+        assert SelectionTier.PRIMARY == "PRIMARY"
+        assert SelectionTier.FILLER == "FILLER"
+
+
+# ---------------------------------------------------------------------------
+# VerificationStatus
+# ---------------------------------------------------------------------------
+
+
+class TestVerificationStatus:
+    def test_all_members_present(self):
+        expected = {"CONFIRMED", "SINGLE_SOURCE", "UNVERIFIED"}
+        assert {m.value for m in VerificationStatus} == expected
+
+    def test_single_source_is_explicit(self):
+        assert VerificationStatus.SINGLE_SOURCE == "SINGLE_SOURCE"
+
+
+# ---------------------------------------------------------------------------
+# ThreadKind / ThreadStatus
+# ---------------------------------------------------------------------------
+
+
+class TestThreadKind:
+    def test_all_members_present(self):
+        assert {m.value for m in ThreadKind} == {"DEVELOPING", "TOPIC"}
+
+
+class TestThreadStatus:
+    def test_all_members_present(self):
+        assert {m.value for m in ThreadStatus} == {"ACTIVE", "DORMANT", "ENDED"}

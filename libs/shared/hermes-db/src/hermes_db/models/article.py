@@ -21,11 +21,14 @@ if TYPE_CHECKING:
 class Article(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     __tablename__ = "articles"
 
-    event_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("events.id", ondelete="CASCADE")
+    # Nullable so deleting an event cannot delete its ledger articles.
+    event_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("events.id", ondelete="SET NULL"),
+        nullable=True,
     )
-    source_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("sources.id", ondelete="CASCADE")
+    source_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("sources.id", ondelete="SET NULL"),
+        nullable=True,
     )
 
     title: Mapped[str] = mapped_column(Text)
@@ -40,6 +43,7 @@ class Article(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     ingested_at: Mapped[datetime] = mapped_column(server_default=func.now())
 
     content_hash: Mapped[str | None] = mapped_column(String(64))
+    # 64-bit SimHash as a 16-character hex digest.
     title_simhash: Mapped[str | None] = mapped_column(String(16))
     language: Mapped[str | None] = mapped_column(String(16))
     ingest_status: Mapped[IngestStatus] = mapped_column(
@@ -52,8 +56,10 @@ class Article(Base, UUIDPrimaryKeyMixin, TimestampMixin):
         server_default=IngestStatus.NEW.value,
     )
 
-    event: Mapped[Event] = relationship(back_populates="articles")
-    source: Mapped[Source] = relationship(back_populates="articles", lazy="selectin")
+    event: Mapped[Event | None] = relationship(back_populates="articles")
+    source: Mapped[Source | None] = relationship(
+        back_populates="articles", lazy="selectin"
+    )
     labels: Mapped[list[ArticleLabel]] = relationship(
         back_populates="article",
         cascade="all, delete-orphan",
@@ -76,6 +82,8 @@ class Article(Base, UUIDPrimaryKeyMixin, TimestampMixin):
             "ingest_status",
             "published_at",
         ),
+        Index("idx_articles_event_id", "event_id"),
+        Index("idx_articles_source_id", "source_id"),
     )
 
     @property

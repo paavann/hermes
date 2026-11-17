@@ -13,6 +13,7 @@ from sqlalchemy import (
     Index,
     SmallInteger,
     String,
+    Text,
     UniqueConstraint,
     func,
 )
@@ -58,6 +59,13 @@ class ArticleLabel(Base, UUIDPrimaryKeyMixin, TimestampMixin):
         nullable=True,
     )
     confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
+
+    fact: Mapped[str | None] = mapped_column(Text, nullable=True)
+    scale_facts: Mapped[dict[str, object]] = mapped_column(
+        JSONB,
+        default=dict,
+        server_default="{}",
+    )
 
     entities: Mapped[list[dict[str, object]]] = mapped_column(
         JSONB,

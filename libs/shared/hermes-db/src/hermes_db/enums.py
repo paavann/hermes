@@ -7,6 +7,29 @@ class EventStatus(enum.StrEnum):
     ARCHIVED = "ARCHIVED"
 
 
+class SelectionTier(enum.StrEnum):
+    PRIMARY = "PRIMARY"
+    FILLER = "FILLER"
+    DROP = "DROP"
+
+
+class VerificationStatus(enum.StrEnum):
+    CONFIRMED = "CONFIRMED"
+    SINGLE_SOURCE = "SINGLE_SOURCE"
+    UNVERIFIED = "UNVERIFIED"
+
+
+class ThreadKind(enum.StrEnum):
+    DEVELOPING = "DEVELOPING"
+    TOPIC = "TOPIC"
+
+
+class ThreadStatus(enum.StrEnum):
+    ACTIVE = "ACTIVE"
+    DORMANT = "DORMANT"
+    ENDED = "ENDED"
+
+
 class EventScope(enum.StrEnum):
     GLOBAL = "GLOBAL"
     COUNTRY = "COUNTRY"

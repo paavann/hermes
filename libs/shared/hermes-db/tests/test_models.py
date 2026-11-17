@@ -23,7 +23,11 @@ from hermes_db.enums import (
     EventTlStatus,
     ImpactLevel,
     IngestStatus,
+    SelectionTier,
     SourceType,
+    ThreadKind,
+    ThreadStatus,
+    VerificationStatus,
 )
 from hermes_db.models.article import Article
 from hermes_db.models.article_embedding import ArticleEmbedding
@@ -32,6 +36,7 @@ from hermes_db.models.event import Event
 from hermes_db.models.event_tl import EventTl
 from hermes_db.models.geocode_cache import GeocodeCache
 from hermes_db.models.source import Source
+from hermes_db.models.thread import Thread
 
 
 # ---------------------------------------------------------------------------
@@ -103,10 +108,22 @@ class TestArticleModel:
         targets = {fk.target_fullname for fk in fks}
         assert "events.id" in targets
 
+    def test_event_id_is_nullable_and_sets_null_on_delete(self):
+        col = inspect(Article).columns["event_id"]
+        assert col.nullable
+        fk = next(iter(col.foreign_keys))
+        assert fk.ondelete == "SET NULL"
+
     def test_source_id_foreign_key(self):
         fks = inspect(Article).columns["source_id"].foreign_keys
         targets = {fk.target_fullname for fk in fks}
         assert "sources.id" in targets
+
+    def test_source_id_is_nullable_and_sets_null_on_delete(self):
+        col = inspect(Article).columns["source_id"]
+        assert col.nullable
+        fk = next(iter(col.foreign_keys))
+        assert fk.ondelete == "SET NULL"
 
     def test_id_default_is_uuid4_callable(self):
         """id column default must be configured as the uuid4 callable."""
@@ -138,6 +155,8 @@ class TestArticleModel:
         assert "idx_articles_content_hash" in indexes
         assert "idx_articles_canonical_url" in indexes
         assert "idx_articles_ingest_status_published_at" in indexes
+        assert "idx_articles_event_id" in indexes
+        assert "idx_articles_source_id" in indexes
 
 
 # ---------------------------------------------------------------------------
@@ -162,11 +181,22 @@ class TestArticleLabelModel:
             "severity",
             "scope",
             "confidence",
+            "fact",
+            "scale_facts",
             "entities",
             "locations",
             "labeled_at",
         }
         assert required.issubset(cols)
+
+    def test_fact_is_nullable(self):
+        assert inspect(ArticleLabel).columns["fact"].nullable
+
+    def test_scale_facts_default_is_empty_dict(self):
+        col = inspect(ArticleLabel).columns["scale_facts"]
+        assert col.default is not None
+        assert col.default.arg(None) == {}
+        assert col.server_default is not None
 
     def test_article_id_foreign_key_cascades(self):
         fk = next(iter(inspect(ArticleLabel).columns["article_id"].foreign_keys))
@@ -275,6 +305,17 @@ class TestEventModel:
             "trending_score",
             "velocity",
             "article_count",
+            "event_time",
+            "latest_published_at",
+            "thread_id",
+            "confidence",
+            "importance_score",
+            "popularity_score",
+            "selection_tier",
+            "verification_status",
+            "independent_origin_count",
+            "member_hash",
+            "version",
         }
         assert required.issubset(cols)
 
@@ -336,6 +377,61 @@ class TestEventModel:
         assert col.default is not None
         assert col.default.arg == 0
 
+    def test_event_time_and_latest_published_are_nullable(self):
+        cols = inspect(Event).columns
+        assert cols["event_time"].nullable
+        assert cols["latest_published_at"].nullable
+
+    def test_thread_id_is_nullable_and_sets_null_on_delete(self):
+        col = inspect(Event).columns["thread_id"]
+        assert col.nullable
+        fk = next(iter(col.foreign_keys))
+        assert fk.target_fullname == "threads.id"
+        assert fk.ondelete == "SET NULL"
+
+    def test_confidence_is_nullable(self):
+        assert inspect(Event).columns["confidence"].nullable
+
+    def test_importance_and_popularity_default_to_zero(self):
+        cols = inspect(Event).columns
+        for name in ("importance_score", "popularity_score"):
+            assert cols[name].default is not None
+            assert cols[name].default.arg == 0.0
+            assert cols[name].server_default is not None
+
+    def test_selection_tier_default(self):
+        col = inspect(Event).columns["selection_tier"]
+        assert col.default is not None
+        assert col.default.arg == SelectionTier.DROP
+        assert col.server_default is not None
+        assert col.server_default.arg == SelectionTier.DROP.value
+
+    def test_verification_status_default(self):
+        col = inspect(Event).columns["verification_status"]
+        assert col.default is not None
+        assert col.default.arg == VerificationStatus.UNVERIFIED
+        assert col.server_default is not None
+        assert col.server_default.arg == VerificationStatus.UNVERIFIED.value
+
+    def test_independent_origin_count_default(self):
+        col = inspect(Event).columns["independent_origin_count"]
+        assert col.default is not None
+        assert col.default.arg == 0
+        assert col.server_default is not None
+
+    def test_member_hash_is_nullable(self):
+        assert inspect(Event).columns["member_hash"].nullable
+
+    def test_version_default(self):
+        col = inspect(Event).columns["version"]
+        assert col.default is not None
+        assert col.default.arg == 1
+        assert col.server_default is not None
+
+    def test_event_graph_relationships(self):
+        rels = {r.key for r in inspect(Event).relationships}
+        assert "thread" in rels
+
     def test_articles_relationship(self):
         rel = inspect(Event).relationships["articles"]
         assert rel.passive_deletes is True
@@ -350,6 +446,10 @@ class TestEventModel:
         assert "idx_events_scope" in indexes
         assert "idx_events_status_last_updated" in indexes
         assert "idx_events_country" in indexes
+        assert "idx_events_thread_id" in indexes
+        assert "idx_events_event_time" in indexes
+        assert "idx_events_latest_published_at" in indexes
+        assert "idx_events_active_selection" in indexes
 
         active_score = indexes["idx_events_active_score"]
         assert [c.name for c in active_score.columns] == ["trending_score"]
@@ -359,6 +459,74 @@ class TestEventModel:
             "m": 16,
             "ef_construction": 64,
         }
+
+
+# ---------------------------------------------------------------------------
+# Thread
+# ---------------------------------------------------------------------------
+
+
+class TestThreadModel:
+    def test_tablename(self):
+        assert Thread.__tablename__ == "threads"
+
+    def test_required_columns_present(self):
+        cols = {c.name for c in inspect(Thread).columns}
+        required = {
+            "id",
+            "kind",
+            "name",
+            "description",
+            "status",
+            "started_at",
+            "ended_at",
+            "entities",
+            "keywords",
+            "importance",
+            "confidence",
+        }
+        assert required.issubset(cols)
+
+    def test_kind_default(self):
+        col = inspect(Thread).columns["kind"]
+        assert col.default is not None
+        assert col.default.arg == ThreadKind.DEVELOPING
+        assert col.server_default is not None
+        assert col.server_default.arg == ThreadKind.DEVELOPING.value
+
+    def test_status_default(self):
+        col = inspect(Thread).columns["status"]
+        assert col.default is not None
+        assert col.default.arg == ThreadStatus.ACTIVE
+        assert col.server_default is not None
+        assert col.server_default.arg == ThreadStatus.ACTIVE.value
+
+    def test_optional_fields_are_nullable(self):
+        cols = inspect(Thread).columns
+        for name in ("description", "started_at", "ended_at", "confidence"):
+            assert cols[name].nullable, f"{name} should be nullable"
+
+    def test_importance_default(self):
+        col = inspect(Thread).columns["importance"]
+        assert col.default is not None
+        assert col.default.arg == 0.0
+        assert col.server_default is not None
+
+    def test_json_defaults_are_empty_lists(self):
+        cols = inspect(Thread).columns
+        for name in ("entities", "keywords"):
+            assert cols[name].default is not None
+            assert cols[name].default.arg(None) == []
+
+    def test_events_relationship(self):
+        rel = inspect(Thread).relationships["events"]
+        assert rel.passive_deletes is True
+        assert rel.lazy == "raise"
+
+    def test_indexes_defined(self):
+        indexes = {idx.name for idx in Thread.__table__.indexes}
+        assert "idx_threads_status_importance" in indexes
+        assert "idx_threads_kind_status" in indexes
 
 
 # ---------------------------------------------------------------------------
@@ -497,8 +665,25 @@ class TestSourceModel:
             "source_type",
             "credibility",
             "is_active",
+            "origin_group",
+            "country_code",
+            "language",
+            "last_error",
+            "consecutive_failures",
         }
         assert required.issubset(cols)
+
+    def test_origin_identity_fields_are_nullable(self):
+        cols = inspect(Source).columns
+        for name in ("origin_group", "country_code", "language", "last_error"):
+            assert cols[name].nullable, f"{name} should be nullable"
+
+    def test_consecutive_failures_default(self):
+        col = inspect(Source).columns["consecutive_failures"]
+        assert col.default is not None
+        assert col.default.arg == 0
+        assert col.server_default is not None
+        assert col.server_default.arg == "0"
 
     def test_slug_is_unique(self):
         col = inspect(Source).columns["slug"]
@@ -543,6 +728,17 @@ class TestSourceModel:
     def test_articles_relationship(self):
         rels = {r.key for r in inspect(Source).relationships}
         assert "articles" in rels
+        assert "health" not in rels
+
+    def test_origin_group_index_present(self):
+        indexes = {idx.name: idx for idx in Source.__table__.indexes}
+        assert "idx_sources_origin_group" in indexes
+        where = (
+            indexes["idx_sources_origin_group"]
+            .dialect_options["postgresql"]
+            .get("where")
+        )
+        assert where is not None
 
     def test_id_default_is_uuid4_callable(self):
         """id column default must be configured as the uuid4 callable."""
@@ -567,6 +763,7 @@ class TestModelsPackage:
             "Event",
             "EventTl",
             "Source",
+            "Thread",
             "GeocodeCache",
         ):
             assert hasattr(models, name), f"{name} not exported from hermes_db.models"
@@ -581,6 +778,7 @@ class TestModelsPackage:
             "Event",
             "EventTl",
             "Source",
+            "Thread",
             "GeocodeCache",
         ):
             cls = getattr(models, name)
@@ -594,6 +792,7 @@ class TestModelsPackage:
                     "events",
                     "event_timelines",
                     "sources",
+                    "threads",
                     "geocode_cache",
                 ]
             }
