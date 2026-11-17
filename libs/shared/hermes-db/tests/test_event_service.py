@@ -1003,3 +1003,113 @@ class TestEventCreationNormalization:
         assert len(event.category) == 100
         assert event.location_name is not None
         assert len(event.location_name) == 255
+
+
+# ---------------------------------------------------------------------------
+# create_event_record
+# ---------------------------------------------------------------------------
+
+
+class _Synthesis:
+    """Minimal EventSynthesisData implementation for tests."""
+
+    def __init__(
+        self,
+        headline: str = "Synthesized headline",
+        summary: str = "Synthesized summary",
+        category: str = "Disaster",
+        category_color: str | None = "#FF0000",
+        location_name: str | None = "Example City",
+        country_code: str | None = "ex",
+        impact_level: str | None = "MAJOR",
+        event_time: datetime | None = None,
+        confidence: float | None = 0.82,
+    ) -> None:
+        self.headline = headline
+        self.summary = summary
+        self.category = category
+        self.category_color = category_color
+        self.location_name = location_name
+        self.country_code = country_code
+        self.impact_level = impact_level
+        self.event_time = event_time
+        self.confidence = confidence
+
+
+class TestCreateEventRecord:
+    def test_returns_event_without_committing(self):
+        session = make_async_session()
+        svc = EventService(session)
+
+        event = run(svc.create_event_record(_Synthesis()))
+
+        assert isinstance(event, Event)
+        session.add.assert_called_once_with(event)
+        session.flush.assert_awaited_once()
+        session.commit.assert_not_awaited()
+
+    def test_persists_synthesis_fields(self):
+        session = make_async_session()
+        svc = EventService(session)
+        event_time = datetime(2026, 11, 17, 12, 30, tzinfo=UTC)
+
+        event = run(
+            svc.create_event_record(
+                _Synthesis(event_time=event_time),
+                geocoding=_Geocoding(51.5, -0.1),
+            )
+        )
+
+        assert event.ai_headline == "Synthesized headline"
+        assert event.ai_summary == "Synthesized summary"
+        assert event.category == "Disaster"
+        assert event.category_color == "#FF0000"
+        assert event.impact_level == ImpactLevel.MAJOR
+        assert event.location_name == "Example City"
+        assert event.country_code == "EX"
+        assert event.location == "SRID=4326;POINT(-0.1 51.5)"
+        assert event.event_time == event_time
+        assert event.confidence == 0.82
+
+    def test_nullable_synthesis_fields(self):
+        session = make_async_session()
+        svc = EventService(session)
+
+        event = run(
+            svc.create_event_record(
+                _Synthesis(
+                    category_color=None,
+                    location_name=None,
+                    country_code=None,
+                    impact_level=None,
+                    event_time=None,
+                    confidence=None,
+                )
+            )
+        )
+
+        assert event.category_color == "#6B7280"
+        assert event.location_name is None
+        assert event.country_code is None
+        assert event.impact_level == ImpactLevel.MODERATE
+        assert event.event_time is None
+        assert event.confidence is None
+
+    def test_truncates_display_fields(self):
+        session = make_async_session()
+        svc = EventService(session)
+
+        event = run(
+            svc.create_event_record(
+                _Synthesis(
+                    headline="h" * 600,
+                    category="c" * 120,
+                    location_name="l" * 300,
+                )
+            )
+        )
+
+        assert len(event.ai_headline) == 500
+        assert len(event.category) == 100
+        assert event.location_name is not None
+        assert len(event.location_name) == 255

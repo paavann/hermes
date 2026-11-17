@@ -8,7 +8,9 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from conftest import make_async_session, make_uuid, run
+from sqlalchemy.engine import CursorResult
 
+from hermes_db.enums import IngestStatus
 from hermes_db.models.article import Article
 from hermes_db.services.article import ArticleService
 
@@ -166,3 +168,175 @@ class TestCreateArticle:
         col = inspect(Article).columns["id"]
         assert col.default is not None and col.default.is_callable
         assert isinstance(col.default.arg(None), uuid.UUID)
+
+
+# ---------------------------------------------------------------------------
+# create_article — ledger extensions
+# ---------------------------------------------------------------------------
+
+
+def _make_cursor_result(rowcount: int) -> MagicMock:
+    result = MagicMock(spec=CursorResult)
+    result.rowcount = rowcount
+    return result
+
+
+class TestCreateLedgerArticle:
+    def test_event_and_source_are_optional(self):
+        """Ledger inserts must not require event or source membership."""
+        mock_article = MagicMock(spec=Article)
+        session = make_async_session(execute_scalar_one_or_none=mock_article)
+        svc = ArticleService(session)
+
+        result = run(
+            svc.create_article(
+                title="Ledger article",
+                url="https://example.com/ledger",
+            )
+        )
+
+        assert result is mock_article
+
+    def test_ledger_fields_are_stored(self):
+        """Feed content and normalization fields must reach the insert."""
+        session = make_async_session(execute_scalar_one_or_none=MagicMock(spec=Article))
+        svc = ArticleService(session)
+
+        run(
+            svc.create_article(
+                title="Ledger article",
+                url="https://example.com/ledger",
+                source_id=make_uuid(),
+                canonical_url="https://example.com/ledger?ref=rss",
+                thumbnail_url="https://example.com/ledger.jpg",
+                feed_summary="Feed summary",
+                feed_content="Feed content",
+                content_hash="a" * 64,
+                title_simhash="0123456789abcdef",
+                language="en",
+            )
+        )
+
+        stmt = session.execute.call_args.args[0]
+        params = stmt.compile().params
+        assert params["canonical_url"] == "https://example.com/ledger?ref=rss"
+        assert params["feed_summary"] == "Feed summary"
+        assert params["feed_content"] == "Feed content"
+        assert params["content_hash"] == "a" * 64
+        assert params["title_simhash"] == "0123456789abcdef"
+        assert params["language"] == "en"
+        assert params["ingest_status"] == IngestStatus.NEW.value
+
+
+# ---------------------------------------------------------------------------
+# Ledger lookups
+# ---------------------------------------------------------------------------
+
+
+class TestFindArticle:
+    def test_find_by_url_returns_article(self):
+        mock_article = MagicMock(spec=Article)
+        session = make_async_session(execute_scalar_one_or_none=mock_article)
+        svc = ArticleService(session)
+
+        assert run(svc.find_by_url("https://example.com/a")) is mock_article
+
+    def test_find_by_url_returns_none(self):
+        session = make_async_session(execute_scalar_one_or_none=None)
+        svc = ArticleService(session)
+
+        assert run(svc.find_by_url("https://example.com/missing")) is None
+
+    def test_find_by_content_hash_returns_article(self):
+        mock_article = MagicMock(spec=Article)
+        session = make_async_session(execute_scalar_one_or_none=mock_article)
+        svc = ArticleService(session)
+
+        assert run(svc.find_by_content_hash("b" * 64)) is mock_article
+
+    def test_find_by_content_hash_returns_none(self):
+        session = make_async_session(execute_scalar_one_or_none=None)
+        svc = ArticleService(session)
+
+        assert run(svc.find_by_content_hash("c" * 64)) is None
+
+
+# ---------------------------------------------------------------------------
+# Status and membership writes
+# ---------------------------------------------------------------------------
+
+
+class TestSetIngestStatus:
+    def test_returns_updated_row_count(self):
+        session = make_async_session()
+        session.execute.return_value = _make_cursor_result(2)
+        svc = ArticleService(session)
+
+        assert (
+            run(svc.set_ingest_status([make_uuid(), make_uuid()], IngestStatus.LABELED))
+            == 2
+        )
+
+    def test_empty_ids_does_not_query(self):
+        session = make_async_session()
+        svc = ArticleService(session)
+
+        assert run(svc.set_ingest_status([], IngestStatus.LABELED)) == 0
+        session.execute.assert_not_awaited()
+
+
+class TestAssignEvent:
+    def test_returns_updated_row_count(self):
+        event_id = make_uuid()
+        session = make_async_session()
+        session.execute.return_value = _make_cursor_result(3)
+        svc = ArticleService(session)
+
+        assert run(svc.assign_event([make_uuid()], event_id)) == 3
+
+        stmt = session.execute.call_args.args[0]
+        assert stmt.compile().params["event_id"] == event_id
+
+    def test_empty_ids_does_not_query(self):
+        session = make_async_session()
+        svc = ArticleService(session)
+
+        assert run(svc.assign_event([], make_uuid())) == 0
+        session.execute.assert_not_awaited()
+
+    def test_clear_event_members_returns_row_count(self):
+        event_id = make_uuid()
+        session = make_async_session()
+        session.execute.return_value = _make_cursor_result(4)
+        svc = ArticleService(session)
+
+        assert run(svc.clear_event_members(event_id)) == 4
+
+        stmt = session.execute.call_args.args[0]
+        assert stmt.compile().params["event_id_1"] == event_id
+
+
+# ---------------------------------------------------------------------------
+# Reads
+# ---------------------------------------------------------------------------
+
+
+class TestListArticles:
+    def test_list_event_articles_returns_members(self):
+        articles = [MagicMock(spec=Article), MagicMock(spec=Article)]
+        session = make_async_session(execute_scalars=articles)
+        svc = ArticleService(session)
+
+        assert run(svc.list_event_articles(make_uuid())) == articles
+
+    def test_list_by_ingest_status_returns_batch(self):
+        articles = [MagicMock(spec=Article)]
+        session = make_async_session(execute_scalars=articles)
+        svc = ArticleService(session)
+
+        result = run(svc.list_by_ingest_status(IngestStatus.NEW, limit=25))
+
+        assert result == articles
+        stmt = session.execute.call_args.args[0]
+        assert stmt.compile().params["ingest_status_1"] == IngestStatus.NEW.value
+        assert stmt.compile().params["param_1"] == 25

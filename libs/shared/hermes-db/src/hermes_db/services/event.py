@@ -20,7 +20,11 @@ from hermes_db.enums import (
 from hermes_db.models.article import Article
 from hermes_db.models.event import Event
 from hermes_db.models.source import Source
-from hermes_db.protocols import EventExtractionData, GeocodingData
+from hermes_db.protocols import (
+    EventExtractionData,
+    EventSynthesisData,
+    GeocodingData,
+)
 from hermes_db.services.article import ArticleService
 from hermes_db.services.ranking import (
     CREDIBILITY_WEIGHTS,
@@ -32,6 +36,7 @@ from hermes_db.services.ranking import (
     calculate_velocity,
     calculate_velocity_multiplier,
 )
+from hermes_db.utils.datetime import ensure_utc
 
 
 __all__ = [
@@ -44,6 +49,7 @@ __all__ = [
     "SOURCE_BLOC_MAP",
     "EventExtractionData",
     "EventService",
+    "EventSynthesisData",
     "GeocodingData",
     "calculate_shannon_diversity",
     "calculate_velocity",
@@ -146,6 +152,48 @@ class EventService:
         await self._session.commit()
 
         logger.info("created event '%s' with 1 article.", event.ai_headline)
+        return event
+
+    async def create_event_record(
+        self,
+        synthesis: EventSynthesisData,
+        *,
+        geocoding: GeocodingData | None = None,
+    ) -> Event:
+        raw_impact = synthesis.impact_level
+        impact = (
+            ImpactLevel(raw_impact)
+            if isinstance(raw_impact, str)
+            else (raw_impact or ImpactLevel.MODERATE)
+        )
+        location_name = (
+            synthesis.location_name[:255]
+            if synthesis.location_name is not None
+            else None
+        )
+        location_wkt = None
+        if geocoding:
+            location_wkt = (
+                f"SRID=4326;POINT({geocoding.longitude} {geocoding.latitude})"
+            )
+        event = Event(
+            ai_headline=synthesis.headline[:500],
+            ai_summary=synthesis.summary,
+            category=synthesis.category[:100],
+            category_color=_normalize_category_color(synthesis.category_color),
+            impact_level=impact,
+            location=location_wkt,
+            location_name=location_name,
+            country_code=_normalize_country_code(synthesis.country_code),
+            event_time=(
+                ensure_utc(synthesis.event_time)
+                if synthesis.event_time is not None
+                else None
+            ),
+            confidence=synthesis.confidence,
+        )
+        self._session.add(event)
+        await self._session.flush()
         return event
 
     async def add_article_to_event(

@@ -1,4 +1,5 @@
 from hermes_db.services.article import ArticleService
+from hermes_db.services.article_label import ArticleLabelService
 from hermes_db.services.event import EventService
 from hermes_db.services.geocode import GeocodeCacheEntry, GeocodeCacheService
 from hermes_db.services.search import (
@@ -21,9 +22,11 @@ from hermes_db.services.source import (
     SourceService,
     sync_sources_from_config,
 )
+from hermes_db.services.thread import ThreadService
 
 
 __all__ = [
+    "ArticleLabelService",
     "ArticleService",
     "BoundingBox",
     "Coverage",
@@ -44,4 +47,5 @@ __all__ = [
     "SearchTimelineNode",
     "SourceService",
     "sync_sources_from_config",
+    "ThreadService",
 ]
