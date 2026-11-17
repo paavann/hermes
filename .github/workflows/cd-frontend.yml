@@ -34,6 +34,14 @@ jobs:
               - 'package.json'
               - 'package-lock.json'
               - '.github/workflows/cd-frontend.yml'
+              # exclusions.
+              - '!**/*.md'
+              - '!**/__tests__/**'
+              - '!**/*.spec.ts'
+              - '!**/*.spec.tsx'
+              - '!**/*.test.ts'
+              - '!**/*.test.tsx'
+              - '!**/.agents/**'
 
   deploy-to-vercel:
     name: build and deploy to vercel

@@ -37,6 +37,12 @@ jobs:
               - 'pyproject.toml'
               - 'uv.lock'
               - '.github/workflows/cd-api.yml'
+              # exclusions.
+              - '!**/*.md'
+              - '!**/tests/**'
+              - '!**/*_test.py'
+              - '!**/test_*.py'
+              - '!**/.agents/**'
 
   deploy-lightsail:
     name: build, push and deploy to lightsail

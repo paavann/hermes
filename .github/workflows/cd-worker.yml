@@ -36,6 +36,12 @@ jobs:
               - 'pyproject.toml'
               - 'uv.lock'
               - '.github/workflows/cd-worker.yml'
+              # exclusions.
+              - '!**/*.md'
+              - '!**/tests/**'
+              - '!**/*_test.py'
+              - '!**/test_*.py'
+              - '!**/.agents/**'
 
   build-and-push:
     name: build and push worker image
