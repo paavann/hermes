@@ -39,23 +39,14 @@ def _extract_content(entry: Mapping[str, object]) -> str | None:
 
 
 async def fetch_feed(feed_url: str) -> list[ParsedArticle]:
-    try:
-        async with httpx.AsyncClient() as client:
-            res = await client.get(
-                feed_url,
-                timeout=30.0,
-                follow_redirects=True,
-                headers={"User-Agent": settings.NOMINATIM_USER_AGENT},
-            )
-            res.raise_for_status()
-    except httpx.TimeoutException:
-        logger.warning(
-            "timeout fetching RSS feed %s (> 30s). skipping source.", feed_url
+    async with httpx.AsyncClient() as client:
+        res = await client.get(
+            feed_url,
+            timeout=30.0,
+            follow_redirects=True,
+            headers={"User-Agent": settings.NOMINATIM_USER_AGENT},
         )
-        return []
-    except httpx.HTTPError as exc:
-        logger.warning("failed to fetch RSS feed %s: %s.", feed_url, exc)
-        return []
+        res.raise_for_status()
 
     feed = feedparser.parse(res.text)
     if feed.bozo and not feed.bozo_exception:

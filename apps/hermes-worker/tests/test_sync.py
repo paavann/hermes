@@ -258,3 +258,74 @@ class TestSyncService:
             mock_sitemap.fetch_articles.assert_awaited_once_with(scrape_source)
 
         asyncio.run(run())
+
+    def test_sync_all_sources_records_fetch_failure(
+        self, dummy_due_source: DueSource
+    ) -> None:
+        async def run() -> None:
+            mock_session = AsyncMock()
+            mock_session_ctx = MagicMock()
+            mock_session_ctx.__aenter__.return_value = mock_session
+            mock_session_ctx.__aexit__.return_value = None
+
+            mock_fetcher = AsyncMock(spec=BaseArticleFetcher)
+            mock_fetcher.fetch_articles = AsyncMock(
+                side_effect=RuntimeError("feed unreachable")
+            )
+
+            with (
+                patch(
+                    "hermes_worker.services.sync.AsyncSessionLocal",
+                    return_value=mock_session_ctx,
+                ),
+                patch("hermes_worker.services.sync.SourceService") as mock_src_cls,
+            ):
+                mock_src = mock_src_cls.return_value
+                mock_src.get_due_sources = AsyncMock(return_value=[dummy_due_source])
+                mock_src.record_fetch_success = AsyncMock()
+                mock_src.record_fetch_failure = AsyncMock()
+
+                svc = SyncService(rss_fetcher=mock_fetcher)
+                stats = await svc.sync_all_sources()
+
+            assert stats["sources_processed"] == 1
+            mock_src.record_fetch_success.assert_not_awaited()
+            mock_src.record_fetch_failure.assert_awaited_once_with(
+                dummy_due_source.id,
+                "RuntimeError: feed unreachable",
+            )
+
+        asyncio.run(run())
+
+    def test_sync_all_sources_records_fetch_success(
+        self, dummy_due_source: DueSource
+    ) -> None:
+        async def run() -> None:
+            mock_session = AsyncMock()
+            mock_session_ctx = MagicMock()
+            mock_session_ctx.__aenter__.return_value = mock_session
+            mock_session_ctx.__aexit__.return_value = None
+
+            mock_fetcher = AsyncMock(spec=BaseArticleFetcher)
+            mock_fetcher.fetch_articles = AsyncMock(return_value=[])
+
+            with (
+                patch(
+                    "hermes_worker.services.sync.AsyncSessionLocal",
+                    return_value=mock_session_ctx,
+                ),
+                patch("hermes_worker.services.sync.SourceService") as mock_src_cls,
+            ):
+                mock_src = mock_src_cls.return_value
+                mock_src.get_due_sources = AsyncMock(return_value=[dummy_due_source])
+                mock_src.record_fetch_success = AsyncMock()
+                mock_src.record_fetch_failure = AsyncMock()
+
+                svc = SyncService(rss_fetcher=mock_fetcher)
+                stats = await svc.sync_all_sources()
+
+            assert stats["sources_processed"] == 1
+            mock_src.record_fetch_success.assert_awaited_once_with(dummy_due_source.id)
+            mock_src.record_fetch_failure.assert_not_awaited()
+
+        asyncio.run(run())

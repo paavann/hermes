@@ -32,6 +32,10 @@ def _make_source(
     credibility: str = "TIER_3",
     source_type: SourceType = SourceType.RSS,
     is_active: bool = True,
+    origin_group: str | None = None,
+    country_code: str | None = None,
+    language: str | None = None,
+    consecutive_failures: int = 0,
 ) -> MagicMock:
     """Create a mock Source ORM object."""
     source = MagicMock(spec=Source)
@@ -42,6 +46,10 @@ def _make_source(
     source.credibility = credibility
     source.source_type = source_type
     source.is_active = is_active
+    source.origin_group = origin_group
+    source.country_code = country_code
+    source.language = language
+    source.consecutive_failures = consecutive_failures
     return source
 
 
@@ -144,6 +152,9 @@ def test_sync_inserts_new_sources():
             "url": "https://reuters.com",
             "feed_url": "https://reuters.com/rss/world",
             "credibility": "TIER_1",
+            "origin_group": "reuters",
+            "country_code": "GB",
+            "language": "en",
         }
     ]
     session = _mock_session(existing_sources=[])
@@ -159,6 +170,73 @@ def test_sync_inserts_new_sources():
     assert stats["updated"] == 0
     assert stats["disabled"] == 0
     session.add.assert_called_once()
+
+    inserted = session.add.call_args.args[0]
+    assert inserted.origin_group == "reuters"
+    assert inserted.country_code == "GB"
+    assert inserted.language == "en"
+
+
+def test_sync_normalizes_source_metadata():
+    """Config metadata must be stored in a comparable canonical form."""
+    config = [
+        {
+            "slug": "bbc-world",
+            "name": "BBC World",
+            "url": "https://bbc.com",
+            "feed_url": "https://bbc.com/rss",
+            "origin_group": " BBC ",
+            "country_code": " gb ",
+            "language": " EN ",
+        }
+    ]
+    session = _mock_session(existing_sources=[])
+
+    with patch(
+        "hermes_db.services.source._load_sources_config",
+        new_callable=AsyncMock,
+        return_value=config,
+    ):
+        asyncio.run(sync_sources_from_config(session))
+
+    inserted = session.add.call_args.args[0]
+    assert inserted.origin_group == "bbc"
+    assert inserted.country_code == "GB"
+    assert inserted.language == "en"
+
+
+def test_sync_updates_source_metadata():
+    """Changing independence metadata in the config must update the row."""
+    existing = _make_source(
+        "bbc-world",
+        origin_group=None,
+        country_code=None,
+        language=None,
+    )
+    config = [
+        {
+            "slug": "bbc-world",
+            "name": "Test",
+            "url": "https://example.com",
+            "feed_url": "https://example.com/rss",
+            "origin_group": "bbc",
+            "country_code": "GB",
+            "language": "en",
+        }
+    ]
+    session = _mock_session(existing_sources=[existing])
+
+    with patch(
+        "hermes_db.services.source._load_sources_config",
+        new_callable=AsyncMock,
+        return_value=config,
+    ):
+        stats = asyncio.run(sync_sources_from_config(session))
+
+    assert stats["updated"] == 1
+    assert existing.origin_group == "bbc"
+    assert existing.country_code == "GB"
+    assert existing.language == "en"
 
 
 def test_sync_skips_entries_without_slug():
@@ -386,13 +464,141 @@ def test_source_service_get_due_sources_force():
     assert due[0].name == "S1"
 
 
-def test_source_service_update_last_fetched():
-    """Should execute an update statement with the source_id."""
+def test_source_service_records_fetch_success():
+    """Success must refresh the timestamp and clear failure state."""
     source_id = uuid.uuid4()
+    session = AsyncMock()
+    fetched_at = datetime(2026, 1, 2, 3, 4, tzinfo=UTC)
+
+    service = SourceService(session)
+    asyncio.run(service.record_fetch_success(source_id, fetched_at=fetched_at))
+
+    stmt = session.execute.call_args.args[0]
+    compiled = str(stmt.compile(compile_kwargs={"literal_binds": True}))
+    assert "last_fetched_at" in compiled
+    assert "last_error=NULL" in compiled
+    assert "consecutive_failures=0" in compiled
+    assert "2026-01-02 03:04:00" in compiled
+
+
+def test_source_service_records_fetch_failure():
+    """Failure must advance the retry anchor and increment the failure counter."""
+    source_id = uuid.uuid4()
+    session = AsyncMock()
+    failed_at = datetime(2026, 1, 2, 3, 4, tzinfo=UTC)
+
+    service = SourceService(session)
+    asyncio.run(
+        service.record_fetch_failure(
+            source_id,
+            "ConnectError: feed unreachable",
+            failed_at=failed_at,
+        )
+    )
+
+    stmt = session.execute.call_args.args[0]
+    compiled = str(stmt.compile(compile_kwargs={"literal_binds": True}))
+    assert "last_error='ConnectError: feed unreachable'" in compiled
+    assert "consecutive_failures=(sources.consecutive_failures + 1)" in compiled
+    assert "2026-01-02 03:04:00" in compiled
+
+
+def test_source_service_truncates_long_fetch_error():
+    """A pathological error must not overflow the source health record."""
     session = AsyncMock()
 
     service = SourceService(session)
-    asyncio.run(service.update_last_fetched(source_id))
+    asyncio.run(service.record_fetch_failure(uuid.uuid4(), "x" * 5000))
+
+    stmt = session.execute.call_args.args[0]
+    value = stmt.compile().params["last_error"]
+    assert len(value) == 1000
+
+
+def test_due_sources_apply_failure_backoff():
+    """One failure doubles the wait before the next attempt."""
+    now = datetime.now(UTC)
+    session = AsyncMock()
+    result = MagicMock()
+
+    failing = _make_source("failing", feed_url="https://failing.com/rss")
+    failing.id = uuid.uuid4()
+    failing.fetch_interval_minutes = 15
+    failing.last_fetched_at = now - timedelta(minutes=20)
+    failing.consecutive_failures = 1
+
+    result.scalars.return_value.all.return_value = [failing]
+    session.execute.return_value = result
+
+    due = asyncio.run(SourceService(session).get_due_sources(force=False))
+
+    assert due == []
+
+
+def test_due_sources_backoff_caps_at_maximum():
+    """Persistent failures must stop growing the delay past the cap."""
+    now = datetime.now(UTC)
+    session = AsyncMock()
+    result = MagicMock()
+
+    failing = _make_source("failing", feed_url="https://failing.com/rss")
+    failing.id = uuid.uuid4()
+    failing.fetch_interval_minutes = 15
+    failing.consecutive_failures = 20
+    failing.last_fetched_at = now - timedelta(hours=6, minutes=1)
+
+    result.scalars.return_value.all.return_value = [failing]
+    session.execute.return_value = result
+
+    due = asyncio.run(SourceService(session).get_due_sources(force=False))
+
+    assert len(due) == 1
+    assert due[0].consecutive_failures == 20
+
+
+def test_due_sources_force_bypasses_backoff():
+    """A manual force sync must retry a backed-off source immediately."""
+    now = datetime.now(UTC)
+    session = AsyncMock()
+    result = MagicMock()
+
+    failing = _make_source("failing", feed_url="https://failing.com/rss")
+    failing.id = uuid.uuid4()
+    failing.fetch_interval_minutes = 15
+    failing.last_fetched_at = now - timedelta(minutes=1)
+    failing.consecutive_failures = 4
+
+    result.scalars.return_value.all.return_value = [failing]
+    session.execute.return_value = result
+
+    due = asyncio.run(SourceService(session).get_due_sources(force=True))
+
+    assert len(due) == 1
+
+
+def test_due_sources_carry_registry_metadata():
+    """Fetch scheduling must expose independence metadata to callers."""
+    session = AsyncMock()
+    result = MagicMock()
+
+    source = _make_source(
+        "bbc-world",
+        origin_group="bbc",
+        country_code="GB",
+        language="en",
+    )
+    source.id = uuid.uuid4()
+    source.fetch_interval_minutes = 15
+    source.last_fetched_at = None
+
+    result.scalars.return_value.all.return_value = [source]
+    session.execute.return_value = result
+
+    due = asyncio.run(SourceService(session).get_due_sources())
+
+    assert due[0].origin_group == "bbc"
+    assert due[0].country_code == "GB"
+    assert due[0].language == "en"
 
 
 def test_source_service_get_due_sources_gdelt():

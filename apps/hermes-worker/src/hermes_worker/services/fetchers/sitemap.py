@@ -64,7 +64,7 @@ class SitemapFetcher(BaseArticleFetcher):
         self,
         client: httpx.AsyncClient | None = None,
         max_articles: int = 20,
-        settings: Settings | None = None
+        settings: Settings | None = None,
     ) -> None:
         self._client = client
         self._max_articles = max_articles
@@ -88,9 +88,18 @@ class SitemapFetcher(BaseArticleFetcher):
             sitemap_url,
         )
 
-        try:
-            if self._client:
-                res = await self._client.get(
+        if self._client:
+            res = await self._client.get(
+                sitemap_url,
+                timeout=30.0,
+                follow_redirects=True,
+                headers={"User-Agent": self._settings.NOMINATIM_USER_AGENT},
+            )
+            res.raise_for_status()
+            xml_text = res.text
+        else:
+            async with httpx.AsyncClient() as client:
+                res = await client.get(
                     sitemap_url,
                     timeout=30.0,
                     follow_redirects=True,
@@ -98,24 +107,6 @@ class SitemapFetcher(BaseArticleFetcher):
                 )
                 res.raise_for_status()
                 xml_text = res.text
-            else:
-                async with httpx.AsyncClient() as client:
-                    res = await client.get(
-                        sitemap_url,
-                        timeout=30.0,
-                        follow_redirects=True,
-                        headers={"User-Agent": self._settings.NOMINATIM_USER_AGENT},
-                    )
-                    res.raise_for_status()
-                    xml_text = res.text
-        except httpx.HTTPError as exc:
-            logger.warning(
-                "failed to fetch sitemap for '%s' from %s: %s.",
-                source.name,
-                sitemap_url,
-                exc,
-            )
-            return []
 
         urls = _parse_sitemap_urls(xml_text, max_urls=self._max_articles)
         if not urls:

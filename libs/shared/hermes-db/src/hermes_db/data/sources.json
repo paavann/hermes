@@ -5,7 +5,10 @@
     "url": "https://www.reuters.com",
     "feed_url": "https://news.google.com/rss/search?q=source:Reuters&hl=en-US&gl=US&ceid=US:en",
     "source_type": "RSS",
-    "credibility": "TIER_1"
+    "credibility": "TIER_1",
+    "origin_group": "reuters",
+    "country_code": "GB",
+    "language": "en"
   },
   {
     "slug": "ap-wire",
@@ -13,7 +16,10 @@
     "url": "https://apnews.com",
     "feed_url": "https://news.google.com/rss/search?q=source:%22Associated+Press%22&hl=en-US&gl=US&ceid=US:en",
     "source_type": "RSS",
-    "credibility": "TIER_1"
+    "credibility": "TIER_1",
+    "origin_group": "ap",
+    "country_code": "US",
+    "language": "en"
   },
   {
     "slug": "afp-wire",
@@ -21,7 +27,10 @@
     "url": "https://www.afp.com",
     "feed_url": "https://news.google.com/rss/search?q=source:%22Agence+France-Presse%22&hl=en-US&gl=US&ceid=US:en",
     "source_type": "RSS",
-    "credibility": "TIER_1"
+    "credibility": "TIER_1",
+    "origin_group": "afp",
+    "country_code": "FR",
+    "language": "en"
   },
   {
     "slug": "upi-wire",
@@ -29,7 +38,10 @@
     "url": "https://www.upi.com",
     "feed_url": "https://rss.upi.com/news/world_news.rss",
     "source_type": "RSS",
-    "credibility": "TIER_1"
+    "credibility": "TIER_1",
+    "origin_group": "upi",
+    "country_code": "US",
+    "language": "en"
   },
   {
     "slug": "bbc-world",
@@ -37,7 +49,10 @@
     "url": "https://www.bbc.com/news/world",
     "feed_url": "https://feeds.bbci.co.uk/news/world/rss.xml",
     "source_type": "RSS",
-    "credibility": "TIER_1"
+    "credibility": "TIER_1",
+    "origin_group": "bbc",
+    "country_code": "GB",
+    "language": "en"
   },
   {
     "slug": "pbs-newshour",
@@ -45,7 +60,10 @@
     "url": "https://www.pbs.org/newshour",
     "feed_url": "https://www.pbs.org/newshour/feeds/rss/world",
     "source_type": "RSS",
-    "credibility": "TIER_1"
+    "credibility": "TIER_1",
+    "origin_group": "pbs",
+    "country_code": "US",
+    "language": "en"
   },
   {
     "slug": "nhk-world",
@@ -53,7 +71,10 @@
     "url": "https://www3.nhk.or.jp/nhkworld",
     "feed_url": "https://news.google.com/rss/search?q=source:%22NHK+WORLD-JAPAN%22&hl=en-US&gl=US&ceid=US:en",
     "source_type": "RSS",
-    "credibility": "TIER_1"
+    "credibility": "TIER_1",
+    "origin_group": "nhk",
+    "country_code": "JP",
+    "language": "en"
   },
   {
     "slug": "guardian-world",
@@ -61,7 +82,10 @@
     "url": "https://www.theguardian.com/world",
     "feed_url": "https://www.theguardian.com/world/rss",
     "source_type": "RSS",
-    "credibility": "TIER_1"
+    "credibility": "TIER_1",
+    "origin_group": "guardian",
+    "country_code": "GB",
+    "language": "en"
   },
   {
     "slug": "nyt-world",
@@ -69,7 +93,10 @@
     "url": "https://www.nytimes.com/section/world",
     "feed_url": "https://rss.nytimes.com/services/xml/rss/nyt/World.xml",
     "source_type": "RSS",
-    "credibility": "TIER_1"
+    "credibility": "TIER_1",
+    "origin_group": "nyt",
+    "country_code": "US",
+    "language": "en"
   },
   {
     "slug": "dw-world",
@@ -77,7 +104,10 @@
     "url": "https://www.dw.com",
     "feed_url": "https://rss.dw.com/xml/rss-en-world",
     "source_type": "RSS",
-    "credibility": "TIER_1"
+    "credibility": "TIER_1",
+    "origin_group": "dw",
+    "country_code": "DE",
+    "language": "en"
   },
   {
     "slug": "npr-world",
@@ -85,7 +115,10 @@
     "url": "https://www.npr.org/sections/world",
     "feed_url": "https://feeds.npr.org/1004/rss.xml",
     "source_type": "RSS",
-    "credibility": "TIER_1"
+    "credibility": "TIER_1",
+    "origin_group": "npr",
+    "country_code": "US",
+    "language": "en"
   },
   {
     "slug": "cbc-world",
@@ -93,7 +126,10 @@
     "url": "https://www.cbc.ca/news/world",
     "feed_url": "https://www.cbc.ca/webfeed/rss/rss-world",
     "source_type": "RSS",
-    "credibility": "TIER_1"
+    "credibility": "TIER_1",
+    "origin_group": "cbc",
+    "country_code": "CA",
+    "language": "en"
   },
   {
     "slug": "wsj-world",
@@ -101,7 +137,10 @@
     "url": "https://www.wsj.com/world",
     "feed_url": "https://feeds.a.dj.com/rss/RSSWorldNews.xml",
     "source_type": "RSS",
-    "credibility": "TIER_1"
+    "credibility": "TIER_1",
+    "origin_group": "wsj",
+    "country_code": "US",
+    "language": "en"
   },
   {
     "slug": "wapo-world",
@@ -109,7 +148,10 @@
     "url": "https://www.washingtonpost.com/world",
     "feed_url": "https://news.google.com/rss/search?q=source:%22The+Washington+Post%22&hl=en-US&gl=US&ceid=US:en",
     "source_type": "RSS",
-    "credibility": "TIER_1"
+    "credibility": "TIER_1",
+    "origin_group": "wapo",
+    "country_code": "US",
+    "language": "en"
   },
   {
     "slug": "aljazeera",
@@ -117,7 +159,10 @@
     "url": "https://www.aljazeera.com",
     "feed_url": "https://www.aljazeera.com/xml/rss/all.xml",
     "source_type": "RSS",
-    "credibility": "TIER_2"
+    "credibility": "TIER_2",
+    "origin_group": "aljazeera",
+    "country_code": "QA",
+    "language": "en"
   },
   {
     "slug": "france24-world",
@@ -125,7 +170,10 @@
     "url": "https://www.france24.com/en",
     "feed_url": "https://www.france24.com/en/world/rss",
     "source_type": "RSS",
-    "credibility": "TIER_2"
+    "credibility": "TIER_2",
+    "origin_group": "france24",
+    "country_code": "FR",
+    "language": "en"
   },
   {
     "slug": "cnn-world",
@@ -133,7 +181,10 @@
     "url": "https://www.cnn.com/world",
     "feed_url": "http://rss.cnn.com/rss/edition_world.rss",
     "source_type": "RSS",
-    "credibility": "TIER_2"
+    "credibility": "TIER_2",
+    "origin_group": "cnn",
+    "country_code": "US",
+    "language": "en"
   },
   {
     "slug": "abc-international",
@@ -141,7 +192,10 @@
     "url": "https://abcnews.go.com/International",
     "feed_url": "https://abcnews.go.com/abcnews/internationalheadlines",
     "source_type": "RSS",
-    "credibility": "TIER_2"
+    "credibility": "TIER_2",
+    "origin_group": "abc-news",
+    "country_code": "US",
+    "language": "en"
   },
   {
     "slug": "euronews-world",
@@ -149,7 +203,10 @@
     "url": "https://www.euronews.com",
     "feed_url": "https://www.euronews.com/rss?level=program&name=world",
     "source_type": "RSS",
-    "credibility": "TIER_2"
+    "credibility": "TIER_2",
+    "origin_group": "euronews",
+    "country_code": "FR",
+    "language": "en"
   },
   {
     "slug": "politico-europe",
@@ -157,6 +214,9 @@
     "url": "https://www.politico.eu",
     "feed_url": "https://www.politico.eu/feed/",
     "source_type": "RSS",
-    "credibility": "TIER_2"
+    "credibility": "TIER_2",
+    "origin_group": "politico",
+    "country_code": "BE",
+    "language": "en"
   }
 ]

@@ -33,10 +33,12 @@ class Source(Base, UUIDPrimaryKeyMixin, TimestampMixin):
 
     is_active: Mapped[bool] = mapped_column(default=True)
     logo_url: Mapped[str | None] = mapped_column(Text)
+    # Last fetch attempt (success or failure); failures also advance this timestamp
+    # so retry backoff has a stable anchor.
     last_fetched_at: Mapped[datetime | None] = mapped_column()
     fetch_interval_minutes: Mapped[int] = mapped_column(default=15)
 
-    # Fetch health. Backoff is derived from last_fetched_at + consecutive_failures.
+    # Fetch health. Backoff derives from last_fetched_at + consecutive_failures.
     last_error: Mapped[str | None] = mapped_column(Text, nullable=True)
     consecutive_failures: Mapped[int] = mapped_column(
         Integer,

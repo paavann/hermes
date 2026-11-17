@@ -47,7 +47,7 @@ class GDELTFetcher(BaseArticleFetcher):
         self,
         rate_limiter: TbRateLimiter | None = None,
         client: httpx.AsyncClient | None = None,
-        settings: Settings | None = None
+        settings: Settings | None = None,
     ) -> None:
         self._limiter = rate_limiter or _DEFAULT_GDELT_LIMITER
         self._client = client
@@ -77,45 +77,31 @@ class GDELTFetcher(BaseArticleFetcher):
             "format": "json",
             "sort": "datedesc",
         }
-        try:
-            if self._client:
-                res = await self._client.get(
+        if self._client:
+            res = await self._client.get(
+                GDELT_DOC_API_URL,
+                params=params,
+                timeout=30.0,
+                headers={"User-Agent": self._settings.NOMINATIM_USER_AGENT},
+            )
+        else:
+            async with httpx.AsyncClient() as client:
+                res = await client.get(
                     GDELT_DOC_API_URL,
                     params=params,
                     timeout=30.0,
                     headers={"User-Agent": self._settings.NOMINATIM_USER_AGENT},
                 )
-            else:
-                async with httpx.AsyncClient() as client:
-                    res = await client.get(
-                        GDELT_DOC_API_URL,
-                        params=params,
-                        timeout=30.0,
-                        headers={"User-Agent": self._settings.NOMINATIM_USER_AGENT},
-                    )
 
-            if res.status_code in (429, 403):
-                self._limiter.trip_circuit_breaker(duration=30.0)
-                logger.warning(
-                    "gdelt returned status %s for source '%s'. circuit breaker tripped for 30s.",
-                    res.status_code,
-                    source.name,
-                )
-                return []
-            res.raise_for_status()
-        except httpx.TimeoutException:
+        if res.status_code in (429, 403):
+            self._limiter.trip_circuit_breaker(duration=30.0)
             logger.warning(
-                "timeout querying gdelt for source '%s'. skipping source.",
+                "gdelt returned status %s for source '%s'. circuit breaker tripped for 30s.",
+                res.status_code,
                 source.name,
             )
             return []
-        except httpx.HTTPError as exc:
-            logger.warning(
-                "failed to fetch gdelt articles for source '%s': %s.",
-                source.name,
-                exc,
-            )
-            return []
+        res.raise_for_status()
 
         try:
             data = res.json()

@@ -87,7 +87,7 @@ sequenceDiagram
     participant AI as LiteLLM (hermes-ai)
     participant Nom as GeocodingService (Nominatim)
 
-    Note over W: Load due sources (last_fetched_at + interval <= now)
+    Note over W: Load due sources (interval doubles per failure, capped at 6h)
     
     loop Bounded Concurrency (asyncio.Semaphore = 5)
         W->>W: Fetch articles (RSS / GDELT / Sitemaps)
@@ -120,7 +120,7 @@ sequenceDiagram
                 end
             end
         end
-        W->>DB: update_last_fetched(source_id)
+        W->>DB: record_fetch_success / record_fetch_failure(source_id)
     end
 ```
 

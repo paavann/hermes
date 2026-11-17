@@ -4,6 +4,7 @@ import uuid
 from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock
 import httpx
+import pytest
 from hermes_ai.utils.rate_limiter import TbRateLimiter
 from hermes_db.enums import CredibilityTier, SourceType
 from hermes_db.services.source import DueSource
@@ -166,6 +167,51 @@ def test_gdelt_fetcher_malformed_json() -> None:
 
         articles = await fetcher.fetch_articles(source)
         assert articles == []
+
+    asyncio.run(_run())
+
+
+def test_gdelt_fetcher_propagates_transport_failure() -> None:
+    async def _run() -> None:
+        mock_client = AsyncMock(spec=httpx.AsyncClient)
+        mock_client.get.side_effect = httpx.TimeoutException("timeout")
+
+        limiter = TbRateLimiter(req_per_min=120, max_burst=10.0)
+        fetcher = GDELTFetcher(rate_limiter=limiter, client=mock_client)
+
+        source = DueSource(
+            id=uuid.uuid4(),
+            name="Reuters",
+            slug="reuters-wire",
+            feed_url=None,
+            source_type=SourceType.GDELT,
+            credibility=CredibilityTier.TIER_1,
+            url="https://www.reuters.com",
+        )
+
+        with pytest.raises(httpx.TimeoutException):
+            await fetcher.fetch_articles(source)
+
+    asyncio.run(_run())
+
+
+def test_sitemap_fetcher_propagates_transport_failure() -> None:
+    async def _run() -> None:
+        mock_client = AsyncMock(spec=httpx.AsyncClient)
+        mock_client.get.side_effect = httpx.ConnectError("unreachable")
+
+        fetcher = SitemapFetcher(client=mock_client)
+        source = DueSource(
+            id=uuid.uuid4(),
+            name="Sitemap News",
+            feed_url="https://example.com/sitemap.xml",
+            source_type=SourceType.SCRAPE,
+            credibility=CredibilityTier.TIER_2,
+            url="https://example.com",
+        )
+
+        with pytest.raises(httpx.ConnectError):
+            await fetcher.fetch_articles(source)
 
     asyncio.run(_run())
 

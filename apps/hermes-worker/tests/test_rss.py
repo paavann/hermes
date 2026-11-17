@@ -4,6 +4,7 @@ import uuid
 from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 import httpx
+import pytest
 from hermes_db.enums import CredibilityTier, SourceType
 from hermes_db.services.source import DueSource
 from hermes_worker.services.fetchers.base import (
@@ -126,19 +127,19 @@ class TestFetchFeed:
 
         asyncio.run(run())
 
-    def test_fetch_feed_handles_timeout(self):
+    def test_fetch_feed_propagates_timeout(self):
         async def run():
             mock_client = AsyncMock()
             mock_client.get = AsyncMock(side_effect=httpx.TimeoutException("Timeout"))
 
             with patch("httpx.AsyncClient") as mock_client_cls:
                 mock_client_cls.return_value.__aenter__.return_value = mock_client
-                articles = await fetch_feed("https://timeout.com/rss")
-                assert articles == []
+                with pytest.raises(httpx.TimeoutException):
+                    await fetch_feed("https://timeout.com/rss")
 
         asyncio.run(run())
 
-    def test_fetch_feed_handles_http_error(self):
+    def test_fetch_feed_propagates_http_error(self):
         async def run():
             mock_client = AsyncMock()
             mock_client.get = AsyncMock(
@@ -149,8 +150,8 @@ class TestFetchFeed:
 
             with patch("httpx.AsyncClient") as mock_client_cls:
                 mock_client_cls.return_value.__aenter__.return_value = mock_client
-                articles = await fetch_feed("https://error.com/rss")
-                assert articles == []
+                with pytest.raises(httpx.HTTPStatusError):
+                    await fetch_feed("https://error.com/rss")
 
         asyncio.run(run())
 

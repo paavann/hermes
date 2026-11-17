@@ -16,6 +16,9 @@ from hermes_db.utils.datetime import ensure_utc
 
 logger = logging.getLogger(__name__)
 DEFAULT_SOURCES_PATH = Path(__file__).resolve().parent.parent / "data" / "sources.json"
+MAX_BACKOFF_MINUTES = 6 * 60
+MAX_SOURCE_ERROR_CHARS = 1000
+_BACKOFF_EXPONENT_CAP = 8
 
 
 class SourceConfigEntry(TypedDict, total=False):
@@ -25,6 +28,9 @@ class SourceConfigEntry(TypedDict, total=False):
     feed_url: str | None
     source_type: str
     credibility: str
+    origin_group: str | None
+    country_code: str | None
+    language: str | None
 
 
 @dataclass(frozen=True, slots=True)
@@ -38,6 +44,37 @@ class DueSource:
     url: str | None = None
     slug: str | None = None
     last_fetched_at: datetime | None = None
+    origin_group: str | None = None
+    country_code: str | None = None
+    language: str | None = None
+    consecutive_failures: int = 0
+
+
+def _fetch_delay(source: Source) -> timedelta:
+    minutes = source.fetch_interval_minutes
+    failures = source.consecutive_failures or 0
+    if failures > 0:
+        exponent = min(failures, _BACKOFF_EXPONENT_CAP)
+        minutes = min(minutes * 2**exponent, MAX_BACKOFF_MINUTES)
+    return timedelta(minutes=minutes)
+
+
+def _to_due_source(source: Source, last_fetched_at: datetime | None) -> DueSource:
+    return DueSource(
+        id=source.id,
+        name=source.name,
+        feed_url=source.feed_url,
+        credibility=source.credibility,
+        fetch_interval_minutes=source.fetch_interval_minutes,
+        source_type=source.source_type,
+        url=source.url,
+        slug=source.slug,
+        last_fetched_at=last_fetched_at,
+        origin_group=source.origin_group,
+        country_code=source.country_code,
+        language=source.language,
+        consecutive_failures=source.consecutive_failures or 0,
+    )
 
 
 class SourceService:
@@ -60,46 +97,47 @@ class SourceService:
 
             last = source.last_fetched_at
             if last is None:
-                due_sources.append(
-                    DueSource(
-                        id=source.id,
-                        name=source.name,
-                        feed_url=source.feed_url,
-                        credibility=source.credibility,
-                        fetch_interval_minutes=source.fetch_interval_minutes,
-                        source_type=source.source_type,
-                        url=source.url,
-                        slug=source.slug,
-                        last_fetched_at=None,
-                    )
-                )
+                due_sources.append(_to_due_source(source, last_fetched_at=None))
                 continue
 
             last = ensure_utc(last)
 
-            delta = timedelta(minutes=source.fetch_interval_minutes)
-            if force or now >= last + delta:
-                due_sources.append(
-                    DueSource(
-                        id=source.id,
-                        name=source.name,
-                        feed_url=source.feed_url,
-                        credibility=source.credibility,
-                        fetch_interval_minutes=source.fetch_interval_minutes,
-                        source_type=source.source_type,
-                        url=source.url,
-                        slug=source.slug,
-                        last_fetched_at=last,
-                    )
-                )
+            if force or now >= last + _fetch_delay(source):
+                due_sources.append(_to_due_source(source, last_fetched_at=last))
 
         return due_sources
 
-    async def update_last_fetched(
+    async def record_fetch_success(
         self, source_id: uuid.UUID, fetched_at: datetime | None = None
     ) -> None:
         now = ensure_utc(fetched_at) if fetched_at is not None else datetime.now(UTC)
-        stmt = update(Source).where(Source.id == source_id).values(last_fetched_at=now)
+        stmt = (
+            update(Source)
+            .where(Source.id == source_id)
+            .values(
+                last_fetched_at=now,
+                last_error=None,
+                consecutive_failures=0,
+            )
+        )
+        await self._session.execute(stmt)
+
+    async def record_fetch_failure(
+        self,
+        source_id: uuid.UUID,
+        error: str,
+        failed_at: datetime | None = None,
+    ) -> None:
+        now = ensure_utc(failed_at) if failed_at is not None else datetime.now(UTC)
+        stmt = (
+            update(Source)
+            .where(Source.id == source_id)
+            .values(
+                last_fetched_at=now,
+                last_error=error[:MAX_SOURCE_ERROR_CHARS],
+                consecutive_failures=Source.consecutive_failures + 1,
+            )
+        )
         await self._session.execute(stmt)
 
 
@@ -115,6 +153,29 @@ async def _load_sources_config(
             f"sources.json must contain a JSON array, got {type(data).__name__}."
         )
     return data
+
+
+def _normalize_origin_group(raw: object) -> str | None:
+    if not isinstance(raw, str):
+        return None
+    value = raw.strip().lower()
+    return value or None
+
+
+def _normalize_country_code(raw: object) -> str | None:
+    if not isinstance(raw, str):
+        return None
+    value = raw.strip().upper()
+    if len(value) != 2 or not value.isalpha():
+        return None
+    return value
+
+
+def _normalize_language(raw: object) -> str | None:
+    if not isinstance(raw, str):
+        return None
+    value = raw.strip().lower()
+    return value or None
 
 
 async def sync_sources_from_config(
@@ -151,6 +212,18 @@ async def sync_sources_from_config(
                     setattr(existing, field, new_value)
                     changed = True
 
+            origin_group = _normalize_origin_group(entry.get("origin_group"))
+            country_code = _normalize_country_code(entry.get("country_code"))
+            language = _normalize_language(entry.get("language"))
+            for field, new_value in (
+                ("origin_group", origin_group),
+                ("country_code", country_code),
+                ("language", language),
+            ):
+                if new_value is not None and getattr(existing, field) != new_value:
+                    setattr(existing, field, new_value)
+                    changed = True
+
             if not existing.is_active:
                 existing.is_active = True
                 changed = True
@@ -178,6 +251,9 @@ async def sync_sources_from_config(
                 feed_url=entry.get("feed_url"),
                 source_type=st,
                 credibility=cred,
+                origin_group=_normalize_origin_group(entry.get("origin_group")),
+                country_code=_normalize_country_code(entry.get("country_code")),
+                language=_normalize_language(entry.get("language")),
                 is_active=True,
             )
             session.add(source)

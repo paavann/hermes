@@ -37,13 +37,15 @@ class SyncService:
         rss_fetcher: BaseArticleFetcher | None = None,
         gdelt_fetcher: BaseArticleFetcher | None = None,
         sitemap_fetcher: BaseArticleFetcher | None = None,
-        settings: Settings | None = None
+        settings: Settings | None = None,
     ) -> None:
         self._settings = settings or get_settings()
         self._ai = ai_client or create_ai_client(self._settings)
         self._rss_fetcher = rss_fetcher or RSSFetcher()
         self._gdelt_fetcher = gdelt_fetcher or GDELTFetcher(settings=self._settings)
-        self._sitemap_fetcher = sitemap_fetcher or SitemapFetcher(settings=self._settings)
+        self._sitemap_fetcher = sitemap_fetcher or SitemapFetcher(
+            settings=self._settings
+        )
 
     def _get_fetcher(self, source_type: SourceType) -> BaseArticleFetcher:
         if source_type == SourceType.GDELT:
@@ -212,18 +214,37 @@ class SyncService:
         logger.info("starting sync for %s sources.", len(sources))
         semaphore = asyncio.Semaphore(5)
 
+        async def _record_health(
+            source: DueSource, error: BaseException | None
+        ) -> None:
+            try:
+                async with AsyncSessionLocal() as db_session:
+                    source_service = SourceService(db_session)
+                    if error is None:
+                        await source_service.record_fetch_success(source.id)
+                    else:
+                        await source_service.record_fetch_failure(
+                            source.id,
+                            f"{type(error).__name__}: {error}",
+                        )
+                    await db_session.commit()
+            except Exception:
+                logger.exception(
+                    "failed to record fetch health for source %s.",
+                    source.name,
+                )
+
         async def _process_source(source: DueSource) -> dict[str, int]:
             async with semaphore:
                 try:
                     s_stats = await self._sync_source(source)
-                    async with AsyncSessionLocal() as db_session:
-                        source_service = SourceService(db_session)
-                        await source_service.update_last_fetched(source.id)
-                        await db_session.commit()
-                    return s_stats
-                except Exception:
+                except Exception as exc:
                     logger.exception("unhandled error syncing source %s.", source.name)
+                    await _record_health(source, exc)
                     return {k: 0 for k in stats if k != "sources_processed"}
+
+                await _record_health(source, None)
+                return s_stats
 
         tasks = [_process_source(s) for s in sources]
         results = await asyncio.gather(*tasks)
