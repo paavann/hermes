@@ -5,9 +5,9 @@
 [![SQLAlchemy 2.0](https://img.shields.io/badge/SQLAlchemy-2.0_Async-D71F00?style=flat&logo=sqlalchemy&logoColor=white)](https://www.sqlalchemy.org/)
 [![PostGIS](https://img.shields.io/badge/PostGIS-3.4-336791?style=flat&logo=postgresql&logoColor=white)](https://postgis.net)
 [![Langfuse](https://img.shields.io/badge/Observability-Langfuse-EE5E2A?style=flat&logo=langfuse&logoColor=white)](https://langfuse.com)
-[![Hosting: Render](https://img.shields.io/badge/Deploy-Render-46E3B7?style=flat&logo=render&logoColor=black)](https://render.com)
+[![Hosting: Amazon Lightsail](https://img.shields.io/badge/Deploy-Amazon_Lightsail-FF9900?style=flat&logo=amazonaws&logoColor=white)](https://aws.amazon.com/lightsail/)
 
-`hermes-api` is the stateless REST API and on-demand historical causality synthesis engine for Project Hermes. Built with **FastAPI** and **Python 3.14+**, it acts as the read-optimized backend connecting PostGIS persistence to the React 19 WebGL frontend client (`apps/hermes` and `@hermes/map`). In production, it is deployed as a container service on the Render free-tier plan.
+`hermes-api` is the REST API, conversational RAG service, and on-demand historical causality synthesis engine for Project Hermes. Built with **FastAPI** and **Python 3.14+**, it acts as the read-optimized backend connecting PostGIS persistence to the React 19 WebGL frontend client (`apps/hermes`, `@hermes/map`, and `@hermes/chat`). In production, it runs as a single-worker container on an **Amazon Lightsail Container Service** (Nano tier).
 
 ---
 
@@ -15,12 +15,12 @@
 
 `hermes-api` operates strictly as a **read and synthesis service**:
 
-- **12-Factor Statelessness**: The API contains zero background schedulers, cron tasks, or ingestion loops. All RSS harvesting, vector embeddings generation, and score decay processes are isolated in [`apps/hermes-worker`](file:///home/pavan/proj/hermes/apps/hermes-worker).
-- **Externalized Data Layer**: All SQLAlchemy 2.0 ORM models (`Event`, `Article`, `EventTl`, `Source`, `GeocodeCache`) and Alembic migrations reside in [`libs/shared/hermes-db`](file:///home/pavan/proj/hermes/libs/shared/hermes-db). The API interacts through async sessions (`get_db`) and service facades (`EventService`, `EventTlService`).
-- **Grounded Geocoding**: The API never prompts LLMs for geographic coordinates. Historical and event locations are resolved strictly through [`GeocodingService`](file:///home/pavan/proj/hermes/libs/shared/hermes-ai/src/hermes_ai/services/geocoding.py) (OpenStreetMap Nominatim with negative caching).
-- **CORS Error Handling**: Custom exception handlers in [`core/errors.py`](file:///home/pavan/proj/hermes/apps/hermes-api/src/hermes_api/core/errors.py) explicitly inject origin headers (`_cors_headers(request)`) to prevent Starlette's `ExceptionMiddleware` from masking internal errors behind opaque browser CORS failures.
+- **No Background Work**: The API contains zero background schedulers, cron tasks, or ingestion loops. All RSS harvesting, vector embeddings generation, and score decay processes are isolated in [`apps/hermes-worker`](../hermes-worker).
+- **Externalized Data Layer**: All SQLAlchemy 2.0 ORM models (`Event`, `Article`, `EventTl`, `Source`, `GeocodeCache`) and Alembic migrations reside in [`libs/shared/hermes-db`](../../libs/shared/hermes-db). The API interacts through async sessions (`get_db`) and service facades (`EventService`, `EventTlService`).
+- **Grounded Geocoding**: The API never prompts LLMs for geographic coordinates. Historical and event locations are resolved strictly through [`GeocodingService`](../../libs/shared/hermes-ai/src/hermes_ai/services/geocoding.py) (OpenStreetMap Nominatim with negative caching).
+- **CORS Error Handling**: Custom exception handlers in [`core/errors.py`](src/hermes_api/core/errors.py) explicitly inject origin headers (`_cors_headers(request)`) to prevent Starlette's `ExceptionMiddleware` from masking internal errors behind opaque browser CORS failures.
 - **Graceful Degradation**: If LLM credentials are unconfigured, the server remains operational for spatial queries and gracefully returns `HTTP 503` from timeline synthesis and chat endpoints instead of crashing.
-- **Conversational RAG**: `POST /api/v1/chat` streams grounded answers over Server-Sent Events. Conversation memory lives in LangGraph checkpoints keyed by `thread_id`; each request carries only its message and map scope, and retrieval opens a short-lived database session that is closed before generation starts.
+- **Conversational RAG**: `POST /api/v1/chat` streams grounded answers over Server-Sent Events. Each request carries only its message, map scope, and `thread_id`; retrieval opens a short-lived database session that is closed before generation starts. Conversation memory is checkpointed per `thread_id` by LangGraph and is process-local in the current deployment, so it does not survive a restart.
 
 > [!NOTE]
 > For in-depth architectural sequence diagrams, state machine transitions, and design tradeoffs, see [apps/hermes-api/docs/architecture.md](docs/architecture.md).
@@ -79,7 +79,7 @@ curl -X POST "http://localhost:8000/api/v1/events/tl/3fa85f64-5717-4562-b3fc-2c9
 - `FAILED`: Upstream extraction or Wikipedia search failed.
 
 #### 4. Conversational Chat (`POST /api/v1/chat`)
-Streams a grounded answer about events in the requested map scope. Conversation memory is keyed by `thread_id` and stored in LangGraph checkpoints in PostgreSQL. Send the same `thread_id` on every turn; the client starts a new thread when the user clears the conversation.
+Streams a grounded answer about events in the requested map scope. Conversation memory is keyed by `thread_id` in a LangGraph checkpointer. The current deployment runs with process-local memory (`InMemorySaver`); a persistent `BaseCheckpointSaver` can be injected at the composition root later without changing this contract. Send the same `thread_id` on every turn; the client starts a new thread when the user clears the conversation.
 
 ```bash
 curl -N -X POST "http://localhost:8000/api/v1/chat" \
@@ -141,7 +141,7 @@ Common error codes: `BUSINESS_LOGIC_ERROR` (400), `EVENT_NOT_FOUND` (404), `VALI
 
 ## Configuration & Environment Variables
 
-Settings are managed via `pydantic-settings` in [`core/config.py`](file:///home/pavan/proj/hermes/apps/hermes-api/src/hermes_api/core/config.py), loading hierarchically from `.env` and `.env.local`:
+Settings are managed via `pydantic-settings` in [`core/config.py`](src/hermes_api/core/config.py), loading hierarchically from `.env` and `.env.local`:
 
 | Variable | Default | Description |
 | :--- | :--- | :--- |
@@ -152,7 +152,7 @@ Settings are managed via `pydantic-settings` in [`core/config.py`](file:///home/
 | `DB_USER` | `postgres` | Database username. |
 | `DB_PASSWORD` | *Required* | Database password. |
 | `DB_NAME` | `hermes` | Database name. |
-| `CHECKPOINT_DB_URL` | `""` | Optional psycopg URL for LangGraph checkpoints. Defaults to the `DB_*` settings with `ssl` mapped to `sslmode`. |
+| `CHECKPOINT_DB_URL` | `""` | Optional psycopg URL for a persistent LangGraph checkpointer. Defaults to the `DB_*` settings with `ssl` mapped to `sslmode`. Without a reachable saver, chat falls back to process-local `InMemorySaver`. |
 | `LLM_API` | `""` | Primary LLM API key (e.g. Mistral). |
 | `LLM_MODEL` | `""` | Primary LLM identifier (e.g. `mistral/ministral-8b-latest`). |
 | `LLM_API_1` | `None` | Fallback LLM API key (e.g. NVIDIA NIM). |

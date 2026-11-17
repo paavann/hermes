@@ -1,11 +1,15 @@
 # @hermes/chat
 
-Stateless conversational RAG client for Project Hermes. It holds the in-memory
-conversation, parses the API's Server-Sent Events stream, resolves the map
-scope for each turn, renders inline citations, and exposes the HUD chat panel.
+Conversational RAG client for Project Hermes. It holds the conversation in a
+module-level Zustand store persisted to `localStorage`, parses the API's
+Server-Sent Events stream, resolves the map scope for each turn, renders inline
+citations, and exposes the HUD chat panel.
 
-The library never persists messages and never talks to a model provider
-directly; it posts to `POST /api/{apiVer}/chat` and consumes the stream.
+The library never talks to a model provider directly; it posts to
+`POST /api/{apiVer}/chat` and consumes the stream. Server-side conversation
+memory is owned by the API: the current deployment checkpoints turns in process
+memory, so a server restart starts a fresh memory thread even though the client
+keeps its transcript.
 
 ## Composition
 
@@ -51,10 +55,11 @@ export function MapChat({
 ```
 
 The panel is an overlay, not a route. Closing it aborts an active stream, marks
-the partial answer `cancelled`, and preserves the conversation store for the
-next open. Citation-driven map focus is owned by the app: `onCitationActivate`
-receives event, article, and timeline sources that have plotted coordinates;
-web sources are opened in a new tab by `useChat` and never move the map.
+the partial answer `cancelled`, clears citation highlights through `onSources`,
+and preserves the conversation store for the next open. Citation-driven map
+focus is owned by the app: `onCitationActivate` receives event, article, and
+timeline sources that have plotted coordinates; web sources are opened in a new
+tab by `useChat` and never move the map.
 
 ## Scope contract
 
@@ -65,7 +70,7 @@ The request scope is resolved from the session mode and the current map state:
 | `auto`     | selected event, else viewport, else global                     |
 | `event`    | selected event, else viewport, else global                     |
 | `viewport` | current viewport, else global                                  |
-| `global`   | global plottings                                               |
+| `global`   | global scope                                                   |
 
 An explicit mode is stored in the Zustand store and persists for the session.
 The underlying event ID and bounding box keep following the map, so an explicit

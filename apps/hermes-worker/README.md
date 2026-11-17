@@ -9,7 +9,7 @@
 
 `hermes-worker` is the autonomous, headless ingestion and data lifecycle worker for Project Hermes. Built as a batch CLI in **Python 3.14+**, it monitors global news feeds (RSS, GDELT, and news sitemaps), computes dense vector embeddings, performs database-side vector deduplication via PostGIS HNSW indexing, resolves coordinates through a grounded geocoding shield, and manages event decay and status transitions.
 
-The worker operates completely decoupled from [`apps/hermes-api`](file:///home/pavan/proj/hermes/apps/hermes-api), ensuring that compute-heavy XML parsing, high-dimensional vector embeddings, and LLM inference never contend with client map queries.
+The worker operates completely decoupled from [`apps/hermes-api`](../hermes-api), ensuring that compute-heavy XML parsing, high-dimensional vector embeddings, and LLM inference never contend with client map queries.
 
 ---
 
@@ -38,13 +38,13 @@ flowchart LR
 ### Key Architectural Invariants
 
 - **12-Factor Run-and-Die Execution**: Contains zero internal loops, cron daemons, or long-lived background schedulers (e.g. Celery or APScheduler). The container boots on demand, executes `hermes-worker run-all`, tears down database pools, and terminates cleanly (`sys.exit(0)` on success, `sys.exit(1)` on error). Process exit guarantees complete OS memory reclamation.
-- **Connection Lifespan Management**: Every CLI handler executes within [`db_lifespan()`](file:///home/pavan/proj/hermes/apps/hermes-worker/src/hermes_worker/core/lifespan.py). On startup, it binds connection pools via `init_db(settings.db_url)`; on teardown, it invokes `close_db()`, ensuring all connections are disposed before exit.
+- **Connection Lifespan Management**: Every CLI handler executes within [`db_lifespan()`](src/hermes_worker/core/lifespan.py). On startup, it binds connection pools via `init_db(settings.db_url)`; on teardown, it invokes `close_db()`, ensuring all connections are disposed before exit.
 - **Memory Bounded on Fargate**: With only 512 MB RAM allocated to the task, incoming articles are parsed and processed in bounded batches (`ARTICLE_BATCH_SIZE = 10`) under a bounded concurrency semaphore (`asyncio.Semaphore(5)`).
 - **Embed Before Extract**: Embeds articles first using `nvidia_nim/nvidia/nemotron-3-embed-1b` and performs an HNSW cosine distance search on PostGIS (`halfvec_cosine_ops` $< 0.25$) before invoking an LLM. Only candidate matches are passed to the model, eliminating expensive $O(N^2)$ pairwise token overhead.
 - **Grounded Geocoding Shield**: Enforces OpenStreetMap Nominatim's 1 req/s usage policy via a token-bucket rate limiter. Results are cached in `geocode_cache`, with non-locatable terms permanently stored as negative cache entries (`latitude=NULL`, `longitude=NULL`).
 
 > [!NOTE]
-> For detailed pipeline flowcharts, cost calculations ($< $0.07/month), and memory bounds analysis, see [apps/hermes-worker/docs/architecture.md](docs/architecture.md).
+> For detailed pipeline flowcharts, cost calculations (~$0.15/month), and memory bounds analysis, see [apps/hermes-worker/docs/architecture.md](docs/architecture.md).
 
 ---
 
@@ -74,7 +74,7 @@ All tasks can be executed via Nx targets or directly through `uv`:
 
 ## Configuration & Environment Variables
 
-Settings are managed via `pydantic-settings` in [`core/config.py`](file:///home/pavan/proj/hermes/apps/hermes-worker/src/hermes_worker/core/config.py):
+Settings are managed via `pydantic-settings` in [`core/config.py`](src/hermes_worker/core/config.py):
 
 | Variable | Default | Description |
 | :--- | :--- | :--- |

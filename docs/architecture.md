@@ -6,7 +6,7 @@ This document details the production architecture, cloud infrastructure topology
 
 ## 1. High-Level Production Topology
 
-Hermes is deployed as a resilient, cost-optimized multi-cloud system spanning **Vercel**, **Render**, **AWS ECS Fargate**, and **Neon Serverless PostgreSQL**.
+Hermes is deployed as a resilient, cost-optimized multi-cloud system spanning **Vercel**, **Amazon Lightsail**, **AWS ECS Fargate (ARM64)**, and **Neon Serverless PostgreSQL**.
 
 ```mermaid
 flowchart TD
@@ -16,8 +16,8 @@ flowchart TD
         ClerkAuth["Clerk Authentication\nSession Management and JWT"]
     end
 
-    subgraph ApiLayer["API Serving Layer (Render)"]
-        RenderApi["FastAPI REST Service\napps/hermes-api (Free Tier Container)"]
+    subgraph ApiLayer["API Serving Layer (Amazon Lightsail)"]
+        LightsailApi["FastAPI REST Service\napps/hermes-api (Nano Container)"]
     end
 
     subgraph BatchLayer["Autonomous Ingestion Layer (AWS ap-southeast-2)"]
@@ -48,15 +48,15 @@ flowchart TD
     %% User interactions
     User -->|"HTTPS / WebGL Map Interactions"| VercelEdge
     VercelEdge -->|"Server-Side Auth Validation"| ClerkAuth
-    User -->|"Direct REST Queries (/events/bbox, /events/tl)"| RenderApi
+    User -->|"Direct REST Queries (/events/bbox, /events/tl, /chat)"| LightsailApi
 
     %% API to Database
-    RenderApi -->|"asyncpg / SQLAlchemy 2.0 (SSL)"| PgBouncer
+    LightsailApi -->|"asyncpg / SQLAlchemy 2.0 (SSL)"| PgBouncer
 
     %% API to AI & Wikipedia
-    RenderApi -->|"Timeline Extraction"| LiteLLM
-    RenderApi -->|"Historical Article Search"| Wikipedia
-    RenderApi -->|"Historical Node Geocoding"| Nominatim
+    LightsailApi -->|"Timeline & Chat Inference"| LiteLLM
+    LightsailApi -->|"Historical Article Search"| Wikipedia
+    LightsailApi -->|"Historical Node Geocoding"| Nominatim
 
     %% Worker Execution
     EventBridge -->|"RunTask Trigger"| Fargate
@@ -91,20 +91,22 @@ flowchart TD
 - **Client Data Synchronization**: Communicates directly with `hermes-api` using `@tanstack/react-query` and `axios` to synchronize viewport bounding boxes (`/api/v1/events/bbox`).
 
 ### B. REST API Service (`apps/hermes-api`)
-- **Hosting Platform**: **Render** (Free Tier Web Service container).
-- **Runtime**: Python 3.14 + Uvicorn running FastAPI.
-- **Stateless 12-Factor Contract**: The API service executes zero background jobs, schedulers, or ingestion loops. It serves two distinct read-optimized workloads:
+- **Hosting Platform**: **Amazon Lightsail Container Services** (`hermes-api`, Nano tier).
+- **Runtime**: Python 3.14 + Uvicorn running FastAPI with a single worker.
+- **Read & Synthesis Contract**: The API service executes zero background jobs, schedulers, or ingestion loops. It serves three read-optimized workloads:
   1. High-frequency spatial bounding box queries (`GET /api/v1/events/bbox`) parameterized by viewport bounds (`north`, `south`, `east`, `west`).
   2. On-demand causal timeline synthesis (`POST /api/v1/events/tl/{id}`) that discovers historical antecedents and generates causal DAGs.
-- **CORS Handling**: Handlers in [`core/errors.py`](file:///home/pavan/proj/hermes/apps/hermes-api/src/hermes_api/core/errors.py) explicitly inject access headers (`_cors_headers(request)`) to prevent Starlette `ExceptionMiddleware` from masking application exceptions behind browser CORS errors.
-- **Graceful Degradation**: If external LLM API credentials are not provisioned, spatial and event retrieval endpoints remain operational, while timeline synthesis returns an explicit `HTTP 503 Service Unavailable`.
+  3. Conversational RAG (`POST /api/v1/chat`) streamed over Server-Sent Events, scoped to an event, viewport, or the globe.
+- **Process-Local State**: Chat conversation memory and chat guardrails are held in process memory. A restart clears both; the client keeps its transcript in `localStorage` and can start a new server thread. The `ChatRuntime` accepts any LangGraph `BaseCheckpointSaver`, so a persistent saver can be introduced without changing the API contract.
+- **CORS Handling**: Handlers in [`core/errors.py`](../apps/hermes-api/src/hermes_api/core/errors.py) explicitly inject access headers (`_cors_headers(request)`) to prevent Starlette `ExceptionMiddleware` from masking application exceptions behind browser CORS errors.
+- **Graceful Degradation**: If external LLM API credentials are not provisioned, spatial and event retrieval endpoints remain operational, while timeline synthesis and chat return explicit `503` responses.
 
 ### C. Ingestion & Lifecycle Worker (`apps/hermes-worker`)
 - **Hosting Platform**: **AWS ECS Fargate** (Sydney region: `ap-southeast-2`).
-- **Compute Sizing**: `0.25 vCPU` and `512 MB RAM` running an x86-64 Linux container image (~319 MB) hosted in a private **Amazon ECR** repository.
+- **Compute Sizing**: `0.25 vCPU` and `512 MB RAM` running an ARM64 (AWS Graviton) Linux container image (~319 MB) hosted in a private **Amazon ECR** repository.
 - **Scheduling**: **Amazon EventBridge** triggers execution three times daily (`cron(0 0,8,16 * * ? *)`) via ECS `RunTask`.
 - **Ephemeral Run-and-Die Execution Model**:
-  - The worker process spins up on demand, wraps database connections within [`db_lifespan()`](file:///home/pavan/proj/hermes/apps/hermes-worker/src/hermes_worker/core/lifespan.py), and executes `hermes-worker run-all` (lifecycle transitions and due source synchronization).
+  - The worker process spins up on demand, wraps database connections within [`db_lifespan()`](../apps/hermes-worker/src/hermes_worker/core/lifespan.py), and executes `hermes-worker run-all` (lifecycle transitions and due source synchronization).
   - Typical runtime is **5 to 10 minutes**.
   - Upon task completion, the container terminates cleanly (`sys.exit(0)` on success or `sys.exit(1)` on error). Fargate deallocates compute resources immediately, terminating billing charges.
   - Telemetry and stdout/stderr logs stream to **Amazon CloudWatch Logs** under `/ecs/hermes-worker`.
@@ -124,7 +126,7 @@ flowchart TD
 
 ## 3. Data Ingestion & Consensus Pipeline
 
-The batch synchronization pipeline in [`SyncService`](file:///home/pavan/proj/hermes/apps/hermes-worker/src/hermes_worker/services/sync.py) processes incoming articles through a strict sequence optimized for token efficiency and memory constraints:
+The batch synchronization pipeline in [`SyncService`](../apps/hermes-worker/src/hermes_worker/services/sync.py) processes incoming articles through a strict sequence optimized for token efficiency and memory constraints:
 
 ```mermaid
 sequenceDiagram
@@ -176,7 +178,7 @@ sequenceDiagram
 
 3. **Grounded Geocoding Shield**:
    - LLMs are never permitted to guess or generate latitude/longitude coordinates directly.
-   - The LLM extracts only normalized location names (e.g. `"Rafah, Gaza Strip"`), which are resolved by [`GeocodingService`](file:///home/pavan/proj/hermes/libs/shared/hermes-ai/src/hermes_ai/services/geocoding.py) against OpenStreetMap Nominatim.
+   - The LLM extracts only normalized location names (e.g. `"Rafah, Gaza Strip"`), which are resolved by [`GeocodingService`](../libs/shared/hermes-ai/src/hermes_ai/services/geocoding.py) against OpenStreetMap Nominatim.
    - Paced by a token-bucket rate limiter enforcing the Nominatim 1 request/second usage policy.
    - Unresolvable locations are stored as negative cache entries (`latitude=NULL`, `longitude=NULL`), preventing repeated outbound calls.
 
@@ -246,13 +248,13 @@ sequenceDiagram
 
 1. **Direct Coordinate Projection**: Rather than serializing and transmitting Well-Known Binary (WKB) geometry objects from PostgreSQL and parsing them on the client, the query executes `ST_X(Event.location)` and `ST_Y(Event.location)` directly in the SQL select projection.
 2. **GPU Canvas Layers**: Map markers are rendered as Mapbox GL WebGL `circle` and `symbol` layers rather than DOM elements (`new mapboxgl.Marker()`). This enables thousands of concurrent data points to be rendered and clustered at 60 FPS without DOM thrashing.
-3. **Decoupled Viewport State**: Viewport coordinates are tracked in a global Zustand store ([`useMapStore`](file:///home/pavan/proj/hermes/libs/map/src/lib/store/store.ts)). React components subscribe to fine-grained state slices, preventing cascading re-renders across the Mapbox container when popups or drawers toggle.
+3. **Decoupled Viewport State**: Viewport coordinates are tracked in a global Zustand store ([`useMapStore`](../libs/map/src/lib/store/store.ts)). React components subscribe to fine-grained state slices, preventing cascading re-renders across the Mapbox container when popups or drawers toggle.
 
 ---
 
 ## 6. Causality Timeline Synthesis Engine
 
-When an analyst clicks an active event on the map and requests historical lineage, [`apps/hermes-api`](file:///home/pavan/proj/hermes/apps/hermes-api) initiates an on-demand historical timeline synthesis (`POST /api/v1/events/tl/{id}`):
+When an analyst clicks an active event on the map and requests historical lineage, [`apps/hermes-api`](../apps/hermes-api) initiates an on-demand historical timeline synthesis (`POST /api/v1/events/tl/{id}`):
 
 ```mermaid
 flowchart TD
@@ -282,18 +284,54 @@ flowchart TD
 
 ---
 
-## 7. Model Routing, Failover & Geocoding Resiliency
+## 7. Conversational RAG & Process-Local Memory
 
-The intelligence layer ([`hermes-ai`](file:///home/pavan/proj/hermes/libs/shared/hermes-ai)) provides unified model orchestration and defense mechanisms:
+`POST /api/v1/chat` answers questions about the current map scope and streams the response over Server-Sent Events. The request carries only the new message, a `thread_id`, and a discriminated `scope` (`event`, `viewport`, or `global`).
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant UI as ChatPanel (@hermes/chat)
+    participant API as FastAPI (/api/v1/chat)
+    participant Guards as ChatGuards
+    participant Engine as ChatEngine (hermes-ai)
+    participant Retriever as DbChatRetriever
+    participant DB as Neon PostgreSQL
+    participant LLM as LiteLLM Router
+
+    UI->>API: POST { message, thread_id, scope }
+    API->>Guards: rate, budget, and concurrency preflight
+    API-->>UI: text/event-stream
+    Engine->>Engine: load thread messages
+    Engine->>LLM: plan retrieval (history-aware)
+    Engine->>Retriever: retrieve ranked evidence
+    Retriever->>DB: hybrid lexical + semantic query
+    DB-->>Retriever: events, articles, timelines
+    Engine->>LLM: grounded answer with citations
+    LLM-->>Engine: token stream
+    Engine-->>UI: status / token / sources / done
+```
+
+- **Memory**: `ChatEngine` compiles a LangGraph `StateGraph` and checkpoints the `messages` channel per `thread_id`. The API currently prefers `AsyncPostgresSaver` when a checkpoint connection is available and falls back to `InMemorySaver`; the in-memory saver is the baseline deployment mode. Because a process restart or scale-out loses in-memory threads, `ChatRuntime` accepts any `BaseCheckpointSaver` so persistence can be enabled at the composition root without changing the client contract.
+- **Retrieval**: `DbChatRetriever` opens a short-lived session, runs hybrid full-text + pgvector retrieval, and closes the session before generation. Tavily is consulted when local coverage is thin or stale; failures degrade to local-only answers.
+- **Guards**: Per-client rate limiting, a daily token budget, and a concurrency semaphore live in `ChatGuards`. They are process-local and reset on restart, matching the single-worker deployment.
+- **Citations**: The `sources` SSE event feeds `@hermes/chat` citation rendering and `useMapStore.citedEvents`. Closing the panel aborts an active stream, marks it `cancelled`, and keeps the client transcript; clearing the conversation generates a new `thread_id`.
+
+---
+
+## 8. Model Routing, Failover & Geocoding Resiliency
+
+The intelligence layer ([`hermes-ai`](../libs/shared/hermes-ai)) provides unified model orchestration and defense mechanisms:
 
 | Capability | Primary Engine | Fallback Engine | Rationale |
 | :--- | :--- | :--- | :--- |
 | **Event & Timeline Extraction** | `mistral/ministral-8b-latest` | `nvidia_nim/openai/gpt-oss-20b` | High-throughput structured JSON extraction with automatic failover on network timeouts or Pydantic `ValidationError`. |
+| **Chat Answer & Planning** | `CHAT_MODEL` / `PLAN_MODEL` (defaults to `LLM_MODEL`, typically Mistral) | Optional `CHAT_MODEL_1` / `PLAN_MODEL_1` | History-aware retrieval planning and grounded answer generation; both groups inherit the same LiteLLM router and failover rules. |
 | **Vector Embeddings** | `nvidia_nim/nvidia/nemotron-3-embed-1b` | None | Produces 2048-dimensional dense semantic vectors optimized for retrieval and deduplication. |
 | **Geocoding** | OpenStreetMap Nominatim | Local Negative Cache | Token-bucket rate-limited (1 req/s) with a 120-second circuit breaker cooldown on persistent HTTP 429s. |
 
 ### Schema-Level Validation Failover
-When an LLM returns HTTP 200 with syntactically valid JSON that fails Pydantic schema validation (e.g. missing required enum fields or misformatted relations), [`LlmService`](file:///home/pavan/proj/hermes/libs/shared/hermes-ai/src/hermes_ai/services/llm.py) catches the `ValidationError` and automatically retries the prompt against the secondary fallback model.
+When an LLM returns HTTP 200 with syntactically valid JSON that fails Pydantic schema validation (e.g. missing required enum fields or misformatted relations), [`LlmService`](../libs/shared/hermes-ai/src/hermes_ai/services/llm.py) catches the `ValidationError` and automatically retries the prompt against the secondary fallback model.
 
 ### LLM Observability & Tracing (Langfuse)
 Hermes instruments LLM operations using the **Langfuse Python SDK v3** (`langfuse>=3.0.0`) within `libs/shared/hermes-ai`. Observability is strictly **opt-in** and activates automatically when both `LANGFUSE_PUBLIC_KEY` and `LANGFUSE_SECRET_KEY` are provisioned in the application environment.
@@ -311,11 +349,11 @@ Hermes instruments LLM operations using the **Langfuse Python SDK v3** (`langfus
 
 ---
 
-## 8. Failure Modes, Tradeoffs & Operational Boundaries
+## 9. Failure Modes, Tradeoffs & Operational Boundaries
 
 | Scenario | Impact | Mitigation Strategy |
 | :--- | :--- | :--- |
-| **Render Free-Tier Spin-Down** | Inactivity causes the container to spin down, resulting in a 30–50s cold start on initial HTTP requests. | Frontend client handles loading states gracefully with animated HUD placeholders (`BootSequence`, `MapLoadingFallback`). |
+| **API Restart or Redeploy** | In-memory chat threads and process-local rate/budget guards are lost. Clients retain their transcript but the server starts a fresh memory thread. | `@hermes/chat` persists `threadId` and messages in `localStorage` and can clear/restart a thread. A persistent LangGraph checkpointer can be injected through `ChatRuntime` when cross-restart memory is required. |
 | **Nominatim 429 Rate Limiting** | OpenStreetMap blocks excessive request volumes. | `NominatimResilienceManager` enforces a 1 req/s token bucket, in-flight request deduplication, exponential backoff with `Retry-After` parsing, and a 120-second circuit breaker. |
 | **LLM Provider Outage** | External inference API becomes unavailable or credentials expire. | `hermes-api` catches client initialization errors and returns `HTTP 503` for timeline synthesis while keeping spatial map queries fully operational. |
 | **PgBouncer Transaction Pooling** | Prepared statement conflicts across pooled connections. | SQLAlchemy async engines instantiate with `connect_args={"statement_cache_size": 0}` across both API and Worker processes. |
@@ -324,14 +362,21 @@ Hermes instruments LLM operations using the **Langfuse Python SDK v3** (`langfus
 
 ---
 
-## 9. CI/CD & Deployment Workflows
+## 10. CI/CD & Deployment Workflows
 
 Continuous Integration and Continuous Deployment are automated via GitHub Actions:
 
-- [`.github/workflows/ci.yml`](file:///home/pavan/proj/hermes/.github/workflows/ci.yml):
+- [`.github/workflows/ci-cd.yml`](../.github/workflows/ci-cd.yml):
   - **Triggers**: Pushes and pull requests to `master` and `dev`.
-  - **Tasks**: Sets up Node.js 22 and Python 3.14 via `uv`, runs `npm run lint` (ESLint + Ruff), runs `npm test` (Vitest + Pytest), and verifies type checks.
-- [`.github/workflows/cd-worker.yml`](file:///home/pavan/proj/hermes/.github/workflows/cd-worker.yml):
-  - **Triggers**: Successful completion of the CI workflow on `master` or `dev`.
-  - **Path Filters**: Runs only when changes touch `apps/hermes-worker/**`, `libs/shared/hermes-db/**`, `libs/shared/hermes-ai/**`, `pyproject.toml`, or `uv.lock`.
-  - **Tasks**: Authenticates to AWS, logs into Amazon ECR, builds the production target of `apps/hermes-worker/Dockerfile` via Docker Buildx, and pushes image tags (`:latest` and `:<git-sha>`).
+  - **Validate Job**: Sets up Node.js 22 and Python 3.14 via `uv`, installs dependencies with `npm ci` and `uv sync --frozen`, then runs `npm run lint` (ESLint + Ruff) and `npm test` (Vitest + Pytest).
+  - **Deploy Fan-Out**: On a push to `master` only, the `deploy-worker`, `deploy-frontend`, and `deploy-api` jobs run in parallel after validation and call the reusable workflows below.
+- [`.github/workflows/cd-worker.yml`](../.github/workflows/cd-worker.yml):
+  - **Triggers**: `workflow_call` from `ci-cd.yml` or manual dispatch.
+  - **Path Filters**: Runs only when changes touch `apps/hermes-worker/**`, `libs/shared/hermes-db/**`, `libs/shared/hermes-ai/**`, `pyproject.toml`, `uv.lock`, or the workflow itself.
+  - **Tasks**: Authenticates to AWS, logs into Amazon ECR, builds the production target of `apps/hermes-worker/Dockerfile` for `linux/arm64` via QEMU/Buildx, and pushes `:latest` plus `:<git-sha>` tags.
+- [`.github/workflows/cd-api.yml`](../.github/workflows/cd-api.yml):
+  - **Path Filters**: `apps/hermes-api/**`, `libs/shared/hermes-db/**`, `libs/shared/hermes-ai/**`, `libs/shared/utils/py/**`, `pyproject.toml`, `uv.lock`, or the workflow itself.
+  - **Tasks**: Builds the production Docker target, streams the image to the Lightsail container service with `lightsailctl`, and deploys a new revision. Environment values come from the `HERMES_API_PROD_ENV` secret when present; otherwise the workflow carries forward the active Lightsail container environment.
+- [`.github/workflows/cd-frontend.yml`](../.github/workflows/cd-frontend.yml):
+  - **Path Filters**: `apps/hermes/**`, `libs/shared/ui-components/**`, `libs/shared/util-types/**`, `libs/map/**`, `package.json`, `package-lock.json`, or the workflow itself.
+  - **Tasks**: Injects the `HERMES_PROD_ENV` secret into `apps/hermes/.env.production`, runs `vercel build --prod`, and deploys the prebuilt artifact to Vercel.

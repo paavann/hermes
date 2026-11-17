@@ -5,9 +5,9 @@
 [![Langfuse](https://img.shields.io/badge/Observability-Langfuse-EE5E2A?style=flat&logo=langfuse&logoColor=white)](https://langfuse.com)
 [![OpenStreetMap](https://img.shields.io/badge/Geocoding-Nominatim-7EBC6F?style=flat&logo=openstreetmap&logoColor=white)](https://nominatim.org)
 
-`hermes-ai` is the shared geospatial intelligence library for Project Hermes. It encapsulates multi-model LLM orchestration, vector embeddings generation, rate-limited and grounded Nominatim geocoding, and end-to-end trace observability via Langfuse.
+`hermes-ai` is the shared geospatial and conversational intelligence library for Project Hermes. It encapsulates multi-model LLM orchestration, vector embeddings generation, rate-limited and grounded Nominatim geocoding, a LangGraph chat engine, and end-to-end trace observability via Langfuse.
 
-The library is completely decoupled from database ORM models and persistence layers, exposing clean service interfaces and Pydantic schemas consumed by [`apps/hermes-api`](../../apps/hermes-api) and [`apps/hermes-worker`](../../apps/hermes-worker).
+The library is completely decoupled from database ORM models and persistence layers, exposing clean service interfaces and Pydantic schemas consumed by [`apps/hermes-api`](../../../apps/hermes-api) and [`apps/hermes-worker`](../../../apps/hermes-worker). Chat memory is owned by the consumer: `HermesAi.create_chat_engine()` accepts any LangGraph `BaseCheckpointSaver` and never creates database tables or sessions itself.
 
 ---
 
@@ -21,6 +21,8 @@ The library is completely decoupled from database ORM models and persistence lay
    Enforces OpenStreetMap's 1 req/s acceptable use policy via an asynchronous token-bucket rate limiter (`NominatimResilienceManager`). Features positive in-memory/database caching, in-flight coroutine deduplication (coalescing), circuit breaking (120s cooldown), and negative caching for unresolvable entities.
 4. **Vector Embeddings Generation**:
    Generates 2048-dimensional dense vectors using `nvidia_nim/nvidia/nemotron-3-embed-1b` for approximate nearest-neighbor deduplication in PostGIS before LLM extraction passes.
+5. **Conversational RAG Engine**:
+   Builds a LangGraph `StateGraph` that plans retrieval, runs hybrid local search plus optional Tavily web search, streams grounded answers, and emits citation markers. `ChatEngine` is transport-agnostic and accepts a `ChatRetriever` implementation plus an optional `BaseCheckpointSaver` supplied by the host application.
 
 ---
 
@@ -44,13 +46,22 @@ The library is configured via the frozen dataclass `AiConfig`:
 
 | Parameter | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
-| `routes` | `dict[str, ModelRoute]` | *Required* | Route definitions mapping logical model groups (e.g. `"extractor"`, `"chat"`, `"plan"`, `"embed"`) to a `ModelRoute(primary=..., fallbacks=...)`. |
+| `routes` | `dict[str, ModelRoute]` | *Required* | Route definitions mapping logical model groups (`extractor`, `chat`, `plan`, `embed`) to a `ModelRoute(primary=..., fallbacks=...)`. |
+| `num_retries` | `int` | `2` | LiteLLM retries per request before failing over or raising. |
+| `cooldown_time` | `int` | `180` | Router cooldown in seconds after a deployment failure. |
+| `retry_after` | `bool` | `True` | Honor provider `Retry-After` headers. |
 | `rpm_limit` | `int \| None` | `None` | Token-bucket rate limit (requests/min) for LLM completions. |
 | `tracing_enabled` | `bool` | `False` | Whether Langfuse trace observability is activated. |
 | `tracing_tags` | `list[str]` | `[]` | Metadata tags attached to all traces (e.g. `["hermes-worker", "production"]`). |
 | `langfuse_public_key` | `str \| None` | `None` | Langfuse project public key. |
 | `langfuse_secret_key` | `str \| None` | `None` | Langfuse project secret key. |
 | `langfuse_host` | `str \| None` | `None` | Langfuse ingestion endpoint (default: `https://cloud.langfuse.com`). |
+| `langfuse_mask_content` | `bool` | `True` | Redact prompt/answer/snippet content from traces. |
+| `chat_stream_include_usage` | `bool` | `True` | Request token usage in streamed chat responses. |
+| `chat_max_output_tokens` | `int` | `1200` | Answer completion budget. |
+| `chat_model_kwargs` / `plan_model_kwargs` | `dict[str, object]` | `{}` | Extra provider parameters for the answer and planner model groups. |
+| `web_timeout_seconds` | `float` | `8.0` | Tavily request timeout. |
+| `tavily_api_key` | `str \| None` | `None` | Enables external news search when present. |
 
 ---
 
@@ -70,17 +81,20 @@ config = AiConfig(
             ),
         ),
         "embed": ModelRoute(
-            primary=ModelTarget(model="nvidia_nim/nvidia/nemotron-3-embed-1b", api_key="...", rpm=120),
-            fallbacks=(
-                ModelTarget(model="self_hosted/nvidia/nemotron-3-embed-1b", api_key="...", rpm=120),
+            primary=ModelTarget(
+                model="nvidia_nim/nvidia/nemotron-3-embed-1b",
+                api_key="...",
+                rpm=120,
             ),
+        ),
+        "chat": ModelRoute(
+            primary=ModelTarget(model="mistral/ministral-8b-latest", api_key="..."),
+        ),
+        "plan": ModelRoute(
+            primary=ModelTarget(model="mistral/ministral-8b-latest", api_key="..."),
         ),
     },
     tracing_enabled=True,
-    tracing_tags=["hermes-api", "production"],
-    langfuse_public_key="pk-lf-...",
-    langfuse_secret_key="sk-lf-...",
-)
     tracing_tags=["hermes-api", "production"],
     langfuse_public_key="pk-lf-...",
     langfuse_secret_key="sk-lf-...",
@@ -96,6 +110,19 @@ async with HermesAi(config) as ai:
     if query and query.is_tl_worthy:
         timeline = await ai.timelines.extract("Wikipedia_Article_Title", prose="...")
 ```
+
+### Chat engine
+
+The host application supplies a `ChatRetriever` and, optionally, a LangGraph checkpointer. `hermes-ai` does not open database sessions or create checkpoint tables.
+
+```python
+engine = ai.create_chat_engine(retriever, checkpointer=None)
+async for event in engine.stream(message, thread_id=thread_id, scope=scope):
+    # Forward status/token/sources/done events to the transport layer.
+    ...
+```
+
+The API wires `DbChatRetriever` to `hermes-db`'s `SearchService` and currently passes a process-local `InMemorySaver`; a persistent saver can be supplied without changing the chat contract.
 
 ---
 

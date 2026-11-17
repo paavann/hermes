@@ -46,7 +46,7 @@ globs: '**/*.tsx, **/*.css'
 
 ## 7. Controls, Icons & Feedback States
 
-- **Centralized Primitives**: All base UI elements live in `libs/shared/ui-components/src/components/ui/` (`base-sera` shadcn style, `@base-ui/react`). Never create local base primitives in `apps/*` or feature `libs/*`.
+- **Centralized Primitives**: All base UI elements live in `libs/shared/ui-components/src/components/ui/` (`base-sera` shadcn style). Never create local base primitives in `apps/*` or feature `libs/*`.
 - **Tailwind v4 Discipline**: Style via Tailwind utilities merged with `cn()`. Standalone `.css` / `.module.css` files and inline `style={{ ... }}` are banned (except dynamic runtime WebGL/canvas transforms).
 - **Hard Color Inversion on Hover/Active**: Interactive buttons (`TacticalActionBtn`, `RollButton`, `Button`) use hard color inversion (e.g., dark background + crisp border inverting to solid high-contrast fill + dark text).
 - **Phosphor Icons**: Use `@phosphor-icons/react` with **`bold`** weight by default, sized at `14px` inline (scaling contextually for standalone triggers).

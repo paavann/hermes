@@ -1,10 +1,10 @@
 # Hermes API (`apps/hermes-api`)
 
-Stateless FastAPI REST API, conversational RAG endpoint, and on-demand historical timeline synthesis engine. Run all Nx commands from the workspace root using project `hermes-api`.
+Request-scoped FastAPI REST API, conversational RAG endpoint, and on-demand historical timeline synthesis engine. Run all Nx commands from the workspace root using project `hermes-api`.
 
-## 2. Invariants
+## 1. Invariants
 
-- **Stateless Operation**: Never add cron runners, background workers, or ingestion loops. All harvesting and decay belong in `hermes-worker`.
+- **Request-Scoped Operation**: Never add cron runners, background workers, or ingestion loops. All harvesting and decay belong in `hermes-worker`. Chat memory is the only process-local exception and is documented in the chat section.
 - **Dependency Injection**: Route handlers in `api/v1/` must never instantiate database sessions or services directly; consume them via FastAPI `Depends()`.
 - **CORS Exception Headers**: Handlers in `core/errors.py` bypass Starlette's `CORSMiddleware`. Every custom exception handler must explicitly include origin headers via `_cors_headers(request)`.
 - **Lifespan Pool Management**: Initialize and dispose database connection pools inside `lifespan` in `main.py` via `init_db` and `close_db`. Never initialize connections at module import time.
@@ -13,6 +13,6 @@ Stateless FastAPI REST API, conversational RAG endpoint, and on-demand historica
 - **No Local ORM Models**: All database models and migrations reside in `libs/shared/hermes-db`. Never define SQLAlchemy models in `hermes-api`.
 - **Chat Guardrails & Contracts**: Route all conversational RAG queries through `chat_guards.py` and `chat_service.py`; mirror any `schemas/chat.py` or `schemas/events.py` response changes in `libs/shared/util-types/src/lib/api-types.ts`.
 
-## 3. Domain Triggers (Code Modifications Only)
+## 2. Domain Triggers (Code Modifications Only)
 
 - **When modifying endpoints, chat/timeline pipelines, or error handling**: Read `apps/hermes-api/docs/architecture.md`.

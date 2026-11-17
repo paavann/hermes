@@ -1,23 +1,24 @@
 # Hermes API — Architecture & Design Rationale
 
-This document details the architectural decisions, design tradeoffs, execution pipelines, and production characteristics of [`apps/hermes-api`](file:///home/pavan/proj/hermes/hermes/apps/hermes-api).
+This document details the architectural decisions, design tradeoffs, execution pipelines, and production characteristics of [`apps/hermes-api`](../README.md).
 
 ---
 
 ## 1. Application Role & Architectural Boundaries
 
-`hermes-api` is the stateless REST API and on-demand historical timeline synthesis engine of Project Hermes. It serves as the read-optimized bridge connecting PostgreSQL/PostGIS persistence to client applications ([`apps/hermes`](file:///home/pavan/proj/hermes/hermes/apps/hermes) and [`libs/map`](file:///home/pavan/proj/hermes/hermes/libs/map)).
+`hermes-api` is the REST API, conversational RAG service, and on-demand historical timeline synthesis engine of Project Hermes. It serves as the read-optimized bridge connecting PostgreSQL/PostGIS persistence to client applications ([`apps/hermes`](../../hermes), [`libs/map`](../../../libs/map), and [`libs/chat`](../../../libs/chat)).
 
 ### Key Architectural Decisions ("The Why")
 
-- **12-Factor Statelessness & Scheduler Isolation**:
+- **Scheduler Isolation**:
   - *The Why*: In production, the API runs as a managed container service on **Amazon Lightsail**. Executing background ingestion loops, RSS polling, or score decay inside the API process causes Python `asyncio` event-loop starvation during network-intensive scraping spikes.
-  - *The Boundary*: `hermes-api` executes **zero background schedulers or ingestion loops**. All RSS feed harvesting, embedding generation, and time decay are isolated to [`apps/hermes-worker`](file:///home/pavan/proj/hermes/hermes/apps/hermes-worker). This allows `hermes-api` to remain strictly stateless, boot rapidly, and scale horizontally without distributed lock contention.
+  - *The Boundary*: `hermes-api` executes **zero background schedulers or ingestion loops**. All RSS feed harvesting, embedding generation, and time decay are isolated to [`apps/hermes-worker`](../../hermes-worker). This lets the API boot rapidly and scale without lock contention.
+  - *Process-local state*: Chat conversation memory and chat guardrails live in process memory. A restart clears both. The client keeps its transcript in `localStorage`, and `ChatRuntime` accepts any LangGraph `BaseCheckpointSaver`, so durable memory is a composition-root decision rather than an API contract change.
 - **Externalized Persistence Layer**:
   - *The Why*: Maintaining ORM models across multiple backend packages invites schema drift and disjoint migration trees.
-  - *The Boundary*: All SQLAlchemy 2.0 ORM models ([`Event`](file:///home/pavan/proj/hermes/hermes/libs/shared/hermes-db/src/hermes_db/models/event.py), [`Article`](file:///home/pavan/proj/hermes/hermes/libs/shared/hermes-db/src/hermes_db/models/article.py), [`EventTl`](file:///home/pavan/proj/hermes/hermes/libs/shared/hermes-db/src/hermes_db/models/event_tl.py), [`Source`](file:///home/pavan/proj/hermes/hermes/libs/shared/hermes-db/src/hermes_db/models/source.py), [`GeocodeCache`](file:///home/pavan/proj/hermes/hermes/libs/shared/hermes-db/src/hermes_db/models/geocode_cache.py)) and Alembic migrations reside exclusively in [`libs/shared/hermes-db`](file:///home/pavan/proj/hermes/hermes/libs/shared/hermes-db). `hermes-api` imports models and services directly and never declares local ORM schemas.
+  - *The Boundary*: All SQLAlchemy 2.0 ORM models ([`Event`](../../../libs/shared/hermes-db/src/hermes_db/models/event.py), [`Article`](../../../libs/shared/hermes-db/src/hermes_db/models/article.py), [`EventTl`](../../../libs/shared/hermes-db/src/hermes_db/models/event_tl.py), [`Source`](../../../libs/shared/hermes-db/src/hermes_db/models/source.py), [`GeocodeCache`](../../../libs/shared/hermes-db/src/hermes_db/models/geocode_cache.py)) and Alembic migrations reside exclusively in [`libs/shared/hermes-db`](../../../libs/shared/hermes-db). `hermes-api` imports models and services directly and never declares local ORM schemas.
 - **Strict Dependency Injection**:
-  - Route handlers in [`api/v1/`](file:///home/pavan/proj/hermes/hermes/apps/hermes-api/src/hermes_api/api/v1) never instantiate database sessions or business services directly; they consume them via FastAPI `Depends()` (`get_db`, `get_event_service`, `get_tl_service`). This decouples request routing from persistence mechanics and allows test mocking via `dependency_overrides`.
+  - Route handlers in [`api/v1/`](../src/hermes_api/api/v1) never instantiate database sessions or business services directly; they consume them via FastAPI `Depends()` (`get_db`, `get_event_service`, `get_tl_service`). This decouples request routing from persistence mechanics and allows test mocking via `dependency_overrides`.
 
 ---
 
@@ -105,12 +106,12 @@ sequenceDiagram
 
 ### Step-by-Step Processing Stages
 
-1. **Intelligent Triage**: An LLM filter ([`AiService.analyze_tl_context`](file:///home/pavan/proj/hermes/hermes/apps/hermes-api/src/hermes_api/services/ai_service.py)) inspects the headline to assess whether it represents a structural historical event (`is_tl_worthy`) and generates a targeted Wikipedia search query. This prevents API latency and token spend on transient, non-historical news.
+1. **Intelligent Triage**: An LLM filter ([`AiService.analyze_tl_context`](../src/hermes_api/services/ai_service.py)) inspects the headline to assess whether it represents a structural historical event (`is_tl_worthy`) and generates a targeted Wikipedia search query. This prevents API latency and token spend on transient, non-historical news.
 2. **Wikipedia Index Resolution & Batch Extraction**:
-   - [`wikipedia_service.py`](file:///home/pavan/proj/hermes/hermes/apps/hermes-api/src/hermes_api/services/wikipedia_service.py) queries the MediaWiki API.
+   - [`wikipedia_service.py`](../src/hermes_api/services/wikipedia_service.py) queries the MediaWiki API.
    - If an index page is detected (e.g. chronological annual timelines), it enumerates and chronologically sorts sub-pages before retrieving extracts in bounded batches (`explaintext=1`, up to 50 pages per batch).
 3. **Graph Synthesis**: LiteLLM processes the extracted prose into structured milestones (`date`, `headline`, `summary`) and directed causal relationships (`"led to"`, `"triggered"`, `"escalated"`).
-4. **Grounded Geocoding Shield**: Extracted historical locations are geocoded using [`GeocodingService`](file:///home/pavan/proj/hermes/hermes/libs/shared/hermes-ai/src/hermes_ai/services/geocoding.py) (backed by the PostgreSQL `geocode_cache` table and OpenStreetMap Nominatim with token-bucket rate limiting). The LLM is never permitted to fabricate coordinates.
+4. **Grounded Geocoding Shield**: Extracted historical locations are geocoded using [`GeocodingService`](../../../libs/shared/hermes-ai/src/hermes_ai/services/geocoding.py) (backed by the PostgreSQL `geocode_cache` table and OpenStreetMap Nominatim with token-bucket rate limiting). The LLM is never permitted to fabricate coordinates.
 5. **Terminal Node Stitching**:
    - The breaking event's coordinates are retrieved from PostGIS.
    - A terminal node (`id="current-event"`) is appended to the graph with its category color.
@@ -124,7 +125,7 @@ sequenceDiagram
 
 ## 4. Conversational RAG Pipeline (`POST /api/v1/chat`)
 
-The chat endpoint answers natural-language questions about events in a selected scope and streams the answer over Server-Sent Events (SSE). Conversation turns are checkpointed per `thread_id` by LangGraph's `AsyncPostgresSaver`; the client sends only the new message and the current scope.
+The chat endpoint answers natural-language questions about events in a selected scope and streams the answer over Server-Sent Events (SSE). Conversation turns are checkpointed per `thread_id` by LangGraph; the baseline deployment uses a process-local `InMemorySaver`, and the client sends only the new message and the current scope.
 
 ```mermaid
 sequenceDiagram
@@ -133,7 +134,7 @@ sequenceDiagram
     participant API as FastAPI (/api/v1/chat)
     participant Guards as ChatGuards (in-memory)
     participant Engine as ChatEngine (hermes-ai)
-    participant CP as AsyncPostgresSaver
+    participant CP as LangGraph Checkpointer
     participant Retriever as DbChatRetriever (hermes-api)
     participant Search as SearchService (hermes-db)
     participant LLM as LiteLLM Router
@@ -178,7 +179,7 @@ sequenceDiagram
 - The graph shape is `START -> plan -> retrieve -> (search | generate) -> [tools -> generate] -> finalize -> END`. The planner and answer model both read prior text turns from the checkpointed messages; assistant history has citation markers stripped.
 - `thread_id` is the checkpointer key. `retry=true` removes the trailing user turn with `RemoveMessage` before re-running it.
 - `retrieve_events` and `web_search` are bound only on the generation node. They return `Command` updates that append evidence to the graph state and answer the tool call. `ToolNode` turns tool failures into `ToolMessage`s, and the graph recursion limit is 12.
-- Checkpoint tables are created by `AsyncPostgresSaver.setup()` during the API lifespan. If the checkpointer cannot initialize, the API logs a warning and falls back to `InMemorySaver`; chat still works, but memory does not survive a restart.
+- The checkpoint saver is the memory boundary. The current deployment runs chat memory in process: at startup the API attempts an `AsyncPostgresSaver` when a checkpoint URL is configured, calls `setup()`, and falls back to `InMemorySaver` with a warning if initialization fails. Chat still works after a fallback, but memory does not survive a restart. `ChatRuntime` and `ChatEngine` accept any `BaseCheckpointSaver`, so durable memory can be enabled without changing the HTTP contract.
 
 ### Scope Resolution & Retrieval
 
@@ -237,7 +238,7 @@ flowchart TD
     subgraph DataServices ["External Services & Persistence"]
         Container <-->|"TLS • pgvector/PostGIS (Port 5432)\nstatement_cache_size=0"| Neon[("Neon Serverless PostgreSQL\nConnection Pooler (PgBouncer)")]
         Container <-->|"MediaWiki REST API"| Wikipedia["Wikipedia API"]
-        Container <-->|"Structured DAG Prompts"| Gemini["Google Gemini (LLM)"]
+        Container <-->|"Structured DAG & Chat Prompts"| LiteLLM["LiteLLM Router\nMistral • NVIDIA NIM"]
         Container <-->|"Reverse Geocoding (1 req/s)"| Nominatim["OSM Nominatim"]
         Container -.->|"OTLP Spans (opt-in)"| Langfuse["Langfuse Observability\n(Traces & Metrics)"]
     end
@@ -255,7 +256,7 @@ flowchart TD
 The production workload is hosted on the **Nano tier** (`0.25 vCPU`, `512 MB RAM`):
 
 - **Single-Worker Concurrency (`--workers 1`)**:
-  In [`Dockerfile`](file:///home/pavan/proj/hermes/hermes/apps/hermes-api/Dockerfile#L45), the production entrypoint configures `--workers ${WORKERS:-1}`. Because FastAPI is built on `asyncio` and `uvloop`, a single process handles 50–100 concurrent I/O-bound requests (database lookups, external HTTP calls) without blocking. Running a single worker eliminates the memory overhead of multi-process duplication.
+  In [`Dockerfile`](../Dockerfile), the production entrypoint configures `--workers ${WORKERS:-1}`. Because FastAPI is built on `asyncio` and `uvloop`, a single process handles 50–100 concurrent I/O-bound requests (database lookups, external HTTP calls) without blocking. Running a single worker eliminates the memory overhead of multi-process duplication.
 - **Strict Memory Envelope**:
   - *Baseline Idle Footprint*: ~160 MB (Python 3.14 runtime, FastAPI, Pydantic-core, SQLAlchemy 2.0, `asyncpg`, GeoAlchemy2).
   - *Active Viewport Queries (`GET /events/bbox`)*: Transmits native coordinate projections with transient Pydantic validation (~185 MB total).
@@ -266,32 +267,31 @@ The production workload is hosted on the **Nano tier** (`0.25 vCPU`, `512 MB RAM
 
 - **Managed Edge Ingress**: Incoming requests arrive via AWS's managed ingress gateway with automated TLS certificates and AWS Shield Standard DDoS mitigation. Port `8000` remains internal to the service container.
 - **Health Gated Blue/Green Rollouts**:
-  - The health check endpoint [`GET /`](file:///home/pavan/proj/hermes/hermes/apps/hermes-api/src/hermes_api/main.py#L52-L54) returns `{"message": "hermes is running..."}` (HTTP 200).
+  - The health check endpoint [`GET /`](../src/hermes_api/main.py) returns `{"message": "hermes is running..."}` (HTTP 200).
   - When a new deployment is triggered, Lightsail spins up the candidate container revision in parallel.
   - Only when the new revision satisfies the health check does the edge load balancer cut over live traffic, draining the old container with **zero dropped requests**.
   - If a container fails to boot or pass health checks, Lightsail cancels the rollout and leaves the existing deployment untouched.
 
 ### Secret Isolation & Dynamic CI/CD Pipeline
 
-The deployment pipeline defined in [`.github/workflows/cd-api.yml`](file:///home/pavan/proj/hermes/hermes/.github/workflows/cd-api.yml) enforces the **Principle of Least Privilege**:
-- **Zero Secret Sprawl**: Database credentials (`DB_PASSWORD`, `DB_USER`) and third-party AI keys (`LLM_API`, `EMBED_API`) are **not** stored in GitHub Secrets. They are configured once directly in the AWS Lightsail Console.
-- **Dynamic Configuration Carry-Forward**:
-  During deployment, GitHub Actions uses the AWS CLI to extract the active environment configuration:
+The deployment pipeline defined in [`.github/workflows/cd-api.yml`](../../../.github/workflows/cd-api.yml) separates build credentials from runtime configuration:
+- **Secret Source Precedence**: Runtime values are read from the `HERMES_API_PROD_ENV` repository secret when it is populated (a newline-delimited `KEY=VALUE` block). This is the current source of truth for database credentials (`DB_*`), AI keys (`LLM_*`, `EMBED_*`), chat settings, and Langfuse keys.
+- **Configuration Carry-Forward**: If `HERMES_API_PROD_ENV` is empty, the workflow calls `aws lightsail get-container-services` for `hermes-api` and reuses the active container environment, then checks deployment history as a fallback. This preserves a hand-managed Lightsail configuration without failing a deploy.
+- **No Repository Credentials**: The workflow itself contains no database or provider secrets; only AWS credentials, the region, and the runtime environment block are supplied through GitHub secrets.
   ```bash
   CURRENT_ENV=$(aws lightsail get-container-services \
-    --region ${{ secrets.AWS_REGION }} \
-    --service-name hermes-api-service \
-    --query 'containerServices[0].currentDeployment.containers."hermes-api".environment' \
+    --region ap-southeast-2 \
+    --service-name hermes-api \
+    --query 'containerServices[0].currentDeployment.containers.*.environment | [0]' \
     --output json)
   ```
-  The workflow injects the existing `CURRENT_ENV` JSON block into the new deployment payload, updating only the image reference tag. This allows credential rotation directly in AWS without modifying repository settings or CI/CD code.
-- **Direct Registry Streaming**: The workflow installs the official `lightsailctl` plugin, which builds the image with `--target production` and streams layers directly into Lightsail's private container registry.
+- **Direct Registry Streaming**: The workflow installs the official `lightsailctl` plugin, builds the image with `--target production`, and streams layers directly into Lightsail's private container registry before creating a new deployment revision.
 
 ### Neon PostgreSQL Integration (PgBouncer)
 
 - **Transaction-Level Pooling**: Neon uses PgBouncer to manage serverless connection scaling.
-- **Statement Cache Disabling**: `asyncpg` prepared statement caching conflicts with transaction-mode connection poolers. The application sets `connect_args={"statement_cache_size": 0}` in [`libs/shared/hermes-db`](file:///home/pavan/proj/hermes/hermes/libs/shared/hermes-db).
-- **Enforced SSL**: Outbound connections enforce encrypted communication (`query["ssl"] = "require"` in [`Settings.db_url`](file:///home/pavan/proj/hermes/hermes/apps/hermes-api/src/hermes_api/core/config.py#L63-L76)) whenever connecting to non-local database hosts.
+- **Statement Cache Disabling**: `asyncpg` prepared statement caching conflicts with transaction-mode connection poolers. The application sets `connect_args={"statement_cache_size": 0}` in [`libs/shared/hermes-db`](../../../libs/shared/hermes-db).
+- **Enforced SSL**: Outbound connections enforce encrypted communication (`query["ssl"] = "require"` in [`Settings.db_url`](../src/hermes_api/core/config.py)) whenever connecting to non-local database hosts.
 
 ---
 
@@ -313,7 +313,7 @@ Custom Handler catches error -> constructs JSONResponse
 ```
 
 ### The Workaround (`_cors_headers`)
-Because error responses can bypass outer `CORSMiddleware` header decoration, custom handlers in [`core/errors.py`](file:///home/pavan/proj/hermes/hermes/apps/hermes-api/src/hermes_api/core/errors.py) explicitly call `_cors_headers(request)` to inject:
+Because error responses can bypass outer `CORSMiddleware` header decoration, custom handlers in [`core/errors.py`](../src/hermes_api/core/errors.py) explicitly call `_cors_headers(request)` to inject:
 - `Access-Control-Allow-Origin: *` (or matching client origin)
 - `Access-Control-Allow-Credentials: true`
 - `Access-Control-Allow-Methods: *`
@@ -325,7 +325,7 @@ This guarantees that browser clients can always inspect error details (such as `
 
 ## 7. Lifespan & Resilience Guarantees
 
-- **Lifespan Management**: Application startup and teardown are governed by an `@asynccontextmanager` in [`main.py`](file:///home/pavan/proj/hermes/hermes/apps/hermes-api/src/hermes_api/main.py). Database connection pools are bound via `init_db()` on boot and cleanly closed via `close_db()` on SIGTERM/SIGINT.
+- **Lifespan Management**: Application startup and teardown are governed by an `@asynccontextmanager` in [`main.py`](../src/hermes_api/main.py). Database connection pools are bound via `init_db()` on boot and cleanly closed via `close_db()` on SIGTERM/SIGINT.
 - **Graceful LLM Degradation**: When `LLM_API` or `LLM_MODEL` credentials are missing at boot, the server logs a warning and remains operational for spatial queries. Any calls to `/api/v1/events/tl/{id}` fail gracefully with `HTTP 503 Service Unavailable`, preventing total service failure. Chat follows the same rule: `ChatRuntime.from_settings` returns `None` and `/api/v1/chat` responds `503 CHAT_UNAVAILABLE` without affecting the map.
 - **Pure Asynchronous I/O**: Every I/O operation is strictly non-blocking:
   - Database access: `asyncpg` via SQLAlchemy 2.0 Async engine.
@@ -350,7 +350,7 @@ flowchart LR
 ### Architectural Decisions ("The Why")
 
 1. **Process Singleton Registration**:
-   The Langfuse SDK client is initialized within [`LlmService.__init__`](file:///home/pavan/proj/hermes/libs/shared/hermes-ai/src/hermes_ai/services/llm.py) using `Langfuse(public_key=..., secret_key=..., base_url=...)` if `tracing_enabled=True`. This registers the SDK singleton for `@observe` decorators and establishes OpenTelemetry tracer plumbing without per-request allocation overhead.
+   The Langfuse SDK client is initialized within [`LlmService.__init__`](../../../libs/shared/hermes-ai/src/hermes_ai/services/llm.py) using `Langfuse(public_key=..., secret_key=..., base_url=...)` if `tracing_enabled=True`. This registers the SDK singleton for `@observe` decorators and establishes OpenTelemetry tracer plumbing without per-request allocation overhead.
 
 2. **Instrumented Spans**:
    - `tl-analyze`: Generated by `TlExtractor.analyze`, measuring the latency and decision logic of event headline triage.

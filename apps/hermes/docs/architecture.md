@@ -49,8 +49,12 @@ In `apps/hermes/app/routes/map.tsx`, the map and chat containers are wrapped ins
 ## 5. Design System Integration
 
 The user interface implements a high-density tactical display:
+### Design Tokens & Typography
 - **Zero Border Radius**: Border radius utility tokens are reset (`--radius-*: initial;`) in `apps/hermes/styles.css`. Components must not apply `rounded-*` classes.
-- **Design Tokens**: Colors, typography, and HUD borders are defined via theme variables in `apps/hermes/styles.css`. Hardcoded color literals and font family definitions must be avoided in component templates.
+- **Type**: `JetBrains Mono` is used for both display and UI chrome, with `Fira Code` as the fallback stack.
+- **Palette**: Pure black canvas (`#000000`) with solid `obsidian` (`#07080A`), `onyx` (`#0B0D10`), and `graphite` (`#12151A`) surfaces; `neon-blue` (`#00F0FF`) is the primary accent; `ivory` (`#F1EDE2`) and `bone` (`#D7D0BF`) carry text; `signal-amber` (`#FFB454`) is a secondary signal.
+- **Surfaces**: Panels use opaque fills and `1px` hairline borders. Glassmorphism, backdrop blur, and glow shadows are prohibited.
+- **Token Discipline**: Colors, typography, and HUD borders are defined via theme variables in `apps/hermes/styles.css`. Hardcoded color literals and font family definitions must be avoided in component templates.
 
 ## 6. Provider Composition & Data Boundaries
 
@@ -75,7 +79,7 @@ Suspense (MapLoadingFallback)
 ## 7. Conversational RAG UI & Map Integration
 
 ### Composition
-`ChatPanel` is an overlay, not a route. It owns its `useChat` hook and renders a closed-state tab when `isOpen` is false. The map remains full-bleed, visible, and interactive; closing the panel only flips `isOpen`, so the module-level Zustand store preserves the conversation and map viewport across close/reopen. The panel is hidden (not unmounted) while timeline inspection mode is active, so an in-flight stream and the conversation survive a mode switch without competing with `TlPanel`.
+`ChatPanel` is an overlay, not a route. It owns its `useChat` hook and renders a closed-state tab when `isOpen` is false. The map remains full-bleed, visible, and interactive; closing the panel aborts an in-flight stream, marks the partial answer `cancelled`, clears cited-event highlights, and flips `isOpen`. The module-level Zustand store preserves the conversation and map viewport across close/reopen. The panel is hidden (not unmounted) while timeline inspection mode is active, so an in-flight stream and the conversation survive a mode switch without competing with `TlPanel`.
 
 ### Scope Resolution
 The panel receives `autoScope` from the map store (`selectedEventId` and `viewport`) and resolves each request:
@@ -85,7 +89,7 @@ The panel receives `autoScope` from the map store (`selectedEventId` and `viewpo
 | `auto`     | selected event, else viewport, else global                     |
 | `event`    | selected event, else viewport, else global                     |
 | `viewport` | current viewport, else global                                  |
-| `global`   | global plottings                                               |
+| `global`   | global scope                                                   |
 
 The explicit mode persists in the chat store, while the underlying event ID and bounding box keep following the map.
 
@@ -98,5 +102,5 @@ The `sources` event is converted by `citedEventsFromSources` into deduplicated p
 ## 8. Production Hosting & Network Topology
 
 - **Vercel Node.js SSR**: Deployed at `hermes-eight-inky.vercel.app`. Route loaders evaluate auth cookies and render initial document HTML on edge/server instances.
-- **Direct API Ingress**: Client-side queries issued via TanStack Query communicate directly with `hermes-api` hosted on Render without intermediate proxy layers. CORS headers returned by the API ensure secure cross-origin communication.
+- **Direct API Ingress**: Client-side queries issued via TanStack Query and `@hermes/chat` communicate directly with `hermes-api` hosted on an **Amazon Lightsail Container Service** (Nano tier) without intermediate proxy layers. CORS headers returned by the API ensure secure cross-origin communication; the chat stream uses SSE with buffering disabled at the proxy.
 

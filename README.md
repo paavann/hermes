@@ -27,6 +27,7 @@ Traditional news aggregators suffer from narrative duplication, click-driven rec
 3. **Verified Geocoding**: Extracts locations via LLM and grounds coordinates strictly using OpenStreetMap Nominatim with token-bucket rate limiting and negative caching.
 4. **Objective Ranking**: Ranks events using source credibility tiers, impact multipliers, Shannon diversity across geopolitical blocs, reporting velocity, and compound time decay (18-hour half-life).
 5. **Causal Timeline Synthesis**: Reconstructs the historical context of any breaking story by querying Wikipedia and generating an interactive antecedent timeline DAG.
+6. **Grounded Conversational RAG**: Answers analyst questions over the current map scope with hybrid lexical/semantic retrieval, inline citations, and Server-Sent Events streaming.
 
 > [!NOTE]
 > Detailed system architecture diagrams, data pipelines, and design decisions are documented in [docs/architecture.md](docs/architecture.md).
@@ -38,6 +39,7 @@ Traditional news aggregators suffer from narrative duplication, click-driven rec
 - **Interactive Tactical Map**: Full-screen WebGL map engine built on Mapbox GL JS with GPU canvas layer clustering, dynamic bounding-box synchronization (`/api/v1/events/bbox`), and camera transitions.
 - **Editorial Consensus Engine**: Corroborates multiple independent reports into single unified events, tracking sources and syndication factors.
 - **Historical Causality DAGs**: On-demand timeline synthesis (`/api/v1/events/tl/{id}`) that connects today's events to historical milestones extracted from Wikipedia.
+- **Grounded Chat**: Scope-aware conversational answers (`POST /api/v1/chat`) streamed over SSE, with hybrid retrieval, optional Tavily web search, and citations that focus the map.
 - **Traceability & Observability**: Integrated with [Langfuse](https://langfuse.com) for real-time span tracking, token usage accounting, latency monitoring, and model fallback observability across batch ingestion and on-demand synthesis.
 - **Resilient Pipeline**: Token-bucket rate limiting, circuit breaking, and schema-level LLM fallback extractors prevent failures during external API degradation.
 
@@ -51,16 +53,18 @@ Hermes is configured as an Nx polyglot monorepo combining TypeScript and Python 
 hermes/
 ├── apps/
 │   ├── hermes/            # React 19 + React Router v8 SSR frontend
-│   ├── hermes-api/        # Stateless FastAPI REST API service
+│   ├── hermes-api/        # FastAPI REST API service
 │   ├── hermes-worker/     # Batch CLI ingestion and lifecycle worker
 │   └── hermes-e2e/        # Playwright end-to-end test suite
 ├── libs/
+│   ├── chat/              # Conversational RAG client (SSE, citations, Zustand store)
 │   ├── map/               # Mapbox GL JS WebGL map engine & Zustand store
 │   └── shared/
-│       ├── hermes-ai/     # LiteLLM extraction, embeddings & Nominatim geocoding
+│       ├── hermes-ai/     # LiteLLM extraction, chat engine, embeddings & geocoding
 │       ├── hermes-db/     # SQLAlchemy 2.0 models, PostGIS & pgvector HNSW
-│       ├── ui-components/ # Shared HUD components (Tailwind CSS v4 & Base UI)
-│       └── util-types/    # Hand-mirrored TypeScript API contracts
+│       ├── ui-components/ # Shared HUD components (Tailwind CSS v4)
+│       ├── util-types/    # Hand-mirrored TypeScript API contracts
+│       └── utils/         # Shared Python (py) and TypeScript (ts) helpers
 └── docs/
     └── architecture.md    # In-depth architectural specifications & diagrams
 ```
@@ -70,8 +74,9 @@ hermes/
 | Project | Type | Description |
 | :--- | :--- | :--- |
 | [`@hermes/hermes`](apps/hermes/README.md) | Web Client | SSR React 19 application with Clerk authentication and Mapbox WebGL viewport. |
-| [`hermes-api`](apps/hermes-api/README.md) | REST API | FastAPI application serving spatial bounding box queries and timeline synthesis. |
+| [`hermes-api`](apps/hermes-api/README.md) | REST API | FastAPI application serving spatial queries, timeline synthesis, and streaming chat. |
 | [`hermes-worker`](apps/hermes-worker/README.md) | Batch CLI | Ephemeral run-and-die container orchestrating feed sync and lifecycle decay. |
+| [`@hermes/chat`](libs/chat/README.md) | Library | Chat overlay, SSE transport, citation parsing, and persisted conversation store. |
 | [`@hermes/map`](libs/map/README.md) | Library | Mapbox GL JS engine, Zustand viewport state, and timeline drawer components. |
 | [`hermes-ai`](libs/shared/hermes-ai/README.md) | Library | LLM extraction via LiteLLM, rate-limited Nominatim geocoding, and embeddings. |
 | [`hermes-db`](libs/shared/hermes-db/README.md) | Library | PostGIS geometry, `halfvec(2048)` pgvector tables, and Alembic migrations. |
@@ -107,7 +112,7 @@ hermes/
    ```bash
    cp .env.example .env
    ```
-   Ensure your `.env` contains database settings, Clerk authentication keys, and your Mapbox public token. For LLM capabilities, configure `LLM_API` and `EMBED_API` in `apps/hermes-api/.env.local`. To enable Langfuse trace observability, add `LANGFUSE_PUBLIC_KEY` and `LANGFUSE_SECRET_KEY` to `.env`.
+   Ensure your `.env` contains database settings, Clerk authentication keys, and your Mapbox public token. For LLM capabilities, configure `LLM_API` and `EMBED_API` in `apps/hermes-api/.env.local`; chat additionally reads the `CHAT_*` and optional `TAVILY_API_KEY` settings. To enable Langfuse trace observability, add `LANGFUSE_PUBLIC_KEY` and `LANGFUSE_SECRET_KEY` to `.env`.
 
 4. **Start the local database**:
    ```bash

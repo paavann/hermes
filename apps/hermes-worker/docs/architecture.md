@@ -50,7 +50,7 @@ flowchart TD
 1. **EventBridge Scheduler Fires**: At the scheduled cadence (00:00, 08:00, 16:00 UTC daily), EventBridge issues an `ecs:RunTask` API call to the ECS cluster `hermes-cluster`.
 2. **Dynamic Resource Allocation**: AWS Fargate dynamically provisions 0.25 vCPU and 512 MB of RAM on **ARM64 (AWS Graviton)** architecture from the shared compute pool. No virtual machine or container remains pre-running or idle between intervals.
 3. **Container Image Pull**: Fargate pulls the production container image (`hermes-worker:latest`, compiled for `linux/arm64`) from Amazon ECR.
-4. **Execution in Isolated Lifespan**: The container initializes, wraps execution in [`db_lifespan()`](file:///home/pavan/proj/hermes/apps/hermes-worker/src/hermes_worker/core/lifespan.py), and runs `hermes-worker run-all`:
+4. **Execution in Isolated Lifespan**: The container initializes, wraps execution in [`db_lifespan()`](../src/hermes_worker/core/lifespan.py), and runs `hermes-worker run-all`:
    - Lifecycle maintenance: applies score decay and updates status transitions (`ACTIVE` $\rightarrow$ `STALE` $\rightarrow$ `ARCHIVED`).
    - Source synchronization: fetches due feeds, generates embeddings, deduplicates via vector similarity, extracts metadata via LiteLLM, geocodes coordinates, and commits transactions.
 5. **Clean Termination & Teardown**: Upon completing all due sources, the process calls `close_db()` and terminates cleanly (`sys.exit(0)`). ECS marks the task as `STOPPED` and Fargate deallocates compute resources immediately. Billing stops at container termination.
@@ -77,7 +77,7 @@ flowchart TD
 
 ## 2. Ingestion Pipeline & Token Optimization
 
-The ingestion stages in [`SyncService`](file:///home/pavan/proj/hermes/apps/hermes-worker/src/hermes_worker/services/sync.py) are structured to minimize token consumption and inference latency:
+The ingestion stages in [`SyncService`](../src/hermes_worker/services/sync.py) are structured to minimize token consumption and inference latency:
 
 ```mermaid
 sequenceDiagram
@@ -141,7 +141,7 @@ sequenceDiagram
 
 ## 3. The Grounded Geocoding Shield
 
-To achieve high spatial accuracy while strictly obeying external rate limits and eliminating LLM coordinate hallucination, `hermes-worker` routes all spatial queries through [`GeocodingService`](file:///home/pavan/proj/hermes/libs/shared/hermes-ai/src/hermes_ai/services/geocoding.py):
+To achieve high spatial accuracy while strictly obeying external rate limits and eliminating LLM coordinate hallucination, `hermes-worker` routes all spatial queries through [`GeocodingService`](../../../libs/shared/hermes-ai/src/hermes_ai/services/geocoding.py):
 
 ```mermaid
 flowchart TD
@@ -168,7 +168,7 @@ flowchart TD
 
 ### Defense Mechanisms
 
-1. **1.0-Second Token Bucket Lock**: OpenStreetMap's Acceptable Use Policy strictly forbids requests exceeding 1 req/sec. [`NominatimResilienceManager`](file:///home/pavan/proj/hermes/libs/shared/hermes-ai/src/hermes_ai/services/geocoding.py) enforces this through an async token-bucket rate limiter.
+1. **1.0-Second Token Bucket Lock**: OpenStreetMap's Acceptable Use Policy strictly forbids requests exceeding 1 req/sec. [`NominatimResilienceManager`](../../../libs/shared/hermes-ai/src/hermes_ai/services/geocoding.py) enforces this through an async token-bucket rate limiter.
 2. **Negative Caching**: Non-geographic terms extracted by models (e.g. `"Global Markets"`, `"Cyberspace"`) cannot be geocoded. The worker caches these as `NULL` coordinates in the `geocode_cache` table, permanently preventing redundant external HTTP requests on subsequent runs.
 3. **In-Flight Request Coalescing**: If multiple concurrent articles in a batch reference the same location (e.g. three separate reports referencing `"Rafah"`), an in-flight future table ensures only a single HTTP request is dispatched; other coroutines await the identical future.
 4. **Circuit Breaker**: If Nominatim returns HTTP 429 across retries, the circuit breaker trips for 120 seconds, preventing IP bans.
@@ -219,7 +219,7 @@ flowchart LR
 ### Architectural Decisions ("The Why")
 
 1. **Process-Level Singleton Registration**:
-   `hermes-worker` instantiates the shared AI facade via `create_ai_client()` in [`core/ai.py`](file:///home/pavan/proj/hermes/apps/hermes-worker/src/hermes_worker/core/ai.py). When `LANGFUSE_PUBLIC_KEY` and `LANGFUSE_SECRET_KEY` are provided, `LlmService` registers the Langfuse SDK singleton using `base_url` (guaranteeing correct regional OTLP routing).
+   `hermes-worker` instantiates the shared AI facade via `create_ai_client()` in [`core/ai.py`](../src/hermes_worker/core/ai.py). When `LANGFUSE_PUBLIC_KEY` and `LANGFUSE_SECRET_KEY` are provided, `LlmService` registers the Langfuse SDK singleton using `base_url` (guaranteeing correct regional OTLP routing).
 
 2. **Batch-Level Tracing (`event-extract`)**:
    Extraction passes over article chunks are decorated with `@observe(as_type="span", name="event-extract", capture_input=False, capture_output=False)`. This captures:

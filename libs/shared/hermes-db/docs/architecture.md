@@ -33,7 +33,7 @@ The design goal is to keep every database concern in one place so `hermes-api` a
 | :--- | :--- | :--- |
 | `apps/hermes-api` | `init_db` / `close_db` in lifespan, `get_db` in FastAPI dependencies, `EventService`, `EventTlService`, `GeocodeCacheService`, `SearchService` via the chat retriever | Read APIs, map queries, timeline persistence, conversational retrieval |
 | `apps/hermes-worker` | `db_lifespan`, `AsyncSessionLocal`, `SourceService`, `EventService`, `GeocodeCacheService` | Ingestion, vector deduplication, event corroboration, lifecycle decay |
-| Alembic CLI | `migrations/env.py`, `Settings`, `Base.metadata`, all models | Schema migration generation and execution |
+| Alembic CLI | `migrations/env.py`, `Base.metadata`, all models | Schema migration generation and execution |
 | Tests | Models, enums, services, ranking, SQL compilation | Pure unit verification without a live database |
 
 ### 1.4 Architectural invariants
@@ -73,7 +73,7 @@ flowchart LR
 
     API -->|"init_db / get_db / services"| Session
     Worker -->|"init_db / AsyncSessionLocal / services"| Session
-    Alembic -->|"env.py -> Settings.db_url"| Migrations
+    Alembic -->|"env.py reads DB_* env"| Migrations
     Session --> Models
     Services --> Models
     Search --> Models
@@ -109,7 +109,7 @@ libs/shared/hermes-db/
 ├── migrations/
 │   ├── env.py                   # async Alembic environment, GeoAlchemy2 integration
 │   ├── script.py.mako
-│   └── versions/                # 15 append-only revisions, head c2d3e4f5a6b7
+│   └── versions/                # 16 append-only revisions, head 9e1bb45d1cba
 ├── src/hermes_db/
 │   ├── __init__.py              # public session API: init_db, get_db, close_db
 │   ├── base.py                  # Base, UUIDPrimaryKeyMixin, TimestampMixin
@@ -166,7 +166,7 @@ Application processes pass their own validated URL to `init_db` so database conf
 
 ### 4.1 Pure Library Separation
 
-`hermes-db` is a pure persistence library with zero environment inspection in `src/hermes_db`. It does not read `.env` files or invoke `os.getenv`. Standalone migration runs (`npx nx run hermes-db:migrate`) resolve database connection URLs directly in [`migrations/env.py`](file:///home/pavan/proj/hermes/hermes/libs/shared/hermes-db/migrations/env.py) by loading root `.env` files relative to the project root.
+`hermes-db` is a pure persistence library with zero environment inspection in `src/hermes_db`. It does not read `.env` files or invoke `os.getenv`. Standalone migration runs (`npx nx run hermes-db:migrate`) resolve database connection URLs directly in [`migrations/env.py`](../migrations/env.py) by loading root `.env` files relative to the project root.
 
 ### 4.2 Engine and session factory
 
@@ -244,7 +244,7 @@ sequenceDiagram
 `init_db` is the explicit IoC seam:
 
 - If `db_url` is provided, the old engine is disposed, a new engine is created with the same pool/statement-cache policy, and the existing `async_sessionmaker` is reconfigured in place. References to `AsyncSessionLocal` remain valid because `configure()` mutates the factory.
-- If `db_url` is omitted, the module-level engine from `Settings` is reused. This supports standalone tooling and simple scripts.
+- If `db_url` is omitted, the existing module-level engine is reused; `init_db` raises `ValueError` if no engine has ever been initialized.
 - Connectivity is verified with `SELECT 1` inside `engine.begin()`.
 - The source catalog sync runs once at startup. Its failure is intentionally swallowed with `logger.exception`, leaving the process alive because a stale source catalog should not prevent the API from serving reads or the worker from processing already-known sources.
 
@@ -353,7 +353,9 @@ erDiagram
 
 ```python
 class Base(DeclarativeBase):
-    pass
+    type_annotation_map = {
+        datetime: DateTime(timezone=True),
+    }
 
 
 class TimestampMixin:
@@ -373,10 +375,10 @@ class UUIDPrimaryKeyMixin:
 
 Design consequences:
 
+- The `type_annotation_map` makes every `Mapped[datetime]` column `TIMESTAMP WITH TIME ZONE`. `created_at` and `updated_at` are therefore timezone-aware (`TIMESTAMPTZ`), not naive.
+- The application convention is **aware UTC**. Services use `datetime.now(UTC)`, and `hermes_db.utils.ensure_utc` attaches UTC to naive inputs and converts aware inputs to UTC before comparisons. `EventTl.generated_at` is explicitly `DateTime(timezone=True)`, consistent with the mixin columns.
+- `onupdate` fires on ORM-originated updates, but it is metadata, not a lifecycle clock.
 - `id` is generated in Python by `uuid.uuid4`, while the initial migration also gives several tables a `gen_random_uuid()` server default. ORM inserts use the Python value; raw SQL inserts get a database value.
-- `created_at` and `updated_at` are **timezone-naive** `DateTime` columns (SQLAlchemy infers `TIMESTAMP WITHOUT TIME ZONE`). The entire application convention is “naive UTC”. `onupdate` fires on ORM-originated updates, but it is metadata, not a lifecycle clock.
-- `EventTl.generated_at` is the one model column explicitly declared `DateTime(timezone=True)` (`TIMESTAMPTZ`). `GeocodeCache` is inconsistent: its migration created `created_at` as `TIMESTAMPTZ` and **omitted `updated_at` entirely**, while the model inherits both from `TimestampMixin` (§12.4).
-- `UUIDPrimaryKeyMixin` is listed before `TimestampMixin` in model bases for consistency. SQLAlchemy’s declarative mixin ordering does not affect column order in practice, but the convention is stable.
 
 ### 5.3 Enumerations
 
@@ -409,9 +411,9 @@ One row per publisher or feed. Sources are soft-disabled, never deleted, so hist
 | `credibility` | `credibilitytier` | no | `TIER_3` | Feeds ranking weights |
 | `is_active` | boolean | no | `true` | Soft-disable flag |
 | `logo_url` | text | yes | — | UI asset |
-| `last_fetched_at` | timestamp | yes | — | Naive UTC; scheduling cursor |
+| `last_fetched_at` | timestamptz | yes | — | UTC; scheduling cursor |
 | `fetch_interval_minutes` | integer | no | `15` | Per-source cadence |
-| `created_at`, `updated_at` | timestamp | no | `now()` | Mixin columns |
+| `created_at`, `updated_at` | timestamptz | no | `now()` | Mixin columns |
 
 Relationship: `Source.articles -> list[Article]`, back-populated by `Article.source`.
 
@@ -427,9 +429,9 @@ An article is one fetched item, always attached to exactly one event and one sou
 | `title` | text | no | — | Article headline |
 | `url` | text | no | — | **Unique** (`uq_articles_url`); ingestion dedupe key |
 | `thumbnail_url` | text | yes | — | Column exists but `create_article` does not populate it yet |
-| `published_at` | timestamp | yes | — | Publisher timestamp, may be missing |
-| `ingested_at` | timestamp | no | `now()` | Server-side ingestion time |
-| `created_at`, `updated_at` | timestamp | no | `now()` | Mixin columns |
+| `published_at` | timestamptz | yes | — | Publisher timestamp, may be missing |
+| `ingested_at` | timestamptz | no | `now()` | Server-side ingestion time |
+| `created_at`, `updated_at` | timestamptz | no | `now()` | Mixin columns (`updated_at` added in revision 16) |
 
 Relationships:
 
@@ -459,10 +461,10 @@ The central aggregate. An event is an AI-synthesized incident that one or more a
 | `trending_score` | float | no | `0.0` | Denormalized score; decayed by lifecycle |
 | `velocity` | float | no | `1.0` | Articles per hour at last corroboration |
 | `article_count` | integer | no | `0` | Denormalized count; incremented by service |
-| `first_reported_at` | timestamp | no | `now()` | Set once at creation; velocity denominator |
-| `last_updated_at` | timestamp | no | `now()` | Set on creation and each corroboration; lifecycle cutoff |
+| `first_reported_at` | timestamptz | no | `now()` | Set once at creation; velocity denominator |
+| `last_updated_at` | timestamptz | no | `now()` | Set on creation and each corroboration; lifecycle cutoff |
 | `embedding` | `halfvec(2048)` | yes | — | Semantic dedupe / ANN search |
-| `created_at`, `updated_at` | timestamp | no | `now()` | Mixin columns |
+| `created_at`, `updated_at` | timestamptz | no | `now()` | Mixin columns |
 
 Relationships:
 
@@ -475,8 +477,9 @@ Indexes declared in `Event.__table_args__`:
 | :--- | :--- | :--- | :--- |
 | `idx_events_location` | GiST | `location` | Bounding-box (`ST_Within`) map queries |
 | `idx_events_embedding` | HNSW | `embedding halfvec_cosine_ops` | Approximate cosine nearest neighbors |
-| `idx_events_active_score` | btree, partial | `(status, trending_score)` where `status = 'ACTIVE'` | Active feed ordered by score |
+| `idx_events_active_score` | btree, partial | `(trending_score)` where `status = 'ACTIVE'` | Active feed ordered by score |
 | `idx_events_scope` | btree | `(scope, status)` | Scope-filtered feeds |
+| `idx_events_status_last_updated` | btree | `(status, last_updated_at)` | Lifecycle transitions and recency filters |
 | `idx_events_country` | btree, partial | `country_code` where `country_code IS NOT NULL` | Country filters |
 | `idx_events_fts` | GIN | weighted `to_tsvector` expression | Full-text lexical search |
 
@@ -490,7 +493,7 @@ A timeline is an optional, one-to-one enrichment of an event. The table replaced
 | :--- | :--- | :--- | :--- | :--- |
 | `id` | UUID | no | `uuid4` | Primary key |
 | `event_id` | UUID | no | — | FK `events.id`, `ON DELETE CASCADE`, **unique** |
-| `status` | varchar(20) / non-native enum | no | `GENERATING` | `READY`, `GENERATING`, `FAILED`, `NO_CONTENT` |
+| `status` | varchar(10) / non-native enum | no | `GENERATING` | `READY`, `GENERATING`, `FAILED`, `NO_CONTENT`; revision 16 aligned the width to `VARCHAR(10)`, no check constraint |
 | `nodes` | JSONB | no | `[]` | List of timeline node objects |
 | `edges` | JSONB | no | `[]` | List of timeline edge objects |
 | `tl_summary` | text | no | `""` | Concatenated per-page summaries |
@@ -498,7 +501,7 @@ A timeline is an optional, one-to-one enrichment of an event. The table replaced
 | `page_count` | integer | no | `0` | Number of Wikipedia pages processed |
 | `node_count` | integer | no | `0` | Number of stored nodes |
 | `generated_at` | timestamptz | yes | — | Set when generation reaches a terminal state |
-| `created_at`, `updated_at` | timestamp | no | `now()` | Mixin columns |
+| `created_at`, `updated_at` | timestamptz | no | `now()` | Mixin columns |
 
 Expected JSONB shapes (validated in `SearchService` when read):
 
@@ -536,8 +539,8 @@ A normalized-key cache in front of the Nominatim client. It is deliberately prov
 | `latitude` | float | yes | — | `NULL` means “known un-geocodable” (negative cache) |
 | `longitude` | float | yes | — | Same |
 | `display_name` | text | yes | — | Provider display name |
-| `created_at` | timestamptz (DB) / naive `DateTime` (model) | no | `now()` | **Drift:** the migration uses `TIMESTAMPTZ`; the model declares a naive type |
-| `updated_at` | **missing in DB** | — | — | Mapped by `TimestampMixin` but never created by migration `c1d2e3f4a5b6`; ORM selects reference it (§12.4, §17.30) |
+| `created_at` | timestamptz | no | `now()` | Mixin column |
+| `updated_at` | timestamptz | no | `now()` | Mixin column added by revision 16 |
 
 The cache is first-write-wins. `save_geocode_result` uses `ON CONFLICT (location_name) DO NOTHING`, then re-fetches. A cached `NULL` coordinate result therefore remains a negative cache until explicitly purged; migration `f5a6b7c8d9e0` performed a one-time purge of null-coordinate rows created during a rate-limit flood.
 
@@ -546,19 +549,18 @@ The cache is first-write-wins. `save_geocode_result` uses `ON CONFLICT (location
 | Relationship | Strategy | Where it is safe |
 | :--- | :--- | :--- |
 | `Article.source` | `lazy="selectin"` | Any article load; `source_name` is immediately usable |
-| `Event.articles` | default `lazy="select"` | Safe only after `selectinload(Event.articles)`; `get_event_by_id` does this |
+| `Event.articles` | `lazy="raise"` | Must be eagerly loaded (`selectinload(Event.articles)`); an unloaded access raises instead of emitting implicit I/O |
 | `Article.event` | default `lazy="select"` | Safe only when explicitly eager-loaded |
 | `Source.articles` | default `lazy="select"` | Same |
 
-In async SQLAlchemy, touching an unloaded lazy relationship raises `MissingGreenlet`. The library solves this at the service boundary rather than globally: `EventService.get_event_by_id` uses `selectinload(Event.articles).joinedload(Article.source)`, and `Article.source` is selectin by default. Any new consumer that walks `event.articles` from a plain `select(Event)` must add its own eager-loading option.
+In async SQLAlchemy, touching an unloaded lazy relationship raises `MissingGreenlet` (or `InvalidRequestError` for `lazy="raise"`). The library solves this at the service boundary rather than globally: `EventService.get_event_by_id` uses `selectinload(Event.articles).joinedload(Article.source)`, and `Article.source` is selectin by default. Any new consumer that walks `event.articles` from a plain `select(Event)` must add its own eager-loading option.
 
 ### 5.10 Time semantics
 
-- All “business” timestamps (`created_at`, `updated_at`, `first_reported_at`, `last_updated_at`, `published_at`, `ingested_at`, `last_fetched_at`) are **naive UTC**.
-- Services normalize with `datetime.now(UTC).replace(tzinfo=None)` before writing or comparing. This matches `TIMESTAMP WITHOUT TIME ZONE` and avoids asyncpg timezone surprises.
-- `calculate_velocity` defensively strips `tzinfo` from both inputs rather than converting between zones.
-- `EventTl.generated_at` is the one explicitly aware model timestamp. `GeocodeCache.created_at` is aware in the database (`TIMESTAMPTZ`) but declared naive in the model, and its `updated_at` does not exist in the migrated table at all (§12.4). Consumers should not assume every datetime in the package is naive *or* that every mapped column exists in the database.
+- All mapped datetimes (`created_at`, `updated_at`, `first_reported_at`, `last_updated_at`, `published_at`, `ingested_at`, `last_fetched_at`, `generated_at`) are `TIMESTAMPTZ` through `Base.type_annotation_map` or an explicit `DateTime(timezone=True)`.
+- The application convention is **aware UTC**. Services write `datetime.now(UTC)` and call `ensure_utc()` before comparing caller-supplied or database values. `ensure_utc` attaches UTC to naive inputs and converts aware inputs to UTC; it never silently writes local time.
 - `updated_at` is maintained by SQLAlchemy’s `onupdate`, but lifecycle decisions use `last_updated_at`, which is only advanced when a corroborating article is added.
+- `EventTl.generated_at` is nullable and set when generation reaches a terminal state.
 
 ---
 
@@ -810,7 +812,7 @@ velocity       = 1.0
 article_count  = 1
 status         = ACTIVE
 scope          = COUNTRY (ORM default)
-first_reported_at = last_updated_at = now (naive UTC)
+first_reported_at = last_updated_at = now (aware UTC)
 embedding      = article embedding or NULL
 location       = WKT POINT or NULL
 ```
@@ -930,10 +932,10 @@ ACTIVE ──(no corroboration for > 24h)──> STALE ──(no corroboration f
 - `get_due_sources(force=False)` selects all active sources, then filters in Python:
   - RSS sources without `feed_url` are skipped.
   - `last_fetched_at is None` means due.
-  - A naive `last_fetched_at` is interpreted as UTC.
+  - A naive `last_fetched_at` is interpreted as UTC by `ensure_utc`.
   - Due when `now >= last_fetched_at + fetch_interval_minutes`, or when `force=True`.
 - Returns an immutable `DueSource` dataclass with exactly the fields a fetcher needs: id, name, feed URL, credibility, interval, type, URL, slug, last fetch time. Decoupling the fetcher from the ORM avoids lazy-loading and session leakage into network code.
-- `update_last_fetched(source_id, fetched_at=None)` executes a Core `UPDATE` with a naive UTC timestamp. **It does not commit**; the worker commits after calling it.
+- `update_last_fetched(source_id, fetched_at=None)` executes a Core `UPDATE` with an aware UTC timestamp (`ensure_utc` normalizes a supplied value). **It does not commit**; the worker commits after calling it.
 
 `sync_sources_from_config(session, config_path=None)`:
 
@@ -970,9 +972,7 @@ class GeocodeCacheService:
 - If the re-fetch unexpectedly returns nothing, it raises `RuntimeError`, treating the cache as inconsistent rather than silently returning a partial result.
 - The service never calls Nominatim. It is the persistence adapter used by `hermes-ai`’s `GeocodingService`.
 
-The negative-cache semantics are important: a `NULL` latitude/longitude row means “this location is known not to be geocodable.” It prevents repeated external requests for non-geographic labels such as “Global Markets.” Migration `f5a6b7c8d9e0` purged null rows once after a 429 flood; the service itself does not expire them.
-
-> **Deployment caveat:** the ORM mapping includes `updated_at`, but the migration that created `geocode_cache` did not. Against a database built strictly from migrations, these entity reads fail. Verify the live table shape before relying on this service (§17.30).
+The negative-cache semantics are important: a `NULL` latitude/longitude row means “this location is known not to be geocodable.” It prevents repeated external requests for non-geographic labels such as “Global Markets.” Migration `f5a6b7c8d9e0` purged null rows once after a 429 flood; the service itself does not expire them. Revision 16 added the `updated_at` column, so the ORM mapping and migrated table now agree.
 
 ### 9.9 `EventTlService`
 
@@ -1070,7 +1070,7 @@ Optional filters are applied inside both CTEs, before ranking:
 | `start` | `Event.last_updated_at >= max(start, cutoff)` | Event must have been updated on/after start |
 | `end` | `Event.first_reported_at <= min(end, now)` | Event must have started on/before end |
 
-The two bounds use different timestamps: `start` gates `last_updated_at`, `end` gates `first_reported_at`. This is not a true interval-overlap test; see §17.24 for the consequences and a migration path. Naive datetimes are treated as UTC; aware datetimes are converted to UTC and stripped.
+The two bounds use different timestamps: `start` gates `last_updated_at`, `end` gates `first_reported_at`. This is not a true interval-overlap test; see §17.24 for the consequences and a migration path. Naive datetimes are treated as UTC by `ensure_utc`; aware datetimes are converted to UTC.
 
 ### 10.4 Query pipeline
 
@@ -1369,7 +1369,7 @@ Because `expire_on_commit=False`, returned ORM objects remain usable after a ser
 `migrations/env.py` is a custom async Alembic environment:
 
 1. Imports `hermes_db.models` so every model is registered in `Base.metadata`.
-2. Loads `Settings` directly (standalone tooling does not receive a URL from an app).
+2. Cascades root `.env` files and reads `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, and `DB_PASSWORD` with `os.getenv` (standalone tooling does not receive a URL from an app).
 3. Sets `sqlalchemy.url` from `settings.db_url`, escaping `%` for `configparser`.
 4. Configures `target_metadata = Base.metadata`.
 5. Installs two GeoAlchemy2 hooks:
@@ -1382,7 +1382,7 @@ Because `expire_on_commit=False`, returned ORM objects remain usable after a ser
 
 ### 12.2 Revision chain
 
-There is exactly one root and one head: `2ec3541646e8` → `c2d3e4f5a6b7` (15 revisions, linear).
+There is exactly one root and one head: `2ec3541646e8` → `9e1bb45d1cba` (16 revisions, linear).
 
 | # | Revision | Description | Why it matters |
 | :--- | :--- | :--- | :--- |
@@ -1401,6 +1401,7 @@ There is exactly one root and one head: `2ec3541646e8` → `c2d3e4f5a6b7` (15 re
 | 13 | `f5a6b7c8d9e0` | Delete geocode-cache rows with `NULL` latitude | Purge 429-era negative entries |
 | 14 | `b1c2d3e4f5a6` | Add `GDELT` enum value, `impactlevel` enum, `impact_level` + `velocity` columns | Multi-factor scoring |
 | 15 | `c2d3e4f5a6b7` | Add `idx_events_fts` GIN expression index concurrently | Hybrid lexical search |
+| 16 | `9e1bb45d1cba` | Harden timestamps to `TIMESTAMPTZ`, add `articles.updated_at` and `geocode_cache.updated_at`, align `event_timelines.status`, rebuild active-score index, add `(status, last_updated_at)` index | Timezone consistency and lifecycle query support |
 
 The history is append-only even where the design was later removed. Revision 10 deletes tables created in revisions 6–9, and revision 11 recreates `event_timelines` with a different shape. This preserves replayability for any environment at any point in history; squashing would destroy that property.
 
@@ -1412,22 +1413,17 @@ The history is append-only even where the design was later removed. Revision 10 
 - **Concurrent index creation**: revision 15 uses `autocommit_block()` because `CREATE INDEX CONCURRENTLY` cannot run inside a transaction.
 - **Spatial types**: migrations use `op.create_geospatial_table` / `create_geospatial_index` and explicitly preserve `srid=4326`, `geometry_type="POINT"`, and `postgresql_using="gist"`.
 - **Data cleanup migration**: revision 13 is pure DML with a no-op downgrade.
+- **Timestamp hardening and index rebuild**: revision 16 alters every business timestamp to `TIMESTAMPTZ`, adds the missing `articles.updated_at` and `geocode_cache.updated_at` columns, aligns `event_timelines.status` with the model enum, replaces the partial active-score index, and adds `idx_events_status_last_updated`. Downgrade reverses each step.
 
 ### 12.4 Model ↔ migration drift watchlist
 
-Alembic autogenerate is a starting point, not an oracle. The following intentional or tolerated differences exist:
+Alembic autogenerate is a starting point, not an oracle. Revision 16 resolved the earlier timestamp and `EventTl.status` drift; the remaining tolerated differences are:
 
 | Area | Model | Migration / database | Consequence |
 | :--- | :--- | :--- | :--- |
-| `EventTl.status` | `Enum(EventTlStatus, native_enum=False)` → `VARCHAR(10)` + check constraint in metadata | `VARCHAR(20)`, no check constraint | Autogenerate may propose a type/constraint change; migrations are authoritative |
-| `Event.impact_level` | ORM default `MODERATE`, no server default | `server_default='MODERATE'` | Raw SQL inserts get a default; ORM inserts use Python |
-| `Event.velocity` | ORM default `1.0`, no server default | `server_default='1.0'` | Same |
 | UUID PKs | Python `uuid4` default | Some tables also have `gen_random_uuid()` | Both paths work; values differ by insert path |
 | `GeocodeCache.id` | Python `uuid4` | No DB server default | Raw SQL inserts must supply id |
-| `GeocodeCache.updated_at` | Mapped by `TimestampMixin` | **Column does not exist** in migration `c1d2e3f4a5b6` | Any ORM `SELECT GeocodeCache` references a missing column; service reads fail until a migration adds it |
-| `GeocodeCache.created_at` | Naive `DateTime` | `TIMESTAMPTZ` | Driver returns an aware value for a “naive” model column; comparisons may raise |
 | `EventTl.id` | Python `uuid4` | No DB server default | Same |
-| `EventTl.generated_at` | `DateTime(timezone=True)` | `TIMESTAMPTZ` | Consistent; aware value written by service |
 | FTS index | SQLAlchemy expression index | Concurrent migration with identical expression | Guarded by `test_event_fts.py` |
 
 When adding a migration, always inspect the generated file and manually verify spatial/vector types, enum names, nullability, server defaults, and index methods.
@@ -1465,7 +1461,7 @@ The suite is ~3,400 lines across thirteen test modules (plus a 168-line `conftes
 | Helper | Purpose |
 | :--- | :--- |
 | `make_uuid()` | Fresh `uuid4` for primary keys. |
-| `utcnow()` | `datetime.now(UTC).replace(tzinfo=None)` — deliberately **naive UTC**, matching the production convention in §5.10. |
+| `utcnow()` | `datetime.now(UTC)` — aware UTC, matching the production convention in §5.10. |
 | `make_event(...)` | `MagicMock` shaped like an `Event`, with overridable `status`, `trending_score`, `article_count`, `ai_headline`, `category`, `location_name`, `last_updated_at`, `embedding`. |
 | `make_article(...)` | `MagicMock` Article with URL, title, source, credibility, impact, published timestamp. |
 | `make_source(...)` | `MagicMock` Source with tier, type, active flag. |
@@ -1497,7 +1493,7 @@ Two tests go beyond interaction mocking and pin the generated SQL:
 - **`test_event_fts.py`** compiles `idx_events_fts` with `CreateIndex(...).compile(dialect=postgresql.dialect())`, loads the migration file by path with `importlib.util.spec_from_file_location`, and compares the normalized index expressions. It also asserts that the migration uses `CONCURRENTLY` and `IF NOT EXISTS` / `IF EXISTS`. This is the only automated guard against model↔migration drift for the FTS expression, and it exists precisely because the expression is too easy to edit in one place and forget in the other.
 - **`test_search_service.py`** compiles `Select` statements with `literal_binds=True` and asserts on substrings: the `<=>` cosine-distance operator, the `websearch_to_tsquery` call, `LIMIT` values, `EventStatus.ACTIVE` / `ARCHIVED` eligibility filters, and the presence of `ST_Within`/bounding-box predicates. These are *string* assertions, so they are sensitive to SQLAlchemy compilation changes across versions — a known fragility when upgrading SQLAlchemy.
 
-Notably, there is **no equivalent test** for the other model↔migration drift items listed in §12.4 (`EventTlStatus`, server defaults, `category_color` nullability). Those rely on review discipline.
+Notably, there is **no equivalent test** for the remaining schema pitfalls described in §17.15 (server defaults) and §17.16 (`category_color` nullability). Those rely on review discipline.
 
 ### 13.6 Test module map
 
@@ -1505,7 +1501,6 @@ Notably, there is **no equivalent test** for the other model↔migration drift i
 | :--- | :--- | :--- |
 | `test_base.py` | Mixins | UUID default is callable and unique; `created_at`/`updated_at` defaults; `onupdate` wiring. |
 | `test_enums.py` | Enum values | Exact string values are stable (`"ACTIVE"`, `"TIER_1"`, …) because they are persisted; `StrEnum` behaviour. |
-| `test_config.py` | Settings | Defaults, `db_url` composition, env override, cached `get_settings()`. |
 | `test_models.py` | Table shape | Column names, nullability, PK/FK, index presence, relationship configuration, package re-exports. |
 | `test_session.py` | Engine lifecycle | `init_db` creates engine/sessionmaker, `get_db` yields and closes, `close_db` disposes, double-init safety. |
 | `test_article_service.py` | Article writes | `url_exists` true/false, `create_article` field mapping, commit/flush ordering. |
@@ -1515,6 +1510,7 @@ Notably, there is **no equivalent test** for the other model↔migration drift i
 | `test_search_service.py` | Hybrid retrieval | RRF fusion, boost multipliers, coverage classification, scope/eligibility filters, relaxed retry, degradation flags, context hydration, row→`SearchEvent` mapping. |
 | `test_geocode_service.py` | Geocode cache | Hit returns row, miss returns `None`, save inserts and commits, negative-cache path. |
 | `test_source_service.py` | Source sync | `sources.json` parsing, due-source calculation, activation/deactivation, interval handling. |
+| `test_utils.py` | Datetime boundary | `ensure_utc` attaches UTC to naive values and converts offset-aware values to UTC. |
 | `test_services.py` | Package surface | `hermes_db.services` re-exports the documented names. |
 
 ### 13.7 What the suite does not test
@@ -1559,7 +1555,7 @@ The library owns the database contract for two long-running processes and one ba
 | Source sync malformed JSON | Same | `JSONDecodeError`/`ValueError` logged, empty stats, startup continues | Source catalog stale; existing rows untouched | Fix `sources.json`; re-run startup or call `sync_sources_from_config` manually. |
 | Source sync DB error | Same | `init_db` catches **all** exceptions and logs `failed to sync sources from config`; startup continues | Source catalog stale | Investigate logs; the app still serves with whatever sources exist. |
 | Duplicate article URL | `ArticleService.create_article` | `INSERT ... ON CONFLICT (url) DO NOTHING RETURNING *` returns `None`; no exception | Single ingestion item | Caller treats `None` as “already ingested”; safe to retry. |
-| Missing LLM/API credentials | Consumer (worker/API), not this library | Settings validation fails at import if `DB_PASSWORD` missing; AI keys are consumed elsewhere | Process fails fast | Populate `.env` from `.env.example`; never log secrets. |
+| Missing LLM/API credentials | Consumer (worker/API), not this library | Consumer settings validation fails at startup if `DB_PASSWORD` is missing; AI keys are consumed elsewhere. `hermes_db` has no import-time settings | Consumer process fails fast | Populate `.env` from `.env.example`; never log secrets. |
 | Embedding dimension mismatch | `create_event`/`add_article_to_event`, search | PostgreSQL rejects assignment to `halfvec(2048)` (`expected 2048 dimensions`) | Ingestion item / search request fails | Confirm embed model matches `EMBED_MODEL`; changing dimension requires migration + re-embed (§16.2). |
 | Geocode upstream 429 / timeout | `GeocodeCacheService.get_by_location_name` miss path | Library returns `None`; caller (AI pipeline) handles upstream retry/rate limiting. Negative results may be cached by callers | Location unresolved; event may lack geometry | Respect Nominatim 1 req/s; check worker logs; cache is first-write-wins (§17.20). |
 | Malformed timeline JSON from LLM | `EventTlService.save_generated_tl` | The service stores whatever nodes/edges the caller passes; no validation occurs before persistence | Malformed JSONB persists; readers skip bad nodes | Validate with `SearchTimelineNode`/`SearchTimelineEdge` before calling the service; repair or regenerate bad rows. |
@@ -1569,7 +1565,7 @@ The library owns the database contract for two long-running processes and one ba
 | Lifecycle never runs | Worker scheduler | Scores/statuses freeze; `ARCHIVED` events never appear | Stale rankings, unbounded `ACTIVE` set | Check worker cron/lifespan; run `run_lifecycle_transitions` manually if needed. |
 | Lifecycle runs too often | Worker scheduler | Each run applies one decay step, so more runs mean faster decay | Scores drop faster than the 18-hour half-life implies; at the documented 3×/day cadence the effective half-life is already ~6 days (§17.3) | Keep the lifecycle cadence at hourly, or fix the decay math before increasing frequency. |
 | Duplicate timeline for event | `EventTlService.create_tl` | Unique `event_id` rejects a second insert; updates go through `save_generated_tl` | Integrity error on duplicate create | Read before create; treat TL as derived, regenerable data. |
-| Null/NaT timestamps | `update_last_fetched`, lifecycle | `tzinfo` dropped on write; naive reads normalized to UTC in `get_due_sources` | Source may be considered due slightly early/late | Keep all writes UTC-naive per §5.10. |
+| Null/NaT timestamps | `update_last_fetched`, lifecycle | `ensure_utc` attaches UTC to naive inputs; writes are aware UTC | Source may be considered due slightly early/late if a caller supplies local time as naive | Keep all writes aware UTC per §5.10. |
 
 ### 14.2 Startup sequence and what "ready" means
 
@@ -1768,9 +1764,9 @@ Each decision below is recorded as *context → decision → consequences → al
 
 **Context.** Status values are queried in partial indexes and compared in SQL; they must be stable and readable in `psql`.
 
-**Decision.** Use `enum.StrEnum` with uppercase values. Let SQLAlchemy create native PostgreSQL enum types for `EventStatus`, `EventScope`, `ImpactLevel`, `SourceType`, and `CredibilityTier`. Use `native_enum=False` (VARCHAR + check constraint) only for `EventTlStatus`.
+**Decision.** Use `enum.StrEnum` with uppercase values. Let SQLAlchemy create native PostgreSQL enum types for `EventStatus`, `EventScope`, `ImpactLevel`, `SourceType`, and `CredibilityTier`. Use `native_enum=False` (VARCHAR(10), Python-side validation only) only for `EventTlStatus`.
 
-**Consequences.** Type safety at the Python boundary and readable database values. Adding a value requires `ALTER TYPE ... ADD VALUE` (as revision 15 did for `GDELT`); removing/renaming a value is painful. The inconsistency for `EventTlStatus` is historical and shows up as model↔migration drift (§12.4).
+**Consequences.** Type safety at the Python boundary and readable database values. Adding a value requires `ALTER TYPE ... ADD VALUE` (as revision 14 did for `GDELT`); removing/renaming a value is painful. Revision 16 aligned `EventTlStatus` to `VARCHAR(10)`; neither the model nor the migration declares a check constraint, so SQL writes can bypass the Python enum.
 
 **Rejected.** Plain strings (typos become data); integer enums (opaque in SQL); all-native or all-VARCHAR consistency (would require rewriting existing types for cosmetic gain).
 
@@ -1794,15 +1790,15 @@ Each decision below is recorded as *context → decision → consequences → al
 
 **Rejected.** Cache successes only (repeated misses hit the rate limiter); TTL-based cache (needs a reaper and freshness policy); external cache (another dependency).
 
-### ADR-13: Naive UTC timestamps
+### ADR-13: Timezone-aware UTC timestamps
 
-**Context.** PostgreSQL columns are `TIMESTAMP WITHOUT TIME ZONE`. Consumers and LLM prompts work with UTC.
+**Context.** PostgreSQL supports both `TIMESTAMP` and `TIMESTAMPTZ`. Naive timestamps make the timezone implicit, and mixing aware and naive values in Python raises `TypeError` or silently compares the wrong instants.
 
-**Decision.** Write naive UTC (`datetime.now(UTC).replace(tzinfo=None)`), normalize naive reads to UTC where comparison matters (`get_due_sources`).
+**Decision.** Map `datetime` to `DateTime(timezone=True)` in `Base.type_annotation_map`, store all business timestamps as `TIMESTAMPTZ`, and write aware UTC (`datetime.now(UTC)`). `ensure_utc` normalizes caller-supplied values by attaching UTC to naive inputs and converting aware inputs to UTC.
 
-**Consequences.** Consistent storage and simple comparisons. The timezone is implicit; a consumer that writes local time silently corrupts ordering. `update_last_fetched` drops `tzinfo` without warning. Mixing aware and naive datetimes in Python raises `TypeError`, which surfaces bugs early but also forces the normalization boilerplate.
+**Consequences.** Comparisons and ordering are unambiguous, DST cannot corrupt data, and driver values arrive aware. Callers must still use `ensure_utc` at boundaries; a naive local-time value is interpreted as UTC, not as the server's local zone. Revision 16 converted the existing columns and added the missing `articles.updated_at` and `geocode_cache.updated_at` fields.
 
-**Rejected.** `TIMESTAMPTZ` (arguably better, but would require migrating every column and changing all consumers); naive local time (ambiguous, DST bugs).
+**Rejected.** Naive UTC (implicit timezone, fragile comparisons); naive local time (ambiguous, DST bugs).
 
 ### ADR-14: Mock-based unit tests, no database in CI
 
@@ -1834,7 +1830,7 @@ Each decision below is recorded as *context → decision → consequences → al
    npx nx run hermes-db:makemigrations -- -m "add <column> to <table>"
    ```
 3. **Review the generated file.** Autogenerate repeatedly misreads enum types, server defaults, and expression indexes (§12.4). Confirm:
-   - `down_revision` matches the current head (`c2d3e4f5a6b7`).
+   - `down_revision` matches the current head (`9e1bb45d1cba`).
    - The `op.add_column` uses the intended type (`sa.String(255)`, `postgresql.JSONB`, `HALFVEC(2048)`, `Geometry`).
    - `server_default` is present if the column is non-null on existing rows.
    - No unrelated `drop_index`/`alter_column` noise.
@@ -1911,7 +1907,7 @@ Filters live in `SearchFilters` (Pydantic) and are translated into SQL in `Searc
 | RRF `k`, recency/trending weights | `services/search.py` | Search-only; no persistence. Re-run search tests. |
 | Coverage thresholds | `SearchService.__init__` | Search-only; tune with real queries. |
 | Ingest cosine threshold (`< 0.25`) | `services/event.py` | Changes dedupe behaviour; too high merges unrelated stories, too low fragments them. Measure on a labelled sample. |
-| Lifecycle stale/archive hours | `Settings.EVENT_STALE_HRS` / `EVENT_ARCHIVE_HRS` | Environment-driven; no code change. |
+| Lifecycle stale/archive hours | `EVENT_STALE_HOURS` / `EVENT_ARCHIVE_HOURS` in the consumer config | Environment-driven; no code change. |
 
 Scoring changes are **not** automatically backfilled. `trending_score` is denormalized (ADR-07), so a weight change only affects events touched afterwards. If the change must apply retroactively, write a one-off recomputation script that loads articles per event and calls the same ranking functions — do not hand-write SQL that duplicates the formula.
 
@@ -1954,16 +1950,15 @@ Rules:
 - **Keep the chain linear.** One `down_revision`; no branches unless intentionally merging (this repo has none).
 - **Use `CONCURRENTLY` for indexes on live tables**, inside `op.get_context().autocommit_block()`.
 - **Set a `lock_timeout`** (already 30 s in `migrations/env.py`) so DDL fails fast instead of blocking traffic.
-- **Review autogenerate output against §12.4.** The known drift items will produce false positives.
+- **Review autogenerate output against §12.4.** The remaining drift items will produce false positives.
 
 ### 16.9 Tunables reference
 
 | Tunable | Location | Default | Notes |
 | :--- | :--- | :--- | :--- |
-| `EVENT_STALE_HRS` | `core/config.py` | `24` | Hours since `last_updated_at` before `ACTIVE → STALE`. Env-overridable. |
-| `EVENT_ARCHIVE_HRS` | `core/config.py` | `48` | Hours before `STALE → ARCHIVED`. Env-overridable. |
-| `DB_HOST` / `DB_PORT` / `DB_NAME` / `DB_USER` / `DB_PASSWORD` | `core/config.py` | `localhost` / `5432` / `hermes` / `postgres` / **required** | `ssl=require` is added automatically for non-local hosts. |
-| `ENV` | `core/config.py` | `development` | Selects `.env.{ENV}` in the cascade. |
+| `EVENT_STALE_HOURS` / `EVENT_ARCHIVE_HOURS` | `apps/hermes-worker/src/hermes_worker/core/config.py` | `24` / `48` | Env-overridable cutoffs passed into `run_lifecycle_transitions`; library defaults are `DEFAULT_EVENT_STALE_HRS` / `DEFAULT_EVENT_ARCHIVE_HRS` in `services/event.py`. |
+| `DB_HOST` / `DB_PORT` / `DB_NAME` / `DB_USER` / `DB_PASSWORD` | consumer `core/config.py` | `localhost` / `5432` / `hermes` / `postgres` / **required** | Consumers pass a validated URL to `init_db`; `ssl=require` is added automatically for non-local hosts. |
+| `ENV` | consumer `core/config.py`, `migrations/env.py` | `development` | Selects `.env.{ENV}` in the cascade. |
 | `pool_size` | `session.py` | `5` | Per-process pool; multiply by replicas before sizing PgBouncer. |
 | `max_overflow` | `session.py` | `10` | Burst connections above `pool_size`. |
 | `pool_pre_ping` | `session.py` | `True` | Validates connections on checkout. |
@@ -1995,21 +1990,23 @@ Rules:
 
 This section is deliberately uncomfortable. These are behaviours a maintainer should know before changing the library; several are acceptable trade-offs, several are latent bugs.
 
-### 17.1 Import-time settings make `DB_PASSWORD` mandatory for any import
+### 17.1 The engine is a process-global singleton
 
-`core/config.py` instantiates `settings = Settings()` at module import, and `session.py` creates the engine at import using `settings.db_url`. `DB_PASSWORD` is a required field. Consequences:
+`session.py` stores one `AsyncEngine` in a module global and one `async_sessionmaker`. `init_db(db_url)` creates the engine, configures the session factory, probes connectivity, and syncs the source catalog. Importing `hermes_db` is side-effect free: no engine is created, no settings are read, and `DB_PASSWORD` is not required.
 
-- Importing `hermes_db` in a script, notebook, or test without a database password fails immediately, even if no query is executed.
-- `alembic` commands, docs tooling, and type checkers that import the package inherit the requirement.
-- The test suite works around it by setting a fake password before imports (`conftest.py`).
+Consequences:
 
-**Mitigation:** always provide `DB_PASSWORD` (a dummy value is fine for import-only work). A future refactor could make `settings` lazy, but that would touch every module and is not planned.
+- One process can serve only one database URL at a time.
+- Tests and scripts must call `init_db(db_url=...)` before using `get_db()` or `AsyncSessionLocal`; otherwise `init_db` raises `ValueError` when no engine exists.
+- A second `init_db` call disposes the previous engine and rebinds the factory, which invalidates in-flight assumptions.
 
-### 17.2 Module-level engine complicates multi-database use
+**Mitigation:** call `init_db` exactly once at process startup and `close_db()` once at teardown. Standalone scripts should follow the same pattern.
 
-`engine` and `AsyncSessionLocal` are module globals. `init_db(db_url=...)` disposes and replaces the engine, then calls `AsyncSessionLocal.configure(bind=engine)`. This is convenient for tests and scripts but unsafe under concurrency: two callers reconfiguring the global sessionmaker at once will race. There is no dependency-injection container for engines.
+### 17.2 Engine reconfiguration is not concurrency-safe
 
-**Mitigation:** call `init_db` exactly once at process startup (or once at the top of a script) before creating sessions. Do not reconfigure while requests are in flight.
+`init_db(db_url=...)` disposes and replaces the engine, then calls `AsyncSessionLocal.configure(bind=engine)`. The sessionmaker is global, so two callers reconfiguring it at once race, and sessions created before reconfiguration may still reference the old engine. There is no dependency-injection container for engines.
+
+**Mitigation:** do not reconfigure while requests or jobs are in flight. Tests that need a different URL should create a fresh engine and session factory rather than mutating the global one.
 
 ### 17.3 Lifecycle decay is per invocation, not per elapsed hour
 
@@ -2106,15 +2103,15 @@ Write methods commit internally (ADR-11). A caller cannot atomically combine, fo
 
 ### 17.13 Lazy relationships raise `MissingGreenlet`
 
-`Event.articles` uses the default lazy strategy. Walking it from an async context without eager loading raises `MissingGreenlet`. Only `get_event_by_id` eager-loads (`selectinload(...).joinedload(...)`), and `Article.source` is `lazy="selectin"`.
+`Event.articles` uses `lazy="raise"`. Walking it from an async context without eager loading raises `InvalidRequestError` immediately. Only `get_event_by_id` eager-loads (`selectinload(...).joinedload(...)`), and `Article.source` is `lazy="selectin"`.
 
 **Mitigation:** every new read path must add `selectinload`/`joinedload` explicitly, or project columns instead of returning entities. This is a recurring source of production errors.
 
-### 17.14 `EventTlStatus` model and migration disagree
+### 17.14 `EventTlStatus` has no database-level check constraint
 
-The model uses `Enum(EventTlStatus, native_enum=False)`, which SQLAlchemy renders as `VARCHAR(10)` plus a check constraint. The migration created `VARCHAR(20)` with no check constraint. Autogenerate may propose a type/constraint change; migrations are authoritative. The database will accept status strings the Python enum rejects.
+The model uses `Enum(EventTlStatus, native_enum=False)`, which SQLAlchemy renders as `VARCHAR(10)` with `create_constraint=False`. Revision 16 converted the column from `VARCHAR(20)` to `VARCHAR(10)`, so model and database widths now agree, but the database still accepts any string of up to ten characters. The Python enum is the only validation layer.
 
-**Mitigation:** do not run blind autogenerate against `event_timelines`; review and discard the spurious alter. If tightening is desired, add a new migration that normalizes values and adds the check constraint explicitly.
+**Mitigation:** write `EventTl.status` through the ORM so the enum coerces values. If database-level enforcement is desired, add a new migration that normalizes existing values and creates an explicit check constraint; autogenerate will not propose one by default.
 
 ### 17.15 Server defaults drift between model and migrations
 
@@ -2134,17 +2131,11 @@ The column exists and is nullable, but no service writes it. API consumers may s
 
 **Mitigation:** treat it as absent until an extractor populates it; do not build UI that depends on it.
 
-### 17.18 Naive timestamps and silent `tzinfo` loss
+### 17.18 Timestamp handling requires aware UTC discipline
 
-Most columns are `TIMESTAMP WITHOUT TIME ZONE`. `update_last_fetched` explicitly strips tzinfo:
+All mapped timestamp columns are `TIMESTAMPTZ`, and services write `datetime.now(UTC)`. The remaining pitfall is caller input: `ensure_utc` attaches UTC to a naive datetime rather than guessing a local zone, so a caller that builds `datetime.now()` (local, naive) writes a value that is offset by its UTC delta. Mixing aware and naive values outside the helpers raises `TypeError`.
 
-```python
-now = (fetched_at or datetime.now(UTC)).replace(tzinfo=None)
-```
-
-`EventTl.generated_at` and `GeocodeCache.created_at` are the exceptions (`TIMESTAMPTZ`). Mixing aware and naive values in Python raises `TypeError`; comparisons in SQL treat naive values as UTC by convention only.
-
-**Mitigation:** keep the convention “naive UTC everywhere except the two documented columns.” Normalize at every boundary; never write local time.
+**Mitigation:** use `datetime.now(UTC)` and pass values through `ensure_utc()` at every service boundary; never write local time.
 
 ### 17.19 Source sync cannot clear a field with `null`
 
@@ -2220,15 +2211,11 @@ There is no database-level validation of `nodes`/`edges`. `EventTlService.save_g
 
 **Mitigation:** add `CREATE INDEX CONCURRENTLY idx_articles_event_id ON articles (event_id)` and the equivalent for `source_id` once the table is large enough to matter. The unique index on `url` does not help these predicates.
 
-### 17.30 `GeocodeCache` maps an `updated_at` column the database does not have
+### 17.30 Geocode-cache timestamp drift (resolved in revision 16)
 
-`GeocodeCache(Base, UUIDPrimaryKeyMixin, TimestampMixin)` maps both `created_at` and `updated_at`, but migration `c1d2e3f4a5b6` created only `created_at` (as `TIMESTAMPTZ`). The table in the migrated schema has no `updated_at`. Consequences:
+Historically, `GeocodeCache(Base, UUIDPrimaryKeyMixin, TimestampMixin)` mapped both `created_at` and `updated_at`, but migration `c1d2e3f4a5b6` created only `created_at` (as `TIMESTAMPTZ`). Entity reads emitted `SELECT geocode_cache.updated_at ...` and failed against a database built strictly from migrations; the model also declared `created_at` as naive while the column was aware.
 
-- Any ORM query that selects the `GeocodeCache` entity (including `GeocodeCacheService.get_by_location_name`) emits `SELECT geocode_cache.updated_at ...` and fails with `UndefinedColumn` against a database built strictly from migrations.
-- The model declares `created_at` naive while the column is `TIMESTAMPTZ`; asyncpg returns an aware datetime, which can raise `TypeError` when compared to naive values.
-- The unit suite cannot catch this because every session is mocked.
-
-**Mitigation:** add a migration that creates `updated_at` (matching the mixin’s naive type and `now()` default) and decides whether to alter `created_at` to `TIMESTAMP WITHOUT TIME ZONE` or change the model to `DateTime(timezone=True)`. Do not assume the current production database matches the migrations; verify with `\d geocode_cache` before deploying a fix.
+Revision `9e1bb45d1cba` added `geocode_cache.updated_at` and converted the timestamp columns to `TIMESTAMPTZ`, so a database at head now matches the ORM mapping. The unit suite still cannot catch schema drift because every session is mocked; verify `alembic_version` when diagnosing a timestamp-column error rather than assuming the production database is at head.
 
 ## 18. Appendix
 
@@ -2239,10 +2226,10 @@ There is no database-level validation of `nodes`/`edges`. `EventTlService.save_g
 | Package | `hermes-db` (Python ≥ 3.14) |
 | Tables | 5 (`events`, `articles`, `sources`, `event_timelines`, `geocode_cache`) |
 | Enums | 7 |
-| Alembic revisions | 15 (root `2ec3541646e8`, head `c2d3e4f5a6b7`) |
+| Alembic revisions | 16 (root `2ec3541646e8`, head `9e1bb45d1cba`) |
 | Seed sources | 20 (14 `TIER_1`, 6 `TIER_2`) |
 | Test files / functions | 13 / 239 (~3,400 lines + 168-line conftest) |
-| Runtime deps | `asyncpg`, `geoalchemy2`, `pgvector`, `sqlalchemy`, `alembic`, `pydantic-settings`, `python-dotenv`, `greenlet` |
+| Runtime deps | `asyncpg`, `geoalchemy2`, `pgvector`, `sqlalchemy`, `alembic`, `greenlet`; `python-dotenv` is used only by `migrations/env.py`, `pydantic-settings` is declared but unused by library code |
 | Extensions required | `postgis`, `pgvector`, `pgcrypto`/`gen_random_uuid()` |
 | Primary consumers | `apps/hermes-api`, `apps/hermes-worker` |
 
@@ -2255,8 +2242,9 @@ There is no database-level validation of `nodes`/`edges`. `EventTlService.save_g
 | `events_pkey` | btree PK | `(id)` | Identity |
 | `idx_events_location` | GiST | `(location)` | Bounding-box / spatial predicates |
 | `idx_events_embedding` | HNSW | `embedding halfvec_cosine_ops (M=16, ef_construction=64)` | Semantic dedupe and search |
-| `idx_events_active_score` | btree partial | `(status, trending_score) WHERE status='ACTIVE'` | Feed and map ordering |
+| `idx_events_active_score` | btree partial | `(trending_score) WHERE status='ACTIVE'` | Feed and map ordering |
 | `idx_events_scope` | btree | `(scope, status)` | Scope-filtered lists |
+| `idx_events_status_last_updated` | btree | `(status, last_updated_at)` | Lifecycle transitions and recency filters |
 | `idx_events_country` | btree partial | `(country_code) WHERE country_code IS NOT NULL` | Country filtering |
 | `idx_events_fts` | GIN | weighted tsvector expression | Full-text lexical search |
 
@@ -2352,16 +2340,13 @@ libs/shared/hermes-db/
 ├── migrations/
 │   ├── env.py                       # async engine, NullPool, lock_timeout, GeoAlchemy2
 │   ├── script.py.mako
-│   └── versions/                    # 15 revisions, linear chain to c2d3e4f5a6b7
+│   └── versions/                    # 16 revisions, linear chain to 9e1bb45d1cba
 ├── src/hermes_db/
 │   ├── __init__.py
 │   ├── base.py                      # Base, UUIDPrimaryKeyMixin, TimestampMixin
 │   ├── enums.py                     # 7 StrEnums
 │   ├── protocols.py                 # EventExtractionData, GeocodingData
 │   ├── session.py                   # engine, AsyncSessionLocal, get_db, init_db, close_db
-│   ├── core/
-│   │   ├── __init__.py
-│   │   └── config.py                # Settings, env cascade, db_url
 │   ├── data/
 │   │   └── sources.json             # 20 seed sources
 │   ├── models/
@@ -2380,6 +2365,9 @@ libs/shared/hermes-db/
 │       ├── source.py                # SourceService + config sync
 │       ├── geocode.py               # GeocodeCacheService
 │       └── tl.py                    # EventTlService
+│   └── utils/
+│       ├── __init__.py
+│       └── datetime.py              # ensure_utc
 └── tests/
     ├── conftest.py                  # env bootstrap + factories
     ├── test_base.py
@@ -2452,7 +2440,7 @@ npx nx affected -t lint test --base=master
 
 ### 18.7 Verification status
 
-This document was written against the working tree at schema head `c2d3e4f5a6b7`. Before relying on a specific detail:
+This document was written against the working tree at schema head `9e1bb45d1cba`. Before relying on a specific detail:
 
 1. Confirm the migration head: `psql "$DATABASE_URL" -c 'select version_num from alembic_version;'`.
 2. Confirm the model surface: `grep -n "mapped_column" libs/shared/hermes-db/src/hermes_db/models/*.py`.
