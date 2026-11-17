@@ -154,6 +154,27 @@ class TestInitDb:
 
         mock_sync.assert_awaited_once()
 
+    def test_source_sync_skipped_when_disabled(self):
+        """sync_sources=False must leave the source table untouched."""
+        engine = self._make_engine_mock()
+        mock_session = AsyncMock()
+        mock_session.__aenter__ = AsyncMock(return_value=mock_session)
+        mock_session.__aexit__ = AsyncMock(return_value=False)
+        mock_factory = MagicMock(return_value=mock_session)
+        mock_sync = AsyncMock()
+
+        with (
+            patch("hermes_db.session.engine", engine),
+            patch("hermes_db.session.AsyncSessionLocal", mock_factory),
+            patch("hermes_db.session.sync_sources_from_config", mock_sync),
+        ):
+            from hermes_db.session import init_db
+
+            run(init_db(sync_sources=False))
+
+        mock_sync.assert_not_awaited()
+        mock_factory.assert_not_called()
+
     def test_sync_failure_does_not_propagate(self, caplog):
         """A sync_sources failure must be caught and logged, not raised."""
         engine = self._make_engine_mock()

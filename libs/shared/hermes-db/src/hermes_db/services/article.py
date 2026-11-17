@@ -1,7 +1,7 @@
-import uuid
 import logging
-from datetime import datetime
+import uuid
 from collections.abc import Sequence
+from datetime import datetime
 
 from sqlalchemy import select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert

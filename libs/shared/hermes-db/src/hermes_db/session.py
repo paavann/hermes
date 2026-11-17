@@ -30,7 +30,11 @@ async def get_db() -> AsyncGenerator[AsyncSession]:
             raise
 
 
-async def init_db(db_url: URL | str | None = None) -> None:
+async def init_db(
+    db_url: URL | str | None = None,
+    *,
+    sync_sources: bool = True,
+) -> None:
     global engine
 
     if db_url is not None:
@@ -58,11 +62,12 @@ async def init_db(db_url: URL | str | None = None) -> None:
         logger.error("failed to connect to the database.")
         raise
 
-    try:
-        async with AsyncSessionLocal() as session:
-            await sync_sources_from_config(session=session)
-    except Exception:
-        logger.exception("failed to sync sources from config.")
+    if sync_sources:
+        try:
+            async with AsyncSessionLocal() as session:
+                await sync_sources_from_config(session=session)
+        except Exception:
+            logger.exception("failed to sync sources from config.")
 
 
 async def close_db() -> None:

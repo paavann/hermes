@@ -3,14 +3,17 @@
 import argparse
 import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
+import pytest
 from hermes_worker.cli import build_parser, main, run_app
 from hermes_worker.core.lifespan import db_lifespan
 from hermes_worker.handlers.commands import (
     WorkerCmd,
     handle_all,
     handle_lifecycle,
+    handle_reset_db,
     handle_sync,
 )
+from hermes_worker.services.reset import ResetGuardError
 
 
 def test_build_parser_commands():
@@ -38,6 +41,22 @@ def test_build_parser_commands():
     assert args_all.command == WorkerCmd.ALL.value
     assert args_all.force
     assert args_all.handler is handle_all
+
+    # reset-db.
+    args_reset = parser.parse_args(["reset-db", "--yes"])
+    assert args_reset.command == WorkerCmd.RESET.value
+    assert args_reset.yes
+    assert args_reset.sync_sources is False
+    assert args_reset.requires_local_db is True
+    assert args_reset.handler is handle_reset_db
+
+
+def test_build_parser_reset_requires_confirmation():
+    """reset-db must fail argument parsing without --yes."""
+    parser = build_parser()
+
+    with pytest.raises(SystemExit):
+        parser.parse_args(["reset-db"])
 
 
 def test_handle_sync():
@@ -93,6 +112,144 @@ def test_handle_all():
 
             mock_life.assert_awaited_once()
             mock_service.sync_all_sources.assert_awaited_once_with(force=True)
+
+    asyncio.run(_test())
+
+
+def test_handle_reset_db_requires_confirmation():
+    """The handler must refuse to run without --yes even if called directly."""
+
+    async def _test():
+        with pytest.raises(ResetGuardError, match="--yes"):
+            await handle_reset_db(argparse.Namespace())
+
+    asyncio.run(_test())
+
+
+def test_handle_reset_db_rejects_unsafe_target():
+    """A guard failure must stop the reset before opening a session."""
+
+    async def _test():
+        with (
+            patch(
+                "hermes_worker.handlers.commands.validate_reset_target",
+                side_effect=ResetGuardError("unsafe target"),
+            ),
+            patch("hermes_worker.handlers.commands.AsyncSessionLocal") as mock_factory,
+        ):
+            with pytest.raises(ResetGuardError, match="unsafe target"):
+                await handle_reset_db(argparse.Namespace(yes=True))
+            mock_factory.assert_not_called()
+
+    asyncio.run(_test())
+
+
+def test_handle_reset_db_runs_schema_reset():
+    """A confirmed local target must reset through the initialized session."""
+
+    async def _test():
+        session = AsyncMock()
+        session_cm = AsyncMock()
+        session_cm.__aenter__ = AsyncMock(return_value=session)
+        session_cm.__aexit__ = AsyncMock(return_value=False)
+
+        with (
+            patch(
+                "hermes_worker.handlers.commands.validate_reset_target"
+            ) as mock_validate,
+            patch(
+                "hermes_worker.handlers.commands.AsyncSessionLocal",
+                return_value=session_cm,
+            ),
+            patch(
+                "hermes_worker.handlers.commands.reset_local_schema",
+                new_callable=AsyncMock,
+            ) as mock_reset,
+        ):
+            await handle_reset_db(argparse.Namespace(yes=True))
+
+        mock_validate.assert_called_once()
+        mock_reset.assert_awaited_once_with(session)
+
+    asyncio.run(_test())
+
+
+def test_db_lifespan_can_skip_source_sync():
+    """Reset runs need a connection without the normal source-sync write."""
+
+    async def _test():
+        mock_settings = MagicMock()
+        mock_settings.APP = "hermes-worker"
+        mock_settings.db_url = "postgresql+asyncpg://user:pass@localhost/hermes"
+
+        with (
+            patch(
+                "hermes_worker.core.lifespan.get_settings",
+                return_value=mock_settings,
+            ),
+            patch(
+                "hermes_worker.core.lifespan.init_db", new_callable=AsyncMock
+            ) as mock_init,
+            patch("hermes_worker.core.lifespan.close_db", new_callable=AsyncMock),
+        ):
+            async with db_lifespan(sync_sources=False):
+                pass
+
+        mock_init.assert_awaited_once_with(
+            db_url=mock_settings.db_url,
+            sync_sources=False,
+        )
+
+    asyncio.run(_test())
+
+
+def test_run_app_passes_sync_sources_flag():
+    """run_app must forward the command's source-sync preference to the lifespan."""
+
+    async def _test():
+        mock_handler = AsyncMock()
+        args = argparse.Namespace(
+            command="reset-db",
+            handler=mock_handler,
+            sync_sources=False,
+        )
+
+        with patch("hermes_worker.cli.db_lifespan") as mock_lifespan:
+            mock_lifespan.return_value = AsyncMock()
+
+            code = await run_app(args)
+
+        assert code == 0
+        mock_lifespan.assert_called_once_with(sync_sources=False)
+        mock_handler.assert_awaited_once_with(args)
+
+    asyncio.run(_test())
+
+
+def test_run_app_blocks_unsafe_reset_before_lifespan():
+    """The reset guard must run before the database engine is initialized."""
+
+    async def _test():
+        mock_handler = AsyncMock()
+        args = argparse.Namespace(
+            command="reset-db",
+            handler=mock_handler,
+            requires_local_db=True,
+        )
+
+        with (
+            patch(
+                "hermes_worker.cli.validate_reset_target",
+                side_effect=ResetGuardError("unsafe target"),
+            ) as mock_guard,
+            patch("hermes_worker.cli.db_lifespan") as mock_lifespan,
+        ):
+            code = await run_app(args)
+
+        assert code == 1
+        mock_guard.assert_called_once()
+        mock_lifespan.assert_not_called()
+        mock_handler.assert_not_awaited()
 
     asyncio.run(_test())
 

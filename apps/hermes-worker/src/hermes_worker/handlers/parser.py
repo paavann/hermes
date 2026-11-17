@@ -3,6 +3,7 @@ from hermes_worker.handlers.commands import (
     WorkerCmd,
     handle_all,
     handle_lifecycle,
+    handle_reset_db,
     handle_sync,
 )
 
@@ -37,6 +38,26 @@ def build_parser() -> argparse.ArgumentParser:
                 action="store_true",
                 help="Force sync of all sources regardless of interval",
             )
-        sub.set_defaults(handler=handler)
+        sub.set_defaults(
+            handler=handler,
+            sync_sources=True,
+            requires_local_db=False,
+        )
+
+    reset = subparsers.add_parser(
+        WorkerCmd.RESET.value,
+        help="Drop all local database objects and recreate PostGIS/vector extensions",
+    )
+    reset.add_argument(
+        "--yes",
+        action="store_true",
+        required=True,
+        help="Required confirmation for dropping local database objects",
+    )
+    reset.set_defaults(
+        handler=handle_reset_db,
+        sync_sources=False,
+        requires_local_db=True,
+    )
 
     return parser

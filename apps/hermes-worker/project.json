@@ -101,6 +101,13 @@
         "command": "uv run hermes-worker run-lifecycle",
         "cwd": "{projectRoot}"
       }
+    },
+    "reset-db": {
+      "executor": "@nxlv/python:run-commands",
+      "options": {
+        "command": "uv run hermes-worker reset-db --yes",
+        "cwd": "{projectRoot}"
+      }
     }
   },
   "tags": [
