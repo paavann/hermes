@@ -32,7 +32,6 @@ Langfuse tracing provides visibility into model routing, latencies, and token sp
 
 - **Opt-in Activation**: Initialized when both `langfuse_public_key` and `langfuse_secret_key` are provided in `AiConfig`. If omitted, extraction and geocoding run without telemetry overhead.
 - **Instrumented Spans**:
-  - `event-extract` (`EventExtractor.extract`): Traces batch article deduplication and event consensus evaluation.
   - `tl-analyze` (`TlExtractor.analyze`): Records headline triage and Wikipedia search query derivation.
   - `tl-extract` (`TlExtractor.extract`): Captures Wikipedia prose extraction, milestone resolution, and causal DAG generation.
 - **Flush-on-Shutdown Guarantee**: The SDK client is cleanly drained via `LlmService.aclose()` -> `get_client().flush()`, ensuring telemetry batches are delivered before process exit or container teardown.
@@ -70,7 +69,7 @@ The library is configured via the frozen dataclass `AiConfig`:
 All external consumers interact with the high-level `HermesAi` facade:
 
 ```python
-from hermes_ai import AiConfig, ArticleInput, HermesAi, ModelRoute, ModelTarget
+from hermes_ai import AiConfig, HermesAi, ModelRoute, ModelTarget
 
 config = AiConfig(
     routes={
@@ -101,11 +100,7 @@ config = AiConfig(
 )
 
 async with HermesAi(config) as ai:
-    # 1. Event extraction with Langfuse tracing (event-extract span)
-    articles = [ArticleInput(title="...", content="...")]
-    events = await ai.events.extract(articles)
-
-    # 2. Historical timeline synthesis (tl-analyze and tl-extract spans)
+    # Historical timeline synthesis (tl-analyze and tl-extract spans)
     query = await ai.timelines.analyze("Headline of breaking event")
     if query and query.is_tl_worthy:
         timeline = await ai.timelines.extract("Wikipedia_Article_Title", prose="...")

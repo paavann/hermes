@@ -4,15 +4,11 @@ import pytest
 
 from hermes_ai.core.config import AiConfig, ModelRoute, ModelTarget
 from hermes_ai.core.constants import (
-    ARTICLE_BATCH_SIZE,
     DEFAULT_CATEGORY_COLOR,
     PREDEFINED_CATEGORIES,
 )
 from hermes_ai.exceptions import ConfigurationError
 from hermes_ai.models import (
-    ArticleInput,
-    ExtractedEvent,
-    ExtractionResponse,
     TlEdgeExtraction,
     TlExtractionResponse,
     TlNodeExtraction,
@@ -20,7 +16,6 @@ from hermes_ai.models import (
 )
 from hermes_ai.utils.coercion import coerce_to_str
 from hermes_ai.utils.prompts import (
-    ARTICLE_SYSTEM_PROMPT,
     TL_SYSTEM_PROMPT,
     TL_TRIAGE_SYSTEM_PROMPT,
 )
@@ -36,69 +31,6 @@ def test_coerce_to_str() -> None:
     assert coerce_to_str(True) == ""
     assert coerce_to_str(False) == ""
     assert coerce_to_str(42) == "42"
-
-
-def test_extracted_event_coercion() -> None:
-    event = ExtractedEvent(
-        article_index=0,
-        has_location=True,
-        location_name={"en": "Tokyo, Japan"},
-        country_code="JP",
-        headline={"en": "Tokyo Summit Concludes"},
-        summary="Leaders met in Tokyo.",
-        category="POLITICS",
-    )
-    assert event.location_name == "Tokyo, Japan"
-    assert event.headline == "Tokyo Summit Concludes"
-    assert event.category == "POLITICS"
-
-
-def test_article_input_and_extraction_response() -> None:
-    article = ArticleInput(title="Test", content="Content")
-    assert article.title == "Test"
-
-    event = ExtractedEvent(
-        article_index=0,
-        has_location=False,
-        headline="No location",
-        summary="Summary",
-        category="ECONOMY",
-    )
-    response = ExtractionResponse(events=[event])
-    assert len(response.events) == 1
-
-
-def test_extraction_response_raw_list_validation() -> None:
-    raw_list_data = [
-        {
-            "article_index": 0,
-            "has_location": True,
-            "location_name": "Paris, France",
-            "country_code": "FR",
-            "headline": "Peace summit begins",
-            "summary": "Diplomats gather in Paris.",
-            "category": "POLITICS",
-        },
-        {
-            "article_index": 1,
-            "has_location": False,
-            "headline": "Global trade update",
-            "summary": "Supply chains recover.",
-            "category": "ECONOMY",
-        },
-    ]
-    res_from_list = ExtractionResponse.model_validate(raw_list_data)
-    assert len(res_from_list.events) == 2
-    assert res_from_list.events[0].location_name == "Paris, France"
-    assert res_from_list.events[1].category == "ECONOMY"
-
-    raw_json = (
-        '[{"article_index": 0, "has_location": false, "headline": "H", '
-        '"summary": "S", "category": "SCIENCE"}]'
-    )
-    res_from_json = ExtractionResponse.model_validate_json(raw_json)
-    assert len(res_from_json.events) == 1
-    assert res_from_json.events[0].category == "SCIENCE"
 
 
 def test_timeline_models_coercion() -> None:
@@ -257,39 +189,5 @@ def test_ai_config_rejects_invalid_fallback() -> None:
 def test_constants_and_prompts() -> None:
     assert "CONFLICT" in PREDEFINED_CATEGORIES
     assert DEFAULT_CATEGORY_COLOR == "#6B7280"
-    assert ARTICLE_BATCH_SIZE == 10
-    assert "news analyst" in ARTICLE_SYSTEM_PROMPT
-    assert "impact_level" in ARTICLE_SYSTEM_PROMPT
     assert "geopolitical historian" in TL_SYSTEM_PROMPT
     assert "geopolitical researcher" in TL_TRIAGE_SYSTEM_PROMPT
-
-
-def test_extracted_event_impact_level() -> None:
-    event_default = ExtractedEvent(
-        article_index=0,
-        has_location=False,
-        headline="Default event",
-        summary="Event with default impact.",
-        category="WORLD",
-    )
-    assert event_default.impact_level == "MODERATE"
-
-    event_critical = ExtractedEvent(
-        article_index=0,
-        has_location=False,
-        headline="War breaks out",
-        summary="Major war begins.",
-        category="CONFLICT",
-        impact_level="critical",
-    )
-    assert event_critical.impact_level == "CRITICAL"
-
-    event_minor = ExtractedEvent(
-        article_index=0,
-        has_location=False,
-        headline="Festival in town",
-        summary="Local cultural festival held.",
-        category="CULTURE",
-        impact_level="MINOR",
-    )
-    assert event_minor.impact_level == "MINOR"

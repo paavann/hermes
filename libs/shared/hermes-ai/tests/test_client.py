@@ -8,7 +8,6 @@ import pytest
 from hermes_ai.client import HermesAi
 from hermes_ai.core.config import AiConfig, ModelRoute, ModelTarget
 from hermes_ai.exceptions import ConfigurationError, SchemaValidationError
-from hermes_ai.models.events import ArticleInput, ExtractedEvent
 from hermes_ai.models.tl import (
     TlEdgeExtraction,
     TlExtractionResponse,
@@ -97,37 +96,6 @@ def test_call_llm_success(mock_acompletion: AsyncMock, base_config: AiConfig) ->
 
 
 @patch("litellm.Router.acompletion")
-def test_extract_events_success(
-    mock_acompletion: AsyncMock, base_config: AiConfig
-) -> None:
-    client = HermesAi(base_config)
-    event = ExtractedEvent(
-        article_index=0,
-        has_location=True,
-        location_name="Berlin, Germany",
-        country_code="DE",
-        headline="Berlin Tech Summit",
-        summary="Summit held in Berlin.",
-        category="TECHNOLOGY",
-    )
-    mock_res = MagicMock()
-    mock_res.choices = [
-        MagicMock(
-            message=MagicMock(content=f'{{"events": [{event.model_dump_json()}]}}')
-        )
-    ]
-    mock_acompletion.return_value = mock_res
-
-    articles = [ArticleInput(title="Berlin Tech Summit", content="Full text")]
-    results = asyncio.run(client.events.extract(articles))
-
-    assert len(results) == 1
-    assert results[0] is not None
-    assert results[0].headline == "Berlin Tech Summit"
-    assert results[0].category_color == "#06B6D4"
-
-
-@patch("litellm.Router.acompletion")
 def test_extract_tl_success(mock_acompletion: AsyncMock, base_config: AiConfig) -> None:
     client = HermesAi(base_config)
     tl = TlExtractionResponse(
@@ -213,7 +181,6 @@ def test_resource_namespaces(
 ) -> None:
     client = HermesAi(base_config)
     assert client.llm is not None
-    assert client.events is not None
     assert client.timelines is not None
 
     mock_res = MagicMock()

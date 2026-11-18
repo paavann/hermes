@@ -5,6 +5,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from langfuse.types import MaskOtelSpansParams, OtelSpanData
+from pydantic import BaseModel, RootModel
 
 from hermes_ai.core.config import AiConfig, ModelRoute, ModelTarget
 from hermes_ai.exceptions import (
@@ -12,10 +13,17 @@ from hermes_ai.exceptions import (
     ModelExecutionError,
     SchemaValidationError,
 )
-from hermes_ai.models.events import ExtractionResponse
 from hermes_ai.models.tl import TlSearchQuery
 from hermes_ai.services.langfuse import mask_otel_spans
 from hermes_ai.services.llm import LlmService
+
+
+class _FenceItem(BaseModel):
+    label: str
+
+
+class _FenceItems(RootModel[list[_FenceItem]]):
+    pass
 
 
 @pytest.fixture
@@ -175,8 +183,7 @@ def test_llm_service_call_llm_markdown_fence_and_raw_list(
         MagicMock(
             message=MagicMock(
                 content="```json\n"
-                '[{"article_index": 0, "has_location": false, "headline": "Fence", '
-                '"summary": "Test", "category": "POLITICS"}]\n'
+                '[{"label": "Fence"}]\n'
                 "```"
             )
         )
@@ -187,13 +194,13 @@ def test_llm_service_call_llm_markdown_fence_and_raw_list(
         svc.call_llm(
             sys_prompt="system",
             user_prompt="user",
-            res_model=ExtractionResponse,
-            schema_name="extraction_response",
+            res_model=_FenceItems,
+            schema_name="fence_items",
         )
     )
     assert res is not None
-    assert len(res.events) == 1
-    assert res.events[0].headline == "Fence"
+    assert len(res.root) == 1
+    assert res.root[0].label == "Fence"
 
 
 @patch("litellm.Router.acompletion")
@@ -574,3 +581,169 @@ def test_gen_embeddings_uses_embed_route_directly(
         input=["test text"],
         encoding_format="float",
     )
+
+
+def _task_config() -> AiConfig:
+    return AiConfig(
+        routes={
+            "extractor": ModelRoute(
+                primary=ModelTarget(model="mistral/large", api_key="key", rpm=60)
+            ),
+            "label": ModelRoute(
+                primary=ModelTarget(model="mistral/small", api_key="key", rpm=60)
+            ),
+        },
+        rpm_limit=60,
+    )
+
+
+def _completion(content: str, *, prompt_tokens: int = 10, output_tokens: int = 5):
+    res = MagicMock()
+    res.choices = [MagicMock(message=MagicMock(content=content))]
+    res.usage = MagicMock(
+        prompt_tokens=prompt_tokens,
+        completion_tokens=output_tokens,
+    )
+    return res
+
+
+def test_complete_json_uses_named_route_and_records_usage() -> None:
+    svc = LlmService(_task_config())
+
+    with patch("litellm.Router.acompletion", new_callable=AsyncMock) as mock_call:
+        mock_call.return_value = _completion('{"is_tl_worthy": false}')
+
+        res = asyncio.run(
+            svc.complete_json(
+                task="label",
+                sys_prompt="system",
+                user_prompt="user",
+                res_model=TlSearchQuery,
+                schema_name="triage",
+            )
+        )
+
+    assert res.is_tl_worthy is False
+    assert mock_call.call_args.kwargs["model"] == "label"
+    assert svc.usage.calls == 1
+    assert svc.usage.input_tokens == 10
+    assert svc.usage.output_tokens == 5
+    assert svc.usage.repairs == 0
+
+
+def test_complete_json_repairs_once_on_schema_mismatch() -> None:
+    svc = LlmService(_task_config())
+
+    with patch("litellm.Router.acompletion", new_callable=AsyncMock) as mock_call:
+        mock_call.side_effect = [
+            _completion('{"invalid": "data"}'),
+            _completion('{"is_tl_worthy": true, "wiki_search_query": "Treaty"}'),
+        ]
+
+        res = asyncio.run(
+            svc.complete_json(
+                task="label",
+                sys_prompt="system",
+                user_prompt="user",
+                res_model=TlSearchQuery,
+                schema_name="triage",
+            )
+        )
+
+    assert res.is_tl_worthy is True
+    assert res.wiki_search_query == "Treaty"
+    assert svc.usage.calls == 2
+    assert svc.usage.repairs == 1
+    repair_prompt = mock_call.call_args_list[1].kwargs["messages"][1]["content"]
+    assert "Validation error" in repair_prompt
+
+
+def test_complete_json_raises_after_repair_fails() -> None:
+    svc = LlmService(_task_config())
+
+    with patch("litellm.Router.acompletion", new_callable=AsyncMock) as mock_call:
+        mock_call.side_effect = [
+            _completion('{"invalid": "data"}'),
+            _completion('{"still": "wrong"}'),
+        ]
+
+        with pytest.raises(SchemaValidationError, match="after repair"):
+            asyncio.run(
+                svc.complete_json(
+                    task="label",
+                    sys_prompt="system",
+                    user_prompt="user",
+                    res_model=TlSearchQuery,
+                    schema_name="triage",
+                )
+            )
+
+    assert svc.usage.calls == 2
+    assert svc.usage.repairs == 1
+
+
+def test_complete_json_can_disable_repair() -> None:
+    svc = LlmService(_task_config())
+
+    with patch("litellm.Router.acompletion", new_callable=AsyncMock) as mock_call:
+        mock_call.return_value = _completion('{"invalid": "data"}')
+
+        with pytest.raises(SchemaValidationError):
+            asyncio.run(
+                svc.complete_json(
+                    task="label",
+                    sys_prompt="system",
+                    user_prompt="user",
+                    res_model=TlSearchQuery,
+                    schema_name="triage",
+                    repair=False,
+                )
+            )
+
+    assert mock_call.call_count == 1
+    assert svc.usage.repairs == 0
+
+
+def test_complete_json_requires_configured_task_route() -> None:
+    svc = LlmService(_task_config())
+
+    with pytest.raises(ConfigurationError, match="adjudicate route"):
+        asyncio.run(
+            svc.complete_json(
+                task="adjudicate",
+                sys_prompt="system",
+                user_prompt="user",
+                res_model=TlSearchQuery,
+                schema_name="triage",
+            )
+        )
+
+
+def test_reset_usage_clears_accounting() -> None:
+    svc = LlmService(_task_config())
+
+    with patch("litellm.Router.acompletion", new_callable=AsyncMock) as mock_call:
+        mock_call.return_value = _completion('{"is_tl_worthy": false}')
+        asyncio.run(
+            svc.complete_json(
+                task="label",
+                sys_prompt="system",
+                user_prompt="user",
+                res_model=TlSearchQuery,
+                schema_name="triage",
+            )
+        )
+
+    svc.reset_usage()
+
+    assert svc.usage.calls == 0
+    assert svc.usage.input_tokens == 0
+    assert svc.usage.output_tokens == 0
+    assert svc.usage.repairs == 0
+
+
+def test_usage_is_not_shared_between_services() -> None:
+    first = LlmService(_task_config())
+    second = LlmService(_task_config())
+
+    assert first.usage is not second.usage

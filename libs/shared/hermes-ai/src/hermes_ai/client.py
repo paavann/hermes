@@ -5,7 +5,6 @@ from types import TracebackType
 from typing import TYPE_CHECKING, Self, cast
 
 from hermes_ai.core.config import AiConfig
-from hermes_ai.extractors.events import EventExtractor
 from hermes_ai.extractors.tl import TlExtractor
 from hermes_ai.services.llm import LlmService
 
@@ -24,7 +23,6 @@ class HermesAi:
     def __init__(self, config: AiConfig) -> None:
         self.config = config
         self.llm = LlmService(self.config)
-        self.events = EventExtractor(self.llm)
         self.timelines = TlExtractor(self.llm)
         logger.info("hermes ai initialized.")
 

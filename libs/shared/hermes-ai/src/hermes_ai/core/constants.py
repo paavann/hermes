@@ -42,4 +42,3 @@ PREDEFINED_CATEGORIES: dict[str, dict[str, str]] = {
 }
 
 DEFAULT_CATEGORY_COLOR: str = "#6B7280"
-ARTICLE_BATCH_SIZE: int = 10

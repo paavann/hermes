@@ -7,7 +7,6 @@ import pytest
 from hermes_ai.client import HermesAi
 from hermes_ai.core.config import AiConfig, ModelRoute, ModelTarget
 from hermes_ai.exceptions import GeocodingError
-from hermes_ai.models.events import ArticleInput, GroundedEvent
 from hermes_ai.models.tl import GroundedTlNode
 from hermes_ai.services.geocoding import (
     _NOT_FOUND,
@@ -212,51 +211,6 @@ def test_call_nominatim_retries_on_429() -> None:
         assert res.latitude == 51.5074
         assert res.longitude == -0.1278
         assert client.get.call_count == 2
-
-    asyncio.run(_run())
-
-
-def test_autonomous_grounding_in_event_extractor() -> None:
-    async def _run() -> None:
-        config = AiConfig(
-            routes={
-                "extractor": ModelRoute(
-                    primary=ModelTarget(model="mistral/mistral-large", api_key="key")
-                )
-            }
-        )
-        client = HermesAi(config)
-        geo_service = GeocodingService()
-
-        # Mock LLM response with location
-        json_content = (
-            '{"events": [{"article_index": 0, "has_location": true, "location_name": '
-            '"Paris, France", "country_code": "FR", "headline": "Summit in Paris", '
-            '"summary": "World leaders meet in Paris.", "category": "POLITICS"}]}'
-        )
-        mock_msg = AsyncMock(content=json_content)
-        mock_res = AsyncMock(choices=[AsyncMock(message=mock_msg)])
-
-        with (
-            patch(
-                "litellm.Router.acompletion", new_callable=AsyncMock
-            ) as mock_acompletion,
-            patch.object(
-                geo_service,
-                "geocode",
-                new_callable=AsyncMock,
-                return_value=GeocodingResult(48.8566, 2.3522, "Paris, France"),
-            ) as mock_geo,
-        ):
-            mock_acompletion.return_value = mock_res
-            articles = [ArticleInput(title="Paris Summit", content="Meeting details")]
-            events = await client.events.extract(articles, geocoding_svc=geo_service)
-            assert len(events) == 1
-            event = events[0]
-            assert isinstance(event, GroundedEvent)
-            assert event.latitude == 48.8566
-            assert event.longitude == 2.3522
-            mock_geo.assert_awaited_once_with("Paris, France")
 
     asyncio.run(_run())
 

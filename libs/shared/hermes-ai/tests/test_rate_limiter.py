@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 from hermes_ai.client import HermesAi
 from hermes_ai.core.config import AiConfig, ModelRoute, ModelTarget
-from hermes_ai.models.events import ArticleInput
+from hermes_ai.models.tl import TlSearchQuery
 from hermes_ai.utils.rate_limiter import (
     CircuitBreakerOpenError,
     TbRateLimiter,
@@ -100,13 +100,20 @@ def test_client_rate_limiter_wiring() -> None:
             mock_res.choices = [
                 MagicMock(
                     message=MagicMock(
-                        content='{"events": [{"article_index": 0, "has_location": false, "headline": "H", "summary": "S", "category": "WORLD"}]}'
+                        content=TlSearchQuery(
+                            is_tl_worthy=True,
+                            wiki_search_query="Treaty",
+                        ).model_dump_json()
                     )
                 )
             ]
             mock_acompletion.return_value = mock_res
-            articles = [ArticleInput(title="T", content="C")]
-            await client.events.extract(articles)
+            await client.llm.call_llm(
+                sys_prompt="system",
+                user_prompt="user",
+                res_model=TlSearchQuery,
+                schema_name="triage",
+            )
             assert mock_acquire.called
 
         # Verify embed_rate_limiter.acquire is called during gen_embeddings
