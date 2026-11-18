@@ -126,7 +126,7 @@ flowchart TD
 
 ## 3. Ingestion Worker & Job Foundation
 
-The worker no longer runs a monolithic ingestion service. Ingestion and event construction are being rebuilt as one staged pipeline with explicit, separately scheduled commands. Phase 1 ships the runtime and maintenance surface; `ingest-articles` and `build-events` are added with their stages in later phases.
+The worker no longer runs a monolithic ingestion service. Ingestion and event construction are being rebuilt as one staged pipeline with explicit, separately scheduled commands. Phase 1 ships the runtime and maintenance surface; Phase 2 adds `ingest-articles` and the deduplicated article ledger; `build-events` follows with its stages.
 
 ```mermaid
 flowchart LR
@@ -142,12 +142,12 @@ flowchart LR
 
 | Command | Schedule | Purpose |
 | :--- | :--- | :--- |
-| `ingest-articles` | every 15 min | Fetch feeds, write the article ledger, label, embed, assign syndication family. Added in Phase 2/3. |
+| `ingest-articles` | every 15 min | Sync sources, fetch due feeds, and write the deduplicated article ledger. Labeling, embeddings, and families arrive in Phase 3. |
 | `build-events` | hourly | Cluster articles into events, describe, verify, score, update threads. Added in Phase 4/5. |
 | `maintain-events` | daily | Requeue abandoned article claims and apply event lifecycle transitions. |
 | `healthcheck` | on demand | Read-only connectivity, schema, queue depth, and stale-claim probe. |
 
-`maintain-events` and `healthcheck` exist today. There is no feature flag and no parallel legacy path.
+`ingest-articles`, `maintain-events`, and `healthcheck` exist today. `audit-sources` is a read-only feed probe used to keep the source registry evidence-based. There is no feature flag and no parallel legacy path.
 
 ### 3.2 Work Queue and Execution Record
 
