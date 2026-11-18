@@ -133,10 +133,10 @@ hermes/
    npx nx dev hermes
    ```
 
-7. **(Optional) Run a worker ingestion sync**:
+7. **(Optional) Run worker maintenance**:
    ```bash
-   # Executes a one-shot fetch, deduplication, and geocoding pass
-   npx nx run hermes-worker:run-sync
+   # Requeues abandoned article claims and applies event lifecycle transitions
+   npx nx run hermes-worker:maintain-events
    ```
 
 ---

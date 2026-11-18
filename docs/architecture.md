@@ -104,10 +104,10 @@ flowchart TD
 ### C. Ingestion & Lifecycle Worker (`apps/hermes-worker`)
 - **Hosting Platform**: **AWS ECS Fargate** (Sydney region: `ap-southeast-2`).
 - **Compute Sizing**: `0.25 vCPU` and `512 MB RAM` running an ARM64 (AWS Graviton) Linux container image (~319 MB) hosted in a private **Amazon ECR** repository.
-- **Scheduling**: **Amazon EventBridge** triggers execution three times daily (`cron(0 0,8,16 * * ? *)`) via ECS `RunTask`.
+- **Scheduling**: **Amazon EventBridge** triggers one-shot executions via ECS `RunTask`. Production currently runs the legacy schedule three times daily (`cron(0 0,8,16 * * ? *)`); cutover splits it into ingest, build, and maintenance schedules.
 - **Ephemeral Run-and-Die Execution Model**:
-  - The worker process spins up on demand, wraps database connections within [`db_lifespan()`](../apps/hermes-worker/src/hermes_worker/core/lifespan.py), and executes `hermes-worker run-all` (lifecycle transitions and due source synchronization).
-  - Typical runtime is **5 to 10 minutes**.
+  - The worker process spins up on demand, wraps database connections within [`db_lifespan()`](../apps/hermes-worker/src/hermes_worker/core/lifespan.py), and executes one command such as `hermes-worker maintain-events`.
+  - Typical runtime is **5 to 10 minutes**. At cutover, EventBridge schedules are split across `ingest-articles`, `build-events`, and `maintain-events`.
   - Upon task completion, the container terminates cleanly (`sys.exit(0)` on success or `sys.exit(1)` on error). Fargate deallocates compute resources immediately, terminating billing charges.
   - Telemetry and stdout/stderr logs stream to **Amazon CloudWatch Logs** under `/ecs/hermes-worker`.
 
@@ -124,63 +124,48 @@ flowchart TD
 
 ---
 
-## 3. Data Ingestion & Consensus Pipeline
+## 3. Ingestion Worker & Job Foundation
 
-The batch synchronization pipeline in [`SyncService`](../apps/hermes-worker/src/hermes_worker/services/sync.py) processes incoming articles through a strict sequence optimized for token efficiency and memory constraints:
+The worker no longer runs a monolithic ingestion service. Ingestion and event construction are being rebuilt as one staged pipeline with explicit, separately scheduled commands. Phase 1 ships the runtime and maintenance surface; `ingest-articles` and `build-events` are added with their stages in later phases.
 
 ```mermaid
-sequenceDiagram
-    autonumber
-    participant EB as Amazon EventBridge
-    participant W as Hermes Worker (Fargate)
-    participant Neon as Neon PostgreSQL (PostGIS / pgvector)
-    participant AI as LiteLLM (Mistral / NIM)
-    participant Nom as OSM Nominatim
-
-    EB->>W: Triggers RunTask (3x daily)
-    Note over W: Initialize db_lifespan() pool
-    W->>Neon: Run lifecycle score decay & status transitions (ACTIVE -> STALE -> ARCHIVED)
-    W->>Neon: Fetch due sources (last_fetched_at + interval <= now)
-    
-    loop Bounded Concurrency (asyncio.Semaphore = 5)
-        W->>W: Fetch articles from RSS / GDELT / Sitemaps
-        W->>Neon: Deduplicate against existing article URLs
-        
-        loop Bounded Batches (ARTICLE_BATCH_SIZE = 10)
-            W->>AI: Generate dense vector embeddings (nemotron-3-embed-1b)
-            W->>Neon: Query active events within cosine distance threshold (< 0.25)
-            W->>AI: Extract event attributes & confirm match vs candidate events
-            
-            alt Article matches existing Event
-                W->>Neon: Add article to event, update article_count & recalculate score
-            else Novel Event Discovered
-                opt Has location name
-                    W->>Nom: Resolve coordinates (Token-bucket paced, 1 req/s)
-                end
-                W->>Neon: Insert new Event with POINT(lng, lat) & halfvec(2048) embedding
-            end
-        end
-        W->>Neon: Update source last_fetched_at timestamp
-    end
-    Note over W: Cleanly dispose engine pool & exit (Fargate container destroyed)
+flowchart LR
+    EventBridge["Amazon EventBridge\n(ingest / build / maintain schedules)"] -->|"ecs:RunTask"| Fargate["Hermes Worker (Fargate)"]
+    Fargate --> Lifespan["db_lifespan()\ninit_db -> close_db"]
+    Lifespan --> Jobs["jobs/ runner\nordered stages + advisory lock"]
+    Jobs --> Neon[("Neon PostgreSQL\n(PostGIS + pgvector)")]
+    Jobs --> AI["LiteLLM routes\nlabel / adjudicate / describe"]
+    Jobs --> Nom["OSM Nominatim\n1 req/s"]
 ```
 
-### Architectural Optimizations ("The Why")
+### 3.1 Command Surface
 
-1. **Embed Before Extract (Vector Pre-Filtering)**:
-   - Articles are embedded using `nvidia_nim/nvidia/nemotron-3-embed-1b` (2048-dimensional vectors) before prompting an LLM.
-   - Postgres evaluates approximate nearest neighbors using an HNSW index with `halfvec_cosine_ops`.
-   - Instead of performing $O(N^2)$ pairwise LLM text comparisons, candidate events within cosine distance $< 0.25$ are passed directly into the LLM extraction prompt for confirmation or new event creation.
+| Command | Schedule | Purpose |
+| :--- | :--- | :--- |
+| `ingest-articles` | every 15 min | Fetch feeds, write the article ledger, label, embed, assign syndication family. Added in Phase 2/3. |
+| `build-events` | hourly | Cluster articles into events, describe, verify, score, update threads. Added in Phase 4/5. |
+| `maintain-events` | daily | Requeue abandoned article claims and apply event lifecycle transitions. |
+| `healthcheck` | on demand | Read-only connectivity, schema, queue depth, and stale-claim probe. |
 
-2. **Memory Bounds on Fargate (512 MB RAM)**:
-   - Untrusted XML parsing and web scraping can cause memory bloat in Python.
-   - Processing feeds in chunks of `ARTICLE_BATCH_SIZE = 10` constrained by an `asyncio.Semaphore(5)` ensures memory footprint remains well beneath the 512 MB container threshold.
+`maintain-events` and `healthcheck` exist today. There is no feature flag and no parallel legacy path.
 
-3. **Grounded Geocoding Shield**:
-   - LLMs are never permitted to guess or generate latitude/longitude coordinates directly.
-   - The LLM extracts only normalized location names (e.g. `"Rafah, Gaza Strip"`), which are resolved by [`GeocodingService`](../libs/shared/hermes-ai/src/hermes_ai/services/geocoding.py) against OpenStreetMap Nominatim.
-   - Paced by a token-bucket rate limiter enforcing the Nominatim 1 request/second usage policy.
-   - Unresolvable locations are stored as negative cache entries (`latitude=NULL`, `longitude=NULL`), preventing repeated outbound calls.
+### 3.2 Work Queue and Execution Record
+
+- `articles.ingest_status` is the only work queue: `NEW → ANALYZING → LABELED → CLUSTERED`, with `REJECTED` and `FAILED` as terminal states.
+- Claims use `UPDATE … WHERE id IN (SELECT … FOR UPDATE SKIP LOCKED) … RETURNING`, bounded by `ARTICLE_CLAIM_BATCH_SIZE`.
+- An abandoned `ANALYZING` claim older than `ARTICLE_CLAIM_STALE_MINUTES` is requeued by `maintain-events`; exhausted attempts become `FAILED`.
+- There is no run-telemetry table. The execution record is the exit code, structured stage logs, and the article claim fields (`claimed_at`, `claimed_by`, `attempt_count`, `last_error`).
+- Stages own their transaction boundaries. Domain services never commit; a crash before commit leaves the claim recoverable.
+
+### 3.3 Bounded Work and Memory
+
+- The Fargate task has 0.25 vCPU and 512 MB RAM. Feeds, articles, bodies, and LLM calls are processed in bounded batches.
+- Network calls are rate-limited: Nominatim at 1 req/s, plus per-route LLM/embedding token buckets.
+- Every stage reserves LLM calls through a per-run budget; exhaustion fails the stage and leaves remaining work queued.
+
+### 3.4 Grounded Geocoding Shield
+
+LLMs never generate coordinates. They return normalized location names, which [`GeocodingService`](../libs/shared/hermes-ai/src/hermes_ai/services/geocoding.py) resolves through OpenStreetMap Nominatim. The service enforces a 1 req/s token bucket, caches results in `geocode_cache`, deduplicates in-flight requests, and stores unresolvable names as negative cache entries (`latitude=NULL`, `longitude=NULL`) to prevent repeated outbound calls.
 
 ---
 
@@ -338,7 +323,6 @@ Hermes instruments LLM operations using the **Langfuse Python SDK v3** (`langfus
 
 | Span Identifier | Component | Purpose |
 | :--- | :--- | :--- |
-| `event-extract` | `EventExtractor.extract` | Traces batch article deduplication and event corroboration across LiteLLM deployments. |
 | `tl-analyze` | `TlExtractor.analyze` | Records headline triage evaluation and Wikipedia query generation. |
 | `tl-extract` | `TlExtractor.extract` | Measures Wikipedia prose extraction, milestone node structuring, and causal edge linking. |
 
