@@ -28,7 +28,10 @@ async def run_app(args: argparse.Namespace) -> int:
                     db_host=settings.DB_HOST,
                     db_name=settings.DB_NAME,
                 )
-            async with db_lifespan(sync_sources=getattr(args, "sync_sources", True)):
+            if getattr(args, "requires_db", True):
+                async with db_lifespan():
+                    await handler(args)
+            else:
                 await handler(args)
             return 0
         except ResetGuardError as exc:

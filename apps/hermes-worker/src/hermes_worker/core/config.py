@@ -80,6 +80,11 @@ class Settings(BaseSettings):
     ARTICLE_MAX_ATTEMPTS: int = Field(default=3, ge=1)
     MAX_LLM_CALLS_PER_RUN: int = Field(default=120, gt=0)
 
+    # ingestion window and fetch fan-out.
+    ARTICLE_MAX_AGE_HOURS: int = Field(default=72, gt=0)
+    ARTICLE_FUTURE_SKEW_HOURS: int = Field(default=2, ge=0)
+    SOURCE_FETCH_CONCURRENCY: int = Field(default=5, gt=0)
+
     @model_validator(mode="after")
     def validate_semantics(self) -> Self:
         if self.EVENT_ARCHIVE_HOURS <= self.EVENT_STALE_HOURS:

@@ -8,7 +8,9 @@ from hermes_worker.cli import build_parser, main, run_app
 from hermes_worker.core.lifespan import db_lifespan
 from hermes_worker.handlers.commands import (
     WorkerCmd,
+    handle_audit_sources,
     handle_healthcheck,
+    handle_ingest_articles,
     handle_maintain_events,
     handle_reset_db,
 )
@@ -19,27 +21,37 @@ def test_build_parser_commands():
     """Verifies CLI argument parsing and handler dispatch bindings."""
     parser = build_parser()
 
+    args_ingest = parser.parse_args(["ingest-articles"])
+    assert args_ingest.command == WorkerCmd.INGEST_ARTICLES.value
+    assert args_ingest.handler is handle_ingest_articles
+    assert args_ingest.force is False
+
+    args_force = parser.parse_args(["ingest-articles", "--force"])
+    assert args_force.force is True
+
     args_maint = parser.parse_args(["maintain-events"])
     assert args_maint.command == WorkerCmd.MAINTAIN_EVENTS.value
     assert args_maint.handler is handle_maintain_events
-    assert args_maint.sync_sources is False
 
     args_check = parser.parse_args(["healthcheck"])
     assert args_check.command == WorkerCmd.HEALTHCHECK.value
     assert args_check.handler is handle_healthcheck
-    assert args_check.sync_sources is False
+
+    args_audit = parser.parse_args(["audit-sources"])
+    assert args_audit.command == WorkerCmd.AUDIT_SOURCES.value
+    assert args_audit.handler is handle_audit_sources
+    assert args_audit.requires_db is False
 
     args_reset = parser.parse_args(["reset-db", "--yes"])
     assert args_reset.command == WorkerCmd.RESET.value
     assert args_reset.yes
-    assert args_reset.sync_sources is False
     assert args_reset.requires_local_db is True
     assert args_reset.handler is handle_reset_db
 
 
 @pytest.mark.parametrize(
     "command",
-    ["run-sync", "run-all", "run-lifecycle"],
+    ["run-sync", "run-all", "run-lifecycle", "pipeline-ingest"],
 )
 def test_legacy_commands_are_gone(command: str):
     parser = build_parser()
@@ -54,6 +66,22 @@ def test_build_parser_reset_requires_confirmation():
 
     with pytest.raises(SystemExit):
         parser.parse_args(["reset-db"])
+
+
+def test_handle_ingest_articles_delegates():
+    async def _test():
+        with patch(
+            "hermes_worker.handlers.commands.run_ingest_articles",
+            new_callable=AsyncMock,
+        ) as mock_run:
+            await handle_ingest_articles(
+                argparse.Namespace(force=True),
+            )
+
+        mock_run.assert_awaited_once()
+        assert mock_run.await_args.kwargs["force"] is True
+
+    asyncio.run(_test())
 
 
 def test_handle_maintain_events_delegates():
@@ -140,53 +168,49 @@ def test_handle_reset_db_runs_schema_reset():
     asyncio.run(_test())
 
 
-def test_db_lifespan_can_skip_source_sync():
-    """Reset runs need a connection without the normal source-sync write."""
-
+def test_handle_audit_sources_prints_report():
     async def _test():
-        mock_settings = MagicMock()
-        mock_settings.APP = "hermes-worker"
-        mock_settings.db_url = "postgresql+asyncpg://user:pass@localhost/hermes"
-
+        audit = object()
         with (
             patch(
-                "hermes_worker.core.lifespan.get_settings",
-                return_value=mock_settings,
+                "hermes_worker.handlers.commands.load_sources_config",
+                new_callable=AsyncMock,
+                return_value=[{"slug": "bbc-world"}],
             ),
             patch(
-                "hermes_worker.core.lifespan.init_db", new_callable=AsyncMock
-            ) as mock_init,
-            patch("hermes_worker.core.lifespan.close_db", new_callable=AsyncMock),
+                "hermes_worker.handlers.commands.audit_sources",
+                new_callable=AsyncMock,
+                return_value=[audit],
+            ) as mock_audit,
+            patch(
+                "hermes_worker.handlers.commands.format_audit",
+                return_value=["bbc-world | report line"],
+            ) as mock_format,
         ):
-            async with db_lifespan(sync_sources=False):
-                pass
+            await handle_audit_sources(argparse.Namespace())
 
-        mock_init.assert_awaited_once_with(
-            db_url=mock_settings.db_url,
-            sync_sources=False,
-        )
+        mock_audit.assert_awaited_once()
+        mock_format.assert_called_once_with([audit])
 
     asyncio.run(_test())
 
 
-def test_run_app_passes_sync_sources_flag():
-    """run_app must forward the command's source-sync preference to the lifespan."""
+def test_run_app_skips_db_for_audit():
+    """audit-sources is a network probe and must not open a database session."""
 
     async def _test():
         mock_handler = AsyncMock()
         args = argparse.Namespace(
-            command="reset-db",
+            command="audit-sources",
             handler=mock_handler,
-            sync_sources=False,
+            requires_db=False,
         )
 
         with patch("hermes_worker.cli.db_lifespan") as mock_lifespan:
-            mock_lifespan.return_value = AsyncMock()
-
             code = await run_app(args)
 
         assert code == 0
-        mock_lifespan.assert_called_once_with(sync_sources=False)
+        mock_lifespan.assert_not_called()
         mock_handler.assert_awaited_once_with(args)
 
     asyncio.run(_test())

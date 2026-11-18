@@ -30,6 +30,7 @@ def test_complete_schema_reports_ok() -> None:
         columns=_complete_columns(),
         ingest_constraint=_constraint(),
         claim_index_exists=True,
+        url_identity_index_exists=True,
     )
     assert report == SchemaReport(())
     assert report.ok is True
@@ -43,6 +44,7 @@ def test_missing_columns_are_named() -> None:
         columns=columns,
         ingest_constraint=_constraint(),
         claim_index_exists=True,
+        url_identity_index_exists=True,
     )
 
     assert report.ok is False
@@ -57,6 +59,7 @@ def test_absent_table_reports_all_of_its_columns() -> None:
         columns=columns,
         ingest_constraint=_constraint(),
         claim_index_exists=True,
+        url_identity_index_exists=True,
     )
 
     assert report.ok is False
@@ -71,6 +74,7 @@ def test_missing_ingest_status_values_are_reported() -> None:
         columns=_complete_columns(),
         ingest_constraint=legacy,
         claim_index_exists=True,
+        url_identity_index_exists=True,
     )
 
     assert report.ok is False
@@ -83,6 +87,7 @@ def test_missing_constraint_is_reported() -> None:
         columns=_complete_columns(),
         ingest_constraint=None,
         claim_index_exists=True,
+        url_identity_index_exists=True,
     )
 
     assert report.ok is False
@@ -94,7 +99,35 @@ def test_missing_claim_index_is_reported() -> None:
         columns=_complete_columns(),
         ingest_constraint=_constraint(),
         claim_index_exists=False,
+        url_identity_index_exists=True,
     )
 
     assert report.ok is False
     assert "articles.idx_articles_analyzing_claimed_at" in report.missing
+
+
+def test_missing_url_identity_index_is_reported() -> None:
+    report = evaluate_schema(
+        columns=_complete_columns(),
+        ingest_constraint=_constraint(),
+        claim_index_exists=True,
+        url_identity_index_exists=False,
+    )
+
+    assert report.ok is False
+    assert report.missing == ("articles.uq_articles_canonical_url_hash",)
+
+
+def test_missing_source_feed_metadata_is_reported() -> None:
+    columns = _complete_columns()
+    columns["sources"].discard("fetch_policy")
+
+    report = evaluate_schema(
+        columns=columns,
+        ingest_constraint=_constraint(),
+        claim_index_exists=True,
+        url_identity_index_exists=True,
+    )
+
+    assert report.ok is False
+    assert report.missing == ("sources.fetch_policy",)

@@ -18,6 +18,17 @@ EXPECTED_COLUMNS: Final[dict[str, frozenset[str]]] = {
             "claimed_by",
             "attempt_count",
             "last_error",
+            "canonical_url_hash",
+            "duplicate_of_id",
+        }
+    ),
+    "sources": frozenset(
+        {
+            "fallback_feed_url",
+            "feed_provider",
+            "canonical_domain",
+            "paywall",
+            "fetch_policy",
         }
     ),
 }
@@ -26,7 +37,7 @@ _COLUMNS_SQL = text(
     "SELECT table_name, column_name "
     "FROM information_schema.columns "
     "WHERE table_schema = 'public' "
-    "AND table_name = 'articles'"
+    "AND table_name IN ('articles', 'sources')"
 )
 _INGEST_CONSTRAINT_SQL = text(
     "SELECT pg_get_constraintdef(c.oid) "
@@ -36,6 +47,9 @@ _INGEST_CONSTRAINT_SQL = text(
 )
 _CLAIM_INDEX_SQL = text(
     "SELECT to_regclass('public.idx_articles_analyzing_claimed_at') IS NOT NULL"
+)
+_URL_IDENTITY_INDEX_SQL = text(
+    "SELECT to_regclass('public.uq_articles_canonical_url_hash') IS NOT NULL"
 )
 
 
@@ -53,6 +67,7 @@ def evaluate_schema(
     columns: Mapping[str, set[str]],
     ingest_constraint: str | None,
     claim_index_exists: bool,
+    url_identity_index_exists: bool,
 ) -> SchemaReport:
     missing: list[str] = []
     for table, expected in EXPECTED_COLUMNS.items():
@@ -69,6 +84,9 @@ def evaluate_schema(
 
     if not claim_index_exists:
         missing.append("articles.idx_articles_analyzing_claimed_at")
+
+    if not url_identity_index_exists:
+        missing.append("articles.uq_articles_canonical_url_hash")
 
     return SchemaReport(tuple(missing))
 
@@ -101,6 +119,9 @@ class HealthcheckStage:
                 columns=await _load_columns(session),
                 ingest_constraint=await _load_ingest_constraint(session),
                 claim_index_exists=bool(await session.scalar(_CLAIM_INDEX_SQL)),
+                url_identity_index_exists=bool(
+                    await session.scalar(_URL_IDENTITY_INDEX_SQL)
+                ),
             )
             stats.add("schema_ok", 1 if report.ok else 0)
             if not report.ok:

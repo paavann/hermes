@@ -1,14 +1,20 @@
 import argparse
 import enum
 import logging
+from hermes_db.services import load_sources_config
 from hermes_db.session import AsyncSessionLocal
 from hermes_worker.core.config import Settings, get_settings
-from hermes_worker.jobs.commands import run_healthcheck, run_maintain_events
+from hermes_worker.jobs.commands import (
+    run_healthcheck,
+    run_ingest_articles,
+    run_maintain_events,
+)
 from hermes_worker.services.reset import (
     ResetGuardError,
     reset_local_schema,
     validate_reset_target,
 )
+from hermes_worker.services.source_audit import audit_sources, format_audit
 
 
 logger = logging.getLogger(__name__)
@@ -16,9 +22,18 @@ settings: Settings = get_settings()
 
 
 class WorkerCmd(enum.StrEnum):
+    INGEST_ARTICLES = "ingest-articles"
     MAINTAIN_EVENTS = "maintain-events"
+    AUDIT_SOURCES = "audit-sources"
     HEALTHCHECK = "healthcheck"
     RESET = "reset-db"
+
+
+async def handle_ingest_articles(args: argparse.Namespace) -> None:
+    await run_ingest_articles(
+        settings=settings,
+        force=bool(getattr(args, "force", False)),
+    )
 
 
 async def handle_maintain_events(_args: argparse.Namespace) -> None:
@@ -27,6 +42,17 @@ async def handle_maintain_events(_args: argparse.Namespace) -> None:
 
 async def handle_healthcheck(_args: argparse.Namespace) -> None:
     await run_healthcheck(settings=settings)
+
+
+async def handle_audit_sources(_args: argparse.Namespace) -> None:
+    entries = await load_sources_config()
+    audits = await audit_sources(
+        entries,
+        user_agent=settings.NOMINATIM_USER_AGENT,
+        concurrency=settings.SOURCE_FETCH_CONCURRENCY,
+    )
+    for line in format_audit(audits):
+        logger.info("%s", line)
 
 
 async def handle_reset_db(args: argparse.Namespace) -> None:

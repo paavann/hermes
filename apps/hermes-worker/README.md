@@ -20,7 +20,7 @@ In production, `hermes-worker` runs as an **ephemeral, serverless batch containe
 ```mermaid
 flowchart LR
     EventBridge["Amazon EventBridge\n(ingest / build / maintain schedules)"] -->|"ecs:RunTask"| Fargate["AWS ECS Fargate Task\n0.25 vCPU • 512 MB RAM"]
-    Fargate --> Command["One worker command\n(maintain-events / healthcheck)"]
+    Fargate --> Command["One worker command\n(ingest-articles / maintain-events / healthcheck)"]
     Command --> NeonDB[("Neon PostgreSQL\n(PostGIS + pgvector)")]
     Command -->|"exit 0 / 1"| Teardown["Clean shutdown & pool disposal"]
 ```
@@ -28,7 +28,7 @@ flowchart LR
 ### Key Architectural Invariants
 
 - **12-Factor Run-and-Die Execution**: Contains zero internal loops, cron daemons, or long-lived background schedulers (e.g. Celery or APScheduler). The container boots on demand, executes one command, tears down database pools, and terminates cleanly (`sys.exit(0)` on success, `sys.exit(1)` on error).
-- **Connection Lifespan Management**: Every CLI handler executes within [`db_lifespan()`](src/hermes_worker/core/lifespan.py). On startup it binds connection pools via `init_db(settings.db_url)`; on teardown it invokes `close_db()`, ensuring all connections are disposed before exit.
+- **Connection Lifespan Management**: Every database-backed CLI handler executes within [`db_lifespan()`](src/hermes_worker/core/lifespan.py). On startup it binds connection pools via `init_db(settings.db_url)`; on teardown it invokes `close_db()`, ensuring all connections are disposed before exit. `audit-sources` is network-only and skips database initialization.
 - **Claim-Based Work Queue**: Articles transition through `NEW -> ANALYZING -> LABELED -> CLUSTERED`, with `FAILED` for exhausted retries. Claims use `UPDATE ... FOR UPDATE SKIP LOCKED` and are owned by the stage transaction.
 - **Bounded Work**: Every stage works in bounded batches. Never accumulate all feeds, articles, or events in memory.
 - **Grounded Geocoding Shield**: Enforces OpenStreetMap Nominatim's 1 req/s usage policy via a token-bucket rate limiter. Results are cached in `geocode_cache`, with non-locatable terms permanently stored as negative cache entries (`latitude=NULL`, `longitude=NULL`).
@@ -44,24 +44,28 @@ All tasks can be executed via Nx targets or directly through `uv`:
 
 | Action | Nx Target | Direct CLI Command | Description |
 | :--- | :--- | :--- | :--- |
+| **Ingest Articles** | `npx nx run hermes-worker:ingest-articles` | `uv run hermes-worker ingest-articles` | Syncs the source registry, fetches due feeds, and writes the deduplicated article ledger. Add `--force` to ignore fetch intervals. |
+| **Audit Sources** | `npx nx run hermes-worker:audit-sources` | `uv run hermes-worker audit-sources` | Probes configured feeds and one sample article each. Read-only and never writes the source config. |
 | **Maintain Events** | `npx nx run hermes-worker:maintain-events` | `uv run hermes-worker maintain-events` | Requeues abandoned article claims and applies event score decay / status transitions. |
 | **Healthcheck** | `npx nx run hermes-worker:healthcheck` | `uv run hermes-worker healthcheck` | Verifies database connectivity, claim-queue schema, queue depth, and stale claims. Read-only. |
 | **Reset DB** | `npx nx run hermes-worker:reset-db` | `uv run hermes-worker reset-db --yes` | Drops local database objects only, guarded by an environment/host check. Never use against production. |
 
-The rebuilt ingestion commands `ingest-articles` and `build-events` are added with their stages in later phases. There is no feature flag and no parallel legacy pipeline.
+The `build-events` command is added with its stages in a later phase. There is no feature flag and no parallel legacy pipeline.
 
 ---
 
-## Pipeline Status (Phase 1)
+## Pipeline Status (Phase 2)
 
-Phase 1 establishes the worker job kernel and the article claim queue:
+Phase 1 established the worker job kernel and the article claim queue. Phase 2 adds the ingestion ledger:
 
 1. **Job Runtime**: `jobs/context.py`, `jobs/runner.py`, and `jobs/locks.py` provide the stage protocol, per-run LLM budget, ordered stage execution, and advisory locking.
 2. **Article Claim Queue**: `jobs/queue.py` claims, marks, fails, and requeues articles with `FOR UPDATE SKIP LOCKED`.
-3. **Maintenance**: `maintain-events` requeues stale claims and applies the existing `ACTIVE -> STALE -> ARCHIVED` event lifecycle transitions.
-4. **Healthcheck**: `healthcheck` verifies the claim columns, the expanded `ingeststatus` constraint, the partial claim index, and queue depth.
+3. **Ingestion**: `ingest-articles` syncs the source registry, fetches due feeds with bounded concurrency, applies the freshness window, and inserts canonicalized rows with conflict handling.
+4. **Source Registry**: direct publisher feeds are preferred, Google News feeds remain as fallback for blocked publishers, and paywalled sources use `SUMMARY_ONLY` labels.
+5. **Maintenance**: `maintain-events` requeues stale claims and applies the existing `ACTIVE -> STALE -> ARCHIVED` event lifecycle transitions.
+6. **Healthcheck**: `healthcheck` verifies the claim columns, source feed metadata, URL identity index, expanded `ingeststatus` constraint, partial claim index, and queue depth.
 
-Article ingestion, labeling, clustering, description, scoring, and thread maintenance land in later phases. Production remains on `master` until the cutover phase.
+Article labeling, clustering, description, scoring, and thread maintenance land in later phases. Production remains on `master` until the cutover phase.
 
 ---
 
@@ -90,6 +94,9 @@ Settings are managed via `pydantic-settings` in [`core/config.py`](src/hermes_wo
 | `ARTICLE_CLAIM_BATCH_SIZE` | `50` | Maximum articles claimed or requeued per run. |
 | `ARTICLE_CLAIM_STALE_MINUTES` | `30` | Age at which a claim is considered abandoned and requeued. |
 | `ARTICLE_MAX_ATTEMPTS` | `3` | Claim attempts before an article is marked `FAILED`. |
+| `ARTICLE_MAX_AGE_HOURS` | `72` | Drop feed entries older than this window. |
+| `ARTICLE_FUTURE_SKEW_HOURS` | `2` | Clamp publisher timestamps further in the future than this. |
+| `SOURCE_FETCH_CONCURRENCY` | `5` | Maximum concurrent source fetches per ingest run. |
 | `MAX_LLM_CALLS_PER_RUN` | `120` | Hard per-run structured LLM call budget. |
 | `LABEL_MODEL` / `LABEL_API` | `None` | Optional label-task override; falls back to `LLM_MODEL` / `LLM_API`. |
 | `ADJUDICATE_MODEL` / `ADJUDICATE_API` | `None` | Optional adjudication-task override; falls back to `LLM_MODEL` / `LLM_API`. |
@@ -116,6 +123,12 @@ Settings are managed via `pydantic-settings` in [`core/config.py`](src/hermes_wo
 All commands are executed from the workspace root:
 
 ```bash
+# Fetch due feeds and write the article ledger
+npx nx run hermes-worker:ingest-articles
+
+# Probe every configured feed without writing to the database
+npx nx run hermes-worker:audit-sources
+
 # Requeue stale article claims and apply event lifecycle transitions
 npx nx run hermes-worker:maintain-events
 

@@ -1,7 +1,9 @@
 import argparse
 from hermes_worker.handlers.commands import (
     WorkerCmd,
+    handle_audit_sources,
     handle_healthcheck,
+    handle_ingest_articles,
     handle_maintain_events,
     handle_reset_db,
 )
@@ -14,14 +16,37 @@ def build_parser() -> argparse.ArgumentParser:
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
+    ingest = subparsers.add_parser(
+        WorkerCmd.INGEST_ARTICLES.value,
+        help="Fetch due sources and write the article ledger",
+    )
+    ingest.add_argument(
+        "--force",
+        action="store_true",
+        help="Fetch every active source regardless of its fetch interval",
+    )
+    ingest.set_defaults(
+        handler=handle_ingest_articles,
+        requires_local_db=False,
+    )
+
     maintain = subparsers.add_parser(
         WorkerCmd.MAINTAIN_EVENTS.value,
         help="Requeue abandoned article claims and apply event lifecycle transitions",
     )
     maintain.set_defaults(
         handler=handle_maintain_events,
-        sync_sources=False,
         requires_local_db=False,
+    )
+
+    audit = subparsers.add_parser(
+        WorkerCmd.AUDIT_SOURCES.value,
+        help="Probe configured feeds and sample articles without writing to the database",
+    )
+    audit.set_defaults(
+        handler=handle_audit_sources,
+        requires_local_db=False,
+        requires_db=False,
     )
 
     healthcheck = subparsers.add_parser(
@@ -30,7 +55,6 @@ def build_parser() -> argparse.ArgumentParser:
     )
     healthcheck.set_defaults(
         handler=handle_healthcheck,
-        sync_sources=False,
         requires_local_db=False,
     )
 
@@ -46,7 +70,6 @@ def build_parser() -> argparse.ArgumentParser:
     )
     reset.set_defaults(
         handler=handle_reset_db,
-        sync_sources=False,
         requires_local_db=True,
     )
 

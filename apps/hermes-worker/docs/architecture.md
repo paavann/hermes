@@ -1,6 +1,6 @@
 # Hermes Worker — Architecture & Design Rationale
 
-This document describes the worker's execution model, the target news ingestion architecture, and the Phase 1 job foundation. The target stages are implemented incrementally; each section marks what exists today.
+This document describes the worker's execution model, the target news ingestion architecture, and the phases implemented so far. The target stages are implemented incrementally; each section marks what exists today.
 
 ---
 
@@ -12,7 +12,7 @@ This document describes the worker's execution model, the target news ingestion 
 flowchart TB
     EventBridge["Amazon EventBridge\n(ingest / build / maintain schedules)"] -->|"ecs:RunTask"| Fargate["ECS Fargate Task\n0.25 vCPU • 512 MB RAM"]
     Fargate --> Lifespan["db_lifespan()\ninit_db -> close_db"]
-    Lifespan --> Command["One command\nmaintain-events / healthcheck"]
+    Lifespan --> Command["One command\ningest-articles / maintain-events / healthcheck"]
     Command --> Neon[("Neon PostgreSQL\nPostGIS + pgvector")]
     Command -->|"exit 0 / 1"| Teardown["Pool disposal\nContainer destroyed"]
 ```
@@ -35,7 +35,7 @@ flowchart TB
 
 ## 2. Target Ingestion Architecture
 
-> **Status:** Phase 1 provides the job runtime, article claim queue, maintenance, and healthcheck. Ingestion and event construction are implemented in later phases.
+> **Status:** Phase 1 provides the job runtime, article claim queue, maintenance, and healthcheck. Phase 2 adds `ingest-articles` and the deduplicated article ledger. Event construction is implemented in later phases.
 
 ```mermaid
 flowchart LR
@@ -52,12 +52,12 @@ flowchart LR
 
 | Command | Schedule | Scope | LLM |
 | :--- | :--- | :--- | :--- |
-| `ingest-articles` | every 15 min | Fetch feeds, write the article ledger, label, embed, assign syndication family | yes |
+| `ingest-articles` | every 15 min | Fetch feeds and write the article ledger. Labeling, embeddings, and syndication families land in Phase 3. | no |
 | `build-events` | hourly | Cluster articles into events, describe, verify, score, update threads | yes |
 | `maintain-events` | daily | Requeue stale claims, lifecycle transitions, retention, consistency checks | no |
 | `healthcheck` | on demand | Connectivity, schema, queue depth, stale claims | no |
 
-Phase 1 registers `maintain-events` and `healthcheck`. `ingest-articles` and `build-events` are registered when their stages land; there is no feature flag and no parallel legacy path.
+Phase 1 registers `maintain-events` and `healthcheck`; Phase 2 registers `ingest-articles`. `build-events` is registered when its stages land. There is no feature flag and no parallel legacy path.
 
 ### 2.2 Article Ledger and Claim Queue
 
@@ -78,6 +78,27 @@ stateDiagram-v2
 - `attempt_count` is bounded by `ARTICLE_MAX_ATTEMPTS`.
 - `maintain-events` requeues `ANALYZING` rows older than `ARTICLE_CLAIM_STALE_MINUTES`.
 - A stage commits its own work; `ArticleQueue` never commits. A crash before commit leaves work claimable by the next run.
+
+### 2.2.1 Phase 2 Ingestion Ledger
+
+`ingest-articles` runs a single `INGEST` stage:
+
+1. Sync the `sources` table from `sources.json` in one transaction.
+2. Select due active sources, respecting `fetch_interval_minutes` and failure backoff.
+3. Fetch feeds with `SOURCE_FETCH_CONCURRENCY` (default `5`).
+4. Drop entries older than `ARTICLE_MAX_AGE_HOURS` (default `72`) and clamp future timestamps beyond `ARTICLE_FUTURE_SKEW_HOURS` (default `2`).
+5. Canonicalize URLs (`jobs/urls.py`) and insert ledger rows with `ON CONFLICT DO NOTHING`.
+6. Record source success/failure health.
+
+The ledger stores `title`, original `url`, `canonical_url`, `canonical_url_hash`, `source_id`, `published_at`, `feed_summary`, and `language`. It does not store article bodies; `feed_content` remains unread and is removed at cleanup.
+
+`canonical_url_hash` has a partial unique index where `duplicate_of_id IS NULL`. Re-running the same feed inserts zero rows. `duplicate_of_id` is reserved for the migration backfill and explicit reconciliation; ingest never sets it.
+
+Source feed metadata is config-owned:
+
+- `feed_provider` is `PUBLISHER`, `GOOGLE_NEWS`, or `GDELT`.
+- `fallback_feed_url` is tried only when the primary returns no entries or errors.
+- `paywall` and `fetch_policy` drive Phase 3 body fetching; `SUMMARY_ONLY` sources label from `feed_summary`.
 
 ### 2.3 Bounded Work and Memory
 
@@ -142,7 +163,7 @@ if SINGLE_SOURCE: score = min(score, 45)
 
 ---
 
-## 5. Phase 1 Job Foundation
+## 5. Job Kernel and Implemented Commands
 
 ### 5.1 Modules
 
@@ -152,20 +173,25 @@ jobs/
   runner.py    ordered stage execution and optional advisory lock
   locks.py     per-command Postgres advisory locks
   queue.py     ArticleQueue claim/mark/fail/requeue
-  commands.py  maintain-events and healthcheck command wiring
+  urls.py      URL canonicalization and ledger hash
+  commands.py  ingest-articles, maintain-events, healthcheck wiring
   stages/
+    ingest.py       source sync, feed fetch, ledger insert, source health
     maintenance.py  requeue stale claims + event lifecycle
     healthcheck.py  connectivity, schema, queue depth
 ```
 
 ### 5.2 Command Surface
 
-| Command | Stages registered in Phase 1 | Purpose |
+| Command | Stages registered | Purpose |
 | :--- | :--- | :--- |
+| `ingest-articles` | `INGEST` | Sync sources, fetch due feeds, write the deduplicated ledger |
 | `maintain-events` | `REQUEUE_CLAIMS`, `EVENT_LIFECYCLE` | Recover abandoned claims and apply event decay/transitions |
 | `healthcheck` | `HEALTHCHECK` | Read-only readiness probe |
 
-`healthcheck` does not take a lock: read-only probes must remain available while maintenance is running. `maintain-events` takes its own advisory lock; a second concurrent invocation records `SKIPPED` in logs and exits cleanly.
+`audit-sources` is a standalone network probe with no database session and no stage. It reports feed status, entry counts, sample URLs, body accessibility, and paywall markers so `sources.json` can be updated from evidence.
+
+`healthcheck` does not take a lock: read-only probes must remain available while maintenance is running. `ingest-articles` and `maintain-events` take their own advisory locks; a second concurrent invocation records `SKIPPED` in logs and exits cleanly.
 
 ### 5.3 Execution Record
 
@@ -188,8 +214,10 @@ The worker builds generic `label`, `adjudicate`, and `describe` routes that defa
 `healthcheck` verifies:
 
 - `articles.claimed_at`, `claimed_by`, `attempt_count`, `last_error`
+- `articles.canonical_url_hash`, `articles.duplicate_of_id`
+- `sources.fallback_feed_url`, `feed_provider`, `canonical_domain`, `paywall`, `fetch_policy`
 - The expanded `ingeststatus` check constraint (`ANALYZING`, `FAILED`)
-- The partial index `idx_articles_analyzing_claimed_at`
+- The partial indexes `idx_articles_analyzing_claimed_at` and `uq_articles_canonical_url_hash`
 
 A missing migration raises `SchemaCheckError` naming the exact missing object, rather than failing later on an opaque SQL error.
 

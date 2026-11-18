@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 
 
 class StageName(enum.StrEnum):
+    INGEST = "ingest"
     REQUEUE_CLAIMS = "requeue-claims"
     EVENT_LIFECYCLE = "event-lifecycle"
     HEALTHCHECK = "healthcheck"
@@ -33,6 +34,7 @@ class StageOutcome(enum.StrEnum):
 @dataclass(slots=True)
 class StageStats:
     counters: dict[str, int] = field(default_factory=dict)
+
     def add(self, name: str, amount: int = 1) -> None:
         self.counters[name] = self.counters.get(name, 0) + amount
 
@@ -61,6 +63,7 @@ class LlmBudget:
 class WorkerIdentity:
     hostname: str
     pid: int
+
     @property
     def id(self) -> str:
         return f"{self.hostname}:{self.pid}"[:128]
@@ -110,6 +113,7 @@ class JobContext:
 
 class Stage(Protocol):
     name: StageName
+
     async def run(self, ctx: JobContext) -> StageStats: ...
 
 

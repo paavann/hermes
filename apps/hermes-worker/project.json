@@ -88,6 +88,20 @@
         "cwd": "{projectRoot}"
       }
     },
+    "ingest-articles": {
+      "executor": "@nxlv/python:run-commands",
+      "options": {
+        "command": "uv run hermes-worker ingest-articles",
+        "cwd": "{projectRoot}"
+      }
+    },
+    "audit-sources": {
+      "executor": "@nxlv/python:run-commands",
+      "options": {
+        "command": "uv run hermes-worker audit-sources",
+        "cwd": "{projectRoot}"
+      }
+    },
     "healthcheck": {
       "executor": "@nxlv/python:run-commands",
       "options": {

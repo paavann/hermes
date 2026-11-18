@@ -8,6 +8,7 @@ from hermes_worker.jobs.runner import StageResult, run_stages
 from hermes_worker.jobs.stages import (
     EventLifecycleStage,
     HealthcheckStage,
+    IngestStage,
     RequeueStaleClaimsStage,
 )
 
@@ -16,7 +17,8 @@ logger = logging.getLogger(__name__)
 
 
 MAINTAIN_STAGES: tuple[Stage, ...] = (
-    RequeueStaleClaimsStage(), EventLifecycleStage(),
+    RequeueStaleClaimsStage(),
+    EventLifecycleStage(),
 )
 HEALTHCHECK_STAGES: tuple[Stage, ...] = (HealthcheckStage(),)
 
@@ -27,6 +29,16 @@ def _summarize(results: Sequence[StageResult]) -> str:
     return ", ".join(
         f"{result.stage.value}={result.outcome.value}" for result in results
     )
+
+
+async def run_ingest_articles(*, settings: Settings, force: bool) -> None:
+    async with create_job_context(settings) as ctx:
+        results = await run_stages(
+            ctx,
+            (IngestStage(force=force),),
+            lock_name=LockName.INGEST_ARTICLES,
+        )
+    logger.info("ingest-articles finished: %s.", _summarize(results))
 
 
 async def run_maintain_events(settings: Settings) -> None:

@@ -1,19 +1,20 @@
 import logging
 from collections.abc import Mapping
 from datetime import UTC, datetime
+from urllib.parse import urljoin
 import feedparser
 import httpx
 from hermes_db.services.source import DueSource
-from hermes_worker.core.config import Settings, get_settings
 from hermes_worker.services.fetchers.base import BaseArticleFetcher, ParsedArticle
 
 
 logger = logging.getLogger(__name__)
-settings: Settings = get_settings()
+
+DEFAULT_USER_AGENT: str = "HermesGeospatialNews/1.0"
 
 
 def _parse_date(entry: Mapping[str, object]) -> datetime | None:
-    parsed_time = entry.get("published_parsed")
+    parsed_time = entry.get("published_parsed") or entry.get("updated_parsed")
     if parsed_time and isinstance(parsed_time, (tuple, list)):
         try:
             return datetime(*parsed_time[:6], tzinfo=UTC)
@@ -38,13 +39,15 @@ def _extract_content(entry: Mapping[str, object]) -> str | None:
     return None
 
 
-async def fetch_feed(feed_url: str) -> list[ParsedArticle]:
+async def fetch_feed(
+    feed_url: str, *, user_agent: str = DEFAULT_USER_AGENT
+) -> list[ParsedArticle]:
     async with httpx.AsyncClient() as client:
         res = await client.get(
             feed_url,
             timeout=30.0,
             follow_redirects=True,
-            headers={"User-Agent": settings.NOMINATIM_USER_AGENT},
+            headers={"User-Agent": user_agent},
         )
         res.raise_for_status()
 
@@ -59,7 +62,8 @@ async def fetch_feed(feed_url: str) -> list[ParsedArticle]:
         title = title_val.strip() if isinstance(title_val, str) else ""
 
         url_val = entry.get("link")
-        url = url_val.strip() if isinstance(url_val, str) else ""
+        raw_url = url_val.strip() if isinstance(url_val, str) else ""
+        url = urljoin(str(res.url), raw_url) if raw_url else ""
         if not title or not url:
             continue
 
@@ -82,12 +86,32 @@ async def fetch_feed(feed_url: str) -> list[ParsedArticle]:
 
 
 class RSSFetcher(BaseArticleFetcher):
+    def __init__(self, *, user_agent: str = DEFAULT_USER_AGENT) -> None:
+        self._user_agent = user_agent
+
     async def fetch_articles(self, source: DueSource) -> list[ParsedArticle]:
-        if not source.feed_url:
+        urls = [url for url in (source.feed_url, source.fallback_feed_url) if url]
+        if not urls:
             logger.warning(
                 "source '%s' has no feed_url configured for RSS fetching.",
                 source.name,
             )
             return []
 
-        return await fetch_feed(source.feed_url)
+        last_error: Exception | None = None
+        responded = False
+        for url in urls:
+            try:
+                articles = await fetch_feed(url, user_agent=self._user_agent)
+            except Exception as exc:
+                last_error = exc
+                logger.warning("feed fetch failed for %s: %s.", url, exc)
+                continue
+
+            responded = True
+            if articles:
+                return articles
+
+        if last_error is not None and not responded:
+            raise last_error
+        return []

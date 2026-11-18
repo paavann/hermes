@@ -127,6 +127,34 @@ class TestFetchFeed:
 
         asyncio.run(run())
 
+    def test_fetch_feed_resolves_relative_links_against_final_url(self):
+        async def run():
+            xml_feed = """<?xml version="1.0" encoding="UTF-8"?>
+            <rss version="2.0">
+                <channel>
+                    <title>Relative Feed</title>
+                    <item>
+                        <title>Relative story</title>
+                        <link>/world/story</link>
+                    </item>
+                </channel>
+            </rss>"""
+            mock_resp = MagicMock()
+            mock_resp.text = xml_feed
+            mock_resp.url = httpx.URL("https://example.com/news/rss")
+            mock_resp.raise_for_status = MagicMock()
+
+            mock_client = AsyncMock()
+            mock_client.get = AsyncMock(return_value=mock_resp)
+
+            with patch("httpx.AsyncClient") as mock_client_cls:
+                mock_client_cls.return_value.__aenter__.return_value = mock_client
+                articles = await fetch_feed("https://example.com/news/rss")
+
+            assert articles[0].url == "https://example.com/world/story"
+
+        asyncio.run(run())
+
     def test_fetch_feed_propagates_timeout(self):
         async def run():
             mock_client = AsyncMock()
@@ -195,6 +223,106 @@ class TestFetchFeed:
             ) as mock_fetch:
                 result = await fetcher.fetch_articles(source)
                 assert result == expected
-                mock_fetch.assert_awaited_once_with("https://example.com/feed.xml")
+                mock_fetch.assert_awaited_once_with(
+                    "https://example.com/feed.xml",
+                    user_agent="HermesGeospatialNews/1.0",
+                )
+
+        asyncio.run(run())
+
+    def test_parse_date_uses_updated_when_published_missing(self):
+        time_tuple = time.strptime("2026-10-03 12:00:00", "%Y-%m-%d %H:%M:%S")
+        parsed = _parse_date({"updated_parsed": time_tuple})
+        assert parsed == datetime(2026, 10, 3, 12, 0, 0, tzinfo=UTC)
+
+    def test_rss_fetcher_falls_back_when_primary_is_empty(self):
+        async def run():
+            source = DueSource(
+                id=uuid.uuid4(),
+                slug="test-fallback",
+                name="Test Fallback",
+                source_type=SourceType.RSS,
+                credibility=CredibilityTier.TIER_2,
+                feed_url="https://example.com/primary.xml",
+                fallback_feed_url="https://fallback.example.com/feed.xml",
+            )
+            expected = [
+                ParsedArticle(
+                    title="Fallback headline",
+                    url="https://fallback.example.com/1",
+                    description="Desc",
+                )
+            ]
+
+            async def fake_fetch(url: str, *, user_agent: str):
+                assert user_agent == "HermesGeospatialNews/1.0"
+                return [] if url.endswith("primary.xml") else expected
+
+            with patch(
+                "hermes_worker.services.fetchers.rss.fetch_feed",
+                side_effect=fake_fetch,
+            ) as mock_fetch:
+                result = await RSSFetcher().fetch_articles(source)
+
+            assert result == expected
+            assert mock_fetch.await_count == 2
+
+        asyncio.run(run())
+
+    def test_rss_fetcher_falls_back_after_primary_error(self):
+        async def run():
+            source = DueSource(
+                id=uuid.uuid4(),
+                slug="test-fallback-error",
+                name="Test Fallback Error",
+                source_type=SourceType.RSS,
+                credibility=CredibilityTier.TIER_2,
+                feed_url="https://example.com/primary.xml",
+                fallback_feed_url="https://fallback.example.com/feed.xml",
+            )
+            expected = [
+                ParsedArticle(
+                    title="Fallback headline",
+                    url="https://fallback.example.com/1",
+                    description="Desc",
+                )
+            ]
+
+            async def fake_fetch(url: str, *, user_agent: str):
+                if url.endswith("primary.xml"):
+                    raise httpx.ConnectError("unreachable")
+                return expected
+
+            with patch(
+                "hermes_worker.services.fetchers.rss.fetch_feed",
+                side_effect=fake_fetch,
+            ):
+                result = await RSSFetcher().fetch_articles(source)
+
+            assert result == expected
+
+        asyncio.run(run())
+
+    def test_rss_fetcher_raises_when_all_feeds_fail(self):
+        async def run():
+            source = DueSource(
+                id=uuid.uuid4(),
+                slug="test-all-fail",
+                name="Test All Fail",
+                source_type=SourceType.RSS,
+                credibility=CredibilityTier.TIER_2,
+                feed_url="https://example.com/primary.xml",
+                fallback_feed_url="https://fallback.example.com/feed.xml",
+            )
+
+            with (
+                patch(
+                    "hermes_worker.services.fetchers.rss.fetch_feed",
+                    new_callable=AsyncMock,
+                    side_effect=httpx.ConnectError("unreachable"),
+                ),
+                pytest.raises(httpx.ConnectError),
+            ):
+                await RSSFetcher().fetch_articles(source)
 
         asyncio.run(run())

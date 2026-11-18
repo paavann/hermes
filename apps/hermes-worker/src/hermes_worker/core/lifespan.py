@@ -9,10 +9,10 @@ logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
-async def db_lifespan(*, sync_sources: bool = True) -> AsyncGenerator[None]:
+async def db_lifespan() -> AsyncGenerator[None]:
     settings: Settings = get_settings()
     logger.info("initializing database connection for %s...", settings.APP)
-    await init_db(db_url=settings.db_url, sync_sources=sync_sources)
+    await init_db(db_url=settings.db_url)
     logger.info("database connection initialized.")
     try:
         yield

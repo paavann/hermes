@@ -12,6 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 class LockName(enum.StrEnum):
+    INGEST_ARTICLES = "ingest-articles"
     MAINTAIN_EVENTS = "maintain-events"
     HEALTHCHECK = "healthcheck"
 
@@ -19,6 +20,7 @@ class LockName(enum.StrEnum):
 # stable 64-bit keys. each command has its own lock so a short maintenance run
 # cannot block a diagnostic probe, while repeated runs of one command still skip.
 LOCK_KEYS: Final[dict[LockName, int]] = {
+    LockName.INGEST_ARTICLES: 824_100_005,
     LockName.MAINTAIN_EVENTS: 824_100_003,
     LockName.HEALTHCHECK: 824_100_004,
 }
