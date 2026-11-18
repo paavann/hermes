@@ -20,7 +20,7 @@ __all__ = [
     "ArticleLabel",
     "Event",
     "EventTl",
+    "GeocodeCache",
     "Source",
     "Thread",
-    "GeocodeCache",
 ]

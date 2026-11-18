@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Enum, ForeignKey, Index, String, Text, func
+from sqlalchemy import DateTime, Enum, ForeignKey, Index, String, Text, func, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from hermes_db.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
@@ -56,6 +56,12 @@ class Article(Base, UUIDPrimaryKeyMixin, TimestampMixin):
         server_default=IngestStatus.NEW.value,
     )
 
+    # article claim queue fields.
+    claimed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    claimed_by: Mapped[str | None] = mapped_column(String(128))
+    attempt_count: Mapped[int] = mapped_column(default=0, server_default="0")
+    last_error: Mapped[str | None] = mapped_column(Text)
+
     event: Mapped[Event | None] = relationship(back_populates="articles")
     source: Mapped[Source | None] = relationship(
         back_populates="articles", lazy="selectin"
@@ -84,6 +90,11 @@ class Article(Base, UUIDPrimaryKeyMixin, TimestampMixin):
         ),
         Index("idx_articles_event_id", "event_id"),
         Index("idx_articles_source_id", "source_id"),
+        Index(
+            "idx_articles_analyzing_claimed_at",
+            "claimed_at",
+            postgresql_where=text("ingest_status = 'ANALYZING'"),
+        ),
     )
 
     @property

@@ -662,10 +662,10 @@ class TestRunLifecycleTransitions:
         result = run(svc.run_lifecycle_transitions())
         assert result["archived"] == 7
 
-    def test_commit_called_once(self):
+    def test_does_not_commit(self):
         svc, session = self._make_svc_with_rowcounts()
         run(svc.run_lifecycle_transitions())
-        session.commit.assert_awaited_once()
+        session.commit.assert_not_awaited()
 
     def test_three_db_statements_executed(self):
         """Must execute decay + stale transition + archive transition = 3 calls."""

@@ -409,6 +409,10 @@ class EventService:
         stale_hours: int = DEFAULT_EVENT_STALE_HRS,
         archive_hours: int = DEFAULT_EVENT_ARCHIVE_HRS,
     ) -> dict[str, int]:
+        """Decay active scores and transition stale or archived events.
+
+        The caller owns the transaction boundary and commits the returned work.
+        """
         now = datetime.now(UTC)
         stale_cutoff = now - timedelta(hours=stale_hours)
         archive_cutoff = now - timedelta(hours=archive_hours)
@@ -427,7 +431,6 @@ class EventService:
             EventStatus.STALE, EventStatus.ARCHIVED, archive_cutoff
         )
 
-        await self._session.commit()
         if staled_count or archived_count:
             logger.info(
                 "lifecycle: %s events staled, %s events archived.",

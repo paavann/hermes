@@ -169,7 +169,15 @@ class TestCredibilityTier:
 
 class TestIngestStatus:
     def test_all_members_present(self):
-        expected = {"NEW", "NORMALIZED", "LABELED", "CLUSTERED", "REJECTED"}
+        expected = {
+            "NEW",
+            "NORMALIZED",
+            "ANALYZING",
+            "LABELED",
+            "CLUSTERED",
+            "REJECTED",
+            "FAILED",
+        }
         assert {m.value for m in IngestStatus} == expected
 
     @pytest.mark.parametrize(

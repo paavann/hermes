@@ -76,3 +76,12 @@ async def close_db() -> None:
         await engine.dispose()
         engine = None
     logger.info("database connection closed.")
+
+
+def get_engine() -> AsyncEngine:
+    """Return the initialized engine or fail loudly when called before init_db()."""
+    if engine is None:
+        raise RuntimeError(
+            "database engine is not initialized; call init_db() before get_engine()."
+        )
+    return engine

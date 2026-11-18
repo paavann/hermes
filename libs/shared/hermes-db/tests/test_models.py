@@ -63,8 +63,29 @@ class TestArticleModel:
             "title_simhash",
             "language",
             "ingest_status",
+            "claimed_at",
+            "claimed_by",
+            "attempt_count",
+            "last_error",
         }
         assert required.issubset(cols)
+
+    def test_claim_columns_default_to_unclaimed(self):
+        cols = inspect(Article).columns
+
+        assert cols["claimed_at"].nullable
+        assert cols["claimed_by"].nullable
+        assert cols["last_error"].nullable
+        assert cols["attempt_count"].nullable is False
+        assert cols["attempt_count"].default.arg == 0
+        assert cols["attempt_count"].server_default.arg == "0"
+
+    def test_analyzing_claim_index_is_partial(self):
+        indexes = {index.name: index for index in Article.__table__.indexes}
+        index = indexes["idx_articles_analyzing_claimed_at"]
+
+        assert [col.name for col in index.columns] == ["claimed_at"]
+        assert index.dialect_options["postgresql"]["where"] is not None
 
     def test_ledger_columns_are_nullable_before_normalization(self):
         cols = inspect(Article).columns

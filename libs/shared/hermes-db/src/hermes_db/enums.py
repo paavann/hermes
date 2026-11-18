@@ -41,9 +41,11 @@ class EventScope(enum.StrEnum):
 class IngestStatus(enum.StrEnum):
     NEW = "NEW"
     NORMALIZED = "NORMALIZED"
+    ANALYZING = "ANALYZING"
     LABELED = "LABELED"
     CLUSTERED = "CLUSTERED"
     REJECTED = "REJECTED"
+    FAILED = "FAILED"
 
 
 class ArticleType(enum.StrEnum):
