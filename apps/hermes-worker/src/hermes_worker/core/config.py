@@ -12,6 +12,7 @@ from sqlalchemy import URL
 SERVICE_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SERVICE_DIR.parents[1]
 
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file_encoding="utf-8",
@@ -44,6 +45,14 @@ class Settings(BaseSettings):
     EMBED_MODEL: str = ""
     EMBED_MODEL_1: str | None = None
 
+    # optional per-task overrides; each falls back to the primary llm route.
+    LABEL_MODEL: str | None = None
+    LABEL_API: SecretStr | None = None
+    ADJUDICATE_MODEL: str | None = None
+    ADJUDICATE_API: SecretStr | None = None
+    DESCRIBE_MODEL: str | None = None
+    DESCRIBE_API: SecretStr | None = None
+
     # rate limits.
     RPM_LIMIT: int = Field(default=26, gt=0)
     EMBED_RPM_LIMIT: int = Field(default=90, gt=0)
@@ -61,11 +70,15 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("LANGFUSE_HOST", "LANGFUSE_BASE_URL"),
     )
 
-    # sync configuration.
-    RSS_FETCH_INTERVAL_MIN: int = Field(default=15, gt=0)
-    SYNC_INTERVAL_MIN: int = Field(default=360, gt=0)
+    # event lifecycle configuration.
     EVENT_STALE_HOURS: int = Field(default=24, gt=0)
     EVENT_ARCHIVE_HOURS: int = Field(default=48, gt=0)
+
+    # article claim queue and per-run budgets.
+    ARTICLE_CLAIM_BATCH_SIZE: int = Field(default=50, gt=0)
+    ARTICLE_CLAIM_STALE_MINUTES: int = Field(default=30, gt=0)
+    ARTICLE_MAX_ATTEMPTS: int = Field(default=3, ge=1)
+    MAX_LLM_CALLS_PER_RUN: int = Field(default=120, gt=0)
 
     @model_validator(mode="after")
     def validate_semantics(self) -> Self:
@@ -120,6 +133,7 @@ def _resolve_env_files(env: str) -> tuple[Path, ...]:
         SERVICE_DIR / f".env.{env}.local",
     )
 
+
 @lru_cache
 def get_settings() -> Settings:
     # bootstrap ENV strictly from the process environment so it stays consistent
@@ -129,7 +143,7 @@ def get_settings() -> Settings:
 
     # ensure ENV inside Settings matches the process environment rather than
     # being silently overridden by a base .env file.
-    return Settings(ENV=raw_env, _env_file=env_files) # type: ignore[arg-type]
+    return Settings(ENV=raw_env, _env_file=env_files)  # type: ignore[arg-type]
 
 
 def __getattr__(name: str) -> Settings:

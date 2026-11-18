@@ -1,10 +1,7 @@
-"""Unit tests for hermes_worker.core.ai client construction and extraction wiring."""
+"""Unit tests for hermes_worker.core.ai client construction."""
 
 import asyncio
-from unittest.mock import AsyncMock, MagicMock, patch
-import pytest
 from hermes_ai.client import HermesAi
-from hermes_ai.models.events import ArticleInput, ExtractedEvent
 from hermes_ai.utils.coercion import coerce_to_str
 from hermes_worker.core.ai import create_ai_client
 from hermes_worker.core.config import Settings
@@ -53,62 +50,14 @@ class TestAiHelpers:
         assert coerce_to_str(42) == "42"
 
 
-class TestExtractedEventModel:
-    def test_valid_extracted_event(self) -> None:
-        event = ExtractedEvent(
-            article_index=0,
-            has_location=True,
-            location_name="Nairobi, Kenya",
-            country_code="KE",
-            headline="Nairobi Trade Summit Begins",
-            summary="Delegates gathered in Nairobi to discuss economic partnerships.",
-            category="ECONOMY",
-            matched_event_id=None,
-        )
-        assert event.article_index == 0
-        assert event.has_location is True
-        assert event.location_name == "Nairobi, Kenya"
-        assert event.country_code == "KE"
-        assert event.category == "ECONOMY"
-        assert event.impact_level == "MODERATE"
-
-    def test_coerces_model_output_shapes(self) -> None:
-        event = ExtractedEvent.model_validate(
-            {
-                "article_index": 1,
-                "has_location": "true",
-                "location_name": {"en": "Geneva, Switzerland"},
-                "headline": {"en": "Ceasefire talks resume"},
-                "summary": ["Delegations", "met on Tuesday."],
-                "category": "politics",
-                "impact_level": "major",
-            }
-        )
-
-        assert event.has_location is True
-        assert event.location_name == "Geneva, Switzerland"
-        assert event.headline == "Ceasefire talks resume"
-        assert event.summary == "Delegations met on Tuesday."
-        assert event.impact_level == "MAJOR"
-
-    def test_unknown_impact_level_falls_back_to_moderate(self) -> None:
-        event = ExtractedEvent(
-            article_index=0,
-            has_location=False,
-            headline="Headline",
-            summary="Summary.",
-            category="TECHNOLOGY",
-            impact_level="CATASTROPHIC",
-        )
-        assert event.impact_level == "MODERATE"
-
-
 class TestWorkerAiClientFactory:
     def test_create_ai_client_success(self) -> None:
         client = create_ai_client(_settings())
 
         assert isinstance(client, HermesAi)
-        assert client.config.routes["extractor"].primary.model == "mistral/mistral-large"
+        assert (
+            client.config.routes["extractor"].primary.model == "mistral/mistral-large"
+        )
         assert client.config.routes["extractor"].primary.api_key == "mock-llm-key"
         assert client.config.routes["extractor"].primary.rpm == 26
         assert client.config.routes["embed"].primary.model == (
@@ -163,115 +112,45 @@ class TestWorkerAiClientFactory:
         assert traced.config.langfuse_public_key == "public-key"
         assert traced.config.langfuse_secret_key == "secret-key"
 
-    def test_extract_events_empty_input(self) -> None:
-        async def run() -> None:
-            client = create_ai_client(_settings())
-            res = await client.events.extract(articles=[], existing_events=[])
-            assert res == []
+    def test_task_routes_default_to_primary_llm_route(self) -> None:
+        client = create_ai_client(_settings())
 
-        asyncio.run(run())
+        for task in ("label", "adjudicate", "describe"):
+            route = client.config.routes[task]
+            assert route.primary.model == "mistral/mistral-large"
+            assert route.primary.api_key == "mock-llm-key"
+            assert route.primary.rpm == 26
 
-    def test_extract_events_successful_extraction(self) -> None:
-        async def run() -> None:
-            client = create_ai_client(_settings())
-            articles = [
-                ArticleInput(
-                    title="Global Oil Prices Rise",
-                    content="Oil markets surged today amid supply concerns.",
-                )
-            ]
-
-            mock_event = ExtractedEvent(
-                article_index=0,
-                has_location=False,
-                location_name=None,
-                country_code=None,
-                headline="Global Oil Prices Rise Amid Supply Concerns",
-                summary="Crude oil benchmarks gained significantly following inventory reports.",
-                category="ECONOMY",
-                matched_event_id=None,
+    def test_task_routes_accept_model_and_key_overrides(self) -> None:
+        client = create_ai_client(
+            _settings(
+                LABEL_MODEL="mistral/ministral-8b-latest",
+                LABEL_API="label-key",
+                DESCRIBE_MODEL="mistral/mistral-medium",
             )
+        )
 
-            mock_response = MagicMock()
-            mock_response.choices = [
-                MagicMock(
-                    message=MagicMock(
-                        content=f'{{"events": [{mock_event.model_dump_json()}]}}'
-                    )
-                )
-            ]
+        label = client.config.routes["label"].primary
+        describe = client.config.routes["describe"].primary
+        adjudicate = client.config.routes["adjudicate"].primary
 
-            with patch(
-                "litellm.Router.acompletion", new_callable=AsyncMock
-            ) as mock_complete:
-                mock_complete.return_value = mock_response
-                results = await client.events.extract(
-                    articles=articles, existing_events=[]
-                )
+        assert label.model == "mistral/ministral-8b-latest"
+        assert label.api_key == "label-key"
+        assert describe.model == "mistral/mistral-medium"
+        assert describe.api_key == "mock-llm-key"
+        assert adjudicate.model == "mistral/mistral-large"
 
-                assert len(results) == 1
-                assert results[0] is not None
-                assert (
-                    results[0].headline == "Global Oil Prices Rise Amid Supply Concerns"
-                )
-                assert results[0].category == "ECONOMY"
-                assert results[0].category_color == "#22C55E"
-
-        asyncio.run(run())
-
-    def test_extract_events_handles_api_failure(self) -> None:
-        async def run() -> None:
-            client = create_ai_client(_settings())
-            articles = [ArticleInput(title="Test Article", content="Test content")]
-
-            with patch(
-                "litellm.Router.acompletion", new_callable=AsyncMock
-            ) as mock_complete:
-                mock_complete.side_effect = Exception("LLM connection timeout")
-                results = await client.events.extract(
-                    articles=articles, existing_events=[]
-                )
-                assert results == [None]
-
-        asyncio.run(run())
-
-    def test_extract_events_reindexes_out_of_order_results(self) -> None:
-        async def run() -> None:
-            client = create_ai_client(_settings())
-            articles = [
-                ArticleInput(title="First", content="First content."),
-                ArticleInput(title="Second", content="Second content."),
-            ]
-
-            second = ExtractedEvent(
-                article_index=1,
-                has_location=False,
-                headline="Second result",
-                summary="Second summary.",
-                category="POLITICS",
+    def test_task_routes_keep_fallback_chain(self) -> None:
+        client = create_ai_client(
+            _settings(
+                LLM_MODEL_1="mistral/ministral-8b-latest",
+                LLM_API_1="fallback-llm-key",
             )
-            mock_response = MagicMock()
-            mock_response.choices = [
-                MagicMock(
-                    message=MagicMock(
-                        content=f'{{"events": [{second.model_dump_json()}]}}'
-                    )
-                )
-            ]
+        )
 
-            with patch(
-                "litellm.Router.acompletion", new_callable=AsyncMock
-            ) as mock_complete:
-                mock_complete.return_value = mock_response
-                results = await client.events.extract(
-                    articles=articles, existing_events=[]
-                )
-
-                assert results[0] is None
-                assert results[1] is not None
-                assert results[1].headline == "Second result"
-
-        asyncio.run(run())
+        fallbacks = client.config.routes["label"].fallbacks
+        assert len(fallbacks) == 1
+        assert fallbacks[0].api_key == "fallback-llm-key"
 
     def test_gen_embeddings_empty_input(self) -> None:
         async def run() -> None:
@@ -288,20 +167,3 @@ class TestWorkerAiClientFactory:
             assert res == [None, None]
 
         asyncio.run(run())
-
-
-@pytest.mark.parametrize(
-    ("value", "expected"),
-    [("true", True), ("1", True), ("yes", True), ("false", False), (0, False)],
-)
-def test_has_location_coercion(value: object, expected: bool) -> None:
-    event = ExtractedEvent.model_validate(
-        {
-            "article_index": 0,
-            "has_location": value,
-            "headline": "Headline",
-            "summary": "Summary.",
-            "category": "ECONOMY",
-        }
-    )
-    assert event.has_location is expected

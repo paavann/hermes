@@ -8,10 +8,9 @@ from hermes_worker.cli import build_parser, main, run_app
 from hermes_worker.core.lifespan import db_lifespan
 from hermes_worker.handlers.commands import (
     WorkerCmd,
-    handle_all,
-    handle_lifecycle,
+    handle_healthcheck,
+    handle_maintain_events,
     handle_reset_db,
-    handle_sync,
 )
 from hermes_worker.services.reset import ResetGuardError
 
@@ -20,35 +19,33 @@ def test_build_parser_commands():
     """Verifies CLI argument parsing and handler dispatch bindings."""
     parser = build_parser()
 
-    # run-sync.
-    args = parser.parse_args(["run-sync"])
-    assert args.command == WorkerCmd.SYNC.value
-    assert not args.force
-    assert args.handler is handle_sync
+    args_maint = parser.parse_args(["maintain-events"])
+    assert args_maint.command == WorkerCmd.MAINTAIN_EVENTS.value
+    assert args_maint.handler is handle_maintain_events
+    assert args_maint.sync_sources is False
 
-    args_force = parser.parse_args(["run-sync", "--force"])
-    assert args_force.command == WorkerCmd.SYNC.value
-    assert args_force.force
-    assert args_force.handler is handle_sync
+    args_check = parser.parse_args(["healthcheck"])
+    assert args_check.command == WorkerCmd.HEALTHCHECK.value
+    assert args_check.handler is handle_healthcheck
+    assert args_check.sync_sources is False
 
-    # run-lifecycle.
-    args_life = parser.parse_args(["run-lifecycle"])
-    assert args_life.command == WorkerCmd.LIFECYCLE.value
-    assert args_life.handler is handle_lifecycle
-
-    # run-all.
-    args_all = parser.parse_args(["run-all", "--force"])
-    assert args_all.command == WorkerCmd.ALL.value
-    assert args_all.force
-    assert args_all.handler is handle_all
-
-    # reset-db.
     args_reset = parser.parse_args(["reset-db", "--yes"])
     assert args_reset.command == WorkerCmd.RESET.value
     assert args_reset.yes
     assert args_reset.sync_sources is False
     assert args_reset.requires_local_db is True
     assert args_reset.handler is handle_reset_db
+
+
+@pytest.mark.parametrize(
+    "command",
+    ["run-sync", "run-all", "run-lifecycle"],
+)
+def test_legacy_commands_are_gone(command: str):
+    parser = build_parser()
+
+    with pytest.raises(SystemExit):
+        parser.parse_args([command])
 
 
 def test_build_parser_reset_requires_confirmation():
@@ -59,59 +56,28 @@ def test_build_parser_reset_requires_confirmation():
         parser.parse_args(["reset-db"])
 
 
-def test_handle_sync():
-    """Verifies that handle_sync invokes the sync service with arguments."""
-
-    async def _test():
-        with patch("hermes_worker.handlers.commands.SyncService") as mock_cls:
-            mock_service = mock_cls.return_value
-            mock_service.sync_all_sources = AsyncMock(return_value={"created": 1})
-
-            args = argparse.Namespace(force=True)
-            await handle_sync(args)
-
-            mock_service.sync_all_sources.assert_awaited_once_with(force=True)
-
-    asyncio.run(_test())
-
-
-def test_handle_lifecycle():
-    """Verifies that handle_lifecycle invokes run_lifecycle."""
-
+def test_handle_maintain_events_delegates():
     async def _test():
         with patch(
-            "hermes_worker.handlers.commands.run_lifecycle", new_callable=AsyncMock
-        ) as mock_life:
-            mock_life.return_value = {"decayed": 3}
+            "hermes_worker.handlers.commands.run_maintain_events",
+            new_callable=AsyncMock,
+        ) as mock_run:
+            await handle_maintain_events(argparse.Namespace())
 
-            args = argparse.Namespace()
-            await handle_lifecycle(args)
-
-            mock_life.assert_awaited_once()
+        mock_run.assert_awaited_once()
 
     asyncio.run(_test())
 
 
-def test_handle_all():
-    """Verifies that handle_all coordinates lifecycle transitions and source sync."""
-
+def test_handle_healthcheck_delegates():
     async def _test():
-        with (
-            patch(
-                "hermes_worker.handlers.commands.run_lifecycle",
-                new_callable=AsyncMock,
-            ) as mock_life,
-            patch("hermes_worker.handlers.commands.SyncService") as mock_cls,
-        ):
-            mock_life.return_value = {"decayed": 2}
-            mock_service = mock_cls.return_value
-            mock_service.sync_all_sources = AsyncMock(return_value={"created": 4})
+        with patch(
+            "hermes_worker.handlers.commands.run_healthcheck",
+            new_callable=AsyncMock,
+        ) as mock_run:
+            await handle_healthcheck(argparse.Namespace())
 
-            args = argparse.Namespace(force=True)
-            await handle_all(args)
-
-            mock_life.assert_awaited_once()
-            mock_service.sync_all_sources.assert_awaited_once_with(force=True)
+        mock_run.assert_awaited_once()
 
     asyncio.run(_test())
 
@@ -255,7 +221,7 @@ def test_run_app_blocks_unsafe_reset_before_lifespan():
 
 
 def test_db_lifespan():
-    """Verifies that the db_lifespan context manager correctly initializes and closes connections."""
+    """Verifies that the db_lifespan context manager initializes and closes connections."""
 
     async def _test():
         with (
@@ -280,10 +246,9 @@ def test_run_app_success():
 
     async def _test():
         mock_handler = AsyncMock()
-        args = argparse.Namespace(command="run-sync", handler=mock_handler)
+        args = argparse.Namespace(command="maintain-events", handler=mock_handler)
 
         with patch("hermes_worker.cli.db_lifespan") as mock_lifespan:
-            # Mock the async context manager protocol
             mock_cm = AsyncMock()
             mock_lifespan.return_value = mock_cm
 
@@ -310,7 +275,7 @@ def test_run_app_exception():
 
     async def _test():
         mock_handler = AsyncMock(side_effect=RuntimeError("connection error"))
-        args = argparse.Namespace(command="run-sync", handler=mock_handler)
+        args = argparse.Namespace(command="maintain-events", handler=mock_handler)
 
         with patch("hermes_worker.cli.db_lifespan") as mock_lifespan:
             mock_cm = AsyncMock()
@@ -322,24 +287,24 @@ def test_run_app_exception():
     asyncio.run(_test())
 
 
-def test_run_app_lifecycle():
-    """Verifies that run_app coordinates database lifespan and lifecycle transitions."""
+def test_run_app_maintain_events():
+    """Verifies that run_app coordinates database lifespan and maintenance."""
 
     async def _test():
         parser = build_parser()
-        args = parser.parse_args(["run-lifecycle"])
+        args = parser.parse_args(["maintain-events"])
 
         with (
             patch("hermes_worker.core.lifespan.init_db", new_callable=AsyncMock),
             patch("hermes_worker.core.lifespan.close_db", new_callable=AsyncMock),
             patch(
-                "hermes_worker.handlers.commands.run_lifecycle",
+                "hermes_worker.handlers.commands.run_maintain_events",
                 new_callable=AsyncMock,
-            ) as mock_life,
+            ) as mock_maint,
         ):
-            mock_life.return_value = {"decayed": 1}
             code = await run_app(args)
             assert code == 0
+            mock_maint.assert_awaited_once()
 
     asyncio.run(_test())
 

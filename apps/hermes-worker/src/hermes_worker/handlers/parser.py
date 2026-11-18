@@ -1,48 +1,38 @@
 import argparse
 from hermes_worker.handlers.commands import (
     WorkerCmd,
-    handle_all,
-    handle_lifecycle,
+    handle_healthcheck,
+    handle_maintain_events,
     handle_reset_db,
-    handle_sync,
 )
 
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="hermes-worker",
-        description="Hermes Ephemeral News data ingestion & Event Lifecycle Worker",
+        description="Hermes news ingestion and event maintenance worker",
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    sub_cmds = [
-        (WorkerCmd.SYNC.value, "Execute RSS source sync cycle", handle_sync, True),
-        (
-            WorkerCmd.LIFECYCLE.value,
-            "Execute event score decay and status transitions",
-            handle_lifecycle,
-            False,
-        ),
-        (
-            WorkerCmd.ALL.value,
-            "Execute lifecycle transitions followed by due sync",
-            handle_all,
-            True,
-        ),
-    ]
-    for name, help_txt, handler, supports_force in sub_cmds:
-        sub = subparsers.add_parser(name, help=help_txt)
-        if supports_force:
-            sub.add_argument(
-                "--force",
-                action="store_true",
-                help="Force sync of all sources regardless of interval",
-            )
-        sub.set_defaults(
-            handler=handler,
-            sync_sources=True,
-            requires_local_db=False,
-        )
+    maintain = subparsers.add_parser(
+        WorkerCmd.MAINTAIN_EVENTS.value,
+        help="Requeue abandoned article claims and apply event lifecycle transitions",
+    )
+    maintain.set_defaults(
+        handler=handle_maintain_events,
+        sync_sources=False,
+        requires_local_db=False,
+    )
+
+    healthcheck = subparsers.add_parser(
+        WorkerCmd.HEALTHCHECK.value,
+        help="Check database connectivity, schema, queue depth, and stale claims",
+    )
+    healthcheck.set_defaults(
+        handler=handle_healthcheck,
+        sync_sources=False,
+        requires_local_db=False,
+    )
 
     reset = subparsers.add_parser(
         WorkerCmd.RESET.value,

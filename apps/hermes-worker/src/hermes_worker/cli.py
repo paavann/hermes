@@ -17,7 +17,6 @@ settings: Settings = get_settings()
 
 async def run_app(args: argparse.Namespace) -> int:
     handler: CmdHandler | None = getattr(args, "handler", None)
-    # if docker compose is used to run hermes-worker without passing any sub-command, it will default to "run-all" command.
     if handler is None:
         logger.error("unknown command: %s.", getattr(args, "command", "none"))
         return 1

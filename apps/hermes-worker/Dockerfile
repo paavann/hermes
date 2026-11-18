@@ -25,7 +25,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --package hermes-worker --frozen
 WORKDIR /app/apps/hermes-worker
 ENTRYPOINT ["sh", "-c", "uv run alembic -c ../../libs/shared/hermes-db/alembic.ini upgrade head && exec uv run hermes-worker \"$@\"", "--"]
-CMD ["run-all"]
+CMD ["maintain-events"]
 
 # production target (--no-dev, precompiled bytecode).
 FROM base AS production
@@ -40,4 +40,4 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --package hermes-worker --frozen --no-dev
 WORKDIR /app/apps/hermes-worker
 ENTRYPOINT ["sh", "-c", "uv run alembic -c ../../libs/shared/hermes-db/alembic.ini upgrade head && exec uv run hermes-worker \"$@\"", "--"]
-CMD ["run-all"]
+CMD ["maintain-events"]

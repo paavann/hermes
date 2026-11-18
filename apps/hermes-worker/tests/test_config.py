@@ -47,12 +47,27 @@ class TestWorkerSettingsDefaults:
         assert s.RPM_LIMIT == 26
         assert s.EMBED_RPM_LIMIT == 90
 
-    def test_sync_interval_defaults(self):
+    def test_lifecycle_defaults(self):
         s = _make_settings()
-        assert s.RSS_FETCH_INTERVAL_MIN == 15
-        assert s.SYNC_INTERVAL_MIN == 360
         assert s.EVENT_STALE_HOURS == 24
         assert s.EVENT_ARCHIVE_HOURS == 48
+
+    def test_claim_queue_defaults(self):
+        s = _make_settings()
+        assert s.ARTICLE_CLAIM_BATCH_SIZE == 50
+        assert s.ARTICLE_CLAIM_STALE_MINUTES == 30
+        assert s.ARTICLE_MAX_ATTEMPTS == 3
+        assert s.MAX_LLM_CALLS_PER_RUN == 120
+
+    def test_claim_batch_size_must_be_positive(self):
+        with pytest.raises(ValidationError):
+            _make_settings(ARTICLE_CLAIM_BATCH_SIZE=0)
+        with pytest.raises(ValidationError):
+            _make_settings(MAX_LLM_CALLS_PER_RUN=0)
+
+    def test_claim_max_attempts_must_be_at_least_one(self):
+        with pytest.raises(ValidationError):
+            _make_settings(ARTICLE_MAX_ATTEMPTS=0)
 
     def test_db_password_is_required(self, monkeypatch):
         monkeypatch.delenv("DB_PASSWORD", raising=False)
@@ -67,7 +82,9 @@ class TestWorkerSettingsDefaults:
             _make_settings(EVENT_STALE_HOURS=24, EVENT_ARCHIVE_HOURS=24)
 
     def test_production_requires_llm_credentials(self):
-        with pytest.raises(ValidationError, match="Missing required production settings"):
+        with pytest.raises(
+            ValidationError, match="Missing required production settings"
+        ):
             _make_settings(ENV="production")
 
 

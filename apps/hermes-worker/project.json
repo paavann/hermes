@@ -81,24 +81,17 @@
         "cwd": "{projectRoot}"
       }
     },
-    "run-all": {
+    "maintain-events": {
       "executor": "@nxlv/python:run-commands",
       "options": {
-        "command": "uv run hermes-worker run-all",
+        "command": "uv run hermes-worker maintain-events",
         "cwd": "{projectRoot}"
       }
     },
-    "run-sync": {
+    "healthcheck": {
       "executor": "@nxlv/python:run-commands",
       "options": {
-        "command": "uv run hermes-worker run-sync",
-        "cwd": "{projectRoot}"
-      }
-    },
-    "run-lifecycle": {
-      "executor": "@nxlv/python:run-commands",
-      "options": {
-        "command": "uv run hermes-worker run-lifecycle",
+        "command": "uv run hermes-worker healthcheck",
         "cwd": "{projectRoot}"
       }
     },

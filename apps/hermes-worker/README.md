@@ -7,44 +7,34 @@
 [![pgvector](https://img.shields.io/badge/pgvector-halfvec(2048)-blue?style=flat)](https://github.com/pgvector/pgvector)
 [![Langfuse](https://img.shields.io/badge/Observability-Langfuse-EE5E2A?style=flat&logo=langfuse&logoColor=white)](https://langfuse.com)
 
-`hermes-worker` is the autonomous, headless ingestion and data lifecycle worker for Project Hermes. Built as a batch CLI in **Python 3.14+**, it monitors global news feeds (RSS, GDELT, and news sitemaps), computes dense vector embeddings, performs database-side vector deduplication via PostGIS HNSW indexing, resolves coordinates through a grounded geocoding shield, and manages event decay and status transitions.
+`hermes-worker` is the autonomous, headless ingestion and data lifecycle worker for Project Hermes. Built as a batch CLI in **Python 3.14+**, it fetches global news feeds, builds incident-level events, resolves coordinates through a grounded geocoding shield, and maintains event and thread lifecycle state.
 
-The worker operates completely decoupled from [`apps/hermes-api`](../hermes-api), ensuring that compute-heavy XML parsing, high-dimensional vector embeddings, and LLM inference never contend with client map queries.
+The worker operates completely decoupled from [`apps/hermes-api`](../hermes-api), ensuring that compute-heavy XML parsing, embeddings, and LLM inference never contend with client map queries.
 
 ---
 
-## Operational Model & Cloud Topology
+## Operational Model
 
-In production, `hermes-worker` runs as an **ephemeral, serverless batch container** on **AWS ECS Fargate** in region `ap-southeast-2` (Sydney), orchestrated 3 times daily by **Amazon EventBridge** (`cron(0 0,8,16 * * ? *)`):
+In production, `hermes-worker` runs as an **ephemeral, serverless batch container** on **AWS ECS Fargate** and is invoked by **Amazon EventBridge** on separate schedules for article ingestion, event construction, and maintenance.
 
 ```mermaid
 flowchart LR
-    EventBridge["Amazon EventBridge\nSchedule: 3x daily"] -->|"ecs:RunTask"| Fargate["AWS ECS Fargate Task\n0.25 vCPU • 512 MB RAM"]
-    
-    subgraph Execution ["Fargate Task Execution (~5-10 min)"]
-        direction TB
-        Decay["1. Score Decay & Lifecycle Transitions"] --> Sync["2. Due Source Ingestion (Semaphore = 5)"]
-        Sync --> Embed["3. Dense Embeddings (nemotron-3-embed-1b)"]
-        Embed --> Cosine["4. HNSW Vector Distance (< 0.25)"]
-        Cosine --> LLM["5. LiteLLM Extraction & Consensus"]
-        LLM --> Geo["6. Grounded Geocoding (Nominatim Shield)"]
-    end
-
-    Fargate --> Execution
-    Execution --> NeonDB[("Neon PostgreSQL\n(PostGIS + pgvector)")]
-    Execution -->|"Exit Code 0"| Teardown["Clean Shutdown & Pool Disposal\n(Zero Idle Billing)"]
+    EventBridge["Amazon EventBridge\n(ingest / build / maintain schedules)"] -->|"ecs:RunTask"| Fargate["AWS ECS Fargate Task\n0.25 vCPU • 512 MB RAM"]
+    Fargate --> Command["One worker command\n(maintain-events / healthcheck)"]
+    Command --> NeonDB[("Neon PostgreSQL\n(PostGIS + pgvector)")]
+    Command -->|"exit 0 / 1"| Teardown["Clean shutdown & pool disposal"]
 ```
 
 ### Key Architectural Invariants
 
-- **12-Factor Run-and-Die Execution**: Contains zero internal loops, cron daemons, or long-lived background schedulers (e.g. Celery or APScheduler). The container boots on demand, executes `hermes-worker run-all`, tears down database pools, and terminates cleanly (`sys.exit(0)` on success, `sys.exit(1)` on error). Process exit guarantees complete OS memory reclamation.
-- **Connection Lifespan Management**: Every CLI handler executes within [`db_lifespan()`](src/hermes_worker/core/lifespan.py). On startup, it binds connection pools via `init_db(settings.db_url)`; on teardown, it invokes `close_db()`, ensuring all connections are disposed before exit.
-- **Memory Bounded on Fargate**: With only 512 MB RAM allocated to the task, incoming articles are parsed and processed in bounded batches (`ARTICLE_BATCH_SIZE = 10`) under a bounded concurrency semaphore (`asyncio.Semaphore(5)`).
-- **Embed Before Extract**: Embeds articles first using `nvidia_nim/nvidia/nemotron-3-embed-1b` and performs an HNSW cosine distance search on PostGIS (`halfvec_cosine_ops` $< 0.25$) before invoking an LLM. Only candidate matches are passed to the model, eliminating expensive $O(N^2)$ pairwise token overhead.
+- **12-Factor Run-and-Die Execution**: Contains zero internal loops, cron daemons, or long-lived background schedulers (e.g. Celery or APScheduler). The container boots on demand, executes one command, tears down database pools, and terminates cleanly (`sys.exit(0)` on success, `sys.exit(1)` on error).
+- **Connection Lifespan Management**: Every CLI handler executes within [`db_lifespan()`](src/hermes_worker/core/lifespan.py). On startup it binds connection pools via `init_db(settings.db_url)`; on teardown it invokes `close_db()`, ensuring all connections are disposed before exit.
+- **Claim-Based Work Queue**: Articles transition through `NEW -> ANALYZING -> LABELED -> CLUSTERED`, with `FAILED` for exhausted retries. Claims use `UPDATE ... FOR UPDATE SKIP LOCKED` and are owned by the stage transaction.
+- **Bounded Work**: Every stage works in bounded batches. Never accumulate all feeds, articles, or events in memory.
 - **Grounded Geocoding Shield**: Enforces OpenStreetMap Nominatim's 1 req/s usage policy via a token-bucket rate limiter. Results are cached in `geocode_cache`, with non-locatable terms permanently stored as negative cache entries (`latitude=NULL`, `longitude=NULL`).
 
 > [!NOTE]
-> For detailed pipeline flowcharts, cost calculations (~$0.15/month), and memory bounds analysis, see [apps/hermes-worker/docs/architecture.md](docs/architecture.md).
+> For stage flowcharts, command cadence, and schema details, see [apps/hermes-worker/docs/architecture.md](docs/architecture.md).
 
 ---
 
@@ -54,21 +44,24 @@ All tasks can be executed via Nx targets or directly through `uv`:
 
 | Action | Nx Target | Direct CLI Command | Description |
 | :--- | :--- | :--- | :--- |
-| **Run All** | `npx nx run hermes-worker:run-all` | `uv run hermes-worker run-all` | Full batch pass: applies score decay and lifecycle transitions, then syncs due news feeds. |
-| **Sync Only** | `npx nx run hermes-worker:run-sync` | `uv run hermes-worker run-sync` | Ingests due sources only. Add `--force` to ignore `last_fetched_at` intervals. |
-| **Lifecycle Only** | `npx nx run hermes-worker:run-lifecycle` | `uv run hermes-worker run-lifecycle` | Executes score decay calculation and transitions events (`ACTIVE` $\rightarrow$ `STALE` $\rightarrow$ `ARCHIVED`). |
+| **Maintain Events** | `npx nx run hermes-worker:maintain-events` | `uv run hermes-worker maintain-events` | Requeues abandoned article claims and applies event score decay / status transitions. |
+| **Healthcheck** | `npx nx run hermes-worker:healthcheck` | `uv run hermes-worker healthcheck` | Verifies database connectivity, claim-queue schema, queue depth, and stale claims. Read-only. |
+| **Reset DB** | `npx nx run hermes-worker:reset-db` | `uv run hermes-worker reset-db --yes` | Drops local database objects only, guarded by an environment/host check. Never use against production. |
+
+The rebuilt ingestion commands `ingest-articles` and `build-events` are added with their stages in later phases. There is no feature flag and no parallel legacy pipeline.
 
 ---
 
-## Ingestion Pipeline Stages
+## Pipeline Status (Phase 1)
 
-1. **Lifecycle Decay & State Progression**: Applies hourly exponential decay factor ($2^{-1/18}$) to all active event trending scores. Transitions events past 24 hours of inactivity from `ACTIVE` $\rightarrow$ `STALE`, and past 48 hours to `ARCHIVED`.
-2. **Concurrent Source Fetching**: Queries sources due for fetching (`last_fetched_at + interval <= now`) across RSS, GDELT, and sitemaps using `httpx.AsyncClient` with custom User-Agent headers.
-3. **Database URL Deduplication**: Skips articles whose canonical URLs already exist in the `articles` table.
-4. **Vector Embeddings & HNSW Search**: Slices novel articles into batches of 10, generates 2048-dimensional dense vectors, and queries PostGIS for active events within cosine distance $< 0.25$.
-5. **LLM Extraction & Consensus**: Prompts LiteLLM (`mistral/ministral-8b-latest` with `nvidia_nim/openai/gpt-oss-20b` fallback) with the article and candidate events to extract structured metadata or corroborate an existing incident.
-6. **Grounded Geocoding**: Resolves extracted entity location names via Nominatim with positive and negative caching.
-7. **Atomic Persistence**: Persists new events with PostGIS `POINT` geometries and embeddings, or attaches new articles to existing events, updates article counts, and recalculates velocity and Shannon diversity scores.
+Phase 1 establishes the worker job kernel and the article claim queue:
+
+1. **Job Runtime**: `jobs/context.py`, `jobs/runner.py`, and `jobs/locks.py` provide the stage protocol, per-run LLM budget, ordered stage execution, and advisory locking.
+2. **Article Claim Queue**: `jobs/queue.py` claims, marks, fails, and requeues articles with `FOR UPDATE SKIP LOCKED`.
+3. **Maintenance**: `maintain-events` requeues stale claims and applies the existing `ACTIVE -> STALE -> ARCHIVED` event lifecycle transitions.
+4. **Healthcheck**: `healthcheck` verifies the claim columns, the expanded `ingeststatus` constraint, the partial claim index, and queue depth.
+
+Article ingestion, labeling, clustering, description, scoring, and thread maintenance land in later phases. Production remains on `master` until the cutover phase.
 
 ---
 
@@ -83,17 +76,24 @@ Settings are managed via `pydantic-settings` in [`core/config.py`](src/hermes_wo
 | `DB_USER` | `postgres` | Database username. |
 | `DB_PASSWORD` | *Required* | Database user password. |
 | `DB_NAME` | `hermes` | Database name. |
-| `LLM_API` | `""` | Primary LLM API key (e.g. Mistral). |
-| `LLM_MODEL` | `""` | Primary LLM identifier (e.g. `mistral/ministral-8b-latest`). |
-| `LLM_API_1` | `None` | Fallback LLM API key. |
-| `LLM_MODEL_1` | `None` | Fallback LLM identifier (e.g. `nvidia_nim/openai/gpt-oss-20b`). |
+| `LLM_API` | `""` | Primary LLM API key. |
+| `LLM_MODEL` | `""` | Primary LLM identifier. |
+| `LLM_API_1` / `LLM_MODEL_1` | `None` | Optional fallback LLM route. |
 | `EMBED_API` | `""` | Embedding service API key. |
-| `EMBED_MODEL` | `""` | Embedding model identifier (`nvidia_nim/nvidia/nemotron-3-embed-1b`). |
+| `EMBED_MODEL` | `""` | Embedding model identifier. |
+| `EMBED_API_1` / `EMBED_MODEL_1` | `None` | Optional fallback embedding route. |
 | `RPM_LIMIT` | `26` | Token-bucket rate limit for LLM calls (req/min). |
 | `EMBED_RPM_LIMIT` | `90` | Token-bucket rate limit for embedding calls (req/min). |
 | `NOMINATIM_USER_AGENT` | `Hermes...` | Custom User-Agent header for OpenStreetMap Nominatim. |
 | `EVENT_STALE_HOURS` | `24` | Hours of inactivity before an `ACTIVE` event transitions to `STALE`. |
 | `EVENT_ARCHIVE_HOURS` | `48` | Hours of inactivity before a `STALE` event transitions to `ARCHIVED`. |
+| `ARTICLE_CLAIM_BATCH_SIZE` | `50` | Maximum articles claimed or requeued per run. |
+| `ARTICLE_CLAIM_STALE_MINUTES` | `30` | Age at which a claim is considered abandoned and requeued. |
+| `ARTICLE_MAX_ATTEMPTS` | `3` | Claim attempts before an article is marked `FAILED`. |
+| `MAX_LLM_CALLS_PER_RUN` | `120` | Hard per-run structured LLM call budget. |
+| `LABEL_MODEL` / `LABEL_API` | `None` | Optional label-task override; falls back to `LLM_MODEL` / `LLM_API`. |
+| `ADJUDICATE_MODEL` / `ADJUDICATE_API` | `None` | Optional adjudication-task override; falls back to `LLM_MODEL` / `LLM_API`. |
+| `DESCRIBE_MODEL` / `DESCRIBE_API` | `None` | Optional describe-task override; falls back to `LLM_MODEL` / `LLM_API`. |
 | `LANGFUSE_PUBLIC_KEY` | `""` | Langfuse project public key. When set with secret key, activates trace observability. |
 | `LANGFUSE_SECRET_KEY` | `""` | Langfuse project secret key. Required alongside public key to enable tracing. |
 | `LANGFUSE_HOST` | `https://cloud.langfuse.com` | Langfuse ingestion base URL (also accepts alias `LANGFUSE_BASE_URL`). |
@@ -102,13 +102,12 @@ Settings are managed via `pydantic-settings` in [`core/config.py`](src/hermes_wo
 
 ## Observability & Tracing (Langfuse)
 
-`hermes-worker` integrates with [Langfuse](https://langfuse.com) via `libs/shared/hermes-ai` for granular observability across batch LLM event extraction jobs:
+`hermes-worker` integrates with [Langfuse](https://langfuse.com) via `libs/shared/hermes-ai`:
 
-- **Opt-in Activation**: Enabled automatically when both `LANGFUSE_PUBLIC_KEY` and `LANGFUSE_SECRET_KEY` are provided. If omitted, news ingestion runs normally without tracing overhead.
-- **Instrumented Spans**:
-  - `event-extract`: Captured by `EventExtractor.extract` around each chunk of 10 incoming articles processed through LiteLLM. Monitors token usage, latency, extraction success, and model fallbacks.
-- **Service & Environment Tags**: Traces are tagged with `["hermes-worker", ENV]` to cleanly isolate worker batch telemetry from API traffic and distinguish local testing from production AWS Fargate runs.
-- **Critical Flush-on-Exit for Ephemeral Compute**: Because `hermes-worker` operates under a run-and-die model on AWS ECS Fargate, the process exits as soon as sync completes. The worker lifespans ensure `LlmService.aclose()` -> `get_client().flush()` is called prior to `sys.exit(0)`, preventing buffered asynchronous trace events from being lost when the container is deallocated.
+- **Opt-in Activation**: Enabled automatically when both `LANGFUSE_PUBLIC_KEY` and `LANGFUSE_SECRET_KEY` are provided. If omitted, jobs run normally without tracing overhead.
+- **Structured Completion**: LLM stages use `complete_json(...)` with schema repair and process-local `LlmUsage` accounting (calls, input/output tokens, repairs).
+- **Service & Environment Tags**: Traces are tagged with `["hermes-worker", ENV]` to isolate worker telemetry from API traffic and distinguish local runs from production.
+- **Critical Flush-on-Exit**: `JobContext.aclose()` calls `LlmService.aclose()` before process exit so buffered trace events are flushed on ephemeral Fargate teardown.
 
 ---
 
@@ -117,11 +116,11 @@ Settings are managed via `pydantic-settings` in [`core/config.py`](src/hermes_wo
 All commands are executed from the workspace root:
 
 ```bash
-# Execute batch pipeline locally (lifecycle decay + incremental sync)
-npx nx run hermes-worker:run-all
+# Requeue stale article claims and apply event lifecycle transitions
+npx nx run hermes-worker:maintain-events
 
-# Force sync all sources regardless of last fetched timestamps
-uv run hermes-worker run-sync --force
+# Check database connectivity, schema, queue depth, and stale claims
+npx nx run hermes-worker:healthcheck
 
 # Run worker test suite (Pytest with coverage)
 npx nx test hermes-worker

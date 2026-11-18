@@ -1,237 +1,217 @@
 # Hermes Worker — Architecture & Design Rationale
 
-This document details the architectural decisions, cloud infrastructure topology, batch ingestion pipelines, and resiliency mechanisms of `apps/hermes-worker`.
+This document describes the worker's execution model, the target news ingestion architecture, and the Phase 1 job foundation. The target stages are implemented incrementally; each section marks what exists today.
 
 ---
 
 ## 1. Cloud Infrastructure & Ephemeral Execution Model
 
-`hermes-worker` runs as an autonomous, run-and-die batch CLI in AWS. Rather than maintaining a long-running daemon with in-process schedulers (e.g. Celery Beat or APScheduler), execution is orchestrated entirely through external cloud scheduling.
-
 ### Architecture Topology
 
 ```mermaid
-flowchart TD
-    subgraph TriggerLayer ["Cloud Scheduling (Amazon EventBridge)"]
-        EventBridge["EventBridge Scheduler Rule\nSchedule: cron(0 0,8,16 * * ? *) • 3x Daily"]
-    end
-
-    subgraph ComputeLayer ["Serverless Compute (AWS ECS Fargate ap-southeast-2)"]
-        ECS["ECS Cluster: hermes-cluster"]
-        Task["hermes-worker Task\n0.25 vCPU • 512 MB RAM • ARM64 (AWS Graviton)"]
-        Container["Container: hermes-worker:latest\nuv run hermes-worker run-all (~5–10 min)"]
-        Teardown["Container Exits (sys.exit 0/1)\nFargate Deallocates Resources • Zero Idle Spend"]
-    end
-
-    subgraph RegistryLayer ["Container Registry & Telemetry"]
-        ECR["Amazon ECR Private Repository\nImage size: ~319 MB"]
-        CloudWatch["Amazon CloudWatch Logs\n/ecs/hermes-worker"]
-    end
-
-    subgraph DataLayer ["Persistence & External Services"]
-        NeonDB[("Neon Serverless PostgreSQL 16\nPostGIS + pgvector halfvec(2048)")]
-        ExternalAPIs["External Intelligence APIs\nRSS/GDELT • LiteLLM • Nominatim"]
-        Langfuse["Langfuse Observability\n(Traces, Spans & Cost Tracking)"]
-    end
-
-    EventBridge -->|"Triggers ecs:RunTask"| ECS
-    ECS --> Task
-    ECR -.->|"Image Pull"| Task
-    Task --> Container
-    Container <-->|"Batch Ingestion & Decay"| NeonDB
-    Container <-->|"News Ingestion & Extraction"| ExternalAPIs
-    Container -.->|"OTLP Spans (opt-in)"| Langfuse
-    Container -->|"Streams stdout / stderr"| CloudWatch
-    Container --> Teardown
+flowchart TB
+    EventBridge["Amazon EventBridge\n(ingest / build / maintain schedules)"] -->|"ecs:RunTask"| Fargate["ECS Fargate Task\n0.25 vCPU • 512 MB RAM"]
+    Fargate --> Lifespan["db_lifespan()\ninit_db -> close_db"]
+    Lifespan --> Command["One command\nmaintain-events / healthcheck"]
+    Command --> Neon[("Neon PostgreSQL\nPostGIS + pgvector")]
+    Command -->|"exit 0 / 1"| Teardown["Pool disposal\nContainer destroyed"]
 ```
 
 ### Lifecycle of an Ephemeral Execution
 
-1. **EventBridge Scheduler Fires**: At the scheduled cadence (00:00, 08:00, 16:00 UTC daily), EventBridge issues an `ecs:RunTask` API call to the ECS cluster `hermes-cluster`.
-2. **Dynamic Resource Allocation**: AWS Fargate dynamically provisions 0.25 vCPU and 512 MB of RAM on **ARM64 (AWS Graviton)** architecture from the shared compute pool. No virtual machine or container remains pre-running or idle between intervals.
-3. **Container Image Pull**: Fargate pulls the production container image (`hermes-worker:latest`, compiled for `linux/arm64`) from Amazon ECR.
-4. **Execution in Isolated Lifespan**: The container initializes, wraps execution in [`db_lifespan()`](../src/hermes_worker/core/lifespan.py), and runs `hermes-worker run-all`:
-   - Lifecycle maintenance: applies score decay and updates status transitions (`ACTIVE` $\rightarrow$ `STALE` $\rightarrow$ `ARCHIVED`).
-   - Source synchronization: fetches due feeds, generates embeddings, deduplicates via vector similarity, extracts metadata via LiteLLM, geocodes coordinates, and commits transactions.
-5. **Clean Termination & Teardown**: Upon completing all due sources, the process calls `close_db()` and terminates cleanly (`sys.exit(0)`). ECS marks the task as `STOPPED` and Fargate deallocates compute resources immediately. Billing stops at container termination.
-6. **Telemetry Streaming**: Real-time stdout and stderr output streams to Amazon CloudWatch Logs under `/ecs/hermes-worker`.
+1. EventBridge invokes `ecs:RunTask` with one worker command.
+2. The container starts, loads typed settings through `pydantic-settings`, and calls `init_db(settings.db_url)` inside `db_lifespan()`.
+3. The command opens a `JobContext`, runs its ordered stages, and commits per stage.
+4. The context flushes LLM telemetry, disposes the engine pool, and the process exits with `0` on success or `1` on failure.
 
 ### Architectural Rationale: Why Ephemeral Compute?
 
-- **Memory Leak Protection**: Parsing thousands of arbitrary, third-party RSS XML feeds with native C-extensions (`feedparser`, `libxml`) in Python frequently leads to memory fragmentation and slow leaks across long-lived processes. Terminating the process on completion guarantees complete memory reclamation by the operating system.
-- **Connection Hygiene**: Encapsulating command runs within `db_lifespan()` guarantees that the SQLAlchemy `AsyncEngine` pool initializes on process boot and explicitly calls `engine.dispose()` on process teardown, eliminating dangling socket connections against Neon's PgBouncer pool.
-- **Externalized Reliability**: Cloud schedulers natively manage timeouts, execution intervals, retries, and dead-letter alarms, eliminating in-process threading deadlocks across worker restarts.
-- **Extreme Cost Efficiency (AWS Graviton ARM64)**:
-  Running a continuous $24/7$ worker VM or resident container costs $15.00–$45.00/month in idle compute. In contrast, `hermes-worker` runs for ~5–10 minutes per invocation (3 times daily) on serverless ARM64 Graviton compute:
-  $$\text{Monthly Runtime} = 3 \text{ runs/day} \times 10 \text{ min} \times 30 \text{ days} = 900 \text{ minutes} = 15 \text{ hours/month}$$
-  At AWS Fargate Linux ARM64 Graviton rates ($0.032384/vCPU-hour, $0.003556/GB-hour — a 20% discount over standard x86):
-  $$\text{vCPU Cost} = 15 \text{ hrs} \times 0.25 \text{ vCPU} \times \$0.032384 \approx \$0.12$$
-  $$\text{Memory Cost} = 15 \text{ hrs} \times 0.5 \text{ GB} \times \$0.003556 \approx \$0.03$$
-  $$\text{Total Compute Cost} \approx \mathbf{\$0.15 / \text{month}}$$
-- **AWS Graviton Architecture Rationale**:
-  - **20% Lower Compute Costs**: AWS Fargate discounts ARM64 tasks by 20% compared to x86_64 across both vCPU and memory dimensions.
-  - **Memory & Async I/O Efficiency**: Graviton's Neoverse cores deliver higher memory bandwidth per vCPU, optimizing high-throughput async network I/O during feed scraping and vector serialization.
-  - **Cross-Architecture CI/CD**: Built via `docker/setup-qemu-action` and `docker/build-push-action` (`platforms: linux/arm64`) in GitHub Actions, ensuring consistent OCI-compliant ARM64 binaries without requiring dedicated ARM build runners.
+- **Zero idle cost**: No always-on worker fleet or queue daemon. Compute exists only for the scheduled run.
+- **Memory reclamation**: A one-shot process returns all memory to the OS; there is no long-lived Python heap to leak.
+- **Simple failure model**: A non-zero exit code is the operational signal. Logs carry the stage, counters, and bounded error string.
+- **No shadow scheduler**: Cadence belongs to EventBridge (or local cron), not to an internal loop.
 
 ---
 
-## 2. Ingestion Pipeline & Token Optimization
+## 2. Target Ingestion Architecture
 
-The ingestion stages in [`SyncService`](../src/hermes_worker/services/sync.py) are structured to minimize token consumption and inference latency:
+> **Status:** Phase 1 provides the job runtime, article claim queue, maintenance, and healthcheck. Ingestion and event construction are implemented in later phases.
 
 ```mermaid
-sequenceDiagram
-    autonumber
-    participant W as SyncService (apps/hermes-worker)
-    participant DB as Neon PostgreSQL (PostGIS / pgvector)
-    participant AI as LiteLLM (hermes-ai)
-    participant Nom as GeocodingService (Nominatim)
-
-    Note over W: Load due sources (interval doubles per failure, capped at 6h)
-    
-    loop Bounded Concurrency (asyncio.Semaphore = 5)
-        W->>W: Fetch articles (RSS / GDELT / Sitemaps)
-        W->>DB: Filter existing URLs (article_url_exists)
-        
-        loop Bounded Batches (ARTICLE_BATCH_SIZE = 10)
-            W->>AI: gen_embeddings(batch_texts) [nemotron-3-embed-1b]
-            AI-->>W: List of 2048-dim vectors
-            
-            W->>DB: get_active_events_by_embeddings(embeddings)
-            Note over DB: HNSW cosine distance scan: Event.embedding <=> vector < 0.25
-            DB-->>W: Candidate active events per article
-            
-            W->>AI: events.extract(articles, candidate_events)
-            Note over AI: LiteLLM evaluates whether to corroborate candidate or create new
-            AI-->>W: List of ExtractedEvent models
-            
-            loop For Each Valid Extraction
-                alt Has Location Name
-                    W->>Nom: geocode(location_name)
-                    Note over Nom: Check geocode_cache -> Rate-limited Nominatim (1 req/s)
-                    Nom-->>W: Grounded POINT(lng, lat)
-                end
-                
-                alt Article matches candidate event
-                    W->>DB: add_article_to_event(event_id, article, credibility)
-                    Note over DB: Updates score (Shannon diversity, velocity, syndication)
-                else Novel event
-                    W->>DB: create_event_with_article(extraction, geocoding, embedding)
-                end
-            end
-        end
-        W->>DB: record_fetch_success / record_fetch_failure(source_id)
-    end
+flowchart LR
+    Feeds["Direct publisher RSS\n+ Google News fallback"] --> Ledger["articles\nURL identity + feed metadata"]
+    Ledger --> Analyze["Analyze\nlabel + embed + syndication family"]
+    Analyze --> Cluster["Cluster\nincident-level events"]
+    Cluster --> Describe["Describe\nevent synthesis"]
+    Describe --> Score["Score\nimportance_score"]
+    Score --> Thread["Thread\npersistent topic grouping"]
+    Thread --> Serve["API + map"]
 ```
 
-### Architectural Decisions ("The Why")
+### 2.1 Command Cadence
 
-#### A. Embed Before Extract (Vector Pre-Filtering)
-- **The Problem**: Passing batches of full articles to an LLM and asking it to perform cross-comparisons against all active events requires $O(N \times M)$ comparisons. For hundreds of articles against dozens of active events, this burns millions of tokens and exceeds context windows.
-- **The Solution**: Articles are embedded *first* into 2048-dimensional dense vectors using `nvidia_nim/nvidia/nemotron-3-embed-1b`. PostGIS evaluates approximate nearest neighbors using an HNSW index with `halfvec_cosine_ops` (`cosine_distance < 0.25`). Only the top candidate events within the threshold are injected into the LLM prompt. The LLM simply confirms whether an article belongs to an existing event or represents a novel incident.
+| Command | Schedule | Scope | LLM |
+| :--- | :--- | :--- | :--- |
+| `ingest-articles` | every 15 min | Fetch feeds, write the article ledger, label, embed, assign syndication family | yes |
+| `build-events` | hourly | Cluster articles into events, describe, verify, score, update threads | yes |
+| `maintain-events` | daily | Requeue stale claims, lifecycle transitions, retention, consistency checks | no |
+| `healthcheck` | on demand | Connectivity, schema, queue depth, stale claims | no |
 
-#### B. Bounded Batch Sizing & Memory Limits
-- **The Problem**: With only 512 MB of RAM allocated to the Fargate container, collecting large collections of parsed feeds and DOM bodies causes Out-Of-Memory (OOM) task kills.
-- **The Solution**: Processing is strictly bounded:
-  - Source fetching concurrency is governed by an `asyncio.Semaphore(5)`.
-  - Articles are sliced into chunks of `ARTICLE_BATCH_SIZE = 10` before embedding and LLM inference.
-  - Article bodies are truncated to 500 words to conserve token context while preserving crucial lead paragraphs.
+Phase 1 registers `maintain-events` and `healthcheck`. `ingest-articles` and `build-events` are registered when their stages land; there is no feature flag and no parallel legacy path.
 
----
+### 2.2 Article Ledger and Claim Queue
 
-## 3. The Grounded Geocoding Shield
-
-To achieve high spatial accuracy while strictly obeying external rate limits and eliminating LLM coordinate hallucination, `hermes-worker` routes all spatial queries through [`GeocodingService`](../../../libs/shared/hermes-ai/src/hermes_ai/services/geocoding.py):
+`articles.ingest_status` is the only work queue:
 
 ```mermaid
-flowchart TD
-    Extracted["Extracted Location Name String"] --> Clean["Sanitize String (clean_location_name)"]
-    Clean --> CacheCheck{"Lookup in geocode_cache Table"}
-    
-    CacheCheck -->|"Hit (Valid Coords)"| ValidCache["Return Cached (Latitude, Longitude)"]
-    CacheCheck -->|"Hit (NULL Coords)"| NegativeCache["Negative Cache: Treat as Non-Geographical (NULL Point)"]
-    CacheCheck -->|"Cache Miss"| InFlightCheck{"In-Flight Coroutine Active?"}
-    
-    InFlightCheck -->|"Yes"| AwaitFlight["Await Shared Coroutine Future (Coalescing)"]
-    InFlightCheck -->|"No"| CircuitCheck{"Circuit Breaker Open?"}
-    
-    CircuitCheck -->|"Yes (120s Cooldown Active)"| CircuitDrop["Bypass External Call (NULL Point)"]
-    CircuitCheck -->|"No"| RateLock["Acquire Token-Bucket Rate Limiter (1 req/s Lock)"]
-    
-    RateLock --> HTTPReq["HTTP GET Nominatim API (10s timeout, custom User-Agent)"]
-    HTTPReq --> ResultCheck{"Valid Coordinates Returned?"}
-    
-    ResultCheck -->|"Found"| SavePositive["Save Coordinates to geocode_cache"]
-    ResultCheck -->|"404 / Unlocatable"| SaveNegative["Negative Cache: Save NULL Coordinates to geocode_cache"]
-    ResultCheck -->|"HTTP 429 Too Many Requests"| TripCircuit["Backoff Retry-After -> Trip Circuit Breaker (120s)"]
+stateDiagram-v2
+    [*] --> NEW
+    NEW --> ANALYZING: claim (attempt_count += 1)
+    ANALYZING --> LABELED: analysis success
+    ANALYZING --> NEW: failure below max attempts
+    ANALYZING --> FAILED: attempts exhausted
+    ANALYZING --> NEW: stale claim requeued
+    ANALYZING --> FAILED: stale claim exhausted
 ```
 
-### Defense Mechanisms
+- Claims use `UPDATE ... WHERE id IN (SELECT ... FOR UPDATE SKIP LOCKED)` and `RETURNING`.
+- `attempt_count` is bounded by `ARTICLE_MAX_ATTEMPTS`.
+- `maintain-events` requeues `ANALYZING` rows older than `ARTICLE_CLAIM_STALE_MINUTES`.
+- A stage commits its own work; `ArticleQueue` never commits. A crash before commit leaves work claimable by the next run.
 
-1. **1.0-Second Token Bucket Lock**: OpenStreetMap's Acceptable Use Policy strictly forbids requests exceeding 1 req/sec. [`NominatimResilienceManager`](../../../libs/shared/hermes-ai/src/hermes_ai/services/geocoding.py) enforces this through an async token-bucket rate limiter.
-2. **Negative Caching**: Non-geographic terms extracted by models (e.g. `"Global Markets"`, `"Cyberspace"`) cannot be geocoded. The worker caches these as `NULL` coordinates in the `geocode_cache` table, permanently preventing redundant external HTTP requests on subsequent runs.
-3. **In-Flight Request Coalescing**: If multiple concurrent articles in a batch reference the same location (e.g. three separate reports referencing `"Rafah"`), an in-flight future table ensures only a single HTTP request is dispatched; other coroutines await the identical future.
-4. **Circuit Breaker**: If Nominatim returns HTTP 429 across retries, the circuit breaker trips for 120 seconds, preventing IP bans.
+### 2.3 Bounded Work and Memory
 
----
+- Process feeds and articles in bounded batches; never accumulate the full feed set in memory.
+- The Fargate task has 512 MB RAM. Feed parsing, embedding requests, and LLM prompts must all have explicit batch limits.
+- Network calls are rate-limited (Nominatim 1 req/s; LLM and embedding token buckets).
 
-## 4. Multi-Factor Scoring & Consensus Formulation
+### 2.4 Grounded Geocoding Shield
 
-When an article corroborates an existing incident, its trending score compounds using:
-
-$$\Delta S = W_{\text{cred}}(a) \times F_{\text{synd}}(a) \times M_{\text{impact}}(E) \times D_{\text{shannon}}(E) \times V_{\text{mult}}(E)$$
-
-- **Credibility Weights ($W_{\text{cred}}$)**: Tier 1 wire services (Reuters, AP) contribute $3.0$; Tier 2 outlets (BBC, NYT) contribute $2.0$; Tier 3 regional outlets contribute $1.0$; Tier 4 aggregators contribute $0.5$.
-- **Syndication Dampening ($F_{\text{synd}} = 1 / \sqrt{N_{\text{source}}}$)**: Decreases the marginal value of repetitive reports from the same publisher.
-- **Geopolitical Shannon Diversity ($D_{\text{shannon}}$)**: Sources are categorized across 6 geopolitical blocs (`GLOBAL_WIRE`, `NORTH_AMERICA`, `EUROPE`, `ASIA_PACIFIC`, `MIDDLE_EAST_AFRICA`, `LATIN_AMERICA`). Events corroborated across disparate blocs earn a multiplier scaling with Shannon entropy $H$:
-  $$D_{\text{shannon}} = 1.0 + 0.5 \times \min(H, 1.0)$$
-- **Velocity Multiplier ($V_{\text{mult}}$)**: Rewards events accumulating reports rapidly:
-  $$\text{velocity} = \frac{N_{\text{articles}}}{\max(\Delta t, 1.0)}, \quad V_{\text{mult}} = 1.0 + \min((\text{velocity} - 1.0) \times 0.2, 1.0)$$
+LLMs never generate coordinates. They return normalized location names, which `GeocodingService` resolves through OpenStreetMap Nominatim. Results are cached in `geocode_cache`; unresolvable names are stored as negative entries to prevent repeated outbound calls. The service is injected into the job context and shared across stages in one run.
 
 ---
 
-## 5. Lifecycle Decay & Status Transitions
+## 3. Event, Thread, and Timeline Model
 
-- **Exponential Score Decay**: Event trending scores diminish over time based on an 18-hour half-life:
-  $$\lambda = 2^{-\frac{1}{18}} \approx 0.9622 \text{ per hour}$$
-- **State Progression**:
-  - `ACTIVE` $\rightarrow$ `STALE`: Occurs when an event has received no new corroborating articles for $> 24$ hours (`EVENT_STALE_HOURS`).
-  - `STALE` $\rightarrow$ `ARCHIVED`: Occurs when an event has remained stale for $> 48$ hours (`EVENT_ARCHIVE_HOURS`).
-  - **Reactivation**: Any new incoming article corroborating a `STALE` event immediately reactivates it to `ACTIVE`.
-- **Resource Teardown**: The worker disposes of all database connections on exit, returning a non-zero exit code (`sys.exit(1)`) if an unhandled error occurs during lifecycle or sync tasks.
+| Entity | Meaning |
+| :--- | :--- |
+| **Event** | One real-world incident at a place and time. This is the map pin. |
+| **Thread** | A persistent topic grouping. Five related events remain five pins, all carrying the thread. |
+| **Timeline** | The existing per-event Wikipedia/LLM causality cache. Threads do not generate timelines. |
+
+Threads persist across news cycles:
+
+- `ACTIVE -> DORMANT` after 7 days without a new event.
+- `DORMANT -> ENDED` after 30 days.
+- A new event on the same topic reactivates a `DORMANT` thread.
+
+Events and threads are not collapsed. Merging is limited to duplicate incidents and is recorded explicitly; there is no automatic splitting in v1.
+
+---
+
+## 4. Verification and Ranking
+
+### 4.1 Syndication Families
+
+Articles are grouped into families by shared syndication origin. Verification is derived from the number and quality of independent families:
+
+| Status | Rule |
+| :--- | :--- |
+| `SINGLE_SOURCE` | One family only. Visible but capped and badged. |
+| `CORROBORATED` | At least two independent families agree. |
+| `CONFIRMED` | Corroborated and includes a tier-1 family. |
+| `CONFLICTING` | Families disagree on a material fact. |
+
+### 4.2 One Authoritative Score
+
+`importance_score` is the only ranking value. It is recomputed from current evidence, never incremented in place:
+
+```
+strength = min(1, sum(max credibility per family) / 9)     # tier1=3, tier2=2, tier3/4=1
+impact   = {CRITICAL:1.0, MAJOR:0.8, MODERATE:0.55, MINOR:0.3}
+verify   = {CONFIRMED:1.0, CORROBORATED:0.85, SINGLE_SOURCE:0.4, CONFLICTING:0.25}
+quality  = clamp(1 - 0.15*(5-specificity) - 0.10*(5-consequence), 0.5, 1.0)
+
+base      = 100 * (0.40*strength + 0.30*impact + 0.15*verify + 0.15*quality)
+score     = base * exp(-age_hours / half_life)
+half_life = 18h CRITICAL, 36h MAJOR, 72h otherwise
+if SINGLE_SOURCE: score = min(score, 45)
+```
+
+`score_breakdown` stores the raw value, weight, contribution, freshness multiplier, and cap for each component. Tiers are `PRIMARY >= 55`, `FILLER 30–55`, `DROP < 30`, with ±5 hysteresis. Single-source events remain visible; they never outrank corroborated events unless a short breaking-news override applies.
+
+---
+
+## 5. Phase 1 Job Foundation
+
+### 5.1 Modules
+
+```
+jobs/
+  context.py   JobContext, LlmBudget, Stage, StageStats, WorkerIdentity
+  runner.py    ordered stage execution and optional advisory lock
+  locks.py     per-command Postgres advisory locks
+  queue.py     ArticleQueue claim/mark/fail/requeue
+  commands.py  maintain-events and healthcheck command wiring
+  stages/
+    maintenance.py  requeue stale claims + event lifecycle
+    healthcheck.py  connectivity, schema, queue depth
+```
+
+### 5.2 Command Surface
+
+| Command | Stages registered in Phase 1 | Purpose |
+| :--- | :--- | :--- |
+| `maintain-events` | `REQUEUE_CLAIMS`, `EVENT_LIFECYCLE` | Recover abandoned claims and apply event decay/transitions |
+| `healthcheck` | `HEALTHCHECK` | Read-only readiness probe |
+
+`healthcheck` does not take a lock: read-only probes must remain available while maintenance is running. `maintain-events` takes its own advisory lock; a second concurrent invocation records `SKIPPED` in logs and exits cleanly.
+
+### 5.3 Execution Record
+
+There is no run-telemetry table. The durable record is:
+
+- Structured logs with stage name, outcome, counters, and a bounded error string.
+- Article claim fields (`claimed_at`, `claimed_by`, `attempt_count`, `last_error`).
+- The process exit code.
+
+A run-telemetry table is intentionally not part of the design; it duplicated logs without serving a query that domain rows cannot answer. Add one only when a concrete operational query requires it.
+
+### 5.4 Structured LLM Completion
+
+`LlmService.complete_json(...)` adds a schema-repair retry for structured stages while `call_llm(...)` keeps its single-shot behavior for the legacy extractor. Usage accounting (`LlmUsage`) records calls, input/output tokens, and repairs per process.
+
+The worker builds generic `label`, `adjudicate`, and `describe` routes that default to `LLM_MODEL` / `LLM_API` and accept per-task overrides. Every stage reserves calls through `JobContext.budget` before invoking `complete_json`; exceeding `MAX_LLM_CALLS_PER_RUN` fails the stage instead of allowing unbounded spend.
+
+### 5.5 Schema Guard
+
+`healthcheck` verifies:
+
+- `articles.claimed_at`, `claimed_by`, `attempt_count`, `last_error`
+- The expanded `ingeststatus` check constraint (`ANALYZING`, `FAILED`)
+- The partial index `idx_articles_analyzing_claimed_at`
+
+A missing migration raises `SchemaCheckError` naming the exact missing object, rather than failing later on an opaque SQL error.
 
 ---
 
 ## 6. Observability & Langfuse Tracing
 
-`hermes-worker` incorporates **Langfuse v3** for traceability and cost observability across batch LLM event extraction workloads.
+- **Opt-in**: Tracing activates only when both Langfuse keys are configured.
+- **Structured calls**: `complete_json` runs are traced through the shared `LlmService`; inputs and outputs are not captured for article content.
+- **Process tags**: Traces carry `["hermes-worker", ENV]` to separate local runs from production.
+- **Flush on exit**: `JobContext.aclose()` calls `LlmService.aclose()`, which flushes the Langfuse client before the container exits.
 
-```mermaid
-flowchart LR
-    Sync["SyncService Ingestion Loop"] --> Batch["Batch of 10 Articles"]
-    Batch --> Observe["@observe: event-extract\n(EventExtractor.extract)"]
-    Observe --> Router["LiteLLM Router\n(Primary -> Fallback)"]
-    Router --> LifespanEnd["Lifespan Teardown\n(LlmService.aclose)"]
-    LifespanEnd --> Flush["Langfuse get_client().flush()\n(Synchronous Drain)"]
-    Flush -.->|"HTTPS Ingestion"| Langfuse[("Langfuse Cloud / Host")]
-```
+---
 
-### Architectural Decisions ("The Why")
+## 7. Failure and Recovery Model
 
-1. **Process-Level Singleton Registration**:
-   `hermes-worker` instantiates the shared AI facade via `create_ai_client()` in [`core/ai.py`](../src/hermes_worker/core/ai.py). When `LANGFUSE_PUBLIC_KEY` and `LANGFUSE_SECRET_KEY` are provided, `LlmService` registers the Langfuse SDK singleton using `base_url` (guaranteeing correct regional OTLP routing).
-
-2. **Batch-Level Tracing (`event-extract`)**:
-   Extraction passes over article chunks are decorated with `@observe(as_type="span", name="event-extract", capture_input=False, capture_output=False)`. This captures:
-   - Batch extraction latency and model response times.
-   - Token consumption across primary (`mistral/ministral-8b-latest`) and fallback (`nvidia_nim/openai/gpt-oss-20b`) deployments.
-   - PII protection: inputs and outputs are not captured to avoid exporting raw scraped articles or sensitive content into the telemetry plane.
-
-3. **Critical Flush on Ephemeral Container Shutdown**:
-   Because `hermes-worker` runs on **AWS ECS Fargate** with an ephemeral run-and-die lifecycle, the container terminates immediately upon sync completion (`sys.exit(0)`).
-   - In long-running servers, background telemetry workers can flush lazily on intervals.
-   - In ephemeral batch tasks, process termination kills background threads immediately, resulting in dropped trace batches.
-   - To prevent telemetry loss, `hermes-worker` ensures `LlmService.aclose()` executes `get_client().flush()` before container teardown, synchronously draining the trace queue to Langfuse before OS process exit.
-
-4. **Environment Separation**:
-   Traces are tagged with `["hermes-worker", ENV]`, separating local developer CLI executions (`ENV=development`) from production AWS Fargate automated batches (`ENV=production`).
+| Failure | Behavior |
+| :--- | :--- |
+| Stage raises | Runner logs the bounded error and re-raises; process exits `1`. Stage transaction rolls back. |
+| Process killed mid-stage | `ANALYZING` claim remains. Next `maintain-events` requeues or fails it based on attempts. |
+| Advisory lock held | Second invocation logs `SKIPPED` and exits `0` without mutating state. |
+| Schema mismatch | `healthcheck` raises `SchemaCheckError` with the missing object list. |
+| LLM budget exhausted | `BudgetExhaustedError` fails the stage; no further calls are made. |
+| LLM schema mismatch | One repair retry through `complete_json`; a second failure raises `SchemaValidationError`. |
+| Telemetry flush failure | Logged as a warning; it does not mask the stage result. |

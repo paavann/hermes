@@ -7,6 +7,9 @@ exclude_lines = ['if TYPE_CHECKING:']
 show_missing = true
 
 [tool.pytest.ini_options]
+markers = [
+  "integration: requires TEST_DATABASE_URL pointing at a disposable migrated database",
+]
 addopts = """
  --cov
  --cov-report html:'../../coverage/apps/hermes-worker/html'
