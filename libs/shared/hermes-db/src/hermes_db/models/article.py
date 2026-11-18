@@ -34,6 +34,15 @@ class Article(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     title: Mapped[str] = mapped_column(Text)
     url: Mapped[str] = mapped_column(Text, unique=True)
     canonical_url: Mapped[str | None] = mapped_column(Text)
+    # sha256 of canonical_url. Partial unique index where the article is not a
+    # known duplicate keeps URL variants from creating separate ledger rows.
+    canonical_url_hash: Mapped[str | None] = mapped_column(String(64))
+    # set only when a backfill or reconciliation resolved this row as a copy of
+    # an article already in the ledger. Ingest skips such rows instead.
+    duplicate_of_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("articles.id", ondelete="SET NULL"),
+        nullable=True,
+    )
     thumbnail_url: Mapped[str | None] = mapped_column(Text)
 
     feed_summary: Mapped[str | None] = mapped_column(Text)
@@ -95,6 +104,15 @@ class Article(Base, UUIDPrimaryKeyMixin, TimestampMixin):
             "claimed_at",
             postgresql_where=text("ingest_status = 'ANALYZING'"),
         ),
+        Index(
+            "uq_articles_canonical_url_hash",
+            "canonical_url_hash",
+            unique=True,
+            postgresql_where=text(
+                "canonical_url_hash IS NOT NULL AND duplicate_of_id IS NULL"
+            ),
+        ),
+        Index("idx_articles_duplicate_of_id", "duplicate_of_id"),
     )
 
     @property

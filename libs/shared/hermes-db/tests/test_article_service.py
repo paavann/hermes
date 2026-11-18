@@ -198,7 +198,7 @@ class TestCreateLedgerArticle:
         assert result is mock_article
 
     def test_ledger_fields_are_stored(self):
-        """Feed content and normalization fields must reach the insert."""
+        """Feed summary and URL identity fields must reach the insert."""
         session = make_async_session(execute_scalar_one_or_none=MagicMock(spec=Article))
         svc = ArticleService(session)
 
@@ -208,9 +208,9 @@ class TestCreateLedgerArticle:
                 url="https://example.com/ledger",
                 source_id=make_uuid(),
                 canonical_url="https://example.com/ledger?ref=rss",
+                canonical_url_hash="d" * 64,
                 thumbnail_url="https://example.com/ledger.jpg",
                 feed_summary="Feed summary",
-                feed_content="Feed content",
                 content_hash="a" * 64,
                 title_simhash="0123456789abcdef",
                 language="en",
@@ -220,12 +220,81 @@ class TestCreateLedgerArticle:
         stmt = session.execute.call_args.args[0]
         params = stmt.compile().params
         assert params["canonical_url"] == "https://example.com/ledger?ref=rss"
+        assert params["canonical_url_hash"] == "d" * 64
         assert params["feed_summary"] == "Feed summary"
-        assert params["feed_content"] == "Feed content"
         assert params["content_hash"] == "a" * 64
         assert params["title_simhash"] == "0123456789abcdef"
         assert params["language"] == "en"
         assert params["ingest_status"] == IngestStatus.NEW.value
+
+
+class TestInsertLedgerRows:
+    def test_inserts_a_batch_and_returns_inserted_count(self):
+        session = make_async_session(execute_scalars=[make_uuid(), make_uuid()])
+        svc = ArticleService(session)
+        source_id = make_uuid()
+
+        inserted = run(
+            svc.insert_ledger_rows(
+                [
+                    {
+                        "source_id": source_id,
+                        "title": "First",
+                        "url": "https://example.com/first",
+                        "canonical_url": "https://example.com/first",
+                        "canonical_url_hash": "a" * 64,
+                        "feed_summary": "First summary",
+                        "published_at": None,
+                        "language": "en",
+                    },
+                    {
+                        "source_id": source_id,
+                        "title": "Second",
+                        "url": "https://example.com/second",
+                        "canonical_url": "https://example.com/second",
+                        "canonical_url_hash": "b" * 64,
+                        "feed_summary": None,
+                        "published_at": None,
+                        "language": "en",
+                    },
+                ]
+            )
+        )
+
+        assert inserted == 2
+        session.execute.assert_awaited_once()
+        stmt = session.execute.call_args.args[0]
+        assert "ON CONFLICT DO NOTHING" in str(stmt)
+
+    def test_counts_only_rows_returned_by_postgres(self):
+        session = make_async_session(execute_scalars=[make_uuid()])
+        svc = ArticleService(session)
+
+        inserted = run(
+            svc.insert_ledger_rows(
+                [
+                    {
+                        "source_id": make_uuid(),
+                        "title": "Duplicate",
+                        "url": "https://example.com/duplicate",
+                        "canonical_url": "https://example.com/duplicate",
+                        "canonical_url_hash": "c" * 64,
+                        "feed_summary": None,
+                        "published_at": None,
+                        "language": None,
+                    }
+                ]
+            )
+        )
+
+        assert inserted == 1
+
+    def test_empty_batch_does_not_query(self):
+        session = make_async_session()
+        svc = ArticleService(session)
+
+        assert run(svc.insert_ledger_rows([])) == 0
+        session.execute.assert_not_awaited()
 
 
 # ---------------------------------------------------------------------------

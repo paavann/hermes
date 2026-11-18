@@ -3,11 +3,16 @@ from __future__ import annotations
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Index, Integer, String, Text, text
+from sqlalchemy import Enum, Index, Integer, String, Text, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from hermes_db.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
-from hermes_db.enums import CredibilityTier, SourceType
+from hermes_db.enums import (
+    CredibilityTier,
+    SourceFeedProvider,
+    SourceFetchPolicy,
+    SourceType,
+)
 
 
 if TYPE_CHECKING:
@@ -22,6 +27,28 @@ class Source(Base, UUIDPrimaryKeyMixin, TimestampMixin):
 
     url: Mapped[str] = mapped_column(Text)
     feed_url: Mapped[str | None] = mapped_column(Text)
+    # second feed tried only when the primary returns no entries or errors.
+    fallback_feed_url: Mapped[str | None] = mapped_column(Text)
+    feed_provider: Mapped[SourceFeedProvider] = mapped_column(
+        Enum(
+            SourceFeedProvider,
+            native_enum=False,
+            values_callable=lambda members: [member.value for member in members],
+        ),
+        default=SourceFeedProvider.PUBLISHER,
+        server_default=SourceFeedProvider.PUBLISHER.value,
+    )
+    canonical_domain: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    paywall: Mapped[bool] = mapped_column(default=False, server_default="false")
+    fetch_policy: Mapped[SourceFetchPolicy] = mapped_column(
+        Enum(
+            SourceFetchPolicy,
+            native_enum=False,
+            values_callable=lambda members: [member.value for member in members],
+        ),
+        default=SourceFetchPolicy.FULL_TEXT,
+        server_default=SourceFetchPolicy.FULL_TEXT.value,
+    )
 
     source_type: Mapped[SourceType] = mapped_column(default=SourceType.RSS)
     credibility: Mapped[CredibilityTier] = mapped_column(default=CredibilityTier.TIER_3)
@@ -57,4 +84,5 @@ class Source(Base, UUIDPrimaryKeyMixin, TimestampMixin):
             "origin_group",
             postgresql_where=text("origin_group IS NOT NULL"),
         ),
+        Index("idx_sources_canonical_domain", "canonical_domain"),
     )

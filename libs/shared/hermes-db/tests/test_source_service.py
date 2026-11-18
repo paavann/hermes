@@ -11,12 +11,17 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from hermes_db.enums import SourceType
+from hermes_db.enums import (
+    SourceFeedProvider,
+    SourceFetchPolicy,
+    SourceType,
+)
 from hermes_db.models import Source
 from hermes_db.services.source import (
     DueSource,
     SourceService,
-    _load_sources_config,
+    canonical_domain_from_url,
+    load_sources_config,
     sync_sources_from_config,
 )
 
@@ -29,6 +34,11 @@ def _make_source(
     name: str = "Test",
     url: str = "https://example.com",
     feed_url: str | None = "https://example.com/rss",
+    fallback_feed_url: str | None = None,
+    feed_provider: SourceFeedProvider = SourceFeedProvider.PUBLISHER,
+    canonical_domain: str | None = "example.com",
+    paywall: bool = False,
+    fetch_policy: SourceFetchPolicy = SourceFetchPolicy.FULL_TEXT,
     credibility: str = "TIER_3",
     source_type: SourceType = SourceType.RSS,
     is_active: bool = True,
@@ -43,6 +53,11 @@ def _make_source(
     source.name = name
     source.url = url
     source.feed_url = feed_url
+    source.fallback_feed_url = fallback_feed_url
+    source.feed_provider = feed_provider
+    source.canonical_domain = canonical_domain
+    source.paywall = paywall
+    source.fetch_policy = fetch_policy
     source.credibility = credibility
     source.source_type = source_type
     source.is_active = is_active
@@ -106,7 +121,7 @@ def _mock_session(
     return session
 
 
-# --- Tests for _load_sources_config ---
+# --- Tests for load_sources_config ---
 
 
 def test_load_sources_config_valid():
@@ -114,7 +129,7 @@ def test_load_sources_config_valid():
     sample = [{"slug": "bbc-world", "name": "BBC World"}]
 
     with patch.object(Path, "read_text", return_value=json.dumps(sample)):
-        result = asyncio.run(_load_sources_config())
+        result = asyncio.run(load_sources_config())
         assert result == sample
 
 
@@ -126,7 +141,7 @@ def test_load_sources_config_not_a_list():
         patch.object(Path, "read_text", return_value='{"slug": "bbc"}'),
         pytest.raises(ValueError, match="JSON array"),
     ):
-        asyncio.run(_load_sources_config())
+        asyncio.run(load_sources_config())
 
 
 def test_load_sources_config_file_not_found():
@@ -137,7 +152,7 @@ def test_load_sources_config_file_not_found():
         patch.object(Path, "read_text", side_effect=FileNotFoundError),
         pytest.raises(FileNotFoundError),
     ):
-        asyncio.run(_load_sources_config())
+        asyncio.run(load_sources_config())
 
 
 # --- Tests for sync_sources_from_config ---
@@ -160,7 +175,7 @@ def test_sync_inserts_new_sources():
     session = _mock_session(existing_sources=[])
 
     with patch(
-        "hermes_db.services.source._load_sources_config",
+        "hermes_db.services.source.load_sources_config",
         new_callable=AsyncMock,
         return_value=config,
     ):
@@ -175,6 +190,107 @@ def test_sync_inserts_new_sources():
     assert inserted.origin_group == "reuters"
     assert inserted.country_code == "GB"
     assert inserted.language == "en"
+    assert inserted.feed_provider == SourceFeedProvider.PUBLISHER
+    assert inserted.fetch_policy == SourceFetchPolicy.FULL_TEXT
+    assert inserted.paywall is False
+    assert inserted.canonical_domain == "reuters.com"
+
+
+def test_sync_persists_feed_metadata():
+    """Feed provider, fallback, paywall, and policy are config-owned."""
+    config = [
+        {
+            "slug": "nyt-world",
+            "name": "The New York Times",
+            "url": "https://www.nytimes.com/section/world",
+            "feed_url": "https://rss.nytimes.com/services/xml/rss/nyt/World.xml",
+            "fallback_feed_url": "https://news.google.com/rss/search?q=source:NYT",
+            "feed_provider": "PUBLISHER",
+            "paywall": True,
+            "fetch_policy": "SUMMARY_ONLY",
+        }
+    ]
+    session = _mock_session(existing_sources=[])
+
+    with patch(
+        "hermes_db.services.source.load_sources_config",
+        new_callable=AsyncMock,
+        return_value=config,
+    ):
+        asyncio.run(sync_sources_from_config(session))
+
+    inserted = session.add.call_args.args[0]
+    assert (
+        inserted.fallback_feed_url == "https://news.google.com/rss/search?q=source:NYT"
+    )
+    assert inserted.feed_provider == SourceFeedProvider.PUBLISHER
+    assert inserted.paywall is True
+    assert inserted.fetch_policy == SourceFetchPolicy.SUMMARY_ONLY
+    assert inserted.canonical_domain == "nytimes.com"
+
+
+def test_sync_clears_removed_feed_metadata():
+    """A removed fallback must not survive the next config sync."""
+    existing = _make_source(
+        "wsj-world",
+        fallback_feed_url="https://old.example.com/feed",
+        paywall=True,
+        fetch_policy=SourceFetchPolicy.SUMMARY_ONLY,
+    )
+    config = [
+        {
+            "slug": "wsj-world",
+            "name": "WSJ World",
+            "url": "https://example.com",
+            "feed_url": "https://example.com/rss",
+            "feed_provider": "PUBLISHER",
+            "paywall": False,
+            "fetch_policy": "FULL_TEXT",
+        }
+    ]
+    session = _mock_session(existing_sources=[existing])
+
+    with patch(
+        "hermes_db.services.source.load_sources_config",
+        new_callable=AsyncMock,
+        return_value=config,
+    ):
+        stats = asyncio.run(sync_sources_from_config(session))
+
+    assert stats["updated"] == 1
+    assert existing.fallback_feed_url is None
+    assert existing.paywall is False
+    assert existing.fetch_policy == SourceFetchPolicy.FULL_TEXT
+
+
+def test_sync_does_not_commit():
+    """The ingest stage owns the transaction boundary for source sync."""
+    config = [
+        {
+            "slug": "bbc-world",
+            "name": "BBC World",
+            "url": "https://bbc.com",
+            "feed_url": "https://bbc.com/rss",
+        }
+    ]
+    session = _mock_session(existing_sources=[])
+
+    with patch(
+        "hermes_db.services.source.load_sources_config",
+        new_callable=AsyncMock,
+        return_value=config,
+    ):
+        asyncio.run(sync_sources_from_config(session))
+
+    session.commit.assert_not_awaited()
+
+
+def test_canonical_domain_strips_www_and_port():
+    assert (
+        canonical_domain_from_url("https://www.example.com:8443/world") == "example.com"
+    )
+    assert canonical_domain_from_url("not a url") is None
+    assert canonical_domain_from_url(None) is None
 
 
 def test_sync_normalizes_source_metadata():
@@ -193,7 +309,7 @@ def test_sync_normalizes_source_metadata():
     session = _mock_session(existing_sources=[])
 
     with patch(
-        "hermes_db.services.source._load_sources_config",
+        "hermes_db.services.source.load_sources_config",
         new_callable=AsyncMock,
         return_value=config,
     ):
@@ -227,7 +343,7 @@ def test_sync_updates_source_metadata():
     session = _mock_session(existing_sources=[existing])
 
     with patch(
-        "hermes_db.services.source._load_sources_config",
+        "hermes_db.services.source.load_sources_config",
         new_callable=AsyncMock,
         return_value=config,
     ):
@@ -245,7 +361,7 @@ def test_sync_skips_entries_without_slug():
     session = _mock_session(existing_sources=[])
 
     with patch(
-        "hermes_db.services.source._load_sources_config",
+        "hermes_db.services.source.load_sources_config",
         new_callable=AsyncMock,
         return_value=config,
     ):
@@ -270,7 +386,7 @@ def test_sync_disables_removed_sources():
     session = _mock_session(existing_sources=[existing])
 
     with patch(
-        "hermes_db.services.source._load_sources_config",
+        "hermes_db.services.source.load_sources_config",
         new_callable=AsyncMock,
         return_value=config,
     ):
@@ -285,7 +401,7 @@ def test_sync_handles_missing_config_file():
     session = _mock_session()
 
     with patch(
-        "hermes_db.services.source._load_sources_config",
+        "hermes_db.services.source.load_sources_config",
         new_callable=AsyncMock,
         side_effect=FileNotFoundError("not found"),
     ):
@@ -301,7 +417,7 @@ def test_sync_handles_invalid_json():
     session = _mock_session()
 
     with patch(
-        "hermes_db.services.source._load_sources_config",
+        "hermes_db.services.source.load_sources_config",
         new_callable=AsyncMock,
         side_effect=json.JSONDecodeError("bad", "", 0),
     ):
@@ -328,11 +444,12 @@ def test_sync_is_idempotent():
         feed_url="https://feeds.bbci.co.uk/news/world/rss.xml",
         credibility="TIER_1",
         is_active=True,
+        canonical_domain="bbc.com",
     )
     session = _mock_session(existing_sources=[existing])
 
     with patch(
-        "hermes_db.services.source._load_sources_config",
+        "hermes_db.services.source.load_sources_config",
         new_callable=AsyncMock,
         return_value=config,
     ):
@@ -365,7 +482,7 @@ def test_sync_updates_changed_source_fields():
     session = _mock_session(existing_sources=[existing])
 
     with patch(
-        "hermes_db.services.source._load_sources_config",
+        "hermes_db.services.source.load_sources_config",
         new_callable=AsyncMock,
         return_value=config,
     ):
@@ -391,7 +508,7 @@ def test_sync_reactivates_inactive_source():
     session = _mock_session(existing_sources=[existing])
 
     with patch(
-        "hermes_db.services.source._load_sources_config",
+        "hermes_db.services.source.load_sources_config",
         new_callable=AsyncMock,
         return_value=config,
     ):

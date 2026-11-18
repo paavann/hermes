@@ -24,6 +24,8 @@ from hermes_db.enums import (
     ImpactLevel,
     IngestStatus,
     SelectionTier,
+    SourceFeedProvider,
+    SourceFetchPolicy,
     SourceType,
     ThreadKind,
     ThreadStatus,
@@ -57,6 +59,8 @@ class TestArticleModel:
             "title",
             "url",
             "canonical_url",
+            "canonical_url_hash",
+            "duplicate_of_id",
             "feed_summary",
             "feed_content",
             "content_hash",
@@ -178,6 +182,31 @@ class TestArticleModel:
         assert "idx_articles_ingest_status_published_at" in indexes
         assert "idx_articles_event_id" in indexes
         assert "idx_articles_source_id" in indexes
+        assert "uq_articles_canonical_url_hash" in indexes
+        assert "idx_articles_duplicate_of_id" in indexes
+
+    def test_canonical_url_hash_is_sha256_sized(self):
+        col = inspect(Article).columns["canonical_url_hash"]
+        assert col.nullable
+        assert isinstance(col.type, String)
+        assert col.type.length == 64
+
+    def test_canonical_url_hash_index_is_partial_and_unique(self):
+        indexes = {index.name: index for index in Article.__table__.indexes}
+        index = indexes["uq_articles_canonical_url_hash"]
+
+        assert index.unique is True
+        assert [col.name for col in index.columns] == ["canonical_url_hash"]
+        where = index.dialect_options["postgresql"]["where"]
+        assert where is not None
+        assert "duplicate_of_id IS NULL" in str(where)
+
+    def test_duplicate_of_points_at_articles(self):
+        col = inspect(Article).columns["duplicate_of_id"]
+        assert col.nullable
+        fk = next(iter(col.foreign_keys))
+        assert fk.target_fullname == "articles.id"
+        assert fk.ondelete == "SET NULL"
 
 
 # ---------------------------------------------------------------------------
@@ -683,6 +712,12 @@ class TestSourceModel:
             "name",
             "slug",
             "url",
+            "feed_url",
+            "fallback_feed_url",
+            "feed_provider",
+            "canonical_domain",
+            "paywall",
+            "fetch_policy",
             "source_type",
             "credibility",
             "is_active",
@@ -713,6 +748,37 @@ class TestSourceModel:
     def test_feed_url_is_nullable(self):
         col = inspect(Source).columns["feed_url"]
         assert col.nullable
+
+    def test_fallback_feed_url_is_nullable(self):
+        col = inspect(Source).columns["fallback_feed_url"]
+        assert col.nullable
+
+    def test_feed_provider_default(self):
+        col = inspect(Source).columns["feed_provider"]
+        assert col.default is not None
+        assert col.default.arg == SourceFeedProvider.PUBLISHER
+        assert col.server_default is not None
+        assert col.server_default.arg == SourceFeedProvider.PUBLISHER.value
+
+    def test_fetch_policy_default(self):
+        col = inspect(Source).columns["fetch_policy"]
+        assert col.default is not None
+        assert col.default.arg == SourceFetchPolicy.FULL_TEXT
+        assert col.server_default is not None
+        assert col.server_default.arg == SourceFetchPolicy.FULL_TEXT.value
+
+    def test_paywall_defaults_to_false(self):
+        col = inspect(Source).columns["paywall"]
+        assert col.default is not None
+        assert col.default.arg is False
+        assert col.server_default is not None
+
+    def test_canonical_domain_is_nullable(self):
+        assert inspect(Source).columns["canonical_domain"].nullable
+
+    def test_canonical_domain_index_present(self):
+        indexes = {idx.name for idx in Source.__table__.indexes}
+        assert "idx_sources_canonical_domain" in indexes
 
     def test_logo_url_is_nullable(self):
         col = inspect(Source).columns["logo_url"]

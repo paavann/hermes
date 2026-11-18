@@ -110,7 +110,6 @@ class TestInitDb:
         with (
             patch("hermes_db.session.engine", engine),
             patch("hermes_db.session.AsyncSessionLocal", mock_factory),
-            patch("hermes_db.session.sync_sources_from_config", new_callable=AsyncMock),
             caplog.at_level(logging.INFO, logger="hermes_db.session"),
         ):
             from hermes_db.session import init_db
@@ -134,69 +133,6 @@ class TestInitDb:
 
         assert any("failed to connect" in r.message for r in caplog.records)
 
-    def test_source_sync_called_on_success(self):
-        """After connecting, sync_sources_from_config must be awaited."""
-        engine = self._make_engine_mock()
-        mock_session = AsyncMock()
-        mock_session.__aenter__ = AsyncMock(return_value=mock_session)
-        mock_session.__aexit__ = AsyncMock(return_value=False)
-        mock_factory = MagicMock(return_value=mock_session)
-        mock_sync = AsyncMock()
-
-        with (
-            patch("hermes_db.session.engine", engine),
-            patch("hermes_db.session.AsyncSessionLocal", mock_factory),
-            patch("hermes_db.session.sync_sources_from_config", mock_sync),
-        ):
-            from hermes_db.session import init_db
-
-            run(init_db())
-
-        mock_sync.assert_awaited_once()
-
-    def test_source_sync_skipped_when_disabled(self):
-        """sync_sources=False must leave the source table untouched."""
-        engine = self._make_engine_mock()
-        mock_session = AsyncMock()
-        mock_session.__aenter__ = AsyncMock(return_value=mock_session)
-        mock_session.__aexit__ = AsyncMock(return_value=False)
-        mock_factory = MagicMock(return_value=mock_session)
-        mock_sync = AsyncMock()
-
-        with (
-            patch("hermes_db.session.engine", engine),
-            patch("hermes_db.session.AsyncSessionLocal", mock_factory),
-            patch("hermes_db.session.sync_sources_from_config", mock_sync),
-        ):
-            from hermes_db.session import init_db
-
-            run(init_db(sync_sources=False))
-
-        mock_sync.assert_not_awaited()
-        mock_factory.assert_not_called()
-
-    def test_sync_failure_does_not_propagate(self, caplog):
-        """A sync_sources failure must be caught and logged, not raised."""
-        engine = self._make_engine_mock()
-        mock_session = AsyncMock()
-        mock_session.__aenter__ = AsyncMock(return_value=mock_session)
-        mock_session.__aexit__ = AsyncMock(return_value=False)
-        mock_factory = MagicMock(return_value=mock_session)
-        mock_sync = AsyncMock(side_effect=RuntimeError("sync boom"))
-
-        with (
-            patch("hermes_db.session.engine", engine),
-            patch("hermes_db.session.AsyncSessionLocal", mock_factory),
-            patch("hermes_db.session.sync_sources_from_config", mock_sync),
-            caplog.at_level(logging.ERROR, logger="hermes_db.session"),
-        ):
-            from hermes_db.session import init_db
-
-            # Must NOT raise — sync failure is swallowed.
-            run(init_db())
-
-        assert any("failed to sync" in r.message for r in caplog.records)
-
     def test_reconfigures_engine_when_db_url_provided(self):
         """When db_url is passed, a new engine must be created and AsyncSessionLocal reconfigured."""
         old_engine = self._make_engine_mock()
@@ -217,7 +153,6 @@ class TestInitDb:
                 "hermes_db.session.create_async_engine", return_value=new_engine
             ) as mock_create,
             patch("hermes_db.session.AsyncSessionLocal", mock_factory),
-            patch("hermes_db.session.sync_sources_from_config", new_callable=AsyncMock),
         ):
             from hermes_db.session import init_db
 

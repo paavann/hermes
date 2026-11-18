@@ -72,6 +72,26 @@ class SourceType(enum.StrEnum):
     GDELT = "GDELT"
 
 
+class SourceFeedProvider(enum.StrEnum):
+    """Where a source's article links originate.
+
+    PUBLISHER feeds carry the publisher's own URLs; GOOGLE_NEWS feeds carry
+    opaque news.google.com redirect links; GDELT results come from the GDELT
+    document API.
+    """
+
+    PUBLISHER = "PUBLISHER"
+    GOOGLE_NEWS = "GOOGLE_NEWS"
+    GDELT = "GDELT"
+
+
+class SourceFetchPolicy(enum.StrEnum):
+    """How much article text the analyze stage may load for a source."""
+
+    FULL_TEXT = "FULL_TEXT"
+    SUMMARY_ONLY = "SUMMARY_ONLY"
+
+
 class ImpactLevel(enum.StrEnum):
     CRITICAL = "CRITICAL"
     MAJOR = "MAJOR"

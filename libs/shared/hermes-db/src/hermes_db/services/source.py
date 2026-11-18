@@ -5,11 +5,17 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import TypedDict
+from urllib.parse import urlsplit
 
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from hermes_db.enums import CredibilityTier, SourceType
+from hermes_db.enums import (
+    CredibilityTier,
+    SourceFeedProvider,
+    SourceFetchPolicy,
+    SourceType,
+)
 from hermes_db.models.source import Source
 from hermes_db.utils.datetime import ensure_utc
 
@@ -26,11 +32,15 @@ class SourceConfigEntry(TypedDict, total=False):
     name: str
     url: str
     feed_url: str | None
+    fallback_feed_url: str | None
+    feed_provider: str
     source_type: str
     credibility: str
     origin_group: str | None
     country_code: str | None
     language: str | None
+    paywall: bool
+    fetch_policy: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -48,6 +58,7 @@ class DueSource:
     country_code: str | None = None
     language: str | None = None
     consecutive_failures: int = 0
+    fallback_feed_url: str | None = None
 
 
 def _fetch_delay(source: Source) -> timedelta:
@@ -74,6 +85,7 @@ def _to_due_source(source: Source, last_fetched_at: datetime | None) -> DueSourc
         country_code=source.country_code,
         language=source.language,
         consecutive_failures=source.consecutive_failures or 0,
+        fallback_feed_url=source.fallback_feed_url,
     )
 
 
@@ -141,7 +153,7 @@ class SourceService:
         await self._session.execute(stmt)
 
 
-async def _load_sources_config(
+async def load_sources_config(
     config_path: Path | None = None,
 ) -> list[SourceConfigEntry]:
     path = config_path or DEFAULT_SOURCES_PATH
@@ -153,6 +165,19 @@ async def _load_sources_config(
             f"sources.json must contain a JSON array, got {type(data).__name__}."
         )
     return data
+
+
+def canonical_domain_from_url(raw: object) -> str | None:
+    """Return the registrable host used to label a source's articles."""
+    if not isinstance(raw, str) or not raw.strip():
+        return None
+    try:
+        host = urlsplit(raw.strip()).hostname
+    except ValueError:
+        return None
+    if not host:
+        return None
+    return host.lower().removeprefix("www.")
 
 
 def _normalize_origin_group(raw: object) -> str | None:
@@ -178,13 +203,36 @@ def _normalize_language(raw: object) -> str | None:
     return value or None
 
 
+def _clean_optional_str(raw: object) -> str | None:
+    if not isinstance(raw, str):
+        return None
+    value = raw.strip()
+    return value or None
+
+
+def _parse_feed_provider(raw: object) -> SourceFeedProvider:
+    if isinstance(raw, str):
+        candidate = raw.strip().upper()
+        if candidate in SourceFeedProvider.__members__:
+            return SourceFeedProvider(candidate)
+    return SourceFeedProvider.PUBLISHER
+
+
+def _parse_fetch_policy(raw: object) -> SourceFetchPolicy:
+    if isinstance(raw, str):
+        candidate = raw.strip().upper()
+        if candidate in SourceFetchPolicy.__members__:
+            return SourceFetchPolicy(candidate)
+    return SourceFetchPolicy.FULL_TEXT
+
+
 async def sync_sources_from_config(
     session: AsyncSession, config_path: Path | None = None
 ) -> dict[str, int]:
     stats = {"inserted": 0, "updated": 0, "disabled": 0}
 
     try:
-        config_sources = await _load_sources_config(config_path)
+        config_sources = await load_sources_config(config_path)
     except FileNotFoundError:
         logger.error("sources config file not found. skipping source sync.")
         return stats
@@ -224,6 +272,22 @@ async def sync_sources_from_config(
                     setattr(existing, field, new_value)
                     changed = True
 
+            # Feed metadata is fully config-owned, so removals clear the row
+            # instead of leaving a stale fallback or fetch policy behind.
+            for field, new_value in (
+                (
+                    "fallback_feed_url",
+                    _clean_optional_str(entry.get("fallback_feed_url")),
+                ),
+                ("feed_provider", _parse_feed_provider(entry.get("feed_provider"))),
+                ("fetch_policy", _parse_fetch_policy(entry.get("fetch_policy"))),
+                ("paywall", entry.get("paywall") is True),
+                ("canonical_domain", canonical_domain_from_url(entry.get("url"))),
+            ):
+                if getattr(existing, field) != new_value:
+                    setattr(existing, field, new_value)
+                    changed = True
+
             if not existing.is_active:
                 existing.is_active = True
                 changed = True
@@ -249,6 +313,11 @@ async def sync_sources_from_config(
                 slug=slug,
                 url=entry.get("url", ""),
                 feed_url=entry.get("feed_url"),
+                fallback_feed_url=_clean_optional_str(entry.get("fallback_feed_url")),
+                feed_provider=_parse_feed_provider(entry.get("feed_provider")),
+                fetch_policy=_parse_fetch_policy(entry.get("fetch_policy")),
+                paywall=entry.get("paywall") is True,
+                canonical_domain=canonical_domain_from_url(entry.get("url")),
                 source_type=st,
                 credibility=cred,
                 origin_group=_normalize_origin_group(entry.get("origin_group")),
@@ -270,9 +339,8 @@ async def sync_sources_from_config(
             stats["disabled"] += 1
             logger.info("disabled source not in config: %s.", source.slug)
 
-    await session.commit()
     logger.info(
-        "source sync complete: %s inserted, %s updated, %s disabled.",
+        "source sync prepared: %s inserted, %s updated, %s disabled.",
         stats["inserted"],
         stats["updated"],
         stats["disabled"],
