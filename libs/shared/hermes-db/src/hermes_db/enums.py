@@ -58,6 +58,57 @@ class ArticleType(enum.StrEnum):
     OTHER = "OTHER"
 
 
+class EventForm(enum.StrEnum):
+    """What kind of real-world occurrence an article reports."""
+
+    INCIDENT = "INCIDENT"
+    PLANNED_EVENT = "PLANNED_EVENT"
+    POLICY_ACTION = "POLICY_ACTION"
+    STATEMENT = "STATEMENT"
+    REPORT = "REPORT"
+    MARKET_MOVE = "MARKET_MOVE"
+    OTHER = "OTHER"
+
+
+class ArticleCertainty(enum.StrEnum):
+    """How strongly the article's central claim is established."""
+
+    CONFIRMED = "CONFIRMED"
+    REPORTED = "REPORTED"
+    ALLEGED = "ALLEGED"
+    DISPUTED = "DISPUTED"
+
+
+class ArticleCategory(enum.StrEnum):
+    """Closed category taxonomy shared by labels and event presentation."""
+
+    CONFLICT = "CONFLICT"
+    DISASTER = "DISASTER"
+    ECONOMY = "ECONOMY"
+    POLITICS = "POLITICS"
+    TECHNOLOGY = "TECHNOLOGY"
+    SCIENCE = "SCIENCE"
+    HEALTH = "HEALTH"
+    ENVIRONMENT = "ENVIRONMENT"
+    SPORTS = "SPORTS"
+    ENTERTAINMENT = "ENTERTAINMENT"
+    OTHER = "OTHER"
+
+
+class ArticleBodySource(enum.StrEnum):
+    """Where the text sent to the labeler came from."""
+
+    FULL_TEXT = "FULL_TEXT"
+    FEED_SUMMARY = "FEED_SUMMARY"
+
+
+class RejectStage(enum.StrEnum):
+    """Why an analyzed article was not allowed into clustering."""
+
+    LABEL = "LABEL"
+    GATE = "GATE"
+
+
 class EventTlStatus(enum.StrEnum):
     READY = "READY"
     GENERATING = "GENERATING"

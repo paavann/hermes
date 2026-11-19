@@ -8,7 +8,13 @@ from unittest.mock import MagicMock
 
 from conftest import make_async_session, make_uuid, run
 
-from hermes_db.enums import ArticleType, EventScope
+from hermes_db.enums import (
+    ArticleCategory,
+    ArticleCertainty,
+    ArticleType,
+    EventForm,
+    EventScope,
+)
 from hermes_db.models.article_label import ArticleLabel
 from hermes_db.services.article_label import ArticleLabelService
 
@@ -25,8 +31,16 @@ class _Label:
         self.confidence = 0.91
         self.fact = "A magnitude 6.1 earthquake struck the coast."
         self.scale_facts = {"magnitude": 6.1}
-        self.entities = [{"name": "Example City", "type": "location"}]
+        self.entities = [{"name": "Example City", "kind": "LOCATION"}]
         self.locations = [{"name": "Example City", "country_code": "EX"}]
+        self.category = ArticleCategory.DISASTER
+        self.event_form = EventForm.INCIDENT
+        self.specificity = 5
+        self.consequence = 4
+        self.certainty = ArticleCertainty.REPORTED
+        self.reject_reason = None
+        self.input_hash = "a" * 64
+        self.evidence_quote = "A magnitude 6.1 earthquake struck the coast."
 
 
 class TestUpsertLabel:
@@ -71,6 +85,16 @@ class TestUpsertLabel:
         assert params["severity"] == 4
         assert params["fact"] == "A magnitude 6.1 earthquake struck the coast."
         assert params["scale_facts"] == {"magnitude": 6.1}
+        assert params["category"] == ArticleCategory.DISASTER
+        assert params["event_form"] == EventForm.INCIDENT
+        assert params["specificity"] == 5
+        assert params["consequence"] == 4
+        assert params["certainty"] == ArticleCertainty.REPORTED
+        assert params["input_hash"] == "a" * 64
+        assert params["evidence_quote"] == (
+            "A magnitude 6.1 earthquake struck the coast."
+        )
+        assert params["reject_reason"] is None
 
 
 class TestReadLabels:

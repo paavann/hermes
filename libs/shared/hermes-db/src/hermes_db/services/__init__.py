@@ -1,4 +1,12 @@
 from hermes_db.services.article import ArticleLedgerRow, ArticleService
+from hermes_db.services.article_analysis import (
+    AnalysisArticle,
+    ArticleAnalysisService,
+)
+from hermes_db.services.article_family import (
+    ArticleFamilyService,
+    FamilyCandidate,
+)
 from hermes_db.services.article_label import ArticleLabelService
 from hermes_db.services.event import EventService
 from hermes_db.services.geocode import GeocodeCacheEntry, GeocodeCacheService
@@ -28,6 +36,9 @@ from hermes_db.services.thread import ThreadService
 
 
 __all__ = [
+    "AnalysisArticle",
+    "ArticleAnalysisService",
+    "ArticleFamilyService",
     "ArticleLabelService",
     "ArticleLedgerRow",
     "ArticleService",
@@ -36,6 +47,7 @@ __all__ = [
     "CoverageLevel",
     "DueSource",
     "EventService",
+    "FamilyCandidate",
     "GeocodeCacheEntry",
     "GeocodeCacheService",
     "SearchArticle",

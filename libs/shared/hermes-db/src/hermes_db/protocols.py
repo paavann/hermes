@@ -1,7 +1,13 @@
 from datetime import datetime
 from typing import Protocol
 
-from hermes_db.enums import ArticleType, EventScope
+from hermes_db.enums import (
+    ArticleCategory,
+    ArticleCertainty,
+    ArticleType,
+    EventForm,
+    EventScope,
+)
 
 
 class EventExtractionData(Protocol):
@@ -92,6 +98,30 @@ class ArticleLabelData(Protocol):
 
     @property
     def locations(self) -> list[dict[str, object]]: ...
+
+    @property
+    def category(self) -> ArticleCategory | None: ...
+
+    @property
+    def event_form(self) -> EventForm | None: ...
+
+    @property
+    def specificity(self) -> int | None: ...
+
+    @property
+    def consequence(self) -> int | None: ...
+
+    @property
+    def certainty(self) -> ArticleCertainty | None: ...
+
+    @property
+    def reject_reason(self) -> str | None: ...
+
+    @property
+    def input_hash(self) -> str | None: ...
+
+    @property
+    def evidence_quote(self) -> str | None: ...
 
 
 class GeocodingData(Protocol):

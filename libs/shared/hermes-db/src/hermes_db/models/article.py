@@ -4,15 +4,27 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, Enum, ForeignKey, Index, String, Text, func, text
+from pgvector.sqlalchemy import HALFVEC
+from sqlalchemy import (
+    CheckConstraint,
+    DateTime,
+    Enum,
+    Float,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    func,
+    text,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from hermes_db.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
-from hermes_db.enums import IngestStatus
+from hermes_db.enums import ArticleBodySource, IngestStatus, RejectStage
 
 
 if TYPE_CHECKING:
-    from hermes_db.models.article_embedding import ArticleEmbedding
     from hermes_db.models.article_label import ArticleLabel
     from hermes_db.models.event import Event
     from hermes_db.models.source import Source
@@ -54,6 +66,49 @@ class Article(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     content_hash: Mapped[str | None] = mapped_column(String(64))
     # 64-bit SimHash as a 16-character hex digest.
     title_simhash: Mapped[str | None] = mapped_column(String(16))
+    body_simhash: Mapped[str | None] = mapped_column(String(16))
+    word_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    body_source: Mapped[ArticleBodySource | None] = mapped_column(
+        Enum(
+            ArticleBodySource,
+            native_enum=False,
+            values_callable=lambda members: [member.value for member in members],
+            name="articlebodysource",
+        ),
+        nullable=True,
+    )
+    input_quality: Mapped[float | None] = mapped_column(Float, nullable=True)
+    fetch_http_status: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # Stored on the ledger so family matching does not need a second table.
+    # Deferred keeps the 4 KB vector out of ordinary article selects.
+    embedding: Mapped[list[float] | None] = mapped_column(
+        HALFVEC(2048),
+        nullable=True,
+        deferred=True,
+    )
+    embedding_model: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    embedding_input_hash: Mapped[str | None] = mapped_column(
+        String(64),
+        nullable=True,
+    )
+    family_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("article_families.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    reject_stage: Mapped[RejectStage | None] = mapped_column(
+        Enum(
+            RejectStage,
+            native_enum=False,
+            values_callable=lambda members: [member.value for member in members],
+            name="articlerejectstage",
+        ),
+        nullable=True,
+    )
+    reject_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    rejected_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
     language: Mapped[str | None] = mapped_column(String(16))
     ingest_status: Mapped[IngestStatus] = mapped_column(
         Enum(
@@ -81,15 +136,29 @@ class Article(Base, UUIDPrimaryKeyMixin, TimestampMixin):
         passive_deletes=True,
         lazy="raise",
     )
-    embedding_record: Mapped[ArticleEmbedding | None] = relationship(
-        back_populates="article",
-        cascade="all, delete-orphan",
-        passive_deletes=True,
-        lazy="raise",
-        uselist=False,
-    )
-
     __table_args__ = (
+        CheckConstraint(
+            "body_source IS NULL OR body_source IN ('FULL_TEXT', 'FEED_SUMMARY')",
+            name="ck_articles_body_source",
+        ),
+        CheckConstraint(
+            "reject_stage IS NULL OR reject_stage IN ('LABEL', 'GATE')",
+            name="ck_articles_reject_stage",
+        ),
+        CheckConstraint(
+            "(embedding IS NULL AND embedding_model IS NULL "
+            "AND embedding_input_hash IS NULL) "
+            "OR (embedding IS NOT NULL AND embedding_model IS NOT NULL "
+            "AND embedding_input_hash IS NOT NULL)",
+            name="ck_articles_embedding_metadata",
+        ),
+        Index(
+            "idx_articles_embedding",
+            "embedding",
+            postgresql_using="hnsw",
+            postgresql_with={"m": 16, "ef_construction": 64},
+            postgresql_ops={"embedding": "halfvec_cosine_ops"},
+        ),
         Index("idx_articles_content_hash", "content_hash"),
         Index("idx_articles_canonical_url", "canonical_url"),
         Index(
@@ -99,6 +168,7 @@ class Article(Base, UUIDPrimaryKeyMixin, TimestampMixin):
         ),
         Index("idx_articles_event_id", "event_id"),
         Index("idx_articles_source_id", "source_id"),
+        Index("idx_articles_family_id", "family_id"),
         Index(
             "idx_articles_analyzing_claimed_at",
             "claimed_at",

@@ -13,7 +13,7 @@ do **not** require a live database connection.  We inspect:
 
 import uuid
 
-from sqlalchemy import String, inspect
+from sqlalchemy import CheckConstraint, String, inspect
 
 from hermes_db.enums import (
     ArticleType,
@@ -32,7 +32,6 @@ from hermes_db.enums import (
     VerificationStatus,
 )
 from hermes_db.models.article import Article
-from hermes_db.models.article_embedding import ArticleEmbedding
 from hermes_db.models.article_label import ArticleLabel
 from hermes_db.models.event import Event
 from hermes_db.models.event_tl import EventTl
@@ -71,6 +70,9 @@ class TestArticleModel:
             "claimed_by",
             "attempt_count",
             "last_error",
+            "embedding",
+            "embedding_model",
+            "embedding_input_hash",
         }
         assert required.issubset(cols)
 
@@ -157,23 +159,41 @@ class TestArticleModel:
         assert isinstance(col.default.arg(None), uuid.UUID)
 
     def test_relationships_declared(self):
-        """event, source, labels, and embedding back-references must be mapped."""
+        """event, source, and label back-references must be mapped."""
         rels = {r.key for r in inspect(Article).relationships}
         assert "event" in rels
         assert "source" in rels
         assert "labels" in rels
-        assert "embedding_record" in rels
 
     def test_labels_relationship_cascades(self):
         rel = inspect(Article).relationships["labels"]
         assert rel.passive_deletes is True
         assert rel.lazy == "raise"
 
-    def test_embedding_relationship_is_one_to_one(self):
-        rel = inspect(Article).relationships["embedding_record"]
-        assert rel.uselist is False
-        assert rel.passive_deletes is True
-        assert rel.lazy == "raise"
+    def test_embedding_columns_present(self):
+        cols = inspect(Article).columns
+        assert cols["embedding"].nullable
+        assert cols["embedding_model"].nullable
+        assert cols["embedding_input_hash"].nullable
+        attrs = inspect(Article).column_attrs
+        assert attrs["embedding"].deferred is True
+
+    def test_embedding_index_is_hnsw(self):
+        indexes = {index.name: index for index in Article.__table__.indexes}
+        index = indexes["idx_articles_embedding"]
+        assert index.dialect_options["postgresql"]["using"] == "hnsw"
+        assert index.dialect_options["postgresql"]["with"] == {
+            "m": 16,
+            "ef_construction": 64,
+        }
+
+    def test_embedding_metadata_check_present(self):
+        checks = {
+            constraint.name
+            for constraint in Article.__table__.constraints
+            if isinstance(constraint, CheckConstraint)
+        }
+        assert "ck_articles_embedding_metadata" in checks
 
     def test_ledger_indexes_defined(self):
         indexes = {idx.name: idx for idx in Article.__table__.indexes}
@@ -287,50 +307,6 @@ class TestArticleLabelModel:
     def test_is_event_index_present(self):
         indexes = {idx.name for idx in ArticleLabel.__table__.indexes}
         assert "idx_article_labels_is_event_labeled" in indexes
-
-
-# ---------------------------------------------------------------------------
-# ArticleEmbedding
-# ---------------------------------------------------------------------------
-
-
-class TestArticleEmbeddingModel:
-    def test_tablename(self):
-        assert ArticleEmbedding.__tablename__ == "article_embeddings"
-
-    def test_required_columns_present(self):
-        cols = {c.name for c in inspect(ArticleEmbedding).columns}
-        required = {"article_id", "model", "embedding", "created_at", "updated_at"}
-        assert required.issubset(cols)
-
-    def test_article_id_is_primary_key(self):
-        assert inspect(ArticleEmbedding).columns["article_id"].primary_key
-
-    def test_article_id_foreign_key_cascades(self):
-        fk = next(iter(inspect(ArticleEmbedding).columns["article_id"].foreign_keys))
-        assert fk.target_fullname == "articles.id"
-        assert fk.ondelete == "CASCADE"
-
-    def test_embedding_is_not_nullable(self):
-        assert not inspect(ArticleEmbedding).columns["embedding"].nullable
-
-    def test_embedding_index_is_hnsw(self):
-        indexes = {idx.name: idx for idx in ArticleEmbedding.__table__.indexes}
-        assert "idx_article_embeddings_embedding" in indexes
-        hnsw = indexes["idx_article_embeddings_embedding"]
-        assert hnsw.dialect_options["postgresql"]["using"] == "hnsw"
-        assert hnsw.dialect_options["postgresql"]["with"] == {
-            "m": 16,
-            "ef_construction": 64,
-        }
-
-    def test_retention_index_present(self):
-        indexes = {idx.name for idx in ArticleEmbedding.__table__.indexes}
-        assert "idx_article_embeddings_created_at" in indexes
-
-    def test_article_relationship(self):
-        rel = inspect(ArticleEmbedding).relationships["article"]
-        assert rel.lazy == "raise"
 
 
 # ---------------------------------------------------------------------------
@@ -845,7 +821,6 @@ class TestModelsPackage:
 
         for name in (
             "Article",
-            "ArticleEmbedding",
             "ArticleLabel",
             "Event",
             "EventTl",
@@ -860,7 +835,6 @@ class TestModelsPackage:
 
         for name in (
             "Article",
-            "ArticleEmbedding",
             "ArticleLabel",
             "Event",
             "EventTl",
@@ -874,7 +848,6 @@ class TestModelsPackage:
                 t
                 for t in [
                     "articles",
-                    "article_embeddings",
                     "article_labels",
                     "events",
                     "event_timelines",
