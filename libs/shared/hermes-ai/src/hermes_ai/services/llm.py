@@ -158,6 +158,10 @@ class LlmService:
     def usage(self) -> LlmUsage:
         return self._usage
 
+    def model_for(self, task: str) -> str:
+        route = self._config.routes.get(task)
+        return route.primary.model if route is not None else ""
+
     def reset_usage(self) -> None:
         self._usage = LlmUsage()
 

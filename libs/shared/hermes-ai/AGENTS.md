@@ -5,7 +5,7 @@ Shared geospatial and conversational RAG intelligence library providing LLM extr
 ## 1. Invariants
 
 - **Zero Database Coupling**: Never import `hermes-db` or ORM models. All caching contracts are mediated via `GeocodeCacheProtocol`; consumers inject concrete cache implementations at runtime.
-- **Client Facade Entry Point**: External consumers (`apps/hermes-api`, `apps/hermes-worker`) must interact via `HermesAi`, never directly with `LlmService` or individual extractors.
+- **Client Facade Entry Point**: External consumers (`apps/hermes-api`, `apps/hermes-worker`) construct `HermesAi` and use its configured `llm`, `labels`, and `timelines` members. Never construct or configure `LlmService` in a consumer.
 - **Explicit Config Injection**: Never read `.env` or `os.environ` inside `src/hermes_ai/`. Consumer apps resolve API keys, model names, and Langfuse settings and pass them explicitly into `HermesAi(...)`.
 - **Location Text Only**: The LLM must never supply latitude or longitude coordinates; it returns cleaned location names only.
 - **Geocoding Resilience**: Never bypass the token-bucket rate limiter (`NominatimResilienceManager`), in-flight request deduplication, or circuit breaker.
