@@ -85,6 +85,18 @@ class Settings(BaseSettings):
     ARTICLE_FUTURE_SKEW_HOURS: int = Field(default=2, ge=0)
     SOURCE_FETCH_CONCURRENCY: int = Field(default=5, gt=0)
 
+    # article analysis: fetch, labeling, embeddings, families.
+    ARTICLE_ANALYZE_BATCH_SIZE: int = Field(default=50, gt=0)
+    ARTICLE_LABEL_BATCH_SIZE: int = Field(default=10, gt=0, le=20)
+    ARTICLE_BODY_MIN_CHARS: int = Field(default=300, ge=0)
+    ARTICLE_FETCH_CONNECT_TIMEOUT_SECONDS: float = Field(default=5.0, gt=0)
+    ARTICLE_FETCH_READ_TIMEOUT_SECONDS: float = Field(default=10.0, gt=0)
+    ARTICLE_FETCH_MAX_BYTES: int = Field(default=2_000_000, gt=0)
+    ARTICLE_FETCH_MAX_REDIRECTS: int = Field(default=5, ge=0)
+    ARTICLE_FETCH_PER_HOST_CONCURRENCY: int = Field(default=2, gt=0)
+    ARTICLE_FAMILY_WINDOW_DAYS: int = Field(default=7, gt=0)
+    ARTICLE_FAMILY_MAX_CANDIDATES: int = Field(default=300, gt=0)
+
     @model_validator(mode="after")
     def validate_semantics(self) -> Self:
         if self.EVENT_ARCHIVE_HOURS <= self.EVENT_STALE_HOURS:

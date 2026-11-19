@@ -8,7 +8,7 @@ Execute from the workspace root (see root `AGENTS.md` for lint, format, and test
 
 | Task               | Command                                     | Description                                                                     |
 | :----------------- | :------------------------------------------ | :------------------------------------------------------------------------------ |
-| **Ingest Articles**| `npx nx run hermes-worker:ingest-articles`  | Sync the source registry, fetch due feeds, and write the deduplicated ledger     |
+| **Ingest Articles**| `npx nx run hermes-worker:ingest-articles`  | Sync sources, fetch due feeds, write the ledger, then label, embed, and assign syndication families |
 | **Audit Sources**  | `npx nx run hermes-worker:audit-sources`    | Probe configured feeds and sample articles read-only                            |
 | **Maintain Events**| `npx nx run hermes-worker:maintain-events`  | Requeue abandoned article claims and apply score decay / status transitions      |
 | **Healthcheck**    | `npx nx run hermes-worker:healthcheck`      | Check database connectivity, schema, queue depth, and stale claims               |
@@ -30,7 +30,9 @@ Execute from the workspace root (see root `AGENTS.md` for lint, format, and test
 - **Claim-Based Work**: Stages claim articles via `ArticleQueue` (`FOR UPDATE SKIP LOCKED`) rather than scanning and mutating rows in place. The queue never commits.
 - **Ledger Identity**: Every ingested row stores `canonical_url` and `canonical_url_hash`. Ingest inserts with `ON CONFLICT DO NOTHING`; it never updates or revives an existing article row. `duplicate_of_id` is set only by explicit reconciliation.
 - **Source Config Ownership**: `sources.json` owns feed URLs, provider, fallback, paywall, and fetch policy. The ingest stage syncs and commits those fields; other commands never sync sources.
-- **Bounded LLM Spend**: Reserve calls through `JobContext.budget` before invoking `complete_json`; exceeding `MAX_LLM_CALLS_PER_RUN` must fail the stage, not run unbounded.
+- **Transient Bodies**: Never persist fetched article bodies. `BodyFetcher` validates every redirect hop (SSRF), obeys robots.txt, caps response size, and returns text only for successful fetches. Paywalled and `SUMMARY_ONLY` sources label from `feed_summary`.
+- **Label Gate**: Persist every label, including rejected ones, with `reject_stage` and a bounded reason. Never embed a rejected label or create a family for it. Evidence quotes must be validated against supplied text; the LLM never supplies coordinates.
+- **Bounded LLM Spend**: Reserve calls through `JobContext.budget` before invoking `complete_json` or embedding. When the budget is exhausted, `ANALYZE` stops before the next group, releases the in-flight claims, and returns; never run unbounded.
 - **No Run Telemetry Table**: The process exit code and structured logs are the execution record. Article claim fields (`claimed_at`, `claimed_by`, `attempt_count`, `last_error`) are the durable work state. Do not add a run-telemetry table without a concrete query that cannot be served by logs or domain rows.
 - **Telemetry Flush on Exit**: Ensure `LlmService.aclose()` -> `get_client().flush()` executes on process exit so buffered Langfuse telemetry flushes before ephemeral Fargate container teardown.
 - **Failure Exit**: Exit with a non-zero status code (`sys.exit(1)`) on unhandled exceptions or execution failures.
@@ -45,6 +47,9 @@ Changing any of these requires explaining the expected effect and obtaining appr
 
 - Claim queue: `ARTICLE_CLAIM_BATCH_SIZE`, `ARTICLE_CLAIM_STALE_MINUTES`, `ARTICLE_MAX_ATTEMPTS` in `apps/hermes-worker/src/hermes_worker/core/config.py`
 - Ingest window: `ARTICLE_MAX_AGE_HOURS`, `ARTICLE_FUTURE_SKEW_HOURS`, `SOURCE_FETCH_CONCURRENCY` in `apps/hermes-worker/src/hermes_worker/core/config.py`
+- Analysis batches: `ARTICLE_ANALYZE_BATCH_SIZE`, `ARTICLE_LABEL_BATCH_SIZE` in `apps/hermes-worker/src/hermes_worker/core/config.py`
+- Transient fetch: `ARTICLE_FETCH_CONNECT_TIMEOUT_SECONDS`, `ARTICLE_FETCH_READ_TIMEOUT_SECONDS`, `ARTICLE_BODY_MIN_CHARS`, `ARTICLE_FETCH_MAX_BYTES`, `ARTICLE_FETCH_MAX_REDIRECTS`, `ARTICLE_FETCH_PER_HOST_CONCURRENCY` in `apps/hermes-worker/src/hermes_worker/core/config.py`
+- Syndication families: `ARTICLE_FAMILY_WINDOW_DAYS`, `ARTICLE_FAMILY_MAX_CANDIDATES` in `apps/hermes-worker/src/hermes_worker/core/config.py`; match thresholds in `apps/hermes-worker/src/hermes_worker/jobs/families.py`
 - Lifecycle cutoffs: `DEFAULT_EVENT_STALE_HRS` and `DEFAULT_EVENT_ARCHIVE_HRS` in `libs/shared/hermes-db/src/hermes_db/services/event.py`; `EVENT_STALE_HOURS` and `EVENT_ARCHIVE_HOURS` in `apps/hermes-worker/src/hermes_worker/core/config.py`
 - Per-run LLM budget: `MAX_LLM_CALLS_PER_RUN` in `apps/hermes-worker/src/hermes_worker/core/config.py`
 

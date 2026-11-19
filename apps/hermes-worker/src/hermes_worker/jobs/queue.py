@@ -103,13 +103,51 @@ class ArticleQueue:
         *,
         max_attempts: int,
     ) -> IngestStatus:
+        return await self.fail_id(
+            article_id=article.id,
+            attempt_count=article.attempt_count,
+            error=error,
+            max_attempts=max_attempts,
+        )
+
+    async def fail_id(
+        self,
+        *,
+        article_id: uuid.UUID,
+        attempt_count: int,
+        error: str,
+        max_attempts: int,
+    ) -> IngestStatus:
         status = (
             IngestStatus.NEW
-            if article.attempt_count < max_attempts
+            if attempt_count < max_attempts
             else IngestStatus.FAILED
         )
-        await self.mark([article.id], status, error=error)
+        await self.mark([article_id], status, error=error)
         return status
+
+    async def release(self, article_ids: Sequence[uuid.UUID]) -> int:
+        """Return claimed articles to NEW without consuming an attempt."""
+        ids = list(article_ids)
+        if not ids:
+            return 0
+        stmt = (
+            update(Article)
+            .where(Article.id.in_(ids))
+            .where(Article.ingest_status == IngestStatus.ANALYZING)
+            .values(
+                ingest_status=IngestStatus.NEW,
+                claimed_at=None,
+                claimed_by=None,
+                last_error=None,
+                attempt_count=func.greatest(Article.attempt_count - 1, 0),
+            )
+            .execution_options(synchronize_session=False)
+        )
+        result = await self._session.execute(stmt)
+        if isinstance(result, CursorResult):
+            return result.rowcount
+        return 0
 
     async def requeue_stale(
         self,

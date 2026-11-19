@@ -6,6 +6,7 @@ from hermes_worker.jobs.context import Stage, create_job_context
 from hermes_worker.jobs.locks import LockName
 from hermes_worker.jobs.runner import StageResult, run_stages
 from hermes_worker.jobs.stages import (
+    AnalyzeStage,
     EventLifecycleStage,
     HealthcheckStage,
     IngestStage,
@@ -32,10 +33,10 @@ def _summarize(results: Sequence[StageResult]) -> str:
 
 
 async def run_ingest_articles(*, settings: Settings, force: bool) -> None:
-    async with create_job_context(settings) as ctx:
+    async with create_job_context(settings, with_ai=True) as ctx:
         results = await run_stages(
             ctx,
-            (IngestStage(force=force),),
+            (IngestStage(force=force), AnalyzeStage()),
             lock_name=LockName.INGEST_ARTICLES,
         )
     logger.info("ingest-articles finished: %s.", _summarize(results))

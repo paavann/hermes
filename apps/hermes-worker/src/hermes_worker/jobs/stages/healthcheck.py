@@ -20,6 +20,18 @@ EXPECTED_COLUMNS: Final[dict[str, frozenset[str]]] = {
             "last_error",
             "canonical_url_hash",
             "duplicate_of_id",
+            "family_id",
+            "body_simhash",
+            "word_count",
+            "body_source",
+            "input_quality",
+            "fetch_http_status",
+            "reject_stage",
+            "reject_reason",
+            "rejected_at",
+            "embedding",
+            "embedding_model",
+            "embedding_input_hash",
         }
     ),
     "sources": frozenset(
@@ -31,13 +43,35 @@ EXPECTED_COLUMNS: Final[dict[str, frozenset[str]]] = {
             "fetch_policy",
         }
     ),
+    "article_labels": frozenset(
+        {
+            "category",
+            "event_form",
+            "specificity",
+            "consequence",
+            "certainty",
+            "reject_reason",
+            "input_hash",
+            "evidence_quote",
+        }
+    ),
+    "article_families": frozenset(
+        {
+            "representative_article_id",
+            "title_simhash",
+            "body_simhash",
+            "primary_origin_group",
+            "member_count",
+        }
+    ),
 }
 
 _COLUMNS_SQL = text(
     "SELECT table_name, column_name "
     "FROM information_schema.columns "
     "WHERE table_schema = 'public' "
-    "AND table_name IN ('articles', 'sources')"
+    "AND table_name IN ("
+    "'articles', 'sources', 'article_labels', 'article_families')"
 )
 _INGEST_CONSTRAINT_SQL = text(
     "SELECT pg_get_constraintdef(c.oid) "

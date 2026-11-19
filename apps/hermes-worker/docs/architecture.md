@@ -35,7 +35,7 @@ flowchart TB
 
 ## 2. Target Ingestion Architecture
 
-> **Status:** Phase 1 provides the job runtime, article claim queue, maintenance, and healthcheck. Phase 2 adds `ingest-articles` and the deduplicated article ledger. Event construction is implemented in later phases.
+> **Status:** Phase 1 provides the job runtime, article claim queue, maintenance, and healthcheck. Phase 2 adds `ingest-articles` and the deduplicated article ledger. Phase 3 adds transient body fetch, article labels, embeddings, and syndication families. Event construction is implemented in later phases.
 
 ```mermaid
 flowchart LR
@@ -52,7 +52,7 @@ flowchart LR
 
 | Command | Schedule | Scope | LLM |
 | :--- | :--- | :--- | :--- |
-| `ingest-articles` | every 15 min | Fetch feeds and write the article ledger. Labeling, embeddings, and syndication families land in Phase 3. | no |
+| `ingest-articles` | every 15 min | Fetch feeds, write the article ledger, label, embed, and assign syndication families | yes |
 | `build-events` | hourly | Cluster articles into events, describe, verify, score, update threads | yes |
 | `maintain-events` | daily | Requeue stale claims, lifecycle transitions, retention, consistency checks | no |
 | `healthcheck` | on demand | Connectivity, schema, queue depth, stale claims | no |
@@ -99,6 +99,40 @@ Source feed metadata is config-owned:
 - `feed_provider` is `PUBLISHER`, `GOOGLE_NEWS`, or `GDELT`.
 - `fallback_feed_url` is tried only when the primary returns no entries or errors.
 - `paywall` and `fetch_policy` drive Phase 3 body fetching; `SUMMARY_ONLY` sources label from `feed_summary`.
+
+### 2.2.2 Phase 3 Analysis
+
+After the ledger insert commits, the same `ingest-articles` run executes the `ANALYZE` stage:
+
+1. Claim up to `ARTICLE_ANALYZE_BATCH_SIZE` `NEW` articles, capped by the remaining LLM budget and `ARTICLE_LABEL_BATCH_SIZE`.
+2. Fetch article bodies transiently with `BodyFetcher` when the source policy allows it.
+3. Select the labeler text: full body for `FULL_TEXT` sources, otherwise `feed_summary`.
+4. Label the batch through the `label` model route, reusing a persisted label when the input hash is unchanged.
+5. Apply the deterministic reject gate and persist every label, including rejected ones.
+6. Embed accepted labels through the `embed` route.
+7. Assign a syndication family by title SimHash, body SimHash, or embedding similarity, then finalize the article as `LABELED`, `REJECTED`, `NEW` (retry), or `FAILED`.
+
+**Transient fetch policy**
+
+- `BodyFetcher` validates every URL and redirect hop, rejecting non-HTTP schemes, credentials, unusual ports, loopback, private, link-local, and reserved addresses before the request.
+- It obeys `robots.txt` per host, caps the response at `ARTICLE_FETCH_MAX_BYTES`, limits redirects, and applies per-host concurrency.
+- Paywall markers, short bodies, non-HTML content, and HTTP errors fall back to `feed_summary`. A fetched body is never written to the database; only labels, facts, fingerprints, and a bounded `evidence_quote` persist.
+- `SUMMARY_ONLY` and paywalled sources never trigger a body request.
+
+**Label contract and reject gate**
+
+The labeler returns one structured object per article: `is_event`, `article_type`, `event_form`, `category`, `specificity`, `consequence`, `certainty`, `fact`, `event_time`, up to three locations, named entities, scale facts, severity, scope, confidence, and `evidence_quote`. Evidence quotes are validated against the supplied text; fabricated spans are dropped. Locations are names only; coordinates are resolved later by the geocoding pipeline.
+
+Reject reasons are recorded on `articles.reject_stage` and `articles.reject_reason`:
+
+- non-event (`is_event = false`) rejects at `LABEL`;
+- missing fact, `ANALYSIS` / `FEATURE` / `LISTICLE` / `OPINION`, specificity below 3, or `POLICY_ACTION` specificity below 4 rejects at `GATE`.
+
+**Families**
+
+`article_families` groups near-identical copies so later verification counts independent origins, not repeated syndication. Matching requires the same event window (36 hours) and one of: title SimHash distance ≤ 3, body SimHash distance ≤ 6, or embedding cosine ≥ 0.97. Candidates come from families updated in the last `ARTICLE_FAMILY_WINDOW_DAYS` days, capped at `ARTICLE_FAMILY_MAX_CANDIDATES`.
+
+The embedding vector lives on `articles.embedding` as a deferred column alongside `embedding_model` and `embedding_input_hash`; there is no separate embeddings table. Family matching reads the representative article's vector directly.
 
 ### 2.3 Bounded Work and Memory
 
@@ -174,9 +208,15 @@ jobs/
   locks.py     per-command Postgres advisory locks
   queue.py     ArticleQueue claim/mark/fail/requeue
   urls.py      URL canonicalization and ledger hash
-  commands.py  ingest-articles, maintain-events, healthcheck wiring
+  fingerprints.py  token normalization, SimHash, cosine similarity
+  fetch.py         SSRF-safe, robots-aware transient body fetcher
+  robots.py        per-run robots.txt cache
+  labels.py        label payload, gate policy, text selection, hashes
+  families.py      syndication-family matching
+  commands.py      ingest-articles, maintain-events, healthcheck
   stages/
     ingest.py       source sync, feed fetch, ledger insert, source health
+    analyze.py      transient fetch, labels, embeddings, family assignment
     maintenance.py  requeue stale claims + event lifecycle
     healthcheck.py  connectivity, schema, queue depth
 ```
@@ -185,7 +225,7 @@ jobs/
 
 | Command | Stages registered | Purpose |
 | :--- | :--- | :--- |
-| `ingest-articles` | `INGEST` | Sync sources, fetch due feeds, write the deduplicated ledger |
+| `ingest-articles` | `INGEST`, `ANALYZE` | Sync sources, fetch due feeds, write the ledger, then label, embed, and assign families |
 | `maintain-events` | `REQUEUE_CLAIMS`, `EVENT_LIFECYCLE` | Recover abandoned claims and apply event decay/transitions |
 | `healthcheck` | `HEALTHCHECK` | Read-only readiness probe |
 
@@ -215,6 +255,10 @@ The worker builds generic `label`, `adjudicate`, and `describe` routes that defa
 
 - `articles.claimed_at`, `claimed_by`, `attempt_count`, `last_error`
 - `articles.canonical_url_hash`, `articles.duplicate_of_id`
+- Phase 3 article fields: `family_id`, `body_simhash`, `body_source`, `word_count`, `input_quality`, `fetch_http_status`, `reject_stage`, `reject_reason`, `rejected_at`
+- Phase 3 label fields: `category`, `event_form`, `specificity`, `consequence`, `certainty`, `reject_reason`, `input_hash`, `evidence_quote`
+- `articles.embedding`, `articles.embedding_model`, `articles.embedding_input_hash`
+- The `article_families` table
 - `sources.fallback_feed_url`, `feed_provider`, `canonical_domain`, `paywall`, `fetch_policy`
 - The expanded `ingeststatus` check constraint (`ANALYZING`, `FAILED`)
 - The partial indexes `idx_articles_analyzing_claimed_at` and `uq_articles_canonical_url_hash`
@@ -240,6 +284,6 @@ A missing migration raises `SchemaCheckError` naming the exact missing object, r
 | Process killed mid-stage | `ANALYZING` claim remains. Next `maintain-events` requeues or fails it based on attempts. |
 | Advisory lock held | Second invocation logs `SKIPPED` and exits `0` without mutating state. |
 | Schema mismatch | `healthcheck` raises `SchemaCheckError` with the missing object list. |
-| LLM budget exhausted | `BudgetExhaustedError` fails the stage; no further calls are made. |
+| LLM budget exhausted | `ANALYZE` stops before the next group, releases the in-flight claims, and exits successfully with `budget_exhausted`; other LLM stages fail the stage. |
 | LLM schema mismatch | One repair retry through `complete_json`; a second failure raises `SchemaValidationError`. |
 | Telemetry flush failure | Logged as a warning; it does not mask the stage result. |

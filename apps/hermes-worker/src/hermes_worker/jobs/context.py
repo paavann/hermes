@@ -21,6 +21,7 @@ logger = logging.getLogger(__name__)
 
 class StageName(enum.StrEnum):
     INGEST = "ingest"
+    ANALYZE = "analyze"
     REQUEUE_CLAIMS = "requeue-claims"
     EVENT_LIFECYCLE = "event-lifecycle"
     HEALTHCHECK = "healthcheck"
