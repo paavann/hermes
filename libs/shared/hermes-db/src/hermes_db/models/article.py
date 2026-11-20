@@ -21,19 +21,25 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from hermes_db.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
-from hermes_db.enums import ArticleBodySource, IngestStatus, RejectStage
+from hermes_db.enums import (
+    ArticleBodySource,
+    AssignmentMethod,
+    IngestStatus,
+    RejectStage,
+)
 
 
 if TYPE_CHECKING:
     from hermes_db.models.article_label import ArticleLabel
     from hermes_db.models.event import Event
+    from hermes_db.models.event_member import EventMember
     from hermes_db.models.source import Source
 
 
 class Article(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     __tablename__ = "articles"
 
-    # Nullable so deleting an event cannot delete its ledger articles.
+    # nullable so deleting an event cannot delete its ledger articles.
     event_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("events.id", ondelete="SET NULL"),
         nullable=True,
@@ -45,26 +51,27 @@ class Article(Base, UUIDPrimaryKeyMixin, TimestampMixin):
 
     title: Mapped[str] = mapped_column(Text)
     url: Mapped[str] = mapped_column(Text, unique=True)
+
     canonical_url: Mapped[str | None] = mapped_column(Text)
-    # sha256 of canonical_url. Partial unique index where the article is not a
+    # sha256 of canonical_url. partial unique index where the article is not a
     # known duplicate keeps URL variants from creating separate ledger rows.
     canonical_url_hash: Mapped[str | None] = mapped_column(String(64))
+    thumbnail_url: Mapped[str | None] = mapped_column(Text)
+
     # set only when a backfill or reconciliation resolved this row as a copy of
-    # an article already in the ledger. Ingest skips such rows instead.
+    # an article already in the ledger. ingest skips such rows instead.
     duplicate_of_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("articles.id", ondelete="SET NULL"),
         nullable=True,
     )
-    thumbnail_url: Mapped[str | None] = mapped_column(Text)
 
     feed_summary: Mapped[str | None] = mapped_column(Text)
-    feed_content: Mapped[str | None] = mapped_column(Text)
 
     published_at: Mapped[datetime | None] = mapped_column()
     ingested_at: Mapped[datetime] = mapped_column(server_default=func.now())
 
     content_hash: Mapped[str | None] = mapped_column(String(64))
-    # 64-bit SimHash as a 16-character hex digest.
+    # 64-bit simhash as a 16-character hex digest.
     title_simhash: Mapped[str | None] = mapped_column(String(16))
     body_simhash: Mapped[str | None] = mapped_column(String(16))
     word_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
@@ -79,8 +86,9 @@ class Article(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     )
     input_quality: Mapped[float | None] = mapped_column(Float, nullable=True)
     fetch_http_status: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    # Stored on the ledger so family matching does not need a second table.
-    # Deferred keeps the 4 KB vector out of ordinary article selects.
+
+    # stored on the ledger so family matching does not need a second table.
+    # deferred keeps the 4 KB vector out of ordinary article selects.
     embedding: Mapped[list[float] | None] = mapped_column(
         HALFVEC(2048),
         nullable=True,
@@ -120,6 +128,19 @@ class Article(Base, UUIDPrimaryKeyMixin, TimestampMixin):
         server_default=IngestStatus.NEW.value,
     )
 
+    # current event assignment provenance; history lives in event_members.
+    assigned_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    assignment_method: Mapped[AssignmentMethod | None] = mapped_column(
+        Enum(
+            AssignmentMethod,
+            native_enum=False,
+            values_callable=lambda members: [member.value for member in members],
+            name="assignmentmethod",
+        ),
+        nullable=True,
+    )
+    assignment_confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
+
     # article claim queue fields.
     claimed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     claimed_by: Mapped[str | None] = mapped_column(String(128))
@@ -136,6 +157,12 @@ class Article(Base, UUIDPrimaryKeyMixin, TimestampMixin):
         passive_deletes=True,
         lazy="raise",
     )
+    memberships: Mapped[list[EventMember]] = relationship(
+        back_populates="article",
+        passive_deletes=True,
+        lazy="raise",
+    )
+
     __table_args__ = (
         CheckConstraint(
             "body_source IS NULL OR body_source IN ('FULL_TEXT', 'FEED_SUMMARY')",
@@ -151,6 +178,16 @@ class Article(Base, UUIDPrimaryKeyMixin, TimestampMixin):
             "OR (embedding IS NOT NULL AND embedding_model IS NOT NULL "
             "AND embedding_input_hash IS NOT NULL)",
             name="ck_articles_embedding_metadata",
+        ),
+        CheckConstraint(
+            "assignment_method IS NULL OR assignment_method IN "
+            "('AUTO', 'LLM', 'MANUAL')",
+            name="ck_articles_assignment_method",
+        ),
+        CheckConstraint(
+            "assignment_confidence IS NULL "
+            "OR (assignment_confidence >= 0.0 AND assignment_confidence <= 1.0)",
+            name="ck_articles_assignment_confidence",
         ),
         Index(
             "idx_articles_embedding",

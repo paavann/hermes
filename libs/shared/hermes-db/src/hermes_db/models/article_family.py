@@ -9,12 +9,6 @@ from hermes_db.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
 
 
 class ArticleFamily(Base, UUIDPrimaryKeyMixin, TimestampMixin):
-    """A syndication family: near-identical copies of one published story.
-
-    Families measure independence, not topic. All members of a family are
-    treated as one source of evidence during verification.
-    """
-
     __tablename__ = "article_families"
 
     representative_article_id: Mapped[uuid.UUID | None] = mapped_column(

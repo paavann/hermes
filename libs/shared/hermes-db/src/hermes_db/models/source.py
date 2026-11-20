@@ -53,19 +53,20 @@ class Source(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     source_type: Mapped[SourceType] = mapped_column(default=SourceType.RSS)
     credibility: Mapped[CredibilityTier] = mapped_column(default=CredibilityTier.TIER_3)
 
-    # Wire/origin family used to avoid counting republished copies as independent.
+    # wire/origin family used to avoid counting republished copies as independent.
     origin_group: Mapped[str | None] = mapped_column(String(64), nullable=True)
     country_code: Mapped[str | None] = mapped_column(String(2), nullable=True)
     language: Mapped[str | None] = mapped_column(String(16), nullable=True)
 
     is_active: Mapped[bool] = mapped_column(default=True)
     logo_url: Mapped[str | None] = mapped_column(Text)
-    # Last fetch attempt (success or failure); failures also advance this timestamp
+
+    # last fetch attempt (success or failure); failures also advance this timestamp
     # so retry backoff has a stable anchor.
     last_fetched_at: Mapped[datetime | None] = mapped_column()
     fetch_interval_minutes: Mapped[int] = mapped_column(default=15)
 
-    # Fetch health. Backoff derives from last_fetched_at + consecutive_failures.
+    # fetch health. backoff derives from last_fetched_at + consecutive_failures.
     last_error: Mapped[str | None] = mapped_column(Text, nullable=True)
     consecutive_failures: Mapped[int] = mapped_column(
         Integer,
