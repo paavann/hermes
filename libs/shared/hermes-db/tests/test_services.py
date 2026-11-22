@@ -26,5 +26,6 @@ def test_services_importable():
     assert ArticleLedgerRow is not None
     assert hasattr(ArticleService, "insert_ledger_rows")
     assert hasattr(SourceService, "get_due_sources")
-    assert hasattr(EventService, "create_event_with_article")
-    assert hasattr(EventService, "run_lifecycle_transitions")
+    assert hasattr(EventService, "get_events")
+    assert hasattr(EventService, "get_event_by_id")
+    assert hasattr(EventService, "get_events_by_bbox")

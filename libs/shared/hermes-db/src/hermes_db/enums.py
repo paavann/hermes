@@ -5,6 +5,7 @@ class EventStatus(enum.StrEnum):
     ACTIVE = "ACTIVE"
     STALE = "STALE"
     ARCHIVED = "ARCHIVED"
+    MERGED = "MERGED"
 
 
 class SelectionTier(enum.StrEnum):
@@ -15,8 +16,26 @@ class SelectionTier(enum.StrEnum):
 
 class VerificationStatus(enum.StrEnum):
     CONFIRMED = "CONFIRMED"
+    CORROBORATED = "CORROBORATED"
     SINGLE_SOURCE = "SINGLE_SOURCE"
+    CONFLICTING = "CONFLICTING"
     UNVERIFIED = "UNVERIFIED"
+
+
+class AssignmentMethod(enum.StrEnum):
+    """How an article was attached to an event."""
+
+    AUTO = "AUTO"
+    LLM = "LLM"
+    MANUAL = "MANUAL"
+
+
+class ClusterDecisionKind(enum.StrEnum):
+    """Cached pairwise clustering adjudication."""
+
+    SAME = "SAME"
+    DIFFERENT = "DIFFERENT"
+    UNSURE = "UNSURE"
 
 
 class ThreadKind(enum.StrEnum):

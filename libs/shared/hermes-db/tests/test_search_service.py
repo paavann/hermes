@@ -125,7 +125,7 @@ def _search_event(
         category_color="#3B82F6",
         impact_level=ImpactLevel.MAJOR,
         status=EventStatus.ACTIVE,
-        trending_score=8.0,
+        importance_score=8.0,
         last_updated_at=NOW - timedelta(hours=age_hours),
         first_reported_at=NOW - timedelta(days=1),
         location_name="Geneva, Switzerland",
@@ -147,8 +147,8 @@ def _event_row(
     semantic_rank: int | None = 1,
     semantic_similarity: float | None = 0.42,
     age_hours: float = 3.0,
-    trending_score: float = 8.0,
-    trending_norm: float = 0.8,
+    importance_score: float = 8.0,
+    importance_norm: float = 0.8,
     boost: float = 1.2,
     score: float = 0.03,
 ) -> dict[str, object]:
@@ -160,7 +160,7 @@ def _event_row(
         "category_color": "#3B82F6",
         "impact_level": ImpactLevel.MAJOR,
         "status": EventStatus.ACTIVE,
-        "trending_score": trending_score,
+        "importance_score": importance_score,
         "last_updated_at": NOW - timedelta(hours=age_hours),
         "first_reported_at": NOW - timedelta(days=1),
         "location_name": "Geneva, Switzerland",
@@ -171,7 +171,7 @@ def _event_row(
         "semantic_similarity": semantic_similarity,
         "rrf": 0.025,
         "age_hours": age_hours,
-        "trending_norm": trending_norm,
+        "importance_norm": importance_norm,
         "boost": boost,
         "score": score,
     }
@@ -527,7 +527,7 @@ def test_selected_event_scope_projects_columns_and_loads_context() -> None:
         "semantic_rank",
         "semantic_similarity",
         "rrf",
-        "trending_norm",
+        "importance_norm",
         "boost",
         "score",
     ):
@@ -567,7 +567,7 @@ def test_search_event_model_validate_normalizes_utc_and_rejects_booleans() -> No
     assert parsed.last_updated_at == NOW
     assert parsed.first_reported_at == NOW
 
-    bad_float_row = {**row, "trending_score": True}
+    bad_float_row = {**row, "importance_score": True}
     with pytest.raises(ValidationError):
         SearchEvent.model_validate(bad_float_row)
 

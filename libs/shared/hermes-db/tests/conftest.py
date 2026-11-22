@@ -43,7 +43,7 @@ def make_event(
     *,
     id: uuid.UUID | None = None,
     status: EventStatus = EventStatus.ACTIVE,
-    trending_score: float = 5.0,
+    importance_score: float = 5.0,
     article_count: int = 1,
     ai_headline: str = "Test headline",
     category: str = "Politics",
@@ -55,7 +55,7 @@ def make_event(
     evt = MagicMock(spec=Event)
     evt.id = id or make_uuid()
     evt.status = status
-    evt.trending_score = trending_score
+    evt.importance_score = importance_score
     evt.article_count = article_count
     evt.ai_headline = ai_headline
     evt.category = category

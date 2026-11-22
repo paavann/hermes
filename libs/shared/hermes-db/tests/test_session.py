@@ -177,7 +177,7 @@ class TestInitDb:
 
             with pytest.raises(
                 ValueError,
-                match="db_url must be provided when database engine is not initialized",
+                match="db url must be provided when database engine is not initialized",
             ):
                 run(init_db())
 

@@ -61,11 +61,14 @@ class TestArticleModel:
             "canonical_url_hash",
             "duplicate_of_id",
             "feed_summary",
-            "feed_content",
             "content_hash",
             "title_simhash",
+            "body_simhash",
+            "word_count",
+            "body_source",
             "language",
             "ingest_status",
+            "family_id",
             "claimed_at",
             "claimed_by",
             "attempt_count",
@@ -98,9 +101,11 @@ class TestArticleModel:
         for name in (
             "canonical_url",
             "feed_summary",
-            "feed_content",
             "content_hash",
             "title_simhash",
+            "body_simhash",
+            "word_count",
+            "body_source",
             "language",
         ):
             assert cols[name].nullable, f"{name} should be nullable"
@@ -328,18 +333,28 @@ class TestEventModel:
             "status",
             "scope",
             "impact_level",
-            "trending_score",
-            "velocity",
             "article_count",
             "event_time",
             "latest_published_at",
             "thread_id",
-            "confidence",
             "importance_score",
-            "popularity_score",
+            "score_breakdown",
+            "score_version",
+            "scored_at",
             "selection_tier",
+            "selection_reason",
+            "selected_at",
             "verification_status",
             "independent_origin_count",
+            "source_count",
+            "family_count",
+            "first_seen_at",
+            "last_member_added_at",
+            "embedding_model",
+            "locations",
+            "merged_into_id",
+            "merged_at",
+            "merge_reason",
             "member_hash",
             "version",
         }
@@ -377,19 +392,6 @@ class TestEventModel:
         assert col.default is not None
         assert col.default.arg == EventScope.COUNTRY
 
-    def test_trending_score_default(self):
-        """trending_score column default must be 0.0."""
-        col = inspect(Event).columns["trending_score"]
-        assert col.default is not None
-        assert col.default.arg == 0.0
-
-    def test_velocity_default(self):
-        """velocity column default must be 1.0."""
-        col = inspect(Event).columns["velocity"]
-        assert col.default is not None
-        assert col.default.arg == 1.0
-        assert col.server_default is not None
-
     def test_impact_level_default(self):
         """impact_level column default must be ImpactLevel.MODERATE."""
         col = inspect(Event).columns["impact_level"]
@@ -415,22 +417,18 @@ class TestEventModel:
         assert fk.target_fullname == "threads.id"
         assert fk.ondelete == "SET NULL"
 
-    def test_confidence_is_nullable(self):
-        assert inspect(Event).columns["confidence"].nullable
-
-    def test_importance_and_popularity_default_to_zero(self):
+    def test_importance_defaults_to_zero(self):
         cols = inspect(Event).columns
-        for name in ("importance_score", "popularity_score"):
-            assert cols[name].default is not None
-            assert cols[name].default.arg == 0.0
-            assert cols[name].server_default is not None
+        assert cols["importance_score"].default is not None
+        assert cols["importance_score"].default.arg == 0.0
+        assert cols["importance_score"].server_default is not None
 
     def test_selection_tier_default(self):
         col = inspect(Event).columns["selection_tier"]
         assert col.default is not None
-        assert col.default.arg == SelectionTier.DROP
+        assert col.default.arg == SelectionTier.FILLER
         assert col.server_default is not None
-        assert col.server_default.arg == SelectionTier.DROP.value
+        assert col.server_default.arg == SelectionTier.FILLER.value
 
     def test_verification_status_default(self):
         col = inspect(Event).columns["verification_status"]
@@ -468,7 +466,7 @@ class TestEventModel:
         indexes = {idx.name: idx for idx in Event.__table__.indexes}
         assert "idx_events_location" in indexes
         assert "idx_events_embedding" in indexes
-        assert "idx_events_active_score" in indexes
+        assert "idx_events_active_importance" in indexes
         assert "idx_events_scope" in indexes
         assert "idx_events_status_last_updated" in indexes
         assert "idx_events_country" in indexes
@@ -476,9 +474,7 @@ class TestEventModel:
         assert "idx_events_event_time" in indexes
         assert "idx_events_latest_published_at" in indexes
         assert "idx_events_active_selection" in indexes
-
-        active_score = indexes["idx_events_active_score"]
-        assert [c.name for c in active_score.columns] == ["trending_score"]
+        assert "idx_events_merge_candidates" in indexes
 
         hnsw = indexes["idx_events_embedding"]
         assert hnsw.dialect_options["postgresql"]["with"] == {
@@ -509,7 +505,11 @@ class TestThreadModel:
             "entities",
             "keywords",
             "importance",
-            "confidence",
+            "name_norm",
+            "event_count",
+            "last_event_at",
+            "embedding",
+            "embedding_model",
         }
         assert required.issubset(cols)
 
@@ -529,7 +529,7 @@ class TestThreadModel:
 
     def test_optional_fields_are_nullable(self):
         cols = inspect(Thread).columns
-        for name in ("description", "started_at", "ended_at", "confidence"):
+        for name in ("description", "started_at", "ended_at", "last_event_at"):
             assert cols[name].nullable, f"{name} should be nullable"
 
     def test_importance_default(self):
@@ -553,6 +553,9 @@ class TestThreadModel:
         indexes = {idx.name for idx in Thread.__table__.indexes}
         assert "idx_threads_status_importance" in indexes
         assert "idx_threads_kind_status" in indexes
+        assert "idx_threads_status_last_event" in indexes
+        assert "idx_threads_name_norm" in indexes
+        assert "idx_threads_embedding" in indexes
 
 
 # ---------------------------------------------------------------------------

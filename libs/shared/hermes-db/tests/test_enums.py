@@ -31,10 +31,11 @@ from hermes_db.enums import (
 
 class TestEventStatus:
     def test_members_exist(self):
-        """All three lifecycle members must be present."""
+        """All lifecycle members must be present."""
         assert EventStatus.ACTIVE
         assert EventStatus.STALE
         assert EventStatus.ARCHIVED
+        assert EventStatus.MERGED
 
     def test_string_equality(self):
         """StrEnum values must compare equal to their raw string counterparts."""
@@ -49,11 +50,11 @@ class TestEventStatus:
     def test_membership(self):
         """All members are reachable via the enum class."""
         members = {m.value for m in EventStatus}
-        assert members == {"ACTIVE", "STALE", "ARCHIVED"}
+        assert members == {"ACTIVE", "STALE", "ARCHIVED", "MERGED"}
 
     @pytest.mark.parametrize(
         "value",
-        ["ACTIVE", "STALE", "ARCHIVED"],
+        ["ACTIVE", "STALE", "ARCHIVED", "MERGED"],
     )
     def test_construction_from_string(self, value: str):
         """EventStatus must be constructable from its string value."""
@@ -253,7 +254,13 @@ class TestSelectionTier:
 
 class TestVerificationStatus:
     def test_all_members_present(self):
-        expected = {"CONFIRMED", "SINGLE_SOURCE", "UNVERIFIED"}
+        expected = {
+            "CONFIRMED",
+            "CORROBORATED",
+            "SINGLE_SOURCE",
+            "CONFLICTING",
+            "UNVERIFIED",
+        }
         assert {m.value for m in VerificationStatus} == expected
 
     def test_single_source_is_explicit(self):

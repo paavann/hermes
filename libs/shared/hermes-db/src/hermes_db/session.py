@@ -12,7 +12,6 @@ from sqlalchemy.ext.asyncio import (
 
 logger = logging.getLogger(__name__)
 
-
 engine: AsyncEngine | None = None
 AsyncSessionLocal: async_sessionmaker[AsyncSession] = async_sessionmaker(
     expire_on_commit=False,
@@ -28,7 +27,7 @@ async def get_db() -> AsyncGenerator[AsyncSession]:
             raise
 
 
-async def init_db(db_url: URL | str | None = None) -> None:
+async def init_db(db_url: URL | None = None) -> None:
     global engine
 
     if db_url is not None:
@@ -45,7 +44,7 @@ async def init_db(db_url: URL | str | None = None) -> None:
         AsyncSessionLocal.configure(bind=engine)
     elif engine is None:
         raise ValueError(
-            "db_url must be provided when database engine is not initialized."
+            "db url must be provided when database engine is not initialized."
         )
 
     try:
@@ -66,7 +65,6 @@ async def close_db() -> None:
 
 
 def get_engine() -> AsyncEngine:
-    """Return the initialized engine or fail loudly when called before init_db()."""
     if engine is None:
         raise RuntimeError(
             "database engine is not initialized; call init_db() before get_engine()."
