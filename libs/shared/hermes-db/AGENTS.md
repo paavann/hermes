@@ -13,9 +13,11 @@ Foundational asynchronous persistence library providing SQLAlchemy 2.0 models, P
 
 ## 2. Tunables
 
-- Similarity threshold: Cosine distance literal in `libs/shared/hermes-db/src/hermes_db/services/event.py`
-- Credibility & decay: `CREDIBILITY_WEIGHTS` and `HOURLY_DECAY_FACTOR` in `libs/shared/hermes-db/src/hermes_db/services/ranking.py`
-- Lifecycle cutoffs: `DEFAULT_EVENT_STALE_HRS` and `DEFAULT_EVENT_ARCHIVE_HRS` in `libs/shared/hermes-db/src/hermes_db/services/event.py`
+- Similarity thresholds: Cosine distance literals in `libs/shared/hermes-db/src/hermes_db/services/event.py`
+- Event scoring: `SCORING_CREDIBILITY`, `IMPACT_VALUE`, `VERIFY_VALUE`, half-lives, and tier cutoffs in `libs/shared/hermes-db/src/hermes_db/services/event_scoring.py`
+- Event lifecycle: `DEFAULT_STALE_HOURS` and `DEFAULT_ARCHIVE_HOURS` in `libs/shared/hermes-db/src/hermes_db/services/event_lifecycle.py`
+- Thread lifecycle: `THREAD_DORMANT_DAYS`, `THREAD_ENDED_DAYS`, and `THREAD_IMPORTANCE_HALF_LIFE_HOURS` in `libs/shared/hermes-db/src/hermes_db/services/thread.py`
+- Merge policy: `EventMergeService` survivor rules in `libs/shared/hermes-db/src/hermes_db/services/event_merge.py`; pair thresholds live in `apps/hermes-worker/src/hermes_worker/jobs/pair_score.py`
 - Vector index parameters: `M` and `ef_construction` in `libs/shared/hermes-db/src/hermes_db/models/event.py`
 
 ## 3. Domain Triggers (Code Modifications Only)

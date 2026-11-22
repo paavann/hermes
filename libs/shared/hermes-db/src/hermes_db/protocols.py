@@ -10,62 +10,6 @@ from hermes_db.enums import (
 )
 
 
-class EventExtractionData(Protocol):
-    """Structural contract for AI-extracted event metadata passed into persistence."""
-
-    @property
-    def headline(self) -> str: ...
-
-    @property
-    def summary(self) -> str: ...
-
-    @property
-    def category(self) -> str: ...
-
-    @property
-    def category_color(self) -> str | None: ...
-
-    @property
-    def location_name(self) -> str | None: ...
-
-    @property
-    def country_code(self) -> str | None: ...
-
-    @property
-    def impact_level(self) -> str | None: ...
-
-
-class EventSynthesisData(Protocol):
-    """Structural contract for the described output of one event cluster."""
-
-    @property
-    def headline(self) -> str: ...
-
-    @property
-    def summary(self) -> str: ...
-
-    @property
-    def category(self) -> str: ...
-
-    @property
-    def category_color(self) -> str | None: ...
-
-    @property
-    def location_name(self) -> str | None: ...
-
-    @property
-    def country_code(self) -> str | None: ...
-
-    @property
-    def impact_level(self) -> str | None: ...
-
-    @property
-    def event_time(self) -> datetime | None: ...
-
-    @property
-    def confidence(self) -> float | None: ...
-
-
 class ArticleLabelData(Protocol):
     """Structural contract for the cheap per-article classification output."""
 
@@ -122,13 +66,3 @@ class ArticleLabelData(Protocol):
 
     @property
     def evidence_quote(self) -> str | None: ...
-
-
-class GeocodingData(Protocol):
-    """Structural contract for resolved geographic coordinates."""
-
-    @property
-    def latitude(self) -> float: ...
-
-    @property
-    def longitude(self) -> float: ...
