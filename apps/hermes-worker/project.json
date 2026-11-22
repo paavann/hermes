@@ -81,6 +81,13 @@
         "cwd": "{projectRoot}"
       }
     },
+    "build-events": {
+      "executor": "@nxlv/python:run-commands",
+      "options": {
+        "command": "uv run hermes-worker build-events",
+        "cwd": "{projectRoot}"
+      }
+    },
     "maintain-events": {
       "executor": "@nxlv/python:run-commands",
       "options": {

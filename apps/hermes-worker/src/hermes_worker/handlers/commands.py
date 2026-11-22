@@ -5,6 +5,7 @@ from hermes_db.services import load_sources_config
 from hermes_db.session import AsyncSessionLocal
 from hermes_worker.core.config import Settings, get_settings
 from hermes_worker.jobs.commands import (
+    run_build_events,
     run_healthcheck,
     run_ingest_articles,
     run_maintain_events,
@@ -23,6 +24,7 @@ settings: Settings = get_settings()
 
 class WorkerCmd(enum.StrEnum):
     INGEST_ARTICLES = "ingest-articles"
+    BUILD_EVENTS = "build-events"
     MAINTAIN_EVENTS = "maintain-events"
     AUDIT_SOURCES = "audit-sources"
     HEALTHCHECK = "healthcheck"
@@ -36,8 +38,18 @@ async def handle_ingest_articles(args: argparse.Namespace) -> None:
     )
 
 
-async def handle_maintain_events(_args: argparse.Namespace) -> None:
-    await run_maintain_events(settings=settings)
+async def handle_build_events(_args: argparse.Namespace) -> None:
+    await run_build_events(settings=settings)
+
+
+async def handle_maintain_events(args: argparse.Namespace) -> None:
+    requeue_since = getattr(args, "since", None)
+    if getattr(args, "requeue", False) and requeue_since is None:
+        raise ValueError("--requeue requires --since <YYYY-MM-DD>.")
+    await run_maintain_events(
+        settings=settings,
+        requeue_since=requeue_since,
+    )
 
 
 async def handle_healthcheck(_args: argparse.Namespace) -> None:

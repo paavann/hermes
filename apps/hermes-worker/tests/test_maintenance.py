@@ -4,11 +4,13 @@ import asyncio
 from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
+from hermes_db.services.event_lifecycle import LifecycleResult
 from hermes_worker.core.config import Settings
 from hermes_worker.jobs.context import JobContext, LlmBudget, WorkerIdentity
 from hermes_worker.jobs.stages.maintenance import (
     EventLifecycleStage,
     RequeueStaleClaimsStage,
+    ThreadLifecycleStage,
 )
 
 
@@ -68,16 +70,16 @@ def test_event_lifecycle_stage_commits_and_counts() -> None:
     async def _test() -> None:
         ctx, session = _context(_settings())
 
-        with patch("hermes_worker.jobs.stages.maintenance.EventService") as service_cls:
+        with patch(
+            "hermes_worker.jobs.stages.maintenance.EventLifecycleService"
+        ) as service_cls:
             service = service_cls.return_value
-            service.run_lifecycle_transitions = AsyncMock(
-                return_value={"staled": 4, "archived": 2}
-            )
+            service.run = AsyncMock(return_value=LifecycleResult(staled=4, archived=2))
 
             stats = await EventLifecycleStage().run(ctx)
 
         service_cls.assert_called_once_with(session)
-        service.run_lifecycle_transitions.assert_awaited_once_with(
+        service.run.assert_awaited_once_with(
             stale_hours=24,
             archive_hours=48,
         )
@@ -91,15 +93,35 @@ def test_event_lifecycle_stage_does_not_commit_on_failure() -> None:
     async def _test() -> None:
         ctx, session = _context(_settings())
 
-        with patch("hermes_worker.jobs.stages.maintenance.EventService") as service_cls:
+        with patch(
+            "hermes_worker.jobs.stages.maintenance.EventLifecycleService"
+        ) as service_cls:
             service = service_cls.return_value
-            service.run_lifecycle_transitions = AsyncMock(
-                side_effect=RuntimeError("database unavailable")
-            )
+            service.run = AsyncMock(side_effect=RuntimeError("database unavailable"))
 
             with pytest.raises(RuntimeError, match="database unavailable"):
                 await EventLifecycleStage().run(ctx)
 
         session.commit.assert_not_awaited()
+
+    asyncio.run(_test())
+
+
+def test_thread_lifecycle_stage_commits_and_counts() -> None:
+    async def _test() -> None:
+        ctx, session = _context(_settings())
+
+        with patch(
+            "hermes_worker.jobs.stages.maintenance.ThreadService"
+        ) as service_cls:
+            service = service_cls.return_value
+            service.run_lifecycle = AsyncMock(return_value={"dormant": 3, "ended": 1})
+
+            stats = await ThreadLifecycleStage().run(ctx)
+
+        service_cls.assert_called_once_with(session)
+        service.run_lifecycle.assert_awaited_once_with()
+        session.commit.assert_awaited_once()
+        assert stats.counters == {"dormant": 3, "ended": 1}
 
     asyncio.run(_test())

@@ -49,8 +49,8 @@ class TestWorkerSettingsDefaults:
 
     def test_lifecycle_defaults(self):
         s = _make_settings()
-        assert s.EVENT_STALE_HOURS == 24
-        assert s.EVENT_ARCHIVE_HOURS == 48
+        assert s.EVENT_STALE_HOURS == 72
+        assert s.EVENT_ARCHIVE_HOURS == 168
 
     def test_claim_queue_defaults(self):
         s = _make_settings()

@@ -90,7 +90,9 @@ def test_fetch_detects_paywall_marker() -> None:
                 return httpx.Response(404)
             return httpx.Response(
                 200,
-                text=ARTICLE_HTML.replace("<h1>Quake</h1>", '<div class="paywall">Subscribe</div>'),
+                text=ARTICLE_HTML.replace(
+                    "<h1>Quake</h1>", '<div class="paywall">Subscribe</div>'
+                ),
                 headers={"content-type": "text/html; charset=utf-8"},
             )
 
@@ -235,9 +237,7 @@ def test_fetch_rejects_credentials_and_unusual_ports() -> None:
             credentials = await _fetcher(client).fetch(
                 "https://user:pass@news.example.com/story"
             )
-            port = await _fetcher(client).fetch(
-                "https://news.example.com:8443/story"
-            )
+            port = await _fetcher(client).fetch("https://news.example.com:8443/story")
 
         assert credentials.reason == FetchReason.INVALID_URL
         assert port.reason == FetchReason.INVALID_URL

@@ -162,8 +162,7 @@ def to_label_payload(
         scale_facts[key] = value
 
     entities: list[dict[str, object]] = [
-        {"name": entity.name, "kind": entity.kind.value}
-        for entity in label.entities
+        {"name": entity.name, "kind": entity.kind.value} for entity in label.entities
     ]
     locations: list[dict[str, object]] = [
         {"name": location.name, "country_code": location.country_code}
@@ -184,9 +183,7 @@ def to_label_payload(
         locations=locations,
         category=ArticleCategory(label.category.value),
         event_form=(
-            EventForm(label.event_form.value)
-            if label.event_form is not None
-            else None
+            EventForm(label.event_form.value) if label.event_form is not None else None
         ),
         specificity=label.specificity,
         consequence=label.consequence,
@@ -287,9 +284,7 @@ def build_text_hashes(
 def build_embedding_text(label: LabelPayload, *, title: str) -> str:
     parts = [title, label.fact or ""]
     parts.extend(
-        str(entity.get("name", ""))
-        for entity in label.entities
-        if entity.get("name")
+        str(entity.get("name", "")) for entity in label.entities if entity.get("name")
     )
     parts.extend(
         str(location.get("name", ""))

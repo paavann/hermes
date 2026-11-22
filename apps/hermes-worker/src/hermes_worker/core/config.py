@@ -52,6 +52,8 @@ class Settings(BaseSettings):
     ADJUDICATE_API: SecretStr | None = None
     DESCRIBE_MODEL: str | None = None
     DESCRIBE_API: SecretStr | None = None
+    THREAD_MODEL: str | None = None
+    THREAD_API: SecretStr | None = None
 
     # rate limits.
     RPM_LIMIT: int = Field(default=26, gt=0)
@@ -71,8 +73,37 @@ class Settings(BaseSettings):
     )
 
     # event lifecycle configuration.
-    EVENT_STALE_HOURS: int = Field(default=24, gt=0)
-    EVENT_ARCHIVE_HOURS: int = Field(default=48, gt=0)
+    EVENT_STALE_HOURS: int = Field(default=72, gt=0)
+    EVENT_ARCHIVE_HOURS: int = Field(default=168, gt=0)
+
+    # event clustering.
+    EVENT_CLUSTER_BATCH_SIZE: int = Field(default=100, gt=0)
+    EVENT_CLUSTER_WAVE_SIZE: int = Field(default=10, gt=0)
+    EVENT_CLUSTER_WINDOW_DAYS: int = Field(default=7, gt=0)
+    EVENT_CLUSTER_ANN_LIMIT: int = Field(default=20, gt=0)
+    EVENT_CLUSTER_COUNTRY_LIMIT: int = Field(default=20, gt=0)
+    EVENT_CLUSTER_CANDIDATE_CAP: int = Field(default=40, gt=0)
+    EVENT_CLUSTER_ADJUDICATION_BATCH_SIZE: int = Field(default=10, gt=0, le=20)
+    EVENT_CLUSTER_LLM_PAIRS_PER_RUN: int = Field(default=25, ge=0)
+
+    # event description synthesis.
+    EVENT_DESCRIBE_BATCH_SIZE: int = Field(default=10, gt=0, le=20)
+    EVENT_DESCRIBE_MAX_FAMILIES: int = Field(default=8, gt=0, le=8)
+
+    # importance scoring.
+    EVENT_SCORE_PAGE_SIZE: int = Field(default=500, gt=0)
+
+    # story threads.
+    THREAD_EVENT_LIMIT: int = Field(default=200, gt=0)
+    THREAD_CANDIDATE_LIMIT: int = Field(default=100, gt=0)
+    THREAD_ADJUDICATION_BATCH_SIZE: int = Field(default=10, gt=0, le=20)
+    THREAD_LLM_PAIRS_PER_RUN: int = Field(default=25, ge=0)
+    THREAD_MIN_GROUP: int = Field(default=2, ge=2)
+
+    # duplicate event reconciliation.
+    EVENT_RECONCILE_WINDOW_HOURS: int = Field(default=24, gt=0)
+    EVENT_RECONCILE_LIMIT: int = Field(default=200, gt=0)
+    EVENT_MERGE_LLM_PAIRS_PER_RUN: int = Field(default=10, ge=0)
 
     # article claim queue and per-run budgets.
     ARTICLE_CLAIM_BATCH_SIZE: int = Field(default=50, gt=0)

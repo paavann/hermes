@@ -184,8 +184,7 @@ class AnalyzeStage:
         existing = {row.article_id: row for row in rows}
 
         selected_by_id = {
-            article.id: text
-            for article, text in zip(articles, selected, strict=True)
+            article.id: text for article, text in zip(articles, selected, strict=True)
         }
         digest_by_id: dict[uuid.UUID, str] = {}
         inputs_to_label: list[LabelArticleInput] = []
@@ -193,9 +192,7 @@ class AnalyzeStage:
         payloads: dict[uuid.UUID, LabelPayload] = {}
         reused = 0
 
-        for index, (article, text) in enumerate(
-            zip(articles, selected, strict=True)
-        ):
+        for index, (article, text) in enumerate(zip(articles, selected, strict=True)):
             label_input = build_label_input(
                 index=index,
                 article=article,
@@ -333,9 +330,7 @@ class AnalyzeStage:
                     article.id,
                     model=settings.EMBED_MODEL or "unknown",
                     embedding=vector,
-                    input_hash=embedding_input_hash(
-                        embedding_text_by_id[article.id]
-                    ),
+                    input_hash=embedding_input_hash(embedding_text_by_id[article.id]),
                 )
                 title_hash, body_hash = build_text_hashes(
                     title=article.title,

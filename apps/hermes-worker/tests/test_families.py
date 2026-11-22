@@ -50,9 +50,7 @@ def test_find_family_matches_normalized_title() -> None:
 
 def test_find_family_rejects_rewritten_title_without_other_signals() -> None:
     candidate = _candidate()
-    title_hash = simhash_hex(
-        "Earthquake strikes coastal city, officials say"
-    )
+    title_hash = simhash_hex("Earthquake strikes coastal city, officials say")
     assert title_hash is not None
 
     match = find_family(
@@ -131,9 +129,7 @@ def test_find_family_matches_embedding_near_duplicate() -> None:
 
 def test_find_family_returns_none_for_unrelated_article() -> None:
     candidate = _candidate()
-    title_hash = simhash_hex(
-        "Central bank raises interest rates at policy meeting"
-    )
+    title_hash = simhash_hex("Central bank raises interest rates at policy meeting")
     assert title_hash is not None
 
     match = find_family(

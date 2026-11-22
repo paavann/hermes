@@ -275,7 +275,11 @@ class BodyFetcher:
                 )
 
             content_type = (response.headers.get("content-type") or "").lower()
-            if content_type and "html" not in content_type and "text/" not in content_type:
+            if (
+                content_type
+                and "html" not in content_type
+                and "text/" not in content_type
+            ):
                 return _Hop(
                     result=FetchResult(
                         url=url,

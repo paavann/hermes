@@ -307,9 +307,7 @@ def test_analyze_persists_rejected_label_without_embedding() -> None:
     analysis.save_embedding.assert_not_awaited()
     analysis.finalize.assert_awaited_once()
     assert analysis.finalize.await_args.kwargs["status"] == IngestStatus.REJECTED
-    assert analysis.finalize.await_args.kwargs["reject_reason"].startswith(
-        "not_event:"
-    )
+    assert analysis.finalize.await_args.kwargs["reject_reason"].startswith("not_event:")
     assert ai.llm.calls == []
 
 

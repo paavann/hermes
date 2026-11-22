@@ -1,12 +1,24 @@
 import argparse
+from datetime import UTC, datetime
 from hermes_worker.handlers.commands import (
     WorkerCmd,
     handle_audit_sources,
+    handle_build_events,
     handle_healthcheck,
     handle_ingest_articles,
     handle_maintain_events,
     handle_reset_db,
 )
+
+
+def _parse_since(value: str) -> datetime:
+    try:
+        parsed = datetime.fromisoformat(value)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(
+            f"invalid date {value!r}; expected YYYY-MM-DD."
+        ) from exc
+    return parsed if parsed.tzinfo is not None else parsed.replace(tzinfo=UTC)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -30,9 +42,29 @@ def build_parser() -> argparse.ArgumentParser:
         requires_local_db=False,
     )
 
+    build = subparsers.add_parser(
+        WorkerCmd.BUILD_EVENTS.value,
+        help="Cluster articles into events, describe, score, thread, and reconcile",
+    )
+    build.set_defaults(
+        handler=handle_build_events,
+        requires_local_db=False,
+    )
+
     maintain = subparsers.add_parser(
         WorkerCmd.MAINTAIN_EVENTS.value,
-        help="Requeue abandoned article claims and apply event lifecycle transitions",
+        help="Apply lifecycle transitions, reconcile counts, and retention",
+    )
+    maintain.add_argument(
+        "--requeue",
+        action="store_true",
+        help="Reset failed and rejected articles before maintenance",
+    )
+    maintain.add_argument(
+        "--since",
+        type=_parse_since,
+        default=None,
+        help="Only requeue articles published on or after this date",
     )
     maintain.set_defaults(
         handler=handle_maintain_events,

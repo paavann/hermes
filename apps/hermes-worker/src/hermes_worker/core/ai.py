@@ -51,6 +51,7 @@ def create_ai_client(settings: Settings) -> HermesAi:
         ("label", settings.LABEL_MODEL, settings.LABEL_API),
         ("adjudicate", settings.ADJUDICATE_MODEL, settings.ADJUDICATE_API),
         ("describe", settings.DESCRIBE_MODEL, settings.DESCRIBE_API),
+        ("thread", settings.THREAD_MODEL, settings.THREAD_API),
     )
 
     specs: list[_RouteSpec] = [
@@ -76,9 +77,7 @@ def create_ai_client(settings: Settings) -> HermesAi:
     )
 
     routes = {
-        spec.name: route
-        for spec in specs
-        if (route := _build_route(spec)) is not None
+        spec.name: route for spec in specs if (route := _build_route(spec)) is not None
     }
 
     config = AiConfig(

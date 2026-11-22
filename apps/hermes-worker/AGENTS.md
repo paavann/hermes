@@ -9,16 +9,17 @@ Execute from the workspace root (see root `AGENTS.md` for lint, format, and test
 | Task               | Command                                     | Description                                                                     |
 | :----------------- | :------------------------------------------ | :------------------------------------------------------------------------------ |
 | **Ingest Articles**| `npx nx run hermes-worker:ingest-articles`  | Sync sources, fetch due feeds, write the ledger, then label, embed, and assign syndication families |
+| **Build Events**   | `npx nx run hermes-worker:build-events`     | Cluster articles into events, synthesize descriptions, score, assign threads, and reconcile/merge duplicate events |
 | **Audit Sources**  | `npx nx run hermes-worker:audit-sources`    | Probe configured feeds and sample articles read-only                            |
-| **Maintain Events**| `npx nx run hermes-worker:maintain-events`  | Requeue abandoned article claims and apply score decay / status transitions      |
+| **Maintain Events**| `npx nx run hermes-worker:maintain-events`  | Requeue stale claims, apply event and thread lifecycle transitions, reconcile aggregate counts, and apply retention |
 | **Healthcheck**    | `npx nx run hermes-worker:healthcheck`      | Check database connectivity, schema, queue depth, and stale claims               |
 | **Reset DB**       | `npx nx run hermes-worker:reset-db`         | Drop local database objects only; guarded by `--yes` and a local-target check    |
 
-`build-events` is added in its implementation phase. Do not reintroduce a `pipeline-*` command or a feature flag that shadows a real command.
+Do not reintroduce a `pipeline-*` command or a feature flag that shadows a real command.
 
 ## 2. Boundaries
 
-- **Execution Approval**: `ingest-articles` and `maintain-events` mutate the database. Never execute them without explicit user approval (and verify `DB_HOST` in `.env` first per root `AGENTS.md`).
+- **Execution Approval**: `ingest-articles`, `build-events`, and `maintain-events` mutate the database. Never execute them without explicit user approval (and verify `DB_HOST` in `.env` first per root `AGENTS.md`).
 - **Read-Only Probe**: `healthcheck` and `audit-sources` must not write rows. `healthcheck` may be run during an incident without approval; `audit-sources` performs outbound network probes but never writes the database or the source config.
 - **Network Isolation in Tests**: All tests in `tests/` are mocked. Never write tests that hit the network, call external APIs, or query a live database. Database tests use the `integration` marker and skip without `TEST_DATABASE_URL`.
 
@@ -50,10 +51,20 @@ Changing any of these requires explaining the expected effect and obtaining appr
 - Analysis batches: `ARTICLE_ANALYZE_BATCH_SIZE`, `ARTICLE_LABEL_BATCH_SIZE` in `apps/hermes-worker/src/hermes_worker/core/config.py`
 - Transient fetch: `ARTICLE_FETCH_CONNECT_TIMEOUT_SECONDS`, `ARTICLE_FETCH_READ_TIMEOUT_SECONDS`, `ARTICLE_BODY_MIN_CHARS`, `ARTICLE_FETCH_MAX_BYTES`, `ARTICLE_FETCH_MAX_REDIRECTS`, `ARTICLE_FETCH_PER_HOST_CONCURRENCY` in `apps/hermes-worker/src/hermes_worker/core/config.py`
 - Syndication families: `ARTICLE_FAMILY_WINDOW_DAYS`, `ARTICLE_FAMILY_MAX_CANDIDATES` in `apps/hermes-worker/src/hermes_worker/core/config.py`; match thresholds in `apps/hermes-worker/src/hermes_worker/jobs/families.py`
-- Lifecycle cutoffs: `DEFAULT_EVENT_STALE_HRS` and `DEFAULT_EVENT_ARCHIVE_HRS` in `libs/shared/hermes-db/src/hermes_db/services/event.py`; `EVENT_STALE_HOURS` and `EVENT_ARCHIVE_HOURS` in `apps/hermes-worker/src/hermes_worker/core/config.py`
+- Event clustering: `EVENT_CLUSTER_BATCH_SIZE`, `EVENT_CLUSTER_WAVE_SIZE`, `EVENT_CLUSTER_WINDOW_DAYS`, `EVENT_CLUSTER_ANN_LIMIT`, `EVENT_CLUSTER_COUNTRY_LIMIT`, `EVENT_CLUSTER_CANDIDATE_CAP`, `EVENT_CLUSTER_ADJUDICATION_BATCH_SIZE`, `EVENT_CLUSTER_LLM_PAIRS_PER_RUN` in `apps/hermes-worker/src/hermes_worker/core/config.py`; pairwise thresholds (`AUTO_ATTACH_THRESHOLD = 0.80`, `LLM_BAND_THRESHOLD = 0.60`) in `apps/hermes-worker/src/hermes_worker/jobs/pair_score.py`
+- Event description: `EVENT_DESCRIBE_BATCH_SIZE`, `EVENT_DESCRIBE_MAX_FAMILIES` in `apps/hermes-worker/src/hermes_worker/core/config.py`
+- Event scoring: `EVENT_SCORE_PAGE_SIZE` in `apps/hermes-worker/src/hermes_worker/core/config.py`; scoring weights and thresholds in `libs/shared/hermes-db/src/hermes_db/services/event_scoring.py`
+- Story threads: `THREAD_EVENT_LIMIT`, `THREAD_CANDIDATE_LIMIT`, `THREAD_ADJUDICATION_BATCH_SIZE`, `THREAD_LLM_PAIRS_PER_RUN`, `THREAD_MIN_GROUP` in `apps/hermes-worker/src/hermes_worker/core/config.py`; `THREAD_DORMANT_DAYS = 7`, `THREAD_ENDED_DAYS = 30`, `THREAD_IMPORTANCE_HALF_LIFE_HOURS = 168.0` in `libs/shared/hermes-db/src/hermes_db/services/thread.py`
+- Event merge & reconciliation: `EVENT_RECONCILE_WINDOW_HOURS`, `EVENT_RECONCILE_LIMIT`, `EVENT_MERGE_LLM_PAIRS_PER_RUN` in `apps/hermes-worker/src/hermes_worker/core/config.py`; pair thresholds (`MERGE_AUTO_THRESHOLD = 0.92`, `MERGE_GRAY_THRESHOLD = 0.85`) in `apps/hermes-worker/src/hermes_worker/jobs/pair_score.py`
+- Lifecycle cutoffs: `DEFAULT_STALE_HOURS` and `DEFAULT_ARCHIVE_HOURS` in `libs/shared/hermes-db/src/hermes_db/services/event_lifecycle.py`; `EVENT_STALE_HOURS` and `EVENT_ARCHIVE_HOURS` in `apps/hermes-worker/src/hermes_worker/core/config.py`
+- Data retention: `cluster_decisions` (90d), removed `event_members` (180d), archived embeddings (30d) in `libs/shared/hermes-db/src/hermes_db/services/maintenance.py`
 - Per-run LLM budget: `MAX_LLM_CALLS_PER_RUN` in `apps/hermes-worker/src/hermes_worker/core/config.py`
 
 ## 6. Triggers (Code Modifications Only)
 
 - **When modifying stage order, claim semantics, thresholds, decay, or scheduling**: Read `apps/hermes-worker/docs/architecture.md`.
+- **When modifying clustering thresholds or pair-scoring weights**: Read `apps/hermes-worker/src/hermes_worker/jobs/pair_score.py` and `apps/hermes-worker/src/hermes_worker/jobs/cluster.py`.
+- **When modifying scoring formula, tiers, or lifecycle cutoffs**: Read `libs/shared/hermes-db/src/hermes_db/services/event_scoring.py` and `libs/shared/hermes-db/src/hermes_db/services/event_lifecycle.py`.
+- **When modifying thread assignment or lifecycle**: Read `libs/shared/hermes-db/src/hermes_db/services/thread.py` and `apps/hermes-worker/src/hermes_worker/jobs/thread_assignment.py`.
+- **When modifying merge policy or reconciliation**: Read `libs/shared/hermes-db/src/hermes_db/services/event_merge.py` and `apps/hermes-worker/src/hermes_worker/jobs/reconcile.py`.
 - **When modifying geocoding logic, rate limits, or caches**: Read `libs/shared/hermes-ai/AGENTS.md`.

@@ -1,6 +1,6 @@
 # Hermes Worker — Architecture & Design Rationale
 
-This document describes the worker's execution model, the target news ingestion architecture, and the phases implemented so far. The target stages are implemented incrementally; each section marks what exists today.
+This document describes the worker's execution model, the complete news ingestion pipeline, and operational runbooks. All phases (1–9) are fully implemented on `refactor/news-ingestion`.
 
 ---
 
@@ -35,8 +35,6 @@ flowchart TB
 
 ## 2. Target Ingestion Architecture
 
-> **Status:** Phase 1 provides the job runtime, article claim queue, maintenance, and healthcheck. Phase 2 adds `ingest-articles` and the deduplicated article ledger. Phase 3 adds transient body fetch, article labels, embeddings, and syndication families. Event construction is implemented in later phases.
-
 ```mermaid
 flowchart LR
     Feeds["Direct publisher RSS\n+ Google News fallback"] --> Ledger["articles\nURL identity + feed metadata"]
@@ -45,7 +43,8 @@ flowchart LR
     Cluster --> Describe["Describe\nevent synthesis"]
     Describe --> Score["Score\nimportance_score"]
     Score --> Thread["Thread\npersistent topic grouping"]
-    Thread --> Serve["API + map"]
+    Thread --> Reconcile["Reconcile\nduplicate-event merge"]
+    Reconcile --> Serve["API + map"]
 ```
 
 ### 2.1 Command Cadence
@@ -57,7 +56,7 @@ flowchart LR
 | `maintain-events` | daily | Requeue stale claims, lifecycle transitions, retention, consistency checks | no |
 | `healthcheck` | on demand | Connectivity, schema, queue depth, stale claims | no |
 
-Phase 1 registers `maintain-events` and `healthcheck`; Phase 2 registers `ingest-articles`. `build-events` is registered when its stages land. There is no feature flag and no parallel legacy path.
+Phase 1 registers `maintain-events` and `healthcheck`; Phase 2 registers `ingest-articles`; Phase 4 registers `build-events`. All four commands are fully implemented. There is no feature flag and no parallel legacy path.
 
 ### 2.2 Article Ledger and Claim Queue
 
@@ -197,41 +196,49 @@ if SINGLE_SOURCE: score = min(score, 45)
 
 ---
 
-## 5. Job Kernel and Implemented Commands
+## 5. Job Kernel and Commands
 
 ### 5.1 Modules
 
 ```
 jobs/
-  context.py   JobContext, LlmBudget, Stage, StageStats, WorkerIdentity
-  runner.py    ordered stage execution and optional advisory lock
-  locks.py     per-command Postgres advisory locks
-  queue.py     ArticleQueue claim/mark/fail/requeue
-  urls.py      URL canonicalization and ledger hash
-  fingerprints.py  token normalization, SimHash, cosine similarity
-  fetch.py         SSRF-safe, robots-aware transient body fetcher
-  robots.py        per-run robots.txt cache
-  labels.py        label payload, gate policy, text selection, hashes
-  families.py      syndication-family matching
-  commands.py      ingest-articles, maintain-events, healthcheck
+  context.py        JobContext, LlmBudget, Stage, StageStats, WorkerIdentity
+  runner.py         ordered stage execution and optional advisory lock
+  locks.py          per-command Postgres advisory locks
+  queue.py          ArticleQueue claim/mark/fail/requeue
+  urls.py           URL canonicalization and ledger hash
+  fingerprints.py   token normalization, SimHash, cosine similarity
+  fetch.py          SSRF-safe, robots-aware transient body fetcher
+  robots.py         per-run robots.txt cache
+  labels.py         label payload, gate policy, text selection, hashes
+  families.py       syndication-family matching
+  pair_score.py     article-pair and event-pair scoring, vetoes, bands
+  commands.py       ingest-articles, build-events, maintain-events, healthcheck
   stages/
     ingest.py       source sync, feed fetch, ledger insert, source health
     analyze.py      transient fetch, labels, embeddings, family assignment
-    maintenance.py  requeue stale claims + event lifecycle
-    healthcheck.py  connectivity, schema, queue depth
+    cluster.py      incident clustering, adjudication, verification
+    describe.py     event synthesis from family facts, geocoding
+    score.py        importance score recompute for all active events
+    thread.py       thread assignment, ANN candidate scoring, creation
+    reconcile.py    event merge deduplication, gray adjudication
+    maintenance.py  stale claims, event lifecycle, thread lifecycle,
+                    count reconciliation, retention, consistency report
+    healthcheck.py  connectivity, schema, queue depth, stale claims
 ```
 
 ### 5.2 Command Surface
 
-| Command | Stages registered | Purpose |
-| :--- | :--- | :--- |
-| `ingest-articles` | `INGEST`, `ANALYZE` | Sync sources, fetch due feeds, write the ledger, then label, embed, and assign families |
-| `maintain-events` | `REQUEUE_CLAIMS`, `EVENT_LIFECYCLE` | Recover abandoned claims and apply event decay/transitions |
-| `healthcheck` | `HEALTHCHECK` | Read-only readiness probe |
+| Command | Stages | Purpose | LLM | Lock |
+| :--- | :--- | :--- | :--- | :--- |
+| `ingest-articles` | `INGEST`, `ANALYZE` | Sync sources, write ledger, label, embed, assign families | yes | yes |
+| `build-events` | `CLUSTER`, `DESCRIBE`, `SCORE`, `THREAD`, `RECONCILE` | Cluster → synthesize → score → thread → merge duplicate events | yes | yes |
+| `maintain-events` | `REQUEUE_CLAIMS`, `EVENT_LIFECYCLE`, `THREAD_LIFECYCLE`, `MAINTENANCE` | Recover claims, lifecycle transitions, retention, consistency report | no | yes |
+| `healthcheck` | `HEALTHCHECK` | Read-only readiness probe | no | no |
 
 `audit-sources` is a standalone network probe with no database session and no stage. It reports feed status, entry counts, sample URLs, body accessibility, and paywall markers so `sources.json` can be updated from evidence.
 
-`healthcheck` does not take a lock: read-only probes must remain available while maintenance is running. `ingest-articles` and `maintain-events` take their own advisory locks; a second concurrent invocation records `SKIPPED` in logs and exits cleanly.
+`healthcheck` does not take a lock — read-only probes must remain available while maintenance is running. `ingest-articles`, `build-events`, and `maintain-events` take per-command advisory locks; a concurrent second invocation logs `SKIPPED` and exits `0`.
 
 ### 5.3 Execution Record
 
@@ -245,9 +252,9 @@ A run-telemetry table is intentionally not part of the design; it duplicated log
 
 ### 5.4 Structured LLM Completion
 
-`LlmService.complete_json(...)` adds a schema-repair retry for structured stages while `call_llm(...)` keeps its single-shot behavior for the legacy extractor. Usage accounting (`LlmUsage`) records calls, input/output tokens, and repairs per process.
+`LlmService.complete_json(...)` adds a schema-repair retry for structured stages. Usage accounting (`LlmUsage`) records calls, input/output tokens, and repairs per process.
 
-The worker builds generic `label`, `adjudicate`, and `describe` routes that default to `LLM_MODEL` / `LLM_API` and accept per-task overrides. Every stage reserves calls through `JobContext.budget` before invoking `complete_json`; exceeding `MAX_LLM_CALLS_PER_RUN` fails the stage instead of allowing unbounded spend.
+The worker builds generic `label`, `adjudicate`, `describe`, and `thread` routes that default to `LLM_MODEL` / `LLM_API` and accept per-task overrides (`ADJUDICATE_MODEL/API`, `DESCRIBE_MODEL/API`, `THREAD_MODEL/API`). Every stage reserves calls through `JobContext.budget` before invoking `complete_json`; exceeding `MAX_LLM_CALLS_PER_RUN` stops the stage cleanly and leaves remaining work queued.
 
 ### 5.5 Schema Guard
 
@@ -267,7 +274,179 @@ A missing migration raises `SchemaCheckError` naming the exact missing object, r
 
 ---
 
-## 6. Observability & Langfuse Tracing
+## 6. Clustering, Scoring, and Merge Pipeline (Phases 4–7)
+
+### 6.1 Article-to-Event Clustering (Phase 4)
+
+The `CLUSTER` stage groups `LABELED` articles into incident-level events using a pair-score with hard vetoes.
+
+**Pair score** (article → event, `score_pair` in `pair_score.py`):
+
+```
+score = 0.40 * embedding_cosine
+      + 0.20 * entity_jaccard
+      + 0.15 * location_compatibility
+      + 0.15 * time_proximity          # 48h half-life
+      + 0.10 * action_token_overlap
+```
+
+**Hard vetoes** (immediately score 0):
+
+- Incompatible `event_form` values (e.g. `INCIDENT` vs. `PLANNED_EVENT`).
+- Conflicting specific locations > 100 km apart with different admin regions.
+- Time delta > 7 days.
+- Non-empty, disjoint top entity sets.
+
+**Bands**:
+
+| Score | Action |
+| :--- | :--- |
+| ≥ 0.80 | Auto-attach to event |
+| 0.60–0.80 | Batched LLM adjudication (10 pairs/call, cached by `pair_hash`, max `EVENT_CLUSTER_LLM_PAIRS_PER_RUN`) |
+| < 0.60 or `UNSURE` | Separate event |
+
+Candidate events come from: ANN top-20 by embedding + same-country block; total candidate cap `EVENT_CLUSTER_CANDIDATE_CAP` (default 40). Each article is processed in `event_time` order within the wave; provisional new events are kept in memory so the next article in the wave can land in the same cluster before commit.
+
+**On attach**: `event_members` row inserted, `articles.event_id` updated, event centroid recomputed (weighted mean), counts incremented, `member_hash` cleared (triggering describe), `latest_published_at` updated. Verification is recomputed from family membership.
+
+### 6.2 Event Synthesis (Phase 5)
+
+The `DESCRIBE` stage synthesizes a unified description for every event whose `member_hash` is unset (i.e., membership changed since last describe).
+
+- Input: up to `EVENT_DESCRIBE_MAX_FAMILIES` (default 8) independent family facts, source, published time, entities, locations, scale facts.
+- Output: headline ≤ 120 chars, 2–3 sentence summary, primary/secondary locations, impact, scope.
+- Numeric fidelity: every number in the output must appear in the input; one retry; fallback to template headline on second failure.
+- Primary location is geocoded through the shared `GeocodingService` instance (never LLM coordinates). Only a changed location triggers a geocoder call.
+- `member_hash` is set after success; `event.version` bumps only on a material field change.
+
+### 6.3 Importance Scoring (Phase 5)
+
+The `SCORE` stage recomputes `importance_score` for all active events in pages of `EVENT_SCORE_PAGE_SIZE` (default 500). Score is never incremented — always a full recomputation.
+
+Formula (from `event_scoring.py`):
+
+```
+strength = min(1, Σ(max credibility per family) / 9)
+           # TIER_1=3.0, TIER_2=2.0, TIER_3/4=1.0
+
+impact   = {CRITICAL:1.0, MAJOR:0.8, MODERATE:0.55, MINOR:0.3}
+verify   = {CONFIRMED:1.0, CORROBORATED:0.85, SINGLE_SOURCE:0.4,
+            CONFLICTING:0.25, UNVERIFIED:0.0}
+quality  = clamp(1 - 0.15*(5-specificity) - 0.10*(5-consequence), 0.5, 1.0)
+
+base     = 100 * (0.40*strength + 0.30*impact + 0.15*verify + 0.15*quality)
+score    = base * exp(-age_hours / half_life)
+half_life = 18h (CRITICAL), 36h (MAJOR), 72h (otherwise)
+
+if SINGLE_SOURCE: score = min(score, 45)      # single-source cap
+
+breaking override: age ≤ 2h AND article_type=BREAKING AND impact ≥ MAJOR
+                   AND base_score ≥ 45 → bypass cap
+```
+
+`score_breakdown` JSONB stores value, weight, contribution, freshness multiplier, and cap flag per component.
+
+**Selection tiers** (with ±5 hysteresis):
+
+| Tier | Score |
+| :--- | :--- |
+| `PRIMARY` | ≥ 55 |
+| `FILLER` | 30–55 |
+| `DROP` | < 30 |
+
+`DROP` events are excluded from API results. Single-source events are always visible; they never outrank corroborated events unless the breaking override applies.
+
+**Event lifecycle**:
+
+- `ACTIVE → STALE` after 72h since `latest_published_at`.
+- `STALE → ARCHIVED` after 168h (7 days).
+- A new member on a `STALE` event reactivates it to `ACTIVE`.
+- `ARCHIVED` events are not clustering candidates.
+
+Timeline cache: `event_timelines.event_version` is compared to `events.version` before returning; a mismatch triggers regeneration.
+
+### 6.4 Story Threads (Phase 6)
+
+The `THREAD` stage assigns events to persistent topic groups.
+
+**Candidate ranking** (`ThreadService.ranked_candidates`):
+
+```
+score = 0.70 * embedding_cosine + 0.30 * entity_jaccard
+```
+
+Candidates are found via embedding ANN and normalized entity-pair blocking.
+
+**Assignment bands**:
+
+| Score | Action |
+| :--- | :--- |
+| ≥ 0.85 | Auto-assign to thread |
+| 0.70–0.85 | Batched LLM adjudication (cached by `pair_hash`, max `THREAD_LLM_PAIRS_PER_RUN`) |
+| < 0.70 | No assignment |
+
+Thread creation: when ≥ `THREAD_MIN_GROUP` (default 2) unthreaded events share the same entity pair, a new thread is created with `kind=DEVELOPING` or `kind=TOPIC`.
+
+**Thread lifecycle** (`run_lifecycle` in `ThreadService`):
+
+- `ACTIVE → DORMANT` after `THREAD_DORMANT_DAYS` (7) days without a new event.
+- `DORMANT → ENDED` after `THREAD_ENDED_DAYS` (30) days.
+- A new event reactivates a `DORMANT` thread.
+
+Thread importance: max member `importance_score` decayed by `THREAD_IMPORTANCE_HALF_LIFE_HOURS` (168h, ~7 days) since `last_event_at`.
+
+### 6.5 Event Merge / Reconciliation (Phase 7)
+
+The `RECONCILE` stage detects and merges duplicate events that survived clustering as separate pins.
+
+**Merge pair score** (`score_event_pair` in `pair_score.py`):
+
+```
+score = 0.40 * embedding_cosine
+      + 0.20 * entity_jaccard
+      + 0.15 * location_compatibility
+      + 0.10 * time_proximity
+      + 0.05 * category_match
+      + 0.10 * family_overlap
+```
+
+Same hard vetoes apply: > 7 days, > 100 km + different country, disjoint top entities.
+
+**Merge bands**:
+
+| Score | Action |
+| :--- | :--- |
+| ≥ 0.92 | Auto-merge |
+| 0.85–0.92 | Batched LLM adjudication (max `EVENT_MERGE_LLM_PAIRS_PER_RUN`) |
+| < 0.85 | No merge |
+
+Decisions are cached in `cluster_decisions` keyed by sorted event IDs + both `member_hash` values + prompt version.
+
+**Survivor selection**: more members wins; on a tie, the older event wins. Loser members are reassigned to survivor; loser is marked `MERGED` with a redirect (`merged_into_id`). The API resolves redirect chains; events are never deleted. Merge clears survivor `member_hash` (triggering a re-describe) and bumps `version` on both.
+
+### 6.6 Maintenance (Phase 7)
+
+`maintain-events` runs four stages daily:
+
+1. **`REQUEUE_CLAIMS`**: Returns `ANALYZING` articles older than `ARTICLE_CLAIM_STALE_MINUTES` to `NEW` (up to `ARTICLE_MAX_ATTEMPTS`; then `FAILED`).
+2. **`EVENT_LIFECYCLE`**: Applies `ACTIVE → STALE → ARCHIVED` transitions, purges embeddings for events archived > 30 days.
+3. **`THREAD_LIFECYCLE`**: Applies `ACTIVE → DORMANT → ENDED` transitions for story threads.
+4. **`MAINTENANCE`**: Reconciles `article_count`, `source_count`, `family_count`, `independent_origin_count` from `event_members`; applies retention; produces consistency report.
+
+**Retention schedule**:
+
+| Data | Retention |
+| :--- | :--- |
+| `cluster_decisions` | 90 days |
+| Removed `event_members` (`is_current=false`) | 180 days |
+| `articles.embedding` for archived events | 30 days after archive |
+| Article metadata and labels | Forever (audit evidence) |
+
+**Reprocessing**: `maintain-events --requeue --since <YYYY-MM-DD>` resets `FAILED`/`REJECTED` articles published on or after that date back to `NEW`.
+
+---
+
+## 7. Observability & Langfuse Tracing
 
 - **Opt-in**: Tracing activates only when both Langfuse keys are configured.
 - **Structured calls**: `complete_json` runs are traced through the shared `LlmService`; inputs and outputs are not captured for article content.
@@ -276,7 +455,7 @@ A missing migration raises `SchemaCheckError` naming the exact missing object, r
 
 ---
 
-## 7. Failure and Recovery Model
+## 8. Failure and Recovery Model
 
 | Failure | Behavior |
 | :--- | :--- |
@@ -284,6 +463,96 @@ A missing migration raises `SchemaCheckError` naming the exact missing object, r
 | Process killed mid-stage | `ANALYZING` claim remains. Next `maintain-events` requeues or fails it based on attempts. |
 | Advisory lock held | Second invocation logs `SKIPPED` and exits `0` without mutating state. |
 | Schema mismatch | `healthcheck` raises `SchemaCheckError` with the missing object list. |
-| LLM budget exhausted | `ANALYZE` stops before the next group, releases the in-flight claims, and exits successfully with `budget_exhausted`; other LLM stages fail the stage. |
+| LLM budget exhausted | `ANALYZE` stops before the next group, releases in-flight claims, exits successfully with `budget_exhausted`; other LLM stages fail the stage. |
 | LLM schema mismatch | One repair retry through `complete_json`; a second failure raises `SchemaValidationError`. |
-| Telemetry flush failure | Logged as a warning; it does not mask the stage result. |
+| Telemetry flush failure | Logged as a warning; does not mask the stage result. |
+| Feed outage | `fallback_feed_url` is tried when primary returns no entries or errors. Source health is updated; failing sources are deprioritized. |
+| Geocoder outage | `GeocodingService` returns cached entries first; network failures produce `None` (no location set). Rate limit: 1 req/s enforced by token bucket in `hermes-ai`. |
+| LLM rate limit | `complete_json` respects the RPM/TPM token bucket. Budget exhaustion stops the stage; remaining work queued for the next run. |
+
+---
+
+## 9. Operations Runbook
+
+### 9.1 Stuck Queue
+
+**Symptom**: Articles stuck in `ANALYZING` > 30 minutes; `healthcheck` reports stale claims.
+
+**Resolution**:
+1. Run `npx nx run hermes-worker:healthcheck` to confirm the count.
+2. Run `npx nx run hermes-worker:maintain-events` — the `REQUEUE_CLAIMS` stage requeues stale claims automatically.
+3. If claims keep sticking, check worker logs for `ANALYZE` stage errors; the `last_error` column on affected articles contains the bounded error string.
+
+### 9.2 Feed Outage
+
+**Symptom**: Zero new articles inserted; `ingest-articles` logs show fetch errors.
+
+**Resolution**:
+1. Run `npx nx run hermes-worker:audit-sources` to identify which feeds are failing.
+2. If the primary feed is unavailable, check whether `fallback_feed_url` is configured in `sources.json`. If not, add one and re-seed via `SourceService.seed_sources`.
+3. Paywalled sources that block body fetching automatically fall back to `SUMMARY_ONLY`; no intervention needed.
+
+### 9.3 LLM Budget Exhaustion
+
+**Symptom**: `build-events` or `ingest-articles` logs `budget_exhausted`; LLM calls per run hit `MAX_LLM_CALLS_PER_RUN`.
+
+**Resolution**:
+1. The stage stops cleanly; remaining articles/events are queued for the next scheduled run. No action required for a single occurrence.
+2. If systematic, raise `MAX_LLM_CALLS_PER_RUN` in settings (requires approval) or reduce batch sizes (`ARTICLE_LABEL_BATCH_SIZE`, `EVENT_CLUSTER_ADJUDICATION_BATCH_SIZE`).
+3. Check Langfuse for token counts; if the model is producing verbose outputs, tighten the system prompt.
+
+### 9.4 Geocoder Outage
+
+**Symptom**: Events missing `location`; `describe.py` logs geocoding failures.
+
+**Resolution**:
+1. The describe stage skips geocoding for `None` results and leaves the location unchanged. The event is still published with its previous location.
+2. When Nominatim recovers, the next `build-events` run will geocode events whose `member_hash` has changed (triggering a re-describe).
+3. Never call Nominatim directly; always go through `GeocodingService` to enforce the 1 req/s token bucket and cache.
+
+### 9.5 Rollback Procedure
+
+**Scenario**: A bad deployment causes stage errors or data corruption.
+
+1. Revert to the previous Docker image tag in ECS.
+2. Because all migrations through Phase 7 are additive (backward-compatible), no migration rollback is needed unless the Phase 9 cleanup migration has run.
+3. If Phase 9 cleanup has run (`trending_score` etc. columns dropped), restore the pre-cutover RDS snapshot; there is no non-destructive rollback path.
+4. Run `healthcheck` after revert to confirm schema compatibility.
+
+---
+
+## 10. Phase 8 — Cutover Checklist
+
+> **Policy**: No Phase 8 steps run against production without explicit approval. No schema drops occur in this phase.
+
+### Pre-Cutover
+
+- [ ] Restore a recent production dump locally; run `alembic upgrade head` through Phase 7 (`e7f8a9b0c1d2`); skip Phase 9 (`f8a9b0c1d2e3`) until after soak.
+- [ ] Run the full pipeline locally against the restored dump: `ingest-articles` then `build-events`; verify events, scores, verification, threads.
+- [ ] Confirm source audit report; update `sources.json` from evidence if needed.
+- [ ] Confirm acceptance metrics on the eval corpus (pairwise cluster precision ≥ 0.90, recall ≥ 0.80, duplicate rate ≤ 5%).
+- [ ] Schedule a low-traffic window (weekend late night).
+
+### Cutover Steps
+
+1. Freeze the old scheduler (stop EventBridge rules).
+2. Take a database snapshot.
+3. Deploy new worker/API/UI image.
+4. Run `alembic upgrade e7f8a9b0c1d2` (Phases 1–7 only; defer Phase 9).
+5. Truncate derived tables: `article_labels`, `article_families`, `events`, `threads`, `event_members`, `event_timelines`, `cluster_decisions`. Keep `sources`, `geocode_cache`, and `articles` metadata.
+6. Reset source health: `UPDATE sources SET last_fetched_at = NULL, consecutive_failures = 0, last_error = NULL`.
+7. Run one `ingest-articles` manually; verify article ledger.
+8. Run one `build-events` manually; verify events, scores, threads, verification badges.
+9. Enable schedules: `ingest-articles` every 15 min, `build-events` hourly, `maintain-events` daily.
+10. Monitor for 24 hours (see below).
+
+### Monitoring Checklist (First 24h)
+
+- Queue depth and stuck `ANALYZING` articles.
+- Ingest/insert/duplicate/reject rates per `ingest-articles` run.
+- Events/hour, clusters/hour, merges from `build-events`.
+- LLM calls/tokens vs. `MAX_LLM_CALLS_PER_RUN`.
+- Geocoder 1 req/s — no Nominatim rate-limit warnings.
+- Top-10 events: no stale single-source events older than 2h.
+- API latency and map render time.
+- `maintain-events` consistency report: zero count drift expected after first run.

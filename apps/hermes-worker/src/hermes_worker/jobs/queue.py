@@ -15,6 +15,7 @@ class ArticleQueue:
     Every method runs inside the caller's transaction. The stage decides when
     to commit so a crash before commit leaves work claimable by the next run.
     """
+
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
@@ -119,9 +120,7 @@ class ArticleQueue:
         max_attempts: int,
     ) -> IngestStatus:
         status = (
-            IngestStatus.NEW
-            if attempt_count < max_attempts
-            else IngestStatus.FAILED
+            IngestStatus.NEW if attempt_count < max_attempts else IngestStatus.FAILED
         )
         await self.mark([article_id], status, error=error)
         return status
