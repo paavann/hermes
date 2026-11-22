@@ -5,7 +5,10 @@ from types import TracebackType
 from typing import TYPE_CHECKING, Self, cast
 
 from hermes_ai.core.config import AiConfig
+from hermes_ai.extractors.adjudicate import PairAdjudicator
+from hermes_ai.extractors.describe import DescribeExtractor
 from hermes_ai.extractors.labels import LabelExtractor
+from hermes_ai.extractors.thread import ThreadAssigner
 from hermes_ai.extractors.tl import TlExtractor
 from hermes_ai.services.llm import LlmService
 
@@ -26,6 +29,9 @@ class HermesAi:
         self.llm = LlmService(self.config)
         self.labels = LabelExtractor(self.llm)
         self.timelines = TlExtractor(self.llm)
+        self.adjudicator = PairAdjudicator(self.llm)
+        self.describer = DescribeExtractor(self.llm)
+        self.threads = ThreadAssigner(self.llm)
         logger.info("hermes ai initialized.")
 
     def create_chat_engine(

@@ -1,3 +1,17 @@
+from hermes_ai.models.adjudicate import (
+    PairAdjudication,
+    PairAdjudicationInput,
+    PairAdjudicationResponse,
+    PairDecision,
+    PairSide,
+)
+from hermes_ai.models.describe import (
+    DescribeEventInput,
+    DescribeImpact,
+    DescribeMemberFact,
+    EventDescription,
+    EventDescriptionBatchResponse,
+)
 from hermes_ai.models.labels import (
     ArticleLabelBatchResponse,
     ArticleLabelExtraction,
@@ -11,6 +25,14 @@ from hermes_ai.models.labels import (
     LabelLocation,
     LabelScope,
 )
+from hermes_ai.models.thread import (
+    ThreadAssignment,
+    ThreadAssignmentInput,
+    ThreadAssignmentResponse,
+    ThreadDecision,
+    ThreadEventSide,
+    ThreadSide,
+)
 from hermes_ai.models.tl import (
     GroundedTlNode,
     TlEdgeExtraction,
@@ -23,6 +45,11 @@ from hermes_ai.models.tl import (
 __all__ = [
     "ArticleLabelBatchResponse",
     "ArticleLabelExtraction",
+    "DescribeEventInput",
+    "DescribeImpact",
+    "DescribeMemberFact",
+    "EventDescription",
+    "EventDescriptionBatchResponse",
     "GroundedTlNode",
     "LabelArticleInput",
     "LabelArticleType",
@@ -33,6 +60,17 @@ __all__ = [
     "LabelEventForm",
     "LabelLocation",
     "LabelScope",
+    "PairAdjudication",
+    "PairAdjudicationInput",
+    "PairAdjudicationResponse",
+    "PairDecision",
+    "PairSide",
+    "ThreadAssignment",
+    "ThreadAssignmentInput",
+    "ThreadAssignmentResponse",
+    "ThreadDecision",
+    "ThreadEventSide",
+    "ThreadSide",
     "TlEdgeExtraction",
     "TlExtractionResponse",
     "TlNodeExtraction",

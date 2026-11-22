@@ -15,8 +15,25 @@ from hermes_ai.exceptions import (
     RateLimitExceededError,
     SchemaValidationError,
 )
+from hermes_ai.extractors.adjudicate import PairAdjudicator
+from hermes_ai.extractors.describe import DescribeExtractor
 from hermes_ai.extractors.labels import LabelExtractor
+from hermes_ai.extractors.thread import ThreadAssigner
 from hermes_ai.extractors.tl import TlExtractor
+from hermes_ai.models.adjudicate import (
+    PairAdjudication,
+    PairAdjudicationInput,
+    PairAdjudicationResponse,
+    PairDecision,
+    PairSide,
+)
+from hermes_ai.models.describe import (
+    DescribeEventInput,
+    DescribeImpact,
+    DescribeMemberFact,
+    EventDescription,
+    EventDescriptionBatchResponse,
+)
 from hermes_ai.models.labels import (
     ArticleLabelBatchResponse,
     ArticleLabelExtraction,
@@ -29,6 +46,14 @@ from hermes_ai.models.labels import (
     LabelEventForm,
     LabelLocation,
     LabelScope,
+)
+from hermes_ai.models.thread import (
+    ThreadAssignment,
+    ThreadAssignmentInput,
+    ThreadAssignmentResponse,
+    ThreadDecision,
+    ThreadEventSide,
+    ThreadSide,
 )
 from hermes_ai.models.tl import (
     TlEdgeExtraction,
@@ -48,6 +73,12 @@ from hermes_ai.utils.coercion import coerce_to_str
 from hermes_ai.utils.prompts import (
     ARTICLE_LABEL_PROMPT_VERSION,
     ARTICLE_LABEL_SYSTEM_PROMPT,
+    EVENT_DESCRIBE_PROMPT_VERSION,
+    EVENT_DESCRIBE_SYSTEM_PROMPT,
+    PAIR_ADJUDICATION_PROMPT_VERSION,
+    PAIR_ADJUDICATION_SYSTEM_PROMPT,
+    THREAD_ASSIGNMENT_PROMPT_VERSION,
+    THREAD_ASSIGNMENT_SYSTEM_PROMPT,
     TL_SYSTEM_PROMPT,
     TL_TRIAGE_SYSTEM_PROMPT,
 )
@@ -63,6 +94,14 @@ __all__ = [
     "CircuitBreakerOpenError",
     "ConfigurationError",
     "DEFAULT_CATEGORY_COLOR",
+    "DescribeEventInput",
+    "DescribeExtractor",
+    "DescribeImpact",
+    "DescribeMemberFact",
+    "EVENT_DESCRIBE_PROMPT_VERSION",
+    "EVENT_DESCRIBE_SYSTEM_PROMPT",
+    "EventDescription",
+    "EventDescriptionBatchResponse",
     "GeocodeCacheProtocol",
     "GeocodingError",
     "GeocodingResult",
@@ -85,12 +124,29 @@ __all__ = [
     "ModelRoute",
     "ModelTarget",
     "NominatimResilienceManager",
+    "PAIR_ADJUDICATION_PROMPT_VERSION",
+    "PAIR_ADJUDICATION_SYSTEM_PROMPT",
+    "PairAdjudication",
+    "PairAdjudicationInput",
+    "PairAdjudicationResponse",
+    "PairAdjudicator",
+    "PairDecision",
+    "PairSide",
     "PREDEFINED_CATEGORIES",
     "RateLimitExceededError",
     "SchemaValidationError",
     "TL_SYSTEM_PROMPT",
     "TL_TRIAGE_SYSTEM_PROMPT",
     "TbRateLimiter",
+    "THREAD_ASSIGNMENT_PROMPT_VERSION",
+    "THREAD_ASSIGNMENT_SYSTEM_PROMPT",
+    "ThreadAssignment",
+    "ThreadAssignmentInput",
+    "ThreadAssignmentResponse",
+    "ThreadAssigner",
+    "ThreadDecision",
+    "ThreadEventSide",
+    "ThreadSide",
     "TlEdgeExtraction",
     "TlExtractionResponse",
     "TlExtractor",

@@ -92,7 +92,7 @@ class RetrievedEvidence(BaseModel):
     first_reported_at: datetime
     last_updated_at: datetime
     age_hours: float = 0.0
-    trending_score: float = 0.0
+    importance_score: float = 0.0
     lexical_rank: int | None = None
     semantic_similarity: float | None = None
     rrf: float = 0.0
