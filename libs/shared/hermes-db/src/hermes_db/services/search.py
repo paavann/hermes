@@ -44,7 +44,7 @@ logger = logging.getLogger(__name__)
 
 RRF_K = 60
 RECENCY_WEIGHT = 0.15
-TRENDING_WEIGHT = 0.10
+IMPORTANCE_WEIGHT = 0.10
 RECENCY_WINDOW_HOURS = 168.0
 MAX_QUERY_CHARS = 400
 
@@ -149,7 +149,7 @@ class SearchEvent(BaseModel):
     category_color: str
     impact_level: ImpactLevel
     status: EventStatus
-    trending_score: NonBoolFloat
+    importance_score: NonBoolFloat
     last_updated_at: UtcDatetime
     first_reported_at: UtcDatetime
     location_name: str | None = None
@@ -160,7 +160,7 @@ class SearchEvent(BaseModel):
     semantic_similarity: NonBoolFloat | None = None
     rrf: NonBoolFloat = 0.0
     age_hours: NonBoolFloat = 0.0
-    trending_norm: NonBoolFloat = 0.0
+    importance_norm: NonBoolFloat = 0.0
     boost: NonBoolFloat = 1.0
     score: NonBoolFloat = 0.0
     articles: list[SearchArticle] = Field(default_factory=list)
@@ -198,14 +198,16 @@ def reciprocal_rank_fusion(
 
 def boost_multiplier(
     age_hours: float,
-    trending_score: float,
-    max_trending_score: float,
+    importance_score: float,
+    max_importance_score: float,
 ) -> float:
     recency = math.exp(-max(age_hours, 0.0) / RECENCY_WINDOW_HOURS)
-    trending_norm = (
-        min(1.0, trending_score / max_trending_score) if max_trending_score > 0 else 0.0
+    importance_norm = (
+        min(1.0, importance_score / max_importance_score)
+        if max_importance_score > 0
+        else 0.0
     )
-    return 1.0 + RECENCY_WEIGHT * recency + TRENDING_WEIGHT * trending_norm
+    return 1.0 + RECENCY_WEIGHT * recency + IMPORTANCE_WEIGHT * importance_norm
 
 
 def classify_coverage(
@@ -287,7 +289,7 @@ def _event_columns(
         Event.category_color,
         Event.impact_level,
         Event.status,
-        Event.trending_score,
+        Event.importance_score,
         Event.last_updated_at,
         Event.first_reported_at,
         Event.location_name,
@@ -537,16 +539,16 @@ class SearchService:
                 (1.0 / (self._rrf_k + lexical.c.rank)).label("rrf"),
             ).cte("fused")
 
-        max_trending = func.max(Event.trending_score).over()
+        max_importance = func.max(Event.importance_score).over()
         age_hours = _age_hours_expr(now)
-        trending_norm = func.least(
+        importance_norm = func.least(
             1.0,
-            Event.trending_score / func.greatest(max_trending, literal(1.0)),
+            Event.importance_score / func.greatest(max_importance, literal(1.0)),
         )
         boost = (
             1.0
             + RECENCY_WEIGHT * func.exp(-age_hours / RECENCY_WINDOW_HOURS)
-            + TRENDING_WEIGHT * trending_norm
+            + IMPORTANCE_WEIGHT * importance_norm
         )
         score = fused.c.rrf * boost
 
@@ -557,7 +559,7 @@ class SearchService:
                 fused.c.semantic_rank,
                 fused.c.semantic_similarity,
                 fused.c.rrf,
-                trending_norm.label("trending_norm"),
+                importance_norm.label("importance_norm"),
                 boost.label("boost"),
                 score.label("score"),
             )

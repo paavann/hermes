@@ -20,13 +20,6 @@ from hermes_db.models.article import Article
 
 @dataclass(frozen=True, slots=True)
 class AnalysisArticle:
-    """Article snapshot consumed by the analyze stage.
-
-    The snapshot deliberately carries the source policy so the stage can decide
-    whether a transient body fetch is allowed without keeping a session open
-    across network calls.
-    """
-
     id: uuid.UUID
     title: str
     url: str

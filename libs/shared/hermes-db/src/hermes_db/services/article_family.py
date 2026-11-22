@@ -14,8 +14,6 @@ from hermes_db.models.article_family import ArticleFamily
 
 @dataclass(frozen=True, slots=True)
 class FamilyCandidate:
-    """A recent syndication family and its representative's fingerprints."""
-
     family_id: uuid.UUID
     representative_article_id: uuid.UUID | None
     title_simhash: str

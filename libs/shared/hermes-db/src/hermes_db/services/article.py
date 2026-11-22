@@ -18,8 +18,6 @@ logger = logging.getLogger(__name__)
 
 
 class ArticleLedgerRow(TypedDict):
-    """One article ledger row produced by the ingest stage."""
-
     source_id: uuid.UUID
     title: str
     url: str
@@ -35,11 +33,6 @@ class ArticleService:
         self._session = session
 
     async def insert_ledger_rows(self, rows: Sequence[ArticleLedgerRow]) -> int:
-        """Insert ledger rows, skipping any URL or canonical-hash conflict.
-
-        Returns the number of rows actually inserted. Conflicts are expected
-        whenever a feed repeats an entry and are not an error.
-        """
         if not rows:
             return 0
         stmt = (
