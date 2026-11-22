@@ -6,6 +6,7 @@ import { useMapDataSync } from '../hooks/datasync';
 import { CornerReticle } from '@hermes/ui-components';
 
 import { EventPopup } from './components/EventPopup';
+import { StoryPanel } from './components/StoryPanel';
 import { TlPanel } from './components/TlPanel';
 import { EventsLoader } from './components/EventsLoader';
 import { MapHud } from './components/MapHud';
@@ -14,19 +15,16 @@ import type { FeatureCollection } from 'geojson';
 import type { MapEventResponse } from '@hermes/util-types';
 import { useMapConfig } from '../config-context';
 
-const createGeoJson = (events: MapEventResponse[]): FeatureCollection => {
-  const uniqueEvents = new Map<string, MapEventResponse>();
-  events.forEach((event) => {
-    const key = `${event.latitude.toFixed(4)},${event.longitude.toFixed(4)}`;
-    const existing = uniqueEvents.get(key);
-    if (!existing || event.trending_score > existing.trending_score) {
-      uniqueEvents.set(key, event);
-    }
-  });
+export interface MapViewProps {
+  readonly threadId?: string | null;
+  readonly onThreadChange?: (threadId: string | null) => void;
+}
 
-  return {
-    type: 'FeatureCollection',
-    features: Array.from(uniqueEvents.values()).map((event, index) => ({
+const createGeoJson = (events: MapEventResponse[]): FeatureCollection => ({
+  type: 'FeatureCollection',
+  features: [...events]
+    .sort((left, right) => right.importance_score - left.importance_score)
+    .map((event, index) => ({
       type: 'Feature',
       geometry: {
         type: 'Point',
@@ -37,10 +35,9 @@ const createGeoJson = (events: MapEventResponse[]): FeatureCollection => {
         rank: index + 1,
       },
     })),
-  };
-};
+});
 
-export function MapView() {
+export function MapView({ threadId = null, onThreadChange }: MapViewProps) {
   const config = useMapConfig();
   mapboxgl.accessToken = config.mapboxToken;
 
@@ -343,7 +340,16 @@ export function MapView() {
 
       <MapHud events={events ?? []} isFetching={isFetching} />
 
-      {isMapReady && !isTimelineMode && <EventPopup map={map.current} />}
+      {isMapReady && !isTimelineMode && (
+        <EventPopup map={map.current} onThreadOpen={onThreadChange} />
+      )}
+      {isMapReady && !isTimelineMode && threadId !== null && (
+        <StoryPanel
+          map={map.current}
+          threadId={threadId}
+          onClose={() => onThreadChange?.(null)}
+        />
+      )}
       {isMapReady && isTimelineMode && <TlPanel map={map.current} />}
 
       {isFetching && !isTimelineMode && <EventsLoader />}

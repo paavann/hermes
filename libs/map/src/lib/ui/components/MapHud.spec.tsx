@@ -19,8 +19,17 @@ function makeEvent(
     location_name: null,
     latitude: 0,
     longitude: 0,
-    trending_score: 50,
+    importance_score: 50,
+    verification_status: 'CORROBORATED',
+    selection_tier: 'FILLER',
+    impact_level: 'MODERATE',
+    scope: 'LOCAL',
+    event_time: null,
     article_count: 1,
+    source_count: 1,
+    family_count: 1,
+    independent_origin_count: 1,
+    thread_id: null,
   };
 }
 

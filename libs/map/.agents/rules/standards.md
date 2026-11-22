@@ -38,7 +38,7 @@ Apply differential easing curves based on user intent:
 
 ---
 
-## 5. Spatial Deduplication Conventions
+## 5. Spatial Clustering Conventions
 
-- **Coordinate Rounding**: In `createGeoJson`, group co-located events by coordinate keys rounded to 4 decimal places (`toFixed(4)` ≈ 11m resolution).
-- **Ranking Resolution**: When co-located events collide, prioritize the event with the highest `trending_score` to avoid z-index fighting on the WebGL canvas.
+- **No Coordinate Dedupe**: Never collapse events that share coordinates. Each event is a distinct map pin; Mapbox clustering handles visual density.
+- **Render Ordering**: Sort events by descending `importance_score` before building the GeoJSON source so the highest-signal pins render on top within a cluster.

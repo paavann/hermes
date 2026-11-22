@@ -78,7 +78,28 @@ function formatTimestamp(value: string | null | undefined): string | null {
     .toUpperCase()} UTC`;
 }
 
-export function EventPopup({ map }: { map: mapboxgl.Map | null }) {
+export interface EventPopupProps {
+  readonly map: mapboxgl.Map | null;
+  readonly onThreadOpen?: (threadId: string) => void;
+}
+
+const VERIFICATION_LABEL: Record<string, string> = {
+  CONFIRMED: 'CONFIRMED',
+  CORROBORATED: 'CORROBORATED',
+  SINGLE_SOURCE: 'SINGLE SOURCE',
+  CONFLICTING: 'CONFLICTING',
+  UNVERIFIED: 'UNVERIFIED',
+};
+
+const VERIFICATION_CLASS: Record<string, string> = {
+  CONFIRMED: 'text-neon-blue',
+  CORROBORATED: 'text-signal-teal-bright',
+  SINGLE_SOURCE: 'text-signal-amber',
+  CONFLICTING: 'text-danger-bright',
+  UNVERIFIED: 'text-slate-muted',
+};
+
+export function EventPopup({ map, onThreadOpen }: EventPopupProps) {
   const selectedEventId = useMapStore((s) => s.selectedEventId);
   const selectedEventLngLat = useMapStore((s) => s.selectedEventLngLat);
   const setSelectedEventId = useMapStore((s) => s.setSelectedEventId);
@@ -227,14 +248,17 @@ export function EventPopup({ map }: { map: mapboxgl.Map | null }) {
 
   if (!selectedEventId) return null;
 
-  const trendScore =
+  const importanceScore =
     event === undefined || event === null
       ? 0
-      : Math.round(event.trending_score ?? 0);
+      : Math.round(event.importance_score ?? 0);
   const sourceCount =
     event === undefined || event === null
       ? 0
-      : (event.article_count ?? event.articles.length);
+      : (event.source_count ?? event.articles.length);
+  const originCount = event?.independent_origin_count ?? 0;
+  const verification = event?.verification_status ?? 'UNVERIFIED';
+  const threadId = event?.thread_id ?? null;
   const firstReported = formatTimestamp(event?.first_reported_at);
   const lastUpdated = formatTimestamp(event?.last_updated_at);
 
@@ -326,37 +350,61 @@ export function EventPopup({ map }: { map: mapboxgl.Map | null }) {
                 </p>
               </div>
 
-              <div className="grid grid-cols-3 border border-border-subtle">
-                <div className="border-r border-border-subtle px-2.5 py-2">
-                  <div className="text-[8px] uppercase tracking-[0.16em] text-slate-muted/40">
-                    TRENDING
+              <div className="grid grid-cols-4 border border-border-subtle">
+                <div className="border-r border-border-subtle px-2 py-2">
+                  <div className="text-[8px] uppercase tracking-[0.14em] text-slate-muted/40">
+                    IMPORTANCE
                   </div>
                   <div className="mt-1 tabular-nums text-sm font-bold text-signal-amber">
-                    {trendScore}
+                    {importanceScore}
                   </div>
                 </div>
-                <div className="border-r border-border-subtle px-2.5 py-2">
-                  <div className="text-[8px] uppercase tracking-[0.16em] text-slate-muted/40">
+                <div className="border-r border-border-subtle px-2 py-2">
+                  <div className="text-[8px] uppercase tracking-[0.14em] text-slate-muted/40">
                     SOURCES
                   </div>
                   <div className="mt-1 tabular-nums text-sm font-bold text-neon-blue">
                     {sourceCount}
                   </div>
                 </div>
-                <div className="px-2.5 py-2">
-                  <div className="text-[8px] uppercase tracking-[0.16em] text-slate-muted/40">
-                    LINEAGE
+                <div className="border-r border-border-subtle px-2 py-2">
+                  <div className="text-[8px] uppercase tracking-[0.14em] text-slate-muted/40">
+                    ORIGINS
+                  </div>
+                  <div className="mt-1 tabular-nums text-sm font-bold text-bone">
+                    {originCount}
+                  </div>
+                </div>
+                <div className="px-2 py-2">
+                  <div className="text-[8px] uppercase tracking-[0.14em] text-slate-muted/40">
+                    VERIFIED
                   </div>
                   <div
                     className={cn(
-                      'mt-1 text-[10px] font-bold uppercase tracking-[0.08em]',
-                      event.has_lineage ? 'text-neon-blue' : 'text-slate-muted/45',
+                      'mt-1 text-[10px] font-bold uppercase tracking-[0.06em]',
+                      VERIFICATION_CLASS[verification] ?? 'text-slate-muted',
                     )}
                   >
-                    {event.has_lineage ? 'READY' : 'NONE'}
+                    {VERIFICATION_LABEL[verification] ?? verification}
                   </div>
                 </div>
               </div>
+
+              {threadId !== null && onThreadOpen !== undefined ? (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onThreadOpen(threadId);
+                  }}
+                  className="flex w-full cursor-pointer items-center justify-between border border-border-bright bg-onyx px-3 py-2 text-[10px] font-bold uppercase tracking-[0.18em] text-bone transition-colors duration-100 hover:border-neon-blue hover:text-neon-blue focus-visible:outline-1 focus-visible:outline-neon-blue focus-visible:outline-offset-2"
+                >
+                  <span className="truncate">
+                    STORY: {event.thread_name ?? 'OPEN THREAD'}
+                  </span>
+                  <span aria-hidden="true">→</span>
+                </button>
+              ) : null}
 
               <button
                 type="button"

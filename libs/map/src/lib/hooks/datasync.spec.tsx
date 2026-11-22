@@ -34,8 +34,17 @@ function makeEvent(id: string): MapEventResponse {
     location_name: 'Test location',
     latitude: 10,
     longitude: 20,
-    trending_score: 80,
+    importance_score: 80,
+    verification_status: 'CORROBORATED',
+    selection_tier: 'PRIMARY',
+    impact_level: 'MAJOR',
+    scope: 'COUNTRY',
+    event_time: '2026-11-01T00:00:00Z',
     article_count: 3,
+    source_count: 2,
+    family_count: 2,
+    independent_origin_count: 2,
+    thread_id: null,
   };
 }
 

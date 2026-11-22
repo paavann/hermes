@@ -141,8 +141,17 @@ const EVENTS: MapEventResponse[] = [
     location_name: null,
     latitude: 10.123456,
     longitude: 20.654321,
-    trending_score: 40,
+    importance_score: 40,
+    verification_status: 'SINGLE_SOURCE',
+    selection_tier: 'FILLER',
+    impact_level: 'MINOR',
+    scope: 'LOCAL',
+    event_time: null,
     article_count: 1,
+    source_count: 1,
+    family_count: 1,
+    independent_origin_count: 1,
+    thread_id: null,
   },
   {
     id: 'event-b',
@@ -152,8 +161,17 @@ const EVENTS: MapEventResponse[] = [
     location_name: null,
     latitude: 10.123456,
     longitude: 20.654321,
-    trending_score: 90,
+    importance_score: 90,
+    verification_status: 'CONFIRMED',
+    selection_tier: 'PRIMARY',
+    impact_level: 'CRITICAL',
+    scope: 'COUNTRY',
+    event_time: null,
     article_count: 3,
+    source_count: 3,
+    family_count: 3,
+    independent_origin_count: 3,
+    thread_id: null,
   },
   {
     id: 'event-c',
@@ -163,8 +181,17 @@ const EVENTS: MapEventResponse[] = [
     location_name: null,
     latitude: 11,
     longitude: 21,
-    trending_score: 60,
+    importance_score: 60,
+    verification_status: 'CORROBORATED',
+    selection_tier: 'PRIMARY',
+    impact_level: 'MODERATE',
+    scope: 'CITY',
+    event_time: null,
     article_count: 2,
+    source_count: 2,
+    family_count: 2,
+    independent_origin_count: 2,
+    thread_id: null,
   },
 ];
 
@@ -245,7 +272,7 @@ describe('MapView', () => {
     });
   });
 
-  it('adds clustered event layers on load and deduplicates coincident events', () => {
+  it('adds clustered event layers and keeps every event pin', () => {
     renderMapView();
 
     emit('load');
@@ -283,9 +310,11 @@ describe('MapView', () => {
     const spec = eventsCall?.[1] as
       | { data: FeatureCollection }
       | undefined;
-    expect(spec?.data.features).toHaveLength(2);
+    expect(spec?.data.features).toHaveLength(3);
     expect(spec?.data.features[0].properties?.id).toBe('event-b');
     expect(spec?.data.features[0].properties?.rank).toBe(1);
+    expect(spec?.data.features[1].properties?.id).toBe('event-c');
+    expect(spec?.data.features[2].properties?.id).toBe('event-a');
   });
 
   it('shows the sync loader while fetching and swaps to the timeline panel', () => {

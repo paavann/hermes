@@ -33,7 +33,7 @@ Hooks fetch only from the injected API config:
 ## Rendering Model
 
 - Events arrive as a clustered GeoJSON source: two cluster layers (`hermes-clusters`, `hermes-cluster-count`) and one unclustered pin layer (`hermes-unclustered-point`).
-- Co-located events are deduplicated at `toFixed(4)` precision; the highest `trending_score` wins.
+- Events are sorted by descending `importance_score` before insertion; Mapbox clustering resolves visual collisions without hiding co-located pins.
 - Citations render from `cited-events-source` as unclustered highlight rings.
 - `TlPanel` injects and removes its own node/edge sources and layers on mount/unmount.
 - `EventPopup` is projected with `map.project()` and positioned with CSS transforms; no `mapboxgl.Marker` DOM nodes are used.

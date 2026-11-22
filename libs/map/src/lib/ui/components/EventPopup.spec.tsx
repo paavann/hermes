@@ -22,7 +22,21 @@ describe('EventPopup', () => {
     location_name: 'Canada',
     latitude: 60.8108,
     longitude: -107.124,
-    trending_score: 95,
+    importance_score: 95,
+    score_breakdown: { version: 'score-v1', score: 95 },
+    verification_status: 'CONFIRMED',
+    selection_tier: 'PRIMARY',
+    impact_level: 'MAJOR',
+    scope: 'COUNTRY',
+    source_count: 1,
+    family_count: 1,
+    independent_origin_count: 1,
+    thread_id: 'thread-wildfire',
+    thread_name: 'Canadian wildfire season',
+    status: 'ACTIVE',
+    event_time: '2026-11-06T11:30:00Z',
+    first_reported_at: '2026-11-06T12:00:00Z',
+    last_updated_at: '2026-11-06T12:00:00Z',
     category: 'ENVIRONMENT',
     category_color: '#22c55e',
     articles: [
@@ -59,6 +73,20 @@ describe('EventPopup', () => {
   it('renders nothing when no event is selected', () => {
     const { container } = render(<EventPopup map={mockMap} />);
     expect(container.firstChild).toBeNull();
+  });
+
+  it('opens the story thread from the popup', () => {
+    useMapStore.setState({
+      selectedEventId: 'event-canada-123',
+      selectedEventLngLat: [-107.124, 60.8108],
+    });
+    const onThreadOpen = vi.fn();
+
+    render(<EventPopup map={mockMap} onThreadOpen={onThreadOpen} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /story:/i }));
+
+    expect(onThreadOpen).toHaveBeenCalledWith('thread-wildfire');
   });
 
   it('renders the popup header and location for Canada (60.8108°, -107.1240°)', () => {
