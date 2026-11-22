@@ -1,3 +1,16 @@
+export type VerificationStatus =
+  | 'SINGLE_SOURCE'
+  | 'CORROBORATED'
+  | 'CONFIRMED'
+  | 'CONFLICTING'
+  | 'UNVERIFIED';
+
+export type SelectionTier = 'PRIMARY' | 'FILLER' | 'DROP';
+
+export type ImpactLevel = 'CRITICAL' | 'MAJOR' | 'MODERATE' | 'MINOR';
+
+export type EventScope = 'GLOBAL' | 'COUNTRY' | 'STATE' | 'CITY' | 'LOCAL';
+
 export interface ArticleResponse {
   id: string;
   title: string;
@@ -14,9 +27,18 @@ export interface MapEventResponse {
   location_name: string | null;
   latitude: number;
   longitude: number;
-  trending_score: number;
+  importance_score: number;
+  verification_status: VerificationStatus;
+  selection_tier: SelectionTier;
+  impact_level: ImpactLevel;
+  scope: EventScope;
+  event_time: string | null;
   article_count: number;
-  has_lineage?: boolean;
+  source_count: number;
+  family_count: number;
+  independent_origin_count: number;
+  thread_id: string | null;
+  thread_name?: string | null;
 }
 
 export interface EventResponse {
@@ -25,17 +47,62 @@ export interface EventResponse {
   category: string;
   category_color: string;
   location_name: string | null;
-  trending_score: number;
+  importance_score: number;
+  score_breakdown: Record<string, unknown>;
+  verification_status: VerificationStatus;
+  selection_tier: SelectionTier;
+  impact_level: ImpactLevel;
+  scope: EventScope;
   article_count: number;
+  source_count: number;
+  family_count: number;
+  independent_origin_count: number;
+  thread_id: string | null;
+  thread_name?: string | null;
   status: string;
+  event_time: string | null;
   first_reported_at: string;
   last_updated_at: string;
-  has_lineage?: boolean;
 }
 
 export interface EventDetailResponse extends EventResponse {
   ai_summary: string;
   articles: ArticleResponse[];
+}
+
+export type ThreadKind = 'DEVELOPING' | 'TOPIC';
+export type ThreadStatus = 'ACTIVE' | 'DORMANT' | 'ENDED';
+
+export interface ThreadResponse {
+  id: string;
+  name: string;
+  kind: ThreadKind;
+  status: ThreadStatus;
+  description: string | null;
+  importance: number;
+  event_count: number;
+  started_at: string | null;
+  last_event_at: string | null;
+}
+
+export interface ThreadEventResponse {
+  id: string;
+  ai_headline: string;
+  ai_summary: string | null;
+  category: string;
+  category_color: string;
+  impact_level: ImpactLevel;
+  importance_score: number;
+  verification_status: VerificationStatus;
+  location_name: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  first_reported_at: string;
+  last_updated_at: string;
+}
+
+export interface ThreadDetailResponse extends ThreadResponse {
+  events: ThreadEventResponse[];
 }
 
 
