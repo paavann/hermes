@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 from hermes_api.api.v1.chat import router as chat_router
 from hermes_api.api.v1.events import router as events_router
+from hermes_api.api.v1.threads import router as threads_router
 from hermes_api.api.v1.tl import router as tl_router
 from hermes_api.schemas.errors import ErrorResponseSchema
 
@@ -14,4 +15,5 @@ api_router = APIRouter(responses={
 
 api_router.include_router(events_router, prefix="/events", tags=["events"])
 api_router.include_router(tl_router, prefix="/events/tl", tags=["timeline"])
+api_router.include_router(threads_router, prefix="/threads", tags=["threads"])
 api_router.include_router(chat_router, prefix="/chat", tags=["chat"])

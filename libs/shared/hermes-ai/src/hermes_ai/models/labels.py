@@ -240,6 +240,22 @@ class ArticleLabelExtraction(BaseModel):
         cleaned = coerce_to_str(value)
         return cleaned or None
 
+    @model_validator(mode="after")
+    def populate_missing_event_fields(self) -> ArticleLabelExtraction:
+        if not self.is_event:
+            return self
+        if not self.fact and self.evidence_quote:
+            cleaned = " ".join(self.evidence_quote.split())
+            if cleaned:
+                self.fact = cleaned[:400]
+        if not self.locations:
+            self.locations = [
+                LabelLocation(name=entity.name)
+                for entity in self.entities
+                if entity.kind == LabelEntityKind.LOCATION and entity.name.strip()
+            ][:3]
+        return self
+
 
 class ArticleLabelBatchResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")

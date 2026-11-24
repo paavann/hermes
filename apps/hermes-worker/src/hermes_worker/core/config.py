@@ -73,8 +73,8 @@ class Settings(BaseSettings):
     )
 
     # event lifecycle configuration.
-    EVENT_STALE_HOURS: int = Field(default=72, gt=0)
-    EVENT_ARCHIVE_HOURS: int = Field(default=168, gt=0)
+    EVENT_STALE_HOURS: int = Field(default=96, gt=0)
+    EVENT_ARCHIVE_HOURS: int = Field(default=240, gt=0)
 
     # event clustering.
     EVENT_CLUSTER_BATCH_SIZE: int = Field(default=100, gt=0)

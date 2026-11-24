@@ -62,7 +62,7 @@ class TestGeocodingService:
 
                 assert res == expected
                 mock_cache_service.save_geocode_result.assert_awaited_once_with(
-                    location_name="london",
+                    location_name="london|",
                     latitude=51.5074,
                     longitude=-0.1278,
                     display_name="London, Greater London, England, United Kingdom",
@@ -84,7 +84,7 @@ class TestGeocodingService:
 
                 assert res is None
                 mock_cache_service.save_geocode_result.assert_awaited_once_with(
-                    location_name="nonexistent place 12345",
+                    location_name="nonexistent place 12345|",
                     latitude=None,
                     longitude=None,
                     display_name=None,

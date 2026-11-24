@@ -260,7 +260,7 @@ class AnalyzeStage:
                 text = build_embedding_text(payload, title=article.title)
                 embedding_text_by_id[article.id] = text
                 texts.append(text)
-            results = await ai.llm.gen_embeddings(texts)
+            results = await ai.llm.gen_embeddings(texts, input_type="passage")
             stats.add("embed_calls")
             for (article, _payload), vector in zip(
                 accepted,

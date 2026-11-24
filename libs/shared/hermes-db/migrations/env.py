@@ -14,7 +14,11 @@ from hermes_db.base import Base
 
 
 def _get_migration_db_url() -> URL:
-    root_dir = Path(__file__).resolve().parents[3]
+    root_dir = Path(__file__).resolve().parent
+    for parent in [root_dir, *root_dir.parents]:
+        if (parent / ".env").is_file() or (parent / "package.json").is_file():
+            root_dir = parent
+            break
     env = os.getenv("ENV", "development").lower()
 
     for env_name in (f".env.{env}.local", ".env.local", f".env.{env}", ".env"):

@@ -183,16 +183,16 @@ Articles are grouped into families by shared syndication origin. Verification is
 ```
 strength = min(1, sum(max credibility per family) / 9)     # tier1=3, tier2=2, tier3/4=1
 impact   = {CRITICAL:1.0, MAJOR:0.8, MODERATE:0.55, MINOR:0.3}
-verify   = {CONFIRMED:1.0, CORROBORATED:0.85, SINGLE_SOURCE:0.4, CONFLICTING:0.25}
+verify   = {CONFIRMED:1.0, CORROBORATED:0.85, SINGLE_SOURCE:0.75, CONFLICTING:0.5}
 quality  = clamp(1 - 0.15*(5-specificity) - 0.10*(5-consequence), 0.5, 1.0)
 
 base      = 100 * (0.40*strength + 0.30*impact + 0.15*verify + 0.15*quality)
 score     = base * exp(-age_hours / half_life)
-half_life = 18h CRITICAL, 36h MAJOR, 72h otherwise
-if SINGLE_SOURCE: score = min(score, 45)
+half_life = 18h CRITICAL, 36h MAJOR, 96h otherwise
+if SINGLE_SOURCE: score = min(score, 65)
 ```
 
-`score_breakdown` stores the raw value, weight, contribution, freshness multiplier, and cap for each component. Tiers are `PRIMARY >= 55`, `FILLER 30–55`, `DROP < 30`, with ±5 hysteresis. Single-source events remain visible; they never outrank corroborated events unless a short breaking-news override applies.
+`score_breakdown` stores the raw value, weight, contribution, freshness multiplier, and cap for each component. Tiers are `PRIMARY >= 50`, `FILLER 22–50`, `DROP < 22`, with ±5 hysteresis. Single-source events remain visible; they never outrank corroborated events unless a short breaking-news override applies.
 
 ---
 
@@ -330,18 +330,18 @@ strength = min(1, Σ(max credibility per family) / 9)
            # TIER_1=3.0, TIER_2=2.0, TIER_3/4=1.0
 
 impact   = {CRITICAL:1.0, MAJOR:0.8, MODERATE:0.55, MINOR:0.3}
-verify   = {CONFIRMED:1.0, CORROBORATED:0.85, SINGLE_SOURCE:0.4,
-            CONFLICTING:0.25, UNVERIFIED:0.0}
+verify   = {CONFIRMED:1.0, CORROBORATED:0.85, SINGLE_SOURCE:0.75,
+            CONFLICTING:0.5, UNVERIFIED:0.0}
 quality  = clamp(1 - 0.15*(5-specificity) - 0.10*(5-consequence), 0.5, 1.0)
 
 base     = 100 * (0.40*strength + 0.30*impact + 0.15*verify + 0.15*quality)
 score    = base * exp(-age_hours / half_life)
-half_life = 18h (CRITICAL), 36h (MAJOR), 72h (otherwise)
+half_life = 18h (CRITICAL), 36h (MAJOR), 96h (otherwise)
 
-if SINGLE_SOURCE: score = min(score, 45)      # single-source cap
+if SINGLE_SOURCE: score = min(score, 65)      # single-source cap
 
 breaking override: age ≤ 2h AND article_type=BREAKING AND impact ≥ MAJOR
-                   AND base_score ≥ 45 → bypass cap
+                   AND base_score ≥ 35 → bypass cap
 ```
 
 `score_breakdown` JSONB stores value, weight, contribution, freshness multiplier, and cap flag per component.
@@ -350,16 +350,16 @@ breaking override: age ≤ 2h AND article_type=BREAKING AND impact ≥ MAJOR
 
 | Tier | Score |
 | :--- | :--- |
-| `PRIMARY` | ≥ 55 |
-| `FILLER` | 30–55 |
-| `DROP` | < 30 |
+| `PRIMARY` | ≥ 50 |
+| `FILLER` | 22–50 |
+| `DROP` | < 22 |
 
 `DROP` events are excluded from API results. Single-source events are always visible; they never outrank corroborated events unless the breaking override applies.
 
 **Event lifecycle**:
 
-- `ACTIVE → STALE` after 72h since `latest_published_at`.
-- `STALE → ARCHIVED` after 168h (7 days).
+- `ACTIVE → STALE` after 96h since `latest_published_at`.
+- `STALE → ARCHIVED` after 240h (10 days).
 - A new member on a `STALE` event reactivates it to `ACTIVE`.
 - `ARCHIVED` events are not clustering candidates.
 

@@ -150,11 +150,11 @@ def test_freshness_decays_with_impact_specific_half_life() -> None:
 
     assert critical.half_life_hours == 18.0
     assert round(critical.freshness, 4) == 0.3679
-    assert minor.half_life_hours == 72.0
+    assert minor.half_life_hours == 96.0
     assert minor.freshness > critical.freshness
 
 
-def test_single_source_is_capped_at_45() -> None:
+def test_single_source_is_capped() -> None:
     members = [_member(credibility=CredibilityTier.TIER_1)]
 
     result = compute_score(

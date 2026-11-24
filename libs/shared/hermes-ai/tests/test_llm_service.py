@@ -134,14 +134,14 @@ def test_llm_service_gen_embeddings(
     mock_res.data = [{"embedding": [0.1, 0.2, 0.3]}]
     mock_aembedding.return_value = mock_res
 
-    embeddings = asyncio.run(svc.gen_embeddings(["sample"]))
+    embeddings = asyncio.run(svc.gen_embeddings(["sample"], input_type="passage"))
     assert len(embeddings) == 1
     assert embeddings[0] == [0.1, 0.2, 0.3]
 
 
 def test_llm_service_gen_embeddings_empty(base_config: AiConfig) -> None:
     svc = LlmService(base_config)
-    assert asyncio.run(svc.gen_embeddings([])) == []
+    assert asyncio.run(svc.gen_embeddings([], input_type="passage")) == []
 
 
 @patch("litellm.aembedding")
@@ -167,7 +167,7 @@ def test_llm_service_gen_embeddings_with_fallback(
     mock_res = MagicMock(data=[{"embedding": [0.5, 0.6]}])
     mock_aembedding.side_effect = [RuntimeError("Provider 500"), mock_res]
 
-    embeddings = asyncio.run(svc.gen_embeddings(["text"]))
+    embeddings = asyncio.run(svc.gen_embeddings(["text"], input_type="passage"))
     assert len(embeddings) == 1
     assert embeddings[0] == [0.5, 0.6]
     assert mock_aembedding.call_count == 2
@@ -573,13 +573,41 @@ def test_gen_embeddings_uses_embed_route_directly(
     mock_aembedding.return_value = mock_res
 
     svc = LlmService(cfg)
-    results = asyncio.run(svc.gen_embeddings(["test text"]))
+    results = asyncio.run(svc.gen_embeddings(["test text"], input_type="query"))
 
     assert results == [[0.1, 0.2, 0.3]]
     mock_aembedding.assert_awaited_once_with(
         model="embed",
         input=["test text"],
         encoding_format="float",
+        input_type="query",
+    )
+
+
+@patch("litellm.Router.aembedding")
+def test_gen_embeddings_passage_input_type(
+    mock_aembedding: AsyncMock,
+) -> None:
+    cfg = AiConfig(
+        routes={
+            "embed": ModelRoute(
+                primary=ModelTarget(model="nvidia_nim/text-embed", api_key="embed-key")
+            )
+        }
+    )
+    mock_res = MagicMock()
+    mock_res.data = [{"embedding": [0.4, 0.5, 0.6]}]
+    mock_aembedding.return_value = mock_res
+
+    svc = LlmService(cfg)
+    results = asyncio.run(svc.gen_embeddings(["article body"], input_type="passage"))
+
+    assert results == [[0.4, 0.5, 0.6]]
+    mock_aembedding.assert_awaited_once_with(
+        model="embed",
+        input=["article body"],
+        encoding_format="float",
+        input_type="passage",
     )
 
 

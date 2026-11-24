@@ -202,7 +202,7 @@ def test_extractor_drops_unknown_indexes_and_validates_quotes() -> None:
         assert result.labels[0].evidence_quote == (
             "Rescue teams searched collapsed buildings"
         )
-        assert extractor.prompt_version == "label-v1"
+        assert extractor.prompt_version == "label-v2"
         assert extractor.model_name == "test/label-model"
         assert len(llm.calls) == 1
 

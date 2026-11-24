@@ -72,7 +72,7 @@ class TestWorkerGeocodingService:
 
                 assert res == expected
                 mock_cache_service.save_geocode_result.assert_awaited_once_with(
-                    location_name="tokyo, japan",
+                    location_name="tokyo, japan|",
                     latitude=35.6762,
                     longitude=139.6503,
                     display_name="Tokyo, Japan",
@@ -92,7 +92,7 @@ class TestWorkerGeocodingService:
 
                 assert res is None
                 mock_cache_service.save_geocode_result.assert_awaited_once_with(
-                    location_name="unreachable fantasy land",
+                    location_name="unreachable fantasy land|",
                     latitude=None,
                     longitude=None,
                     display_name=None,
@@ -126,7 +126,7 @@ class TestWorkerGeocodingService:
 
             call_count = 0
 
-            async def slow_nominatim(loc):
+            async def slow_nominatim(loc, country_code):
                 nonlocal call_count
                 call_count += 1
                 await asyncio.sleep(0.05)

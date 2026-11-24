@@ -17,7 +17,7 @@ from hermes_worker.jobs.stages.describe import (
     _apply_description,
     _apply_fallback,
     _EventFacts,
-    _geocode_primary,
+    _geocode_event,
     _member_locations,
     _one_per_family,
 )
@@ -98,7 +98,7 @@ class TestApplyDescription:
         event.locations = []
         event.country_code = None
 
-        _apply_description(event, _description())
+        _apply_description(event, _description(), ())
 
         assert event.ai_headline == "Explosion strikes central Kyiv market"
         assert event.ai_summary.startswith("An explosion struck")
@@ -119,7 +119,7 @@ class TestApplyDescription:
             summary="S" * MAX_SUMMARY_CHARS,
         )
 
-        _apply_description(event, description)
+        _apply_description(event, description, ())
 
         assert len(event.ai_headline) <= MAX_HEADLINE_CHARS
         assert len(event.ai_summary) <= MAX_SUMMARY_CHARS
@@ -130,7 +130,7 @@ class TestApplyDescription:
         event.country_code = "UA"
         event.locations = [{"name": "Kyiv", "country_code": "UA"}]
 
-        _apply_description(event, _description(locations=[]))
+        _apply_description(event, _description(locations=[]), ())
 
         assert event.location_name == "Kyiv"
         assert event.locations == []
@@ -210,7 +210,7 @@ def _context(geocoder: object) -> JobContext:
     )
 
 
-class TestGeocodePrimary:
+class TestGeocodeEvent:
     def test_sets_point_on_success(self) -> None:
         async def _test() -> None:
             geocoder = MagicMock()
@@ -224,45 +224,87 @@ class TestGeocodePrimary:
             ctx = _context(geocoder)
             event = MagicMock()
             event.location_name = "Kyiv, Ukraine"
+            event.country_code = "UA"
+            event.locations = [{"name": "Kyiv, Ukraine", "country_code": "UA"}]
             stats = StageStats()
 
-            await _geocode_primary(ctx, event, stats)
+            geocoded = await _geocode_event(ctx, event, stats)
 
+            assert geocoded is True
             assert event.location == "SRID=4326;POINT(30.52 50.45)"
             assert stats.counters == {"geocoded": 1}
+            geocoder.geocode.assert_awaited_once_with(
+                "Kyiv, Ukraine", country_code="UA"
+            )
 
         asyncio.run(_test())
 
-    def test_clears_point_on_geocode_miss(self) -> None:
+    def test_tries_next_location_on_miss(self) -> None:
+        async def _test() -> None:
+            geocoder = MagicMock()
+            geocoder.geocode = AsyncMock(
+                side_effect=[
+                    None,
+                    GeocodingResult(
+                        latitude=32.08,
+                        longitude=20.06,
+                        display_name="Benghazi, Libya",
+                    ),
+                ]
+            )
+            ctx = _context(geocoder)
+            event = MagicMock()
+            event.location_name = "Benghazi naval base"
+            event.country_code = "LY"
+            event.locations = [
+                {"name": "Benghazi naval base", "country_code": "LY"},
+                {"name": "Benghazi", "country_code": "LY"},
+            ]
+            stats = StageStats()
+
+            geocoded = await _geocode_event(ctx, event, stats)
+
+            assert geocoded is True
+            assert event.location_name == "Benghazi"
+            assert event.location == "SRID=4326;POINT(20.06 32.08)"
+            assert stats.counters == {"geocode_miss": 1, "geocoded": 1}
+
+        asyncio.run(_test())
+
+    def test_reports_miss_without_clearing_point(self) -> None:
         async def _test() -> None:
             geocoder = MagicMock()
             geocoder.geocode = AsyncMock(return_value=None)
             ctx = _context(geocoder)
             event = MagicMock()
             event.location_name = "Nowhere"
+            event.country_code = None
+            event.locations = [{"name": "Nowhere", "country_code": None}]
             event.location = "SRID=4326;POINT(1 1)"
             stats = StageStats()
 
-            await _geocode_primary(ctx, event, stats)
+            geocoded = await _geocode_event(ctx, event, stats)
 
-            assert event.location is None
+            assert geocoded is False
+            assert event.location == "SRID=4326;POINT(1 1)"
             assert stats.counters == {"geocode_miss": 1}
 
         asyncio.run(_test())
 
-    def test_clears_point_when_name_is_empty(self) -> None:
+    def test_skips_geocoding_without_a_name(self) -> None:
         async def _test() -> None:
             geocoder = MagicMock()
             geocoder.geocode = AsyncMock()
             ctx = _context(geocoder)
             event = MagicMock()
             event.location_name = None
-            event.location = "SRID=4326;POINT(1 1)"
+            event.country_code = None
+            event.locations = []
             stats = StageStats()
 
-            await _geocode_primary(ctx, event, stats)
+            geocoded = await _geocode_event(ctx, event, stats)
 
-            assert event.location is None
+            assert geocoded is False
             geocoder.geocode.assert_not_awaited()
             assert stats.counters == {}
 

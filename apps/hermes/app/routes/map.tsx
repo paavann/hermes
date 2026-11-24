@@ -1,4 +1,5 @@
 import { lazy, Suspense, useCallback } from 'react';
+import { useSearchParams } from 'react-router';
 import type { LoaderFunctionArgs } from 'react-router';
 import { getAuth } from '@clerk/react-router/server';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -45,6 +46,26 @@ const DynamicMapContainer = lazy(async () => {
     const isTimelineMode = useMapStore((state) => state.isTlMode);
     const focusEvent = useMapStore((state) => state.focusEvent);
     const setCitedEvents = useMapStore((state) => state.setCitedEvents);
+    const [searchParams, setSearchParams] = useSearchParams();
+    const threadId = searchParams.get('thread');
+
+    const handleThreadChange = useCallback(
+      (nextThreadId: string | null) => {
+        setSearchParams(
+          (previous) => {
+            const next = new URLSearchParams(previous);
+            if (nextThreadId === null) {
+              next.delete('thread');
+            } else {
+              next.set('thread', nextThreadId);
+            }
+            return next;
+          },
+          { replace: true },
+        );
+      },
+      [setSearchParams],
+    );
 
     const handleSources = useCallback(
       (sources: ChatSource[]) => {
@@ -72,8 +93,8 @@ const DynamicMapContainer = lazy(async () => {
         <ChatConfigProvider
           config={{ baseUrl: MAP_CONFIG.baseUrl, apiVer: MAP_CONFIG.apiVer }}
         >
-          <MapView />
-          <div hidden={isTimelineMode}>
+          <MapView threadId={threadId} onThreadChange={handleThreadChange} />
+          <div hidden={isTimelineMode || threadId !== null}>
             <ChatPanel
               autoScope={{ eventId: selectedEventId, viewport }}
               onSources={handleSources}

@@ -134,14 +134,14 @@ def test_gen_embeddings_success(
     mock_res.data = [{"embedding": [0.1, 0.2, 0.3]}]
     mock_aembedding.return_value = mock_res
 
-    embeddings = asyncio.run(client.llm.gen_embeddings(["Sample text"]))
+    embeddings = asyncio.run(client.llm.gen_embeddings(["Sample text"], input_type="passage"))
     assert len(embeddings) == 1
     assert embeddings[0] == [0.1, 0.2, 0.3]
 
 
 def test_gen_embeddings_empty_list(base_config: AiConfig) -> None:
     client = HermesAi(base_config)
-    assert asyncio.run(client.llm.gen_embeddings([])) == []
+    assert asyncio.run(client.llm.gen_embeddings([], input_type="passage")) == []
 
 
 @patch("litellm.Router.acompletion")

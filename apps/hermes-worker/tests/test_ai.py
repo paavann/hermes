@@ -155,7 +155,7 @@ class TestWorkerAiClientFactory:
     def test_gen_embeddings_empty_input(self) -> None:
         async def run() -> None:
             client = create_ai_client(_settings())
-            res = await client.llm.gen_embeddings([])
+            res = await client.llm.gen_embeddings([], input_type="passage")
             assert res == []
 
         asyncio.run(run())
@@ -163,7 +163,7 @@ class TestWorkerAiClientFactory:
     def test_gen_embeddings_without_route_degrades_to_none(self) -> None:
         async def run() -> None:
             client = create_ai_client(_settings(EMBED_API="", EMBED_MODEL=""))
-            res = await client.llm.gen_embeddings(["alpha", "beta"])
+            res = await client.llm.gen_embeddings(["alpha", "beta"], input_type="passage")
             assert res == [None, None]
 
         asyncio.run(run())

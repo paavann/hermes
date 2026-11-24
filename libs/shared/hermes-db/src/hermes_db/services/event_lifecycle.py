@@ -12,8 +12,8 @@ from hermes_db.enums import EventStatus
 from hermes_db.models.event import Event
 
 
-DEFAULT_STALE_HOURS = 72
-DEFAULT_ARCHIVE_HOURS = 168
+DEFAULT_STALE_HOURS = 96
+DEFAULT_ARCHIVE_HOURS = 240
 
 
 @dataclass(frozen=True, slots=True)

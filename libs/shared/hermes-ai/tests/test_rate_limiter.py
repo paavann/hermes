@@ -125,7 +125,7 @@ def test_client_rate_limiter_wiring() -> None:
             patch("litellm.aembedding", new_callable=AsyncMock) as mock_embed,
         ):
             mock_embed.return_value = MagicMock(data=[{"embedding": [0.1, 0.2]}])
-            embeddings = await client.llm.gen_embeddings(["sample"])
+            embeddings = await client.llm.gen_embeddings(["sample"], input_type="passage")
             assert mock_embed_acquire.called
             assert embeddings == [[0.1, 0.2]]
 

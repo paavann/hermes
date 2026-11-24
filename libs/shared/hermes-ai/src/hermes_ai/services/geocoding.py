@@ -54,6 +54,22 @@ class GeocodeCacheProtocol(Protocol):
     ) -> object: ...
 
 
+def _normalize_country_code(country_code: str | None) -> str | None:
+    if country_code is None:
+        return None
+    code = country_code.strip().upper()
+    return code if len(code) == 2 and code.isalpha() else None
+
+
+def _cache_key(cleaned: str, country_code: str | None) -> str:
+    """Key every lookup by place and country.
+
+    The trailing separator deliberately invalidates legacy name-only cache rows,
+    so an ambiguous result such as "west bank" -> Minnesota is never reused.
+    """
+    return f"{cleaned.strip().lower()}|{(country_code or '').lower()}"
+
+
 def clean_location_name(loc: str) -> str | None:
     if not loc or not loc.strip():
         return None
@@ -131,12 +147,17 @@ class GeocodingService:
         self._client = client
         self._in_flight: dict[str, asyncio.Future[GeocodingResult | None]] = {}
 
-    async def geocode(self, location_name: str) -> GeocodingResult | None:
+    async def geocode(
+        self,
+        location_name: str,
+        country_code: str | None = None,
+    ) -> GeocodingResult | None:
         cleaned = clean_location_name(location_name)
         if not cleaned:
             return None
 
-        norm_key = cleaned.strip().lower()
+        expected = _normalize_country_code(country_code)
+        norm_key = _cache_key(cleaned, expected)
         if self._cache is not None:
             cached = await self._cache.get_by_location_name(norm_key)
             if cached is not None:
@@ -155,7 +176,7 @@ class GeocodingService:
         future = loop.create_future()
         self._in_flight[norm_key] = future
         try:
-            res = await self._call_nominatim(cleaned)
+            res = await self._call_nominatim(cleaned, expected)
             if isinstance(res, GeocodingResult):
                 if self._cache is not None:
                     await self._cache.save_geocode_result(
@@ -186,7 +207,10 @@ class GeocodingService:
             self._in_flight.pop(norm_key, None)
 
     async def _call_nominatim(
-        self, location_name: str, max_retries: int = 3
+        self,
+        location_name: str,
+        country_code: str | None = None,
+        max_retries: int = 3,
     ) -> GeocodingResult | _NotFoundSentinel | None:
         circuit_open, remaining = self._resilience.is_circuit_open()
         if circuit_open:
@@ -198,7 +222,14 @@ class GeocodingService:
             return None
 
         last_was_429 = False
-        params = {"q": location_name, "format": "jsonv2", "limit": 1}
+        params: dict[str, str | int] = {
+            "q": location_name,
+            "format": "jsonv2",
+            "limit": 1,
+            "addressdetails": 1,
+        }
+        if country_code is not None:
+            params["countrycodes"] = country_code.lower()
         headers = {"User-Agent": self._user_agent}
 
         for attempt in range(max_retries):
@@ -249,6 +280,25 @@ class GeocodingService:
                     return _NOT_FOUND
 
                 first = results[0]
+                address = first.get("address")
+                returned_country = (
+                    str(address.get("country_code", "")).lower()
+                    if isinstance(address, dict)
+                    else ""
+                )
+                if (
+                    country_code is not None
+                    and returned_country
+                    and returned_country != country_code.lower()
+                ):
+                    logger.warning(
+                        "geocoder returned '%s' in %s for '%s' but expected %s; rejecting.",
+                        first.get("display_name", location_name),
+                        returned_country,
+                        location_name,
+                        country_code,
+                    )
+                    return _NOT_FOUND
                 result = GeocodingResult(
                     latitude=float(first["lat"]),
                     longitude=float(first["lon"]),

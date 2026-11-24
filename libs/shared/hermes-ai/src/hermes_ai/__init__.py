@@ -68,7 +68,7 @@ from hermes_ai.services.geocoding import (
     NominatimResilienceManager,
     clean_location_name,
 )
-from hermes_ai.services.llm import LlmService, LlmUsage
+from hermes_ai.services.llm import EmbeddingInputType, LlmService, LlmUsage
 from hermes_ai.utils.coercion import coerce_to_str
 from hermes_ai.utils.prompts import (
     ARTICLE_LABEL_PROMPT_VERSION,
@@ -98,6 +98,7 @@ __all__ = [
     "DescribeExtractor",
     "DescribeImpact",
     "DescribeMemberFact",
+    "EmbeddingInputType",
     "EVENT_DESCRIBE_PROMPT_VERSION",
     "EVENT_DESCRIBE_SYSTEM_PROMPT",
     "EventDescription",

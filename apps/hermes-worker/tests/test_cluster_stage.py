@@ -129,7 +129,7 @@ class TestLocations:
 
         assert location is not None
         assert location.name == "Kyiv"
-        assert location.country_code == "ua"
+        assert location.country_code == "UA"
 
     def test_merge_locations_deduplicates_and_caps(self) -> None:
         merged = _merge_locations(

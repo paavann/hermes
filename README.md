@@ -25,7 +25,7 @@ Traditional news aggregators suffer from narrative duplication, click-driven rec
 1. **Autonomous Ingestion**: Ingests articles across global wire services, major outlets, and GDELT.
 2. **Vector Deduplication & Clustering**: Generates high-dimensional embeddings (`halfvec(2048)`) and uses HNSW index cosine distance to match incoming articles to active events.
 3. **Verified Geocoding**: Extracts locations via LLM and grounds coordinates strictly using OpenStreetMap Nominatim with token-bucket rate limiting and negative caching.
-4. **Objective Ranking**: Ranks events using source credibility tiers, impact multipliers, Shannon diversity across geopolitical blocs, reporting velocity, and compound time decay (18-hour half-life).
+4. **Objective Ranking**: Computes one explainable `importance_score` (0–100) from independent-family strength, impact level, verification status, and label quality, then applies impact-tiered exponential decay and a single-source cap.
 5. **Causal Timeline Synthesis**: Reconstructs the historical context of any breaking story by querying Wikipedia and generating an interactive antecedent timeline DAG.
 6. **Grounded Conversational RAG**: Answers analyst questions over the current map scope with hybrid lexical/semantic retrieval, inline citations, and Server-Sent Events streaming.
 

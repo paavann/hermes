@@ -2,6 +2,7 @@ from __future__ import annotations
 import logging
 from collections.abc import Callable
 from typing import Protocol
+from hermes_ai import EmbeddingInputType
 from hermes_ai.chat.models import (
     ChatScope,
     Coverage,
@@ -84,7 +85,7 @@ def _evidence(event: SearchEvent) -> RetrievedEvidence:
         first_reported_at=event.first_reported_at,
         last_updated_at=event.last_updated_at,
         age_hours=event.age_hours,
-        trending_score=event.trending_score,
+        importance_score=event.importance_score,
         lexical_rank=event.lexical_rank,
         semantic_similarity=event.semantic_similarity,
         rrf=event.rrf,
@@ -94,7 +95,9 @@ def _evidence(event: SearchEvent) -> RetrievedEvidence:
 
 
 class EmbeddingClient(Protocol):
-    async def gen_embeddings(self, texts: list[str]) -> list[list[float] | None]: ...
+    async def gen_embeddings(
+        self, texts: list[str], input_type: EmbeddingInputType
+    ) -> list[list[float] | None]: ...
 
 class DbChatRetriever:
     def __init__(
@@ -118,7 +121,7 @@ class DbChatRetriever:
 
     async def _embed_query(self, query: str) -> list[float] | None:
         try:
-            embeddings = await self._llm.gen_embeddings([query])
+            embeddings = await self._llm.gen_embeddings([query], input_type="query")
         except Exception as exc:
             logger.warning(
                 "chat query embedding failed; using lexical retrieval: %s.",

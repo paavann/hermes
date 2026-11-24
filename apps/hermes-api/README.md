@@ -36,9 +36,11 @@ All application endpoints are mounted under the configurable `API_BASE_PATH` pre
 | Method | Path | Description | Response Model |
 | :--- | :--- | :--- | :--- |
 | `GET` | `/` | Health check endpoint returning server liveness status. | `{"message": "hermes is running..."}` |
-| `GET` | `/api/v1/events/` | Retrieves a ranked list of events ordered by descending `trending_score`. | `list[EventResponse]` |
-| `GET` | `/api/v1/events/bbox` | Spatial bounding box query returning events located within the viewport. | `list[MapEventResponse]` |
+| `GET` | `/api/v1/events/` | Retrieves a ranked list of events ordered by descending `importance_score`. | `list[EventResponse]` |
+| `GET` | `/api/v1/events/bbox` | Spatial bounding box query returning active, non-dropped events within the viewport. | `list[MapEventResponse]` |
 | `GET` | `/api/v1/events/{event_id}` | Retrieves full event detail, summary, and linked news articles. | `EventDetailResponse` |
+| `GET` | `/api/v1/threads/` | Lists active and dormant story threads ordered by importance. | `list[ThreadResponse]` |
+| `GET` | `/api/v1/threads/{thread_id}` | Retrieves one thread and its member events in time order. | `ThreadDetailResponse` |
 | `POST` | `/api/v1/events/tl/{event_id}` | On-demand timeline synthesis generating an antecedent historical DAG. | `TlResponse` |
 | `POST` | `/api/v1/chat` | Streams a grounded conversational answer for the current map scope. | `text/event-stream` |
 
@@ -60,10 +62,13 @@ curl "http://localhost:8000/api/v1/events/bbox?north=45.0&south=30.0&east=35.0&w
 - `west` (`float`, -180 to 180): Western longitude boundary.
 
 #### 2. Event List Query (`GET /api/v1/events/`)
-Returns active events sorted by trending score:
-- `status` (`string`, optional): Filter by `ACTIVE`, `STALE`, or `ARCHIVED` (default: `ACTIVE`).
+Returns events sorted by `importance_score`:
+- `status` (`string`, optional): Filter by `ACTIVE`, `STALE`, `ARCHIVED`, or `MERGED` (default: `ACTIVE`).
 - `scope` (`string`, optional): Filter by `GLOBAL`, `COUNTRY`, `STATE`, `CITY`, or `LOCAL`.
 - `limit` (`integer`, optional): Max events to return (default: `50`, max: `200`).
+
+#### 3. Thread Queries (`GET /api/v1/threads/`, `GET /api/v1/threads/{thread_id}`)
+`/threads/` lists `ACTIVE` and `DORMANT` threads by importance. `/{thread_id}` returns the thread metadata plus its member events ordered by `event_time`; the map story panel uses this to filter and focus pins. Threads never replace event pins.
 
 #### 3. On-Demand Timeline Synthesis (`POST /api/v1/events/tl/{event_id}`)
 Synthesizes a causal historical lineage by triaging the headline, querying the MediaWiki REST API, extracting chronological milestones via LiteLLM, geocoding locations, and stitching the breaking event as the terminal leaf node:

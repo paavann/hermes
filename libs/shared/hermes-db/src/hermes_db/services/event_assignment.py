@@ -99,6 +99,7 @@ def _latest_label_subquery():
             ArticleLabel.article_id.label("article_id"),
             ArticleLabel.fact.label("fact"),
             ArticleLabel.event_time.label("event_time"),
+            ArticleLabel.article_type.label("article_type"),
             ArticleLabel.category.label("category"),
             ArticleLabel.event_form.label("event_form"),
             ArticleLabel.specificity.label("specificity"),

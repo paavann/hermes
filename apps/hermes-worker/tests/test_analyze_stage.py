@@ -119,10 +119,14 @@ class _Labeler:
 class _Embedder:
     def __init__(self, *, available: bool = True) -> None:
         self.calls: list[list[str]] = []
+        self.input_types: list[str] = []
         self._available = available
 
-    async def gen_embeddings(self, texts: list[str]) -> list[list[float] | None]:
+    async def gen_embeddings(
+        self, texts: list[str], input_type: str = "passage"
+    ) -> list[list[float] | None]:
         self.calls.append(texts)
+        self.input_types.append(input_type)
         if not self._available:
             return [None] * len(texts)
         return [[1.0, 0.0, 0.0] for _ in texts]
@@ -257,6 +261,7 @@ def test_analyze_accepts_event_and_creates_family() -> None:
     assert stats["label_calls"] == 1
     assert stats["embedded"] == 1
     assert stats["families_created"] == 1
+    assert ai.llm.input_types == ["passage"]
 
     analysis.save_text.assert_awaited_once()
     save_text_kwargs = analysis.save_text.await_args.kwargs

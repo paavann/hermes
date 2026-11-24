@@ -52,9 +52,13 @@ class FakeEmbeddingClient:
         self.embeddings = embeddings
         self.error = error
         self.calls: list[list[str]] = []
+        self.input_types: list[str] = []
 
-    async def gen_embeddings(self, texts: list[str]) -> list[list[float] | None]:
+    async def gen_embeddings(
+        self, texts: list[str], input_type: str = "query"
+    ) -> list[list[float] | None]:
         self.calls.append(texts)
+        self.input_types.append(input_type)
         if self.error is not None:
             raise self.error
         return self.embeddings
@@ -110,7 +114,7 @@ def _event() -> SearchEvent:
         category_color="#ff8800",
         impact_level=ImpactLevel.MAJOR,
         status=EventStatus.ACTIVE,
-        trending_score=0.7,
+        importance_score=0.7,
         last_updated_at=NOW,
         first_reported_at=NOW,
         location_name="Valencia, Spain",
@@ -121,7 +125,7 @@ def _event() -> SearchEvent:
         semantic_similarity=None,
         rrf=0.016,
         age_hours=0.5,
-        trending_norm=1.0,
+        importance_norm=1.0,
         boost=1.2,
         score=0.019,
         articles=[

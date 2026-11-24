@@ -69,7 +69,9 @@ def test_clean_location_name() -> None:
 def test_geocoding_service_cache_hit() -> None:
     async def _run() -> None:
         cache = DummyCache()
-        cache.store["rome, italy"] = DummyCacheEntry(41.9028, 12.4964, "Rome, Italy")
+        cache.store["rome, italy|"] = DummyCacheEntry(
+            41.9028, 12.4964, "Rome, Italy"
+        )
         service = GeocodingService(cache_service=cache)
 
         with patch.object(service, "_call_nominatim") as mock_call:
@@ -85,7 +87,7 @@ def test_geocoding_service_cache_hit() -> None:
 def test_geocoding_service_negative_cache_hit() -> None:
     async def _run() -> None:
         cache = DummyCache()
-        cache.store["nowhere"] = DummyCacheEntry(None, None, None)
+        cache.store["nowhere|"] = DummyCacheEntry(None, None, None)
         service = GeocodingService(cache_service=cache)
 
         with patch.object(service, "_call_nominatim") as mock_call:
@@ -110,7 +112,7 @@ def test_geocoding_service_fetches_and_persists() -> None:
             assert res == expected
             assert len(cache.save_calls) == 1
             assert cache.save_calls[0] == (
-                "tokyo, japan",
+                "tokyo, japan|",
                 35.6762,
                 139.6503,
                 "Tokyo, Japan",
@@ -131,7 +133,7 @@ def test_geocoding_service_negative_cache_on_not_found() -> None:
             res = await service.geocode("Fantasy Land 9999")
             assert res is None
             assert len(cache.save_calls) == 1
-            assert cache.save_calls[0] == ("fantasy land 9999", None, None, None)
+            assert cache.save_calls[0] == ("fantasy land 9999|", None, None, None)
 
     asyncio.run(_run())
 
@@ -159,7 +161,9 @@ def test_geocoding_service_deduplicates_in_flight() -> None:
         service = GeocodingService(cache_service=cache)
         expected = GeocodingResult(40.7128, -74.006, "New York, USA")
 
-        async def _delayed_call(name: str) -> GeocodingResult:
+        async def _delayed_call(
+            name: str, country_code: str | None
+        ) -> GeocodingResult:
             await asyncio.sleep(0.05)
             return expected
 

@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging
 from dataclasses import dataclass
+from typing import Literal
 
 from litellm.router import Router
 from litellm.types.router import DeploymentTypedDict, LiteLLMParamsTypedDict
@@ -29,6 +30,9 @@ class LlmUsage:
     input_tokens: int = 0
     output_tokens: int = 0
     repairs: int = 0
+
+
+EmbeddingInputType = Literal["query", "passage"]
 
 
 def _deployment(
@@ -297,7 +301,11 @@ class LlmService:
             schema_name,
         )
 
-    async def gen_embeddings(self, texts: list[str]) -> list[list[float] | None]:
+    async def gen_embeddings(
+        self,
+        texts: list[str],
+        input_type: EmbeddingInputType,
+    ) -> list[list[float] | None]:
         if not texts:
             return []
         elif not self._config.has_embed:
@@ -316,6 +324,7 @@ class LlmService:
                 model="embed",
                 input=texts,
                 encoding_format=encoding_format,
+                input_type=input_type,
             )
             embeddings: list[list[float] | None] = [
                 item["embedding"] for item in res.data

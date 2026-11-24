@@ -359,6 +359,23 @@ class ClusterStage:
             event.locations = _merge_locations(event.locations, article.locations)
             if event.country_code is None:
                 event.country_code = EventAssignmentService.article_country(article)
+            if event.location_name is None and event.locations:
+                primary = event.locations[0]
+                name = primary.get("name")
+                if isinstance(name, str) and name.strip():
+                    event.location_name = name.strip()[:255]
+                    code = primary.get("country_code")
+                    if isinstance(code, str) and len(code) == 2:
+                        event.country_code = code.upper()
+            if event.location is None and event.location_name:
+                geocoded = await ctx.require_geocoder().geocode(
+                    event.location_name,
+                    country_code=event.country_code,
+                )
+                if geocoded is not None:
+                    event.location = (
+                        f"SRID=4326;POINT({geocoded.longitude} {geocoded.latitude})"
+                    )
             # Membership changed, so the description is stale.
             event.member_hash = None
 
@@ -382,7 +399,10 @@ class ClusterStage:
         latitude: float | None = None
         longitude: float | None = None
         if location_name:
-            geocoded = await ctx.require_geocoder().geocode(location_name)
+            geocoded = await ctx.require_geocoder().geocode(
+                location_name,
+                country_code=country_code,
+            )
             if geocoded is not None:
                 latitude = geocoded.latitude
                 longitude = geocoded.longitude
@@ -474,18 +494,20 @@ def _impact_level(severity: int | None) -> ImpactLevel:
 
 
 def _article_location(article: AssignableArticle) -> GeoLocation | None:
-    for location in article.locations:
-        name = location.get("name")
-        if isinstance(name, str) and name.strip():
-            code = location.get("country_code")
-            return GeoLocation(
-                name=name.strip(),
-                country_code=code if isinstance(code, str) else None,
-            )
-    return None
+    place = _article_place(article)
+    if place is None:
+        return None
+    return GeoLocation(name=place[0], country_code=place[1])
 
 
 def _primary_location(article: AssignableArticle) -> tuple[str | None, str | None]:
+    place = _article_place(article)
+    if place is None:
+        return None, None
+    return place
+
+
+def _article_place(article: AssignableArticle) -> tuple[str, str | None] | None:
     for location in article.locations:
         name = location.get("name")
         if isinstance(name, str) and name.strip():
@@ -494,7 +516,13 @@ def _primary_location(article: AssignableArticle) -> tuple[str | None, str | Non
                 name.strip(),
                 code.upper() if isinstance(code, str) and len(code) == 2 else None,
             )
-    return None, None
+    for entity in article.entities:
+        if str(entity.get("kind", "")).strip().upper() != "LOCATION":
+            continue
+        name = entity.get("name")
+        if isinstance(name, str) and name.strip():
+            return name.strip(), None
+    return None
 
 
 def _merge_locations(

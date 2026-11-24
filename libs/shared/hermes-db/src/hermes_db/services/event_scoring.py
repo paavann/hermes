@@ -22,7 +22,7 @@ from hermes_db.services.event_membership import EventMembershipService, MemberRe
 from hermes_db.utils.datetime import ensure_utc
 
 
-SCORE_VERSION = "score-v1"
+SCORE_VERSION = "score-v2"
 STRENGTH_WEIGHT = 0.40
 IMPACT_WEIGHT = 0.30
 VERIFY_WEIGHT = 0.15
@@ -43,20 +43,20 @@ IMPACT_VALUE: dict[ImpactLevel, float] = {
 VERIFY_VALUE: dict[VerificationStatus, float] = {
     VerificationStatus.CONFIRMED: 1.0,
     VerificationStatus.CORROBORATED: 0.85,
-    VerificationStatus.SINGLE_SOURCE: 0.4,
-    VerificationStatus.CONFLICTING: 0.25,
+    VerificationStatus.SINGLE_SOURCE: 0.75,
+    VerificationStatus.CONFLICTING: 0.5,
     VerificationStatus.UNVERIFIED: 0.0,
 }
 HALF_LIFE_CRITICAL_HOURS = 18.0
 HALF_LIFE_MAJOR_HOURS = 36.0
-HALF_LIFE_DEFAULT_HOURS = 72.0
+HALF_LIFE_DEFAULT_HOURS = 96.0
 
-PRIMARY_THRESHOLD = 55.0
-FILLER_THRESHOLD = 30.0
+PRIMARY_THRESHOLD = 50.0
+FILLER_THRESHOLD = 22.0
 HYSTERESIS = 5.0
-SINGLE_SOURCE_CAP = 45.0
+SINGLE_SOURCE_CAP = 65.0
 BREAKING_MAX_AGE_HOURS = 2.0
-BREAKING_MIN_SCORE = 45.0
+BREAKING_MIN_SCORE = 35.0
 
 
 @dataclass(frozen=True, slots=True)

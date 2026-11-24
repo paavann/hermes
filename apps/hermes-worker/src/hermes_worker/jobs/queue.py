@@ -34,7 +34,7 @@ class ArticleQueue:
             .where(Article.ingest_status == status)
             .where(Article.attempt_count < max_attempts)
             .order_by(
-                Article.published_at.asc().nulls_last(), Article.ingested_at.asc()
+                Article.published_at.desc().nulls_last(), Article.ingested_at.desc()
             )
             .limit(limit)
             .with_for_update(skip_locked=True)

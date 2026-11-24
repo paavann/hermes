@@ -168,6 +168,12 @@ def to_label_payload(
         {"name": location.name, "country_code": location.country_code}
         for location in label.locations
     ]
+    fact = label.fact
+    if not fact and label.is_event and label.evidence_quote:
+        cleaned = " ".join(label.evidence_quote.split())
+        if cleaned:
+            fact = cleaned[:400]
+
     return LabelPayload(
         is_event=label.is_event,
         article_type=ArticleType(label.article_type.value),
@@ -177,7 +183,7 @@ def to_label_payload(
         severity=label.severity,
         scope=EventScope(label.scope.value),
         confidence=label.confidence,
-        fact=label.fact,
+        fact=fact,
         scale_facts=scale_facts,
         entities=entities,
         locations=locations,
@@ -200,6 +206,12 @@ def to_label_payload(
 
 def payload_from_row(row: ArticleLabel) -> LabelPayload:
     """Rebuild a payload from a persisted label for cost-free retries."""
+    fact = row.fact
+    if not fact and row.is_event and row.evidence_quote:
+        cleaned = " ".join(row.evidence_quote.split())
+        if cleaned:
+            fact = cleaned[:400]
+
     return LabelPayload(
         is_event=row.is_event,
         article_type=row.article_type,
@@ -207,7 +219,7 @@ def payload_from_row(row: ArticleLabel) -> LabelPayload:
         severity=row.severity,
         scope=row.scope,
         confidence=row.confidence,
-        fact=row.fact,
+        fact=fact,
         scale_facts=dict(row.scale_facts),
         entities=list(row.entities),
         locations=list(row.locations),

@@ -16,7 +16,7 @@ from hermes_db.services import (
     MemberRecord,
     member_hash,
 )
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from hermes_worker.jobs.context import (
     BudgetExhaustedError,
@@ -31,6 +31,7 @@ logger = logging.getLogger(__name__)
 MAX_LOCATIONS = 3
 MAX_HEADLINE_CHARS = 120
 MAX_SUMMARY_CHARS = 900
+MAX_DESCRIBE_ROUNDS = 20
 
 
 @dataclass(frozen=True, slots=True)
@@ -47,74 +48,116 @@ class DescribeStage:
 
     async def run(self, ctx: JobContext) -> StageStats:
         stats = StageStats()
-        if ctx.budget.remaining_llm_calls <= 0:
-            stats.add("budget_empty")
-            return stats
+        processed: set[uuid.UUID] = set()
+        rounds = 0
 
-        async with ctx.session_factory() as session:
-            event_ids = list(
-                (
-                    await session.execute(
-                        select(Event.id)
-                        .where(
-                            Event.status.in_([EventStatus.ACTIVE, EventStatus.STALE])
-                        )
-                        .where(Event.merged_into_id.is_(None))
-                        .where(Event.member_hash.is_(None))
-                        .order_by(Event.importance_score.desc())
-                        .limit(ctx.settings.EVENT_DESCRIBE_BATCH_SIZE)
-                    )
-                )
-                .scalars()
-                .all()
-            )
-        stats.add("candidates", len(event_ids))
-        if not event_ids:
-            return stats
+        while rounds < MAX_DESCRIBE_ROUNDS:
+            if ctx.budget.remaining_llm_calls <= 0:
+                stats.add("budget_exhausted")
+                break
 
-        async with ctx.session_factory() as session:
-            facts = await _load_facts(session, event_ids)
-        stats.add("loaded", len(facts))
-        if not facts:
-            return stats
+            event_ids = await _candidate_ids(ctx, exclude=processed)
+            stats.add("candidates", len(event_ids))
+            if not event_ids:
+                break
 
-        try:
-            ctx.budget.reserve_llm_calls(1)
-        except BudgetExhaustedError:
-            stats.add("budget_exhausted")
-            return stats
-        stats.add("describe_calls")
-        describer = ctx.require_ai().describer
-        inputs = [_describe_input(index, item) for index, item in enumerate(facts)]
-        response = await describer.describe(inputs)
-        by_index = (
-            {description.index: description for description in response.descriptions}
-            if response is not None
-            else {}
-        )
+            processed.update(event_ids)
+            rounds += 1
 
-        now = datetime.now(UTC)
-        async with ctx.session_factory() as session:
-            for index, item in enumerate(facts):
-                event = await session.get(Event, item.event.id)
-                if event is None:
-                    continue
-                previous_location = event.location_name
-                description = by_index.get(index)
-                if description is None:
-                    _apply_fallback(event, item)
-                    stats.add("described_fallback")
-                else:
-                    _apply_description(event, description)
-                    stats.add("described_llm")
-                if event.location_name != previous_location:
-                    await _geocode_primary(ctx, event, stats)
-                event.member_hash = item.hash
-                event.version += 1
-                event.last_updated_at = now
-            await session.commit()
+            async with ctx.session_factory() as session:
+                facts = await _load_facts(session, event_ids)
+            stats.add("loaded", len(facts))
+            if not facts:
+                continue
 
+            try:
+                ctx.budget.reserve_llm_calls(1)
+            except BudgetExhaustedError:
+                stats.add("budget_exhausted")
+                break
+            stats.add("describe_calls")
+            describer = ctx.require_ai().describer
+            inputs = [_describe_input(index, item) for index, item in enumerate(facts)]
+            response = await describer.describe(inputs)
+            if response is None:
+                stats.add("describe_failed")
+                break
+
+            by_index = {
+                description.index: description
+                for description in response.descriptions
+            }
+            now = datetime.now(UTC)
+            async with ctx.session_factory() as session:
+                for index, item in enumerate(facts):
+                    event = await session.get(Event, item.event.id)
+                    if event is None:
+                        continue
+                    previous_location = event.location_name
+                    description = by_index.get(index)
+                    if description is None:
+                        _apply_fallback(event, item)
+                        stats.add("described_fallback")
+                    else:
+                        _apply_description(event, description, item.members)
+                        stats.add("described_llm")
+                    if event.location_name and (
+                        description is not None
+                        or event.location_name != previous_location
+                        or event.location is None
+                    ):
+                        geocoded = await _geocode_event(ctx, event, stats)
+                        if not geocoded and (
+                            description is not None
+                            or event.location_name != previous_location
+                        ):
+                            event.location = None
+                    event.member_hash = item.hash
+                    event.version += 1
+                    event.last_updated_at = now
+                await session.commit()
+
+        if rounds >= MAX_DESCRIBE_ROUNDS:
+            stats.add("max_rounds")
+        stats.add("pending_remaining", await _pending_count(ctx))
         return stats
+
+
+async def _candidate_ids(
+    ctx: JobContext,
+    *,
+    exclude: set[uuid.UUID],
+) -> list[uuid.UUID]:
+    stmt = (
+        select(Event.id)
+        .where(Event.status.in_([EventStatus.ACTIVE, EventStatus.STALE]))
+        .where(Event.merged_into_id.is_(None))
+        .where(Event.member_hash.is_(None))
+        .order_by(
+            Event.event_time.desc().nulls_last(),
+            Event.latest_published_at.desc().nulls_last(),
+            Event.first_reported_at.desc(),
+        )
+        .limit(ctx.settings.EVENT_DESCRIBE_BATCH_SIZE)
+    )
+    if exclude:
+        stmt = stmt.where(Event.id.notin_(exclude))
+    async with ctx.session_factory() as session:
+        return list((await session.execute(stmt)).scalars().all())
+
+
+async def _pending_count(ctx: JobContext) -> int:
+    async with ctx.session_factory() as session:
+        return int(
+            await session.scalar(
+                select(func.count())
+                .select_from(Event)
+                .where(Event.status.in_([EventStatus.ACTIVE, EventStatus.STALE]))
+                .where(Event.merged_into_id.is_(None))
+                .where(Event.member_hash.is_(None))
+            )
+            or 0
+        )
 
 
 async def _load_facts(
@@ -212,7 +255,11 @@ def _describe_input(index: int, item: _EventFacts) -> DescribeEventInput:
     )
 
 
-def _apply_description(event: Event, description: EventDescription) -> None:
+def _apply_description(
+    event: Event,
+    description: EventDescription,
+    members: Sequence[MemberRecord],
+) -> None:
     event.ai_headline = description.headline[:MAX_HEADLINE_CHARS]
     event.ai_summary = description.summary[:MAX_SUMMARY_CHARS]
     event.impact_level = ImpactLevel(description.impact_level.value)
@@ -227,7 +274,10 @@ def _apply_description(event: Event, description: EventDescription) -> None:
             ),
         }
         for location in description.locations[:MAX_LOCATIONS]
+        if location.name.strip()
     ]
+    if not locations:
+        locations = _member_locations(members)
     event.locations = locations
     if locations:
         name = locations[0]["name"]
@@ -257,23 +307,48 @@ def _apply_fallback(event: Event, item: _EventFacts) -> None:
             event.country_code = code
 
 
-async def _geocode_primary(
+async def _geocode_event(
     ctx: JobContext,
     event: Event,
     stats: StageStats,
-) -> None:
-    """Resolve the description's primary location through the shared geocoder."""
-    if not event.location_name:
-        event.location = None
-        return
-    geocoded = await ctx.require_geocoder().geocode(event.location_name)
-    if geocoded is None:
-        # Never leave a pin on the previous location after the name changed.
-        event.location = None
-        stats.add("geocode_miss")
-        return
-    event.location = f"SRID=4326;POINT({geocoded.longitude} {geocoded.latitude})"
-    stats.add("geocoded")
+) -> bool:
+    """Resolve the first locatable candidate through the shared geocoder."""
+    candidates: list[tuple[str, str | None]] = []
+    seen: set[str] = set()
+    for location in event.locations:
+        name = location.get("name")
+        if not isinstance(name, str) or not name.strip():
+            continue
+        key = name.strip().casefold()
+        if key in seen:
+            continue
+        seen.add(key)
+        code = location.get("country_code")
+        candidates.append(
+            (
+                name.strip(),
+                code.upper() if isinstance(code, str) and len(code) == 2 else None,
+            )
+        )
+    if event.location_name:
+        key = event.location_name.strip().casefold()
+        if key and key not in seen:
+            candidates.insert(0, (event.location_name.strip(), event.country_code))
+
+    geocoder = ctx.require_geocoder()
+    for name, code in candidates[:MAX_LOCATIONS]:
+        effective = code or event.country_code
+        geocoded = await geocoder.geocode(name, country_code=effective)
+        if geocoded is None:
+            stats.add("geocode_miss")
+            continue
+        event.location = f"SRID=4326;POINT({geocoded.longitude} {geocoded.latitude})"
+        event.location_name = name[:255]
+        if effective is not None:
+            event.country_code = effective
+        stats.add("geocoded")
+        return True
+    return False
 
 
 def _member_locations(

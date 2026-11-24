@@ -1,6 +1,13 @@
 import uuid
 from datetime import datetime
-from hermes_db.enums import EventStatus, EventTlStatus
+from hermes_db.enums import (
+    EventScope,
+    EventStatus,
+    EventTlStatus,
+    ImpactLevel,
+    SelectionTier,
+    VerificationStatus,
+)
 from pydantic import BaseModel, ConfigDict
 
 
@@ -19,9 +26,20 @@ class EventResponse(BaseModel):
     category: str
     category_color: str
     location_name: str | None
-    trending_score: float
+    importance_score: float
+    score_breakdown: dict[str, object]
+    verification_status: VerificationStatus
+    selection_tier: SelectionTier
+    impact_level: ImpactLevel
+    scope: EventScope
     article_count: int
+    source_count: int
+    family_count: int
+    independent_origin_count: int
+    thread_id: uuid.UUID | None
+    thread_name: str | None = None
     status: EventStatus
+    event_time: datetime | None
     first_reported_at: datetime
     last_updated_at: datetime
     model_config = ConfigDict(from_attributes=True)
@@ -40,8 +58,18 @@ class MapEventResponse(BaseModel):
     location_name: str | None
     latitude: float
     longitude: float
-    trending_score: float
+    importance_score: float
+    verification_status: VerificationStatus
+    selection_tier: SelectionTier
+    impact_level: ImpactLevel
+    scope: EventScope
+    event_time: datetime | None
     article_count: int
+    source_count: int
+    family_count: int
+    independent_origin_count: int
+    thread_id: uuid.UUID | None
+    thread_name: str | None = None
     model_config = ConfigDict(from_attributes=True)
 
 

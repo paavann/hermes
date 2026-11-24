@@ -2,7 +2,14 @@ import uuid
 from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 from fastapi.testclient import TestClient
-from hermes_db.enums import EventScope, EventStatus, EventTlStatus
+from hermes_db.enums import (
+    EventScope,
+    EventStatus,
+    EventTlStatus,
+    ImpactLevel,
+    SelectionTier,
+    VerificationStatus,
+)
 from hermes_db.session import get_db
 from hermes_api.main import app
 from hermes_api.schemas.events import TlResponse
@@ -33,20 +40,44 @@ def test_get_events_with_scope_parameter():
     app.dependency_overrides.clear()
 
 
+def _mock_event_fields(event: MagicMock, *, event_id: uuid.UUID) -> None:
+    event.id = event_id
+    event.ai_headline = "Headline"
+    event.ai_summary = "Summary"
+    event.category = "Politics"
+    event.category_color = "#FF0000"
+    event.location_name = "Berlin"
+    event.country_code = "DE"
+    event.importance_score = 62.5
+    event.score_breakdown = {"version": "score-v1", "score": 62.5}
+    event.verification_status = VerificationStatus.CORROBORATED
+    event.selection_tier = SelectionTier.PRIMARY
+    event.impact_level = ImpactLevel.MAJOR
+    event.scope = EventScope.COUNTRY
+    event.status = EventStatus.ACTIVE
+    event.event_time = datetime.now(UTC)
+    event.article_count = 3
+    event.source_count = 2
+    event.family_count = 2
+    event.independent_origin_count = 2
+    event.thread_id = None
+    event.thread = None
+    event.thread_name = None
+    event.first_reported_at = datetime.now(UTC)
+    event.last_updated_at = datetime.now(UTC)
+
+
 def test_get_events_by_bbox_success():
     mock_session = AsyncMock()
     app.dependency_overrides[get_db] = lambda: mock_session
 
     mock_row = MagicMock()
-    mock_row.Event.id = uuid.uuid4()
+    _mock_event_fields(mock_row.Event, event_id=uuid.uuid4())
     mock_row.Event.ai_headline = "Bbox Headline"
-    mock_row.Event.category = "Politics"
-    mock_row.Event.category_color = "#FF0000"
     mock_row.Event.location_name = "Berlin"
     mock_row.latitude = 52.52
     mock_row.longitude = 13.405
-    mock_row.Event.trending_score = 4.5
-    mock_row.Event.article_count = 3
+    mock_row.thread_name = None
 
     with (
         patch("hermes_api.main.init_db", new_callable=AsyncMock),
@@ -85,18 +116,12 @@ def test_get_event_detail_success():
 
     event_id = uuid.uuid4()
     mock_detail = MagicMock()
-    mock_detail.id = event_id
+    _mock_event_fields(mock_detail, event_id=event_id)
     mock_detail.ai_headline = "Detail Headline"
     mock_detail.ai_summary = "Detail Summary"
-    mock_detail.category = "Politics"
-    mock_detail.category_color = "#FF0000"
     mock_detail.location_name = "Paris"
     mock_detail.country_code = "FR"
-    mock_detail.status = EventStatus.ACTIVE
     mock_detail.scope = EventScope.GLOBAL
-    mock_detail.trending_score = 5.0
-    mock_detail.article_count = 1
-    mock_detail.last_updated_at = datetime.now(UTC)
     mock_detail.articles = []
 
     with (
