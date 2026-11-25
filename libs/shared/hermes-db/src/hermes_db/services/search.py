@@ -217,6 +217,7 @@ def classify_coverage(
     min_semantic_similarity: float,
     freshness_hours: float,
     recency_intent: bool,
+    browse: bool = False,
 ) -> Coverage:
     count = len(events)
     semantics = [
@@ -234,9 +235,12 @@ def classify_coverage(
         recency_intent and newest_age is not None and newest_age > freshness_hours
     )
 
-    strong = count >= min_local_results and (
-        (best_semantic is not None and best_semantic >= min_semantic_similarity)
-        or (best_lexical is not None and best_lexical <= 3)
+    strong = (browse and count >= 1) or (
+        count >= min_local_results
+        and (
+            (best_semantic is not None and best_semantic >= min_semantic_similarity)
+            or (best_lexical is not None and best_lexical <= 3)
+        )
     )
     if count == 0:
         level = CoverageLevel.EMPTY
@@ -369,9 +373,10 @@ class SearchService:
         filters: SearchFilters | None = None,
         embedding: Sequence[float] | None = None,
         recency_intent: bool = False,
+        browse: bool = False,
     ) -> SearchResult:
         query = query.strip()
-        if not query:
+        if not query and not browse:
             raise ValueError("query must not be empty.")
         query = query[:MAX_QUERY_CHARS]
         self._validate_scope(scope=scope, event_id=event_id, bbox=bbox)
@@ -385,6 +390,24 @@ class SearchService:
                 now=now,
                 cutoff=cutoff,
                 recency_intent=recency_intent,
+            )
+
+        if browse:
+            stmt = self._build_browse_statement(
+                scope=scope,
+                bbox=bbox,
+                filters=filters,
+                now=now,
+                cutoff=cutoff,
+            )
+            result = await self._session.execute(stmt)
+            rows = result.mappings().all()
+            events = [SearchEvent.model_validate(row) for row in rows]
+            await self._load_context(events)
+            return self._build_result(
+                events,
+                recency_intent=recency_intent,
+                browse=True,
             )
 
         stmt = self._build_statement(
@@ -434,6 +457,7 @@ class SearchService:
         *,
         recency_intent: bool,
         degraded: Sequence[SearchDegradedFlag] = (),
+        browse: bool = False,
     ) -> SearchResult:
         return SearchResult(
             events=events,
@@ -443,6 +467,7 @@ class SearchService:
                 min_semantic_similarity=self._min_semantic_similarity,
                 freshness_hours=self._freshness_hours,
                 recency_intent=recency_intent,
+                browse=browse,
             ),
             degraded=list(degraded),
         )
@@ -458,6 +483,49 @@ class SearchService:
             raise ValueError("event scope requires event_id.")
         if scope is SearchScope.VIEWPORT and bbox is None:
             raise ValueError("viewport scope requires bbox.")
+
+    def _build_browse_statement(
+        self,
+        *,
+        scope: SearchScope,
+        bbox: BoundingBox | None,
+        filters: SearchFilters | None,
+        now: datetime,
+        cutoff: datetime,
+    ) -> ExecutableReturnsRows:
+        conditions = self._eligibility_conditions(
+            scope=scope,
+            bbox=bbox,
+            filters=filters,
+            now=now,
+            cutoff=cutoff,
+        )
+        age_hours = _age_hours_expr(now)
+        max_importance = func.max(Event.importance_score).over()
+        importance_norm = func.least(
+            1.0,
+            Event.importance_score / func.greatest(max_importance, literal(1.0)),
+        )
+        boost = (
+            1.0
+            + RECENCY_WEIGHT * func.exp(-age_hours / RECENCY_WINDOW_HOURS)
+            + IMPORTANCE_WEIGHT * importance_norm
+        )
+        return (
+            select(
+                *_event_columns(age_hours),
+                cast(literal(None), Integer).label("lexical_rank"),
+                cast(literal(None), Integer).label("semantic_rank"),
+                cast(literal(None), Float).label("semantic_similarity"),
+                literal(0.0).label("rrf"),
+                importance_norm.label("importance_norm"),
+                boost.label("boost"),
+                boost.label("score"),
+            )
+            .where(*conditions)
+            .order_by(Event.importance_score.desc(), Event.last_updated_at.desc())
+            .limit(self._top_k)
+        )
 
     def _build_statement(
         self,

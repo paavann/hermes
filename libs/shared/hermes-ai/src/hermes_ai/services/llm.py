@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import logging
 from dataclasses import dataclass
-from typing import Literal
+from typing import Literal, cast
 
 from litellm.router import Router
 from litellm.types.router import DeploymentTypedDict, LiteLLMParamsTypedDict
@@ -40,10 +40,20 @@ def _deployment(
     model: str,
     api_key: str,
     rpm: int | None = None,
+    *,
+    model_kwargs: dict[str, object] | None = None,
+    timeout_seconds: float | None = None,
 ) -> DeploymentTypedDict:
-    params: LiteLLMParamsTypedDict = {"model": model, "api_key": api_key}
+    raw_params: dict[str, object] = {"model": model, "api_key": api_key}
     if rpm is not None:
-        params["rpm"] = rpm
+        raw_params["rpm"] = rpm
+    if timeout_seconds is not None:
+        raw_params["timeout"] = timeout_seconds
+    if model_kwargs:
+        for key, value in model_kwargs.items():
+            if key not in {"model", "api_key", "rpm"}:
+                raw_params[key] = value
+    params = cast("LiteLLMParamsTypedDict", raw_params)
     return {"model_name": name, "litellm_params": params}
 
 
@@ -98,13 +108,24 @@ def _build_deployments(
                 route.primary.model,
                 route.primary.api_key,
                 route.primary.rpm,
+                model_kwargs=route.primary.model_kwargs,
+                timeout_seconds=route.primary.timeout_seconds,
             )
         )
         fb_names: list[str] = []
         total_fallbacks = len(route.fallbacks)
         for idx, fb in enumerate(route.fallbacks, start=1):
             fb_alias = _fallback_alias(name, idx, total_fallbacks)
-            model_list.append(_deployment(fb_alias, fb.model, fb.api_key, fb.rpm))
+            model_list.append(
+                _deployment(
+                    fb_alias,
+                    fb.model,
+                    fb.api_key,
+                    fb.rpm,
+                    model_kwargs=fb.model_kwargs,
+                    timeout_seconds=fb.timeout_seconds,
+                )
+            )
             fb_names.append(fb_alias)
         if fb_names:
             fallbacks.append({name: fb_names})

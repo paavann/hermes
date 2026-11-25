@@ -4,6 +4,7 @@ import json
 import logging
 import re
 from collections.abc import Sequence
+from datetime import datetime
 
 from hermes_ai.exceptions import ModelExecutionError, SchemaValidationError
 from hermes_ai.models.describe import (
@@ -44,6 +45,37 @@ def has_numeric_fidelity(description: EventDescription, source_text: str) -> boo
     allowed = numeric_tokens(source_text)
     output = numeric_tokens(f"{description.headline} {description.summary}")
     return output.issubset(allowed)
+
+
+def _date_tokens(published_at: str | None) -> str:
+    if not published_at:
+        return ""
+    cleaned = published_at.strip()
+    normalized = f"{cleaned[:-1]}+00:00" if cleaned.endswith("Z") else cleaned
+    try:
+        parsed = datetime.fromisoformat(normalized)
+    except ValueError:
+        return cleaned
+    return (
+        f"{cleaned} {parsed.year} {parsed.month} "
+        f"{parsed.day} {parsed.hour} {parsed.minute}"
+    )
+
+
+def _item_source_text(item: DescribeEventInput) -> str:
+    parts: list[str] = []
+    for fact in item.facts:
+        parts.extend(
+            [
+                fact.fact,
+                fact.source,
+                _date_tokens(fact.published_at),
+                *fact.entities,
+                *fact.locations,
+                *(str(value) for value in fact.scale_facts.values()),
+            ]
+        )
+    return " ".join(part for part in parts if part)
 
 
 def build_describe_payload(items: Sequence[DescribeEventInput]) -> str:
@@ -117,66 +149,64 @@ class DescribeExtractor:
             return None
 
         source_by_index = {
-            item.index: " ".join(
-                " ".join(
-                    [
-                        fact.fact,
-                        *fact.entities,
-                        *fact.locations,
-                        *[
-                            str(value)
-                            for value in fact.scale_facts.values()
-                        ],
-                    ]
-                )
-                for fact in item.facts
-            )
+            item.index: _item_source_text(item)
             for item in items
         }
-        missing = [
-            description.index
-            for description in response.descriptions
-            if not has_numeric_fidelity(
+        valid_by_index: dict[int, EventDescription] = {}
+        missing: list[int] = []
+        for description in response.descriptions:
+            if has_numeric_fidelity(
                 description,
                 source_by_index.get(description.index, ""),
-            )
-        ]
+            ):
+                valid_by_index[description.index] = description
+            else:
+                missing.append(description.index)
+
         if missing:
             logger.warning(
                 "description numeric fidelity failed for indexes %s; retrying.",
                 missing,
             )
-            response = await self._request(
+            missing_set = set(missing)
+            retry_items = [item for item in items if item.index in missing_set]
+            retry_prompt = wrap_untrusted(
+                "untrusted_event_batch",
+                build_describe_payload(retry_items),
+                boundary=boundary,
+            )
+            retry_response = await self._request(
                 sys_prompt=sys_prompt,
                 user_prompt=(
-                    f"{user_prompt}\n\n"
+                    f"{retry_prompt}\n\n"
                     "Numeric fidelity check failed for indexes "
-                    f"{missing}. Rewrite those descriptions using only numbers "
+                    f"{missing}. Rewrite only those descriptions using only numbers "
                     "present in the supplied facts."
                 ),
             )
-            if response is None:
-                return None
-            rejected = {
-                description.index
-                for description in response.descriptions
-                if not has_numeric_fidelity(
-                    description,
-                    source_by_index.get(description.index, ""),
-                )
-            }
-            if rejected:
+            if retry_response is not None:
+                for description in retry_response.descriptions:
+                    if description.index not in missing_set:
+                        continue
+                    if has_numeric_fidelity(
+                        description,
+                        source_by_index.get(description.index, ""),
+                    ):
+                        valid_by_index[description.index] = description
+
+            dropped = {idx for idx in missing_set if idx not in valid_by_index}
+            if dropped:
                 logger.warning(
                     "dropping descriptions that still fail numeric fidelity: %s.",
-                    rejected,
+                    sorted(dropped),
                 )
-                response = EventDescriptionBatchResponse(
-                    descriptions=[
-                        description
-                        for description in response.descriptions
-                        if description.index not in rejected
-                    ]
-                )
+            response = EventDescriptionBatchResponse(
+                descriptions=[
+                    valid_by_index[item.index]
+                    for item in items
+                    if item.index in valid_by_index
+                ]
+            )
 
         logger.info(
             "described %s of %s events.",

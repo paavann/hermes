@@ -8,6 +8,8 @@ from langgraph.graph import MessagesState
 
 class ChatState(MessagesState):
     scope: dict[str, object]
+    explicit_scope: dict[str, object] | None
+    map_context: dict[str, object] | None
     query: str
     plan: dict[str, object]
     retrieval: dict[str, object]

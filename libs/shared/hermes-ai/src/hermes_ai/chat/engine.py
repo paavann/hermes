@@ -56,7 +56,13 @@ from hermes_ai.chat.models.retrieval import (
     RetrievalResult,
     RetrievedEvidence,
 )
-from hermes_ai.chat.models.scopes import ChatRole, ChatScope, ChatTurn
+from hermes_ai.chat.models.scopes import (
+    ChatMapContext,
+    ChatRole,
+    ChatScope,
+    ChatTurn,
+    ScopeType,
+)
 from hermes_ai.chat.models.sources import (
     ChatSource,
     ChatSourceKind,
@@ -66,6 +72,7 @@ from hermes_ai.chat.models.sources import (
 from hermes_ai.chat.planner import (
     CITATION_MARKER_RE,
     MAX_HISTORY_TURNS,
+    resolve_scope,
 )
 from hermes_ai.chat.prompts import build_answer_messages
 from hermes_ai.chat.state import ChatState
@@ -146,6 +153,34 @@ def _chunk_text(chunk: BaseMessageChunk) -> str:
                     parts.append(text)
         return "".join(parts)
     return ""
+
+
+def _chunk_stream_activity(chunk: BaseMessageChunk) -> tuple[bool, bool]:
+    has_tool_call = bool(
+        getattr(chunk, "tool_call_chunks", None)
+        or getattr(chunk, "tool_calls", None)
+    )
+    additional = getattr(chunk, "additional_kwargs", None)
+    has_reasoning = False
+    if isinstance(additional, dict):
+        has_reasoning = bool(
+            additional.get("reasoning_content")
+            or additional.get("thinking")
+            or additional.get("thinking_blocks")
+            or additional.get("reasoning_items")
+        )
+    if not has_reasoning and isinstance(chunk.content, list):
+        for block in chunk.content:
+            if not isinstance(block, dict):
+                continue
+            if block.get("type") in {"thinking", "reasoning"} and (
+                block.get("thinking")
+                or block.get("reasoning")
+                or block.get("text")
+            ):
+                has_reasoning = True
+                break
+    return has_reasoning, has_tool_call
 
 
 def _int(value: object) -> int:
@@ -375,15 +410,48 @@ class ChatEngine:
         messages = state["messages"]
         current = _message_text(messages[-1])
         scope = ChatScope.model_validate(state["scope"])
-        outcome = await self._planner.plan(
+        raw_explicit = state.get("explicit_scope")
+        explicit_scope = (
+            ChatScope.model_validate(raw_explicit)
+            if raw_explicit is not None
+            else None
+        )
+        raw_context = state.get("map_context")
+        map_context = (
+            ChatMapContext.model_validate(raw_context)
+            if raw_context is not None
+            else None
+        )
+        if map_context is not None:
+            outcome = await self._planner.plan(
+                current,
+                history=_history_turns(messages),
+                scope=scope,
+                map_context=map_context,
+            )
+        else:
+            outcome = await self._planner.plan(
+                current,
+                history=_history_turns(messages),
+                scope=scope,
+            )
+        resolved_scope, effective_browse = resolve_scope(
             current,
-            history=_history_turns(messages),
-            scope=scope,
+            outcome.plan,
+            explicit_scope=explicit_scope,
+            map_context=map_context,
+        )
+        resolved_plan = outcome.plan.model_copy(
+            update={
+                "target_scope": resolved_scope.type,
+                "browse": effective_browse,
+            }
         )
         degraded = [DegradedFlag.PLANNER_FALLBACK.value] if outcome.degraded else []
         return {
-            "query": outcome.plan.query,
-            "plan": outcome.plan.model_dump(mode="json"),
+            "scope": resolved_scope.model_dump(mode="json"),
+            "query": resolved_plan.query,
+            "plan": resolved_plan.model_dump(mode="json"),
             "started_at": time.monotonic(),
             "web_available": False,
             "answer": "",
@@ -400,12 +468,21 @@ class ChatEngine:
         scope = ChatScope.model_validate(state["scope"])
         try:
             async with asyncio.timeout(self._retrieval_timeout_seconds):
-                retrieval = await self._retriever.retrieve(
-                    plan.query,
-                    scope=scope,
-                    filters=_plan_filters(plan),
-                    recency_intent=plan.recency_intent,
-                )
+                if plan.browse:
+                    retrieval = await self._retriever.retrieve(
+                        plan.query,
+                        scope=scope,
+                        filters=_plan_filters(plan),
+                        recency_intent=plan.recency_intent,
+                        browse=True,
+                    )
+                else:
+                    retrieval = await self._retriever.retrieve(
+                        plan.query,
+                        scope=scope,
+                        filters=_plan_filters(plan),
+                        recency_intent=plan.recency_intent,
+                    )
         except Exception as exc:
             is_timeout = isinstance(exc, TimeoutError)
             if is_timeout:
@@ -475,6 +552,10 @@ class ChatEngine:
         accumulated: AIMessageChunk | None = None
         stream: AsyncIterator[BaseMessageChunk] | None = None
         first_token = True
+        chunk_count = 0
+        reasoning_chunks = 0
+        tool_chunks = 0
+        stream_started_at = time.monotonic()
         deadline = float(state.get("started_at") or time.monotonic()) + (
             self._total_timeout_seconds
         )
@@ -483,6 +564,14 @@ class ChatEngine:
             while True:
                 remaining = deadline - time.monotonic()
                 if remaining <= 0:
+                    logger.warning(
+                        "chat answer stream exceeded total timeout after %.2fs "
+                        "(chunks=%d, reasoning_chunks=%d, tool_chunks=%d).",
+                        time.monotonic() - stream_started_at,
+                        chunk_count,
+                        reasoning_chunks,
+                        tool_chunks,
+                    )
                     get_stream_writer()(
                         ErrorEvent(
                             code=ErrorCode.STREAM_TIMEOUT,
@@ -505,7 +594,15 @@ class ChatEngine:
                 except StopAsyncIteration:
                     break
                 except TimeoutError:
-                    logger.warning("chat answer stream timed out.")
+                    logger.warning(
+                        "chat answer stream timed out after %.2fs "
+                        "(first_token=%s, chunks=%d, reasoning_chunks=%d, tool_chunks=%d).",
+                        time.monotonic() - stream_started_at,
+                        first_token,
+                        chunk_count,
+                        reasoning_chunks,
+                        tool_chunks,
+                    )
                     get_stream_writer()(
                         ErrorEvent(
                             code=(
@@ -539,6 +636,12 @@ class ChatEngine:
                         "usage": _usage_update(usage, state),
                     }
 
+                chunk_count += 1
+                has_reasoning, has_tool_call = _chunk_stream_activity(chunk)
+                if has_reasoning:
+                    reasoning_chunks += 1
+                if has_tool_call:
+                    tool_chunks += 1
                 if isinstance(chunk, AIMessageChunk):
                     accumulated = chunk if accumulated is None else accumulated + chunk
                 pass_usage = _merge_usage(pass_usage, chunk)
@@ -684,18 +787,28 @@ class ChatEngine:
         message: str,
         *,
         thread_id: str,
-        scope: ChatScope,
+        scope: ChatScope | None = None,
+        map_context: ChatMapContext | None = None,
         retry: bool = False,
     ) -> AsyncIterator[EngineEvent]:
         if retry:
             await self._discard_last_turn(thread_id)
+        initial_scope = scope or ChatScope(type=ScopeType.GLOBAL)
         config: RunnableConfig = {
             "configurable": {"thread_id": thread_id},
             "recursion_limit": RECURSION_LIMIT,
         }
         initial: ChatState = {
             "messages": [HumanMessage(content=message)],
-            "scope": scope.model_dump(mode="json"),
+            "scope": initial_scope.model_dump(mode="json"),
+            "explicit_scope": (
+                scope.model_dump(mode="json") if scope is not None else None
+            ),
+            "map_context": (
+                map_context.model_dump(mode="json")
+                if map_context is not None
+                else None
+            ),
             "query": message,
             "plan": {},
             "retrieval": {},

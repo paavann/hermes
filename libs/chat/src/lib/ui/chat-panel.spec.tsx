@@ -143,7 +143,7 @@ beforeEach(() => {
   useChatStore.setState({
     messages: [],
     isOpen: false,
-    scopeOverride: 'auto',
+    updatedAt: null,
     isStreaming: false,
     activeId: null,
   });
@@ -184,7 +184,7 @@ describe('ChatPanel', () => {
     expect(document.querySelector('[class*="bg-hud-bg/95"]')).toBeNull();
   });
 
-  it('renders solid accent controls without a resolved scope readout', () => {
+  it('renders solid accent controls without scope selector chrome', () => {
     renderPanel();
     openPanel();
 
@@ -195,14 +195,8 @@ describe('ChatPanel', () => {
       screen.getByRole('button', { name: 'Close chat' }).className,
     ).toContain('bg-danger');
 
-    expect(screen.getByRole('button', { name: 'auto' }).className).toContain(
-      'bg-signal-teal',
-    );
-    expect(
-      screen.getByRole('button', { name: 'viewport' }).className,
-    ).not.toContain('bg-signal-teal');
-
-    expect(screen.queryByText('GLOBAL')).toBeNull();
+    expect(screen.queryByRole('group', { name: 'Chat scope' })).toBeNull();
+    expect(screen.queryByText(/SCOPE/)).toBeNull();
   });
 
   it('preserves the conversation across close and reopen', async () => {
@@ -328,22 +322,23 @@ describe('ChatPanel', () => {
     expect(screen.getByTestId('streaming-cursor')).toBeTruthy();
   });
 
-  it('changes the request scope through the selector', async () => {
+  it('forwards live map context in chat requests without scope controls', async () => {
     const transport = deferredTransport();
-    renderPanel({ transport: transport.stream });
+    const eventId = 'event-123';
+    const viewport = { north: 50, south: 10, east: 40, west: -20 };
+    renderPanel({
+      autoScope: { eventId, viewport },
+      transport: transport.stream,
+    });
     openPanel();
-    sendQuestion('Question');
+    sendQuestion('What is on my screen?');
 
     await waitFor(() => expect(transport.calls).toHaveLength(1));
-    completeTurn(transport, [done]);
-    await waitFor(() => expect(transport.calls).toHaveLength(1));
-
-    fireEvent.click(screen.getByRole('button', { name: 'viewport' }));
-    expect(
-      screen
-        .getByRole('button', { name: 'viewport' })
-        .getAttribute('aria-pressed'),
-    ).toBe('true');
+    expect(transport.calls[0].payload.context).toEqual({
+      event_id: eventId,
+      bbox: viewport,
+    });
+    expect(transport.calls[0].payload.scope).toBeUndefined();
   });
 
   it('sends on Enter but not on Shift+Enter', async () => {

@@ -180,11 +180,17 @@ export interface ChatGlobalScope {
 
 export type ChatScope = ChatEventScope | ChatViewportScope | ChatGlobalScope;
 
+export interface ChatMapContext {
+  event_id?: string | null;
+  bbox?: ChatBoundingBox | null;
+}
+
 export interface ChatRequest {
   message: string;
   thread_id: string;
   retry?: boolean;
   scope?: ChatScope;
+  context?: ChatMapContext | null;
 }
 
 export interface ChatSource {

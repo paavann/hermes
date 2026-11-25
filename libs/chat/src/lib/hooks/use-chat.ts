@@ -2,14 +2,14 @@ import { useCallback, useEffect, useRef } from 'react';
 import type {
   ChatBoundingBox,
   ChatError,
+  ChatMapContext,
   ChatRequest,
-  ChatScope,
   ChatSource,
 } from '@hermes/util-types';
 import { isFocusableSource } from '../citations';
 import { useChatConfig } from '../config-context';
 import { findLastUserIndex, useChatStore } from '../store/chat-store';
-import type { ChatMessage, ChatScopeMode } from '../store/chat-store';
+import type { ChatMessage } from '../store/chat-store';
 import {
   ChatTransportErr,
   chatErrorFromTransport,
@@ -35,8 +35,6 @@ export interface UseChatResult {
   messages: ChatMessage[];
   isOpen: boolean;
   isStreaming: boolean;
-  scope: ChatScope;
-  scopeMode: ChatScopeMode;
   open: () => void;
   close: () => void;
   toggle: () => void;
@@ -44,22 +42,18 @@ export interface UseChatResult {
   retry: () => void;
   cancel: () => void;
   clear: () => void;
-  setScopeOverride: (mode: ChatScopeMode) => void;
   activateCitation: (source: ChatSource) => void;
 }
 
-/** Resolve the request scope from the session mode and current map defaults. */
-export function resolveScope(
-  mode: ChatScopeMode,
-  { eventId, viewport: bbox }: AutoScope,
-): ChatScope {
-  if ((mode === 'auto' || mode === 'event') && eventId !== null) {
-    return { type: 'event', event_id: eventId };
-  }
-  if (mode !== 'global' && bbox !== null) {
-    return { type: 'viewport', bbox };
-  }
-  return { type: 'global' };
+/** Build backend map context from the currently open popup and visible viewport. */
+export function buildMapContext({
+  eventId,
+  viewport: bbox,
+}: AutoScope): ChatMapContext {
+  return {
+    event_id: eventId,
+    bbox,
+  };
 }
 
 function normalizeTransportError(error: unknown): ChatError {
@@ -97,8 +91,6 @@ export function useChat({
   const messages = useChatStore((state) => state.messages);
   const isOpen = useChatStore((state) => state.isOpen);
   const isStreaming = useChatStore((state) => state.isStreaming);
-  const scopeMode = useChatStore((state) => state.scopeOverride);
-  const scope = resolveScope(scopeMode, autoScope);
 
   const abortStream = useCallback(() => {
     abortRef.current?.abort();
@@ -147,7 +139,7 @@ export function useChat({
       const payload: ChatRequest = {
         message: content.trim(),
         thread_id: store.threadId,
-        scope: resolveScope(store.scopeOverride, latestRef.current.autoScope),
+        context: buildMapContext(latestRef.current.autoScope),
       };
       if (!store.send(content)) {
         return;
@@ -170,7 +162,7 @@ export function useChat({
       message: store.messages[index].content,
       thread_id: store.threadId,
       retry: true,
-      scope: resolveScope(store.scopeOverride, latestRef.current.autoScope),
+      context: buildMapContext(latestRef.current.autoScope),
     };
     if (!store.retry()) {
       return;
@@ -211,10 +203,6 @@ export function useChat({
     latestRef.current.onSources?.([]);
   }, [abortStream]);
 
-  const setScopeOverride = useCallback((mode: ChatScopeMode) => {
-    useChatStore.getState().setScopeOverride(mode);
-  }, []);
-
   const activateCitation = useCallback((source: ChatSource) => {
     if (source.kind === 'web') {
       if (source.url) {
@@ -233,8 +221,6 @@ export function useChat({
     messages,
     isOpen,
     isStreaming,
-    scope,
-    scopeMode,
     open,
     close,
     toggle,
@@ -242,7 +228,6 @@ export function useChat({
     retry,
     cancel,
     clear,
-    setScopeOverride,
     activateCitation,
   };
 }

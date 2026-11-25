@@ -167,3 +167,24 @@ class TestWorkerAiClientFactory:
             assert res == [None, None]
 
         asyncio.run(run())
+
+
+    def test_create_ai_client_forwards_model_kwargs_and_timeout(self) -> None:
+        settings = _settings(
+            LLM_MODEL_KWARGS={
+                "extra_body": {"chat_template_kwargs": {"enable_thinking": False}}
+            },
+            DESCRIBE_MODEL_KWARGS={"temperature": 0},
+            LLM_REQUEST_TIMEOUT_SECONDS=45.0,
+        )
+        client = create_ai_client(settings)
+
+        assert settings.EVENT_DESCRIBE_BATCH_SIZE == 5
+        describe = client.config.routes["describe"].primary
+        adjudicate = client.config.routes["adjudicate"].primary
+        assert describe.model_kwargs == {"temperature": 0}
+        assert describe.timeout_seconds == 45.0
+        assert adjudicate.model_kwargs == {
+            "extra_body": {"chat_template_kwargs": {"enable_thinking": False}}
+        }
+        assert adjudicate.timeout_seconds == 45.0

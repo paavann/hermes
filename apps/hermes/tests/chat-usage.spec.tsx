@@ -40,7 +40,7 @@ beforeEach(() => {
   useChatStore.setState({
     messages: [],
     isOpen: false,
-    scopeOverride: 'auto',
+    updatedAt: null,
     isStreaming: false,
     activeId: null,
   });

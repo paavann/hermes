@@ -4,6 +4,7 @@ from datetime import UTC, datetime
 from urllib.parse import urljoin
 import feedparser
 import httpx
+from hermes_ai.utils.sanitization import strip_html_text
 from hermes_db.services.source import DueSource
 from hermes_worker.services.fetchers.base import BaseArticleFetcher, ParsedArticle
 
@@ -68,8 +69,10 @@ async def fetch_feed(
             continue
 
         desc_val = entry.get("summary")
-        description = desc_val.strip() if isinstance(desc_val, str) else ""
-        content = _extract_content(entry)
+        raw_desc = desc_val.strip() if isinstance(desc_val, str) else ""
+        description = strip_html_text(raw_desc) if raw_desc else ""
+        raw_content = _extract_content(entry)
+        content = (strip_html_text(raw_content) or None) if raw_content else None
         pub_at = _parse_date(entry)
         articles.append(
             ParsedArticle(

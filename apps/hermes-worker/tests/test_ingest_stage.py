@@ -420,3 +420,36 @@ def test_ingest_stage_insert_count_drives_duplicate_counter(
         assert counters["duplicates"] == 3 - insert_count
 
     asyncio.run(_test())
+
+
+def test_prepare_rows_drops_redundant_title_summary_and_prefers_richer_content() -> None:
+    source = _source()
+    rows, stale, invalid = prepare_rows(
+        source=source,
+        articles=[
+            _article(
+                title="Nvidia chief returns",
+                url="https://news.google.com/rss/articles/CBMiAAA",
+                description='<a href="https://news.google.com">Nvidia chief returns</a> Reuters',
+                content=None,
+            ),
+            _article(
+                title="Port talks resume in Rotterdam",
+                url="https://example.com/port-talks",
+                description="Port talks resume in Rotterdam",
+                content="<p>Dockworkers and port operators resumed talks on Wednesday after a 48-hour stoppage.</p>",
+            ),
+        ],
+        now=datetime.now(UTC),
+        max_age=timedelta(hours=72),
+        future_skew=timedelta(hours=2),
+    )
+
+    assert stale == 0
+    assert invalid == 0
+    assert len(rows) == 2
+    assert rows[0]["feed_summary"] is None
+    assert (
+        rows[1]["feed_summary"]
+        == "Dockworkers and port operators resumed talks on Wednesday after a 48-hour stoppage."
+    )

@@ -574,3 +574,39 @@ def test_search_event_model_validate_normalizes_utc_and_rejects_booleans() -> No
     bad_int_row = {**row, "lexical_rank": False}
     with pytest.raises(ValidationError):
         SearchEvent.model_validate(bad_int_row)
+
+
+def test_browse_viewport_retrieval_skips_fts_and_marks_sufficient() -> None:
+    event_id = uuid.uuid4()
+    row = _event_row(event_id=event_id)
+    row["lexical_rank"] = None
+    row["semantic_rank"] = None
+    row["semantic_similarity"] = None
+    row["rrf"] = 0.0
+    row["importance_norm"] = 1.0
+    row["boost"] = 1.2
+    row["score"] = 1.2
+
+    svc, session = _service(
+        [
+            _Result(mapping_rows=[row]),
+            _Result(mapping_rows=[]),
+            _Result(all_rows=[]),
+        ]
+    )
+    bbox = BoundingBox(north=50.0, south=20.0, east=20.0, west=-20.0)
+    result = asyncio.run(
+        svc.retrieve(
+            "what am I seeing in my screen right now?",
+            scope=SearchScope.VIEWPORT,
+            bbox=bbox,
+            browse=True,
+        )
+    )
+
+    sql = _sql(session.statements[0])
+    assert "websearch_to_tsquery" not in sql
+    assert "ST_Within" in sql
+    assert len(result.events) == 1
+    assert result.coverage.level is CoverageLevel.SUFFICIENT
+    assert SearchDegradedFlag.SEMANTIC_UNAVAILABLE not in result.degraded

@@ -67,6 +67,7 @@ class HermesAi:
             streaming=True,
             temperature=0.2,
             max_tokens=self.config.chat_max_output_tokens,
+            request_timeout=self.config.chat_request_timeout_seconds,
             stream_options={"include_usage": self.config.chat_stream_include_usage},
             model_kwargs=self.config.chat_model_kwargs,
         )
@@ -88,6 +89,8 @@ class HermesAi:
             tools=tools,
             web_search=web_search,
             checkpointer=checkpointer,
+            first_token_timeout_seconds=self.config.chat_first_token_timeout_seconds,
+            total_timeout_seconds=self.config.chat_total_timeout_seconds,
         )
 
     async def __aenter__(self) -> Self:

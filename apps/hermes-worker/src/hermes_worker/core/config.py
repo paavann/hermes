@@ -38,6 +38,8 @@ class Settings(BaseSettings):
     LLM_API_1: SecretStr | None = None
     LLM_MODEL: str = ""
     LLM_MODEL_1: str | None = None
+    LLM_MODEL_KWARGS: dict[str, object] = Field(default_factory=dict)
+    LLM_REQUEST_TIMEOUT_SECONDS: float = Field(default=60.0, gt=0)
 
     # primary and fallback embedding credentials.
     EMBED_API: SecretStr = SecretStr("")
@@ -48,12 +50,16 @@ class Settings(BaseSettings):
     # optional per-task overrides; each falls back to the primary llm route.
     LABEL_MODEL: str | None = None
     LABEL_API: SecretStr | None = None
+    LABEL_MODEL_KWARGS: dict[str, object] | None = None
     ADJUDICATE_MODEL: str | None = None
     ADJUDICATE_API: SecretStr | None = None
+    ADJUDICATE_MODEL_KWARGS: dict[str, object] | None = None
     DESCRIBE_MODEL: str | None = None
     DESCRIBE_API: SecretStr | None = None
+    DESCRIBE_MODEL_KWARGS: dict[str, object] | None = None
     THREAD_MODEL: str | None = None
     THREAD_API: SecretStr | None = None
+    THREAD_MODEL_KWARGS: dict[str, object] | None = None
 
     # rate limits.
     RPM_LIMIT: int = Field(default=26, gt=0)
@@ -87,7 +93,7 @@ class Settings(BaseSettings):
     EVENT_CLUSTER_LLM_PAIRS_PER_RUN: int = Field(default=25, ge=0)
 
     # event description synthesis.
-    EVENT_DESCRIBE_BATCH_SIZE: int = Field(default=10, gt=0, le=20)
+    EVENT_DESCRIBE_BATCH_SIZE: int = Field(default=5, gt=0, le=20)
     EVENT_DESCRIBE_MAX_FAMILIES: int = Field(default=8, gt=0, le=8)
 
     # importance scoring.
@@ -120,6 +126,10 @@ class Settings(BaseSettings):
     ARTICLE_ANALYZE_BATCH_SIZE: int = Field(default=50, gt=0)
     ARTICLE_LABEL_BATCH_SIZE: int = Field(default=10, gt=0, le=20)
     ARTICLE_BODY_MIN_CHARS: int = Field(default=300, ge=0)
+    ARTICLE_FETCH_USER_AGENT: str = (
+        "Mozilla/5.0 (compatible; HermesNewsBot/1.0; "
+        "+https://github.com/paavann/hermes)"
+    )
     ARTICLE_FETCH_CONNECT_TIMEOUT_SECONDS: float = Field(default=5.0, gt=0)
     ARTICLE_FETCH_READ_TIMEOUT_SECONDS: float = Field(default=10.0, gt=0)
     ARTICLE_FETCH_MAX_BYTES: int = Field(default=2_000_000, gt=0)

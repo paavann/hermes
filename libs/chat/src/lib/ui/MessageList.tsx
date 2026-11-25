@@ -3,7 +3,7 @@ import { useEffect, useRef } from 'react';
 
 import type { ChatSource } from '@hermes/util-types';
 
-import type { ChatMessage, ChatScopeMode } from '../store/chat-store';
+import type { ChatMessage } from '../store/chat-store';
 import { MessageBubble } from './MessageBubble';
 
 export interface MessageListProps {
@@ -12,7 +12,6 @@ export interface MessageListProps {
   onRetry: () => void;
   onCitationActivate?: (source: ChatSource) => void;
   onSendPrompt?: (prompt: string) => void;
-  scopeMode?: ChatScopeMode;
 }
 
 const QUICK_QUERIES: readonly {
@@ -23,7 +22,7 @@ const QUICK_QUERIES: readonly {
   {
     index: '01',
     label: 'CRITICAL INCIDENTS',
-    prompt: 'Identify and detail high-severity incidents in the current scope.',
+    prompt: 'Identify and detail top high-severity global incidents.',
   },
   {
     index: '02',
@@ -44,7 +43,6 @@ export function MessageList({
   onRetry,
   onCitationActivate,
   onSendPrompt,
-  scopeMode = 'auto',
 }: MessageListProps): React.JSX.Element {
   const endRef = useRef<HTMLDivElement>(null);
 
@@ -64,9 +62,6 @@ export function MessageList({
               <span className="h-1.5 w-1.5 bg-neon-blue" aria-hidden="true" />
               <span>BRIEFING</span>
             </span>
-            <span className="tabular-nums text-slate-muted/40">
-              SCOPE · {scopeMode.toUpperCase()}
-            </span>
           </div>
 
           <div className="space-y-4 p-4">
@@ -75,8 +70,8 @@ export function MessageList({
                 Intelligence briefing
               </p>
               <p className="mt-2 text-[10px] leading-relaxed text-slate-muted/70">
-                Synthesize events, casualties, and critical developments within
-                the current map scope.
+                Synthesize events, casualties, and critical developments across
+                global reporting or ask what is on your screen.
               </p>
             </div>
 
@@ -84,7 +79,7 @@ export function MessageList({
               type="button"
               onClick={() =>
                 onSendPrompt?.(
-                  'Provide a concise situation briefing summarizing all recent events and developments in the current map scope.',
+                  'Provide a concise global situation briefing summarizing recent events and key developments.',
                 )
               }
               disabled={isStreaming}

@@ -775,3 +775,40 @@ def test_usage_is_not_shared_between_services() -> None:
     second = LlmService(_task_config())
 
     assert first.usage is not second.usage
+
+
+def test_model_target_forwards_model_kwargs_and_timeout_to_deployment() -> None:
+    cfg = AiConfig(
+        routes={
+            "describe": ModelRoute(
+                primary=ModelTarget(
+                    model="nvidia_nim/nvidia/nemotron-3.5-lightning-30b-a3b",
+                    api_key="primary-key",
+                    rpm=26,
+                    model_kwargs={
+                        "extra_body": {
+                            "chat_template_kwargs": {"enable_thinking": False}
+                        }
+                    },
+                    timeout_seconds=60.0,
+                ),
+                fallbacks=(
+                    ModelTarget(
+                        model="gemini/gemini-2.5-flash",
+                        api_key="fallback-key",
+                        rpm=26,
+                        timeout_seconds=45.0,
+                    ),
+                ),
+            )
+        }
+    )
+    svc = LlmService(cfg)
+    by_name = {item["model_name"]: item for item in svc.router.model_list}
+
+    assert by_name["describe"]["litellm_params"]["timeout"] == 60.0
+    assert by_name["describe"]["litellm_params"]["extra_body"] == {
+        "chat_template_kwargs": {"enable_thinking": False}
+    }
+    assert by_name["describe-fallback"]["litellm_params"]["timeout"] == 45.0
+    assert "extra_body" not in by_name["describe-fallback"]["litellm_params"]

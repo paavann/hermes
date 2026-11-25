@@ -30,6 +30,7 @@ from hermes_ai.chat.models.retrieval import (
 )
 from hermes_ai.chat.models.scopes import (
     BoundingBox,
+    ChatMapContext,
     ChatRole,
     ChatScope,
     ChatTurn,
@@ -45,6 +46,7 @@ from hermes_ai.chat.models.sources import (
 
 __all__ = [
     "BoundingBox",
+    "ChatMapContext",
     "ChatPlan",
     "ChatRole",
     "ChatScope",

@@ -60,6 +60,25 @@ class ChatScope(BaseModel):
         return "all eligible plottings."
 
 
+class ChatMapContext(BaseModel):
+    event_id: uuid.UUID | None = None
+    bbox: BoundingBox | None = None
+
+    def describe(self) -> str:
+        parts: list[str] = []
+        if self.event_id is not None:
+            parts.append(f"selected_event_id={self.event_id}")
+        if self.bbox is not None:
+            parts.append(
+                "viewport="
+                f"(north={self.bbox.north}, south={self.bbox.south}, "
+                f"east={self.bbox.east}, west={self.bbox.west})"
+            )
+        if not parts:
+            return "none (no selected event or viewport bounds)."
+        return "; ".join(parts)
+
+
 class ChatTurn(BaseModel):
     role: ChatRole
     content: str = Field(min_length=1, max_length=8000)

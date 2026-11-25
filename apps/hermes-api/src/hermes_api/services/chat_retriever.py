@@ -1,4 +1,5 @@
 from __future__ import annotations
+import asyncio
 import logging
 from collections.abc import Callable
 from typing import Protocol
@@ -30,6 +31,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 
 logger = logging.getLogger(__name__)
+
+EMBED_TIMEOUT_SECONDS = 4.0
 
 
 def _article(article: SearchArticle) -> RetrievedArticle:
@@ -121,7 +124,16 @@ class DbChatRetriever:
 
     async def _embed_query(self, query: str) -> list[float] | None:
         try:
-            embeddings = await self._llm.gen_embeddings([query], input_type="query")
+            async with asyncio.timeout(EMBED_TIMEOUT_SECONDS):
+                embeddings = await self._llm.gen_embeddings(
+                    [query],
+                    input_type="query",
+                )
+        except TimeoutError:
+            logger.warning(
+                "chat query embedding timed out; using lexical retrieval.",
+            )
+            return None
         except Exception as exc:
             logger.warning(
                 "chat query embedding failed; using lexical retrieval: %s.",
@@ -140,8 +152,9 @@ class DbChatRetriever:
         scope: ChatScope,
         filters: RetrievalFilters | None = None,
         recency_intent: bool = False,
+        browse: bool = False,
     ) -> RetrievalResult:
-        embedding = await self._embed_query(query)
+        embedding = None if browse else await self._embed_query(query)
 
         async with self._session_factory() as session:
             service = SearchService(
@@ -151,28 +164,61 @@ class DbChatRetriever:
                 min_semantic_similarity=self._min_semantic_similarity,
                 freshness_hours=self._freshness_hours,
             )
-            result = await service.retrieve(
-                query,
-                scope=SearchScope(scope.type.value),
-                event_id=scope.event_id,
-                bbox=(
-                    BoundingBox(
-                        north=scope.bbox.north,
-                        south=scope.bbox.south,
-                        east=scope.bbox.east,
-                        west=scope.bbox.west,
-                    ) if scope.bbox is not None else None
-                ),
-                filters=(
-                    SearchFilters(
-                        category=filters.category,
-                        start=filters.start,
-                        end=filters.end,
-                    ) if filters is not None else None
-                ),
-                embedding=embedding,
-                recency_intent=recency_intent,
-            )
+            if browse:
+                result = await service.retrieve(
+                    query,
+                    scope=SearchScope(scope.type.value),
+                    event_id=scope.event_id,
+                    bbox=(
+                        BoundingBox(
+                            north=scope.bbox.north,
+                            south=scope.bbox.south,
+                            east=scope.bbox.east,
+                            west=scope.bbox.west,
+                        )
+                        if scope.bbox is not None
+                        else None
+                    ),
+                    filters=(
+                        SearchFilters(
+                            category=filters.category,
+                            start=filters.start,
+                            end=filters.end,
+                        )
+                        if filters is not None
+                        else None
+                    ),
+                    embedding=embedding,
+                    recency_intent=recency_intent,
+                    browse=True,
+                )
+            else:
+                result = await service.retrieve(
+                    query,
+                    scope=SearchScope(scope.type.value),
+                    event_id=scope.event_id,
+                    bbox=(
+                        BoundingBox(
+                            north=scope.bbox.north,
+                            south=scope.bbox.south,
+                            east=scope.bbox.east,
+                            west=scope.bbox.west,
+                        )
+                        if scope.bbox is not None
+                        else None
+                    ),
+                    filters=(
+                        SearchFilters(
+                            category=filters.category,
+                            start=filters.start,
+                            end=filters.end,
+                        )
+                        if filters is not None
+                        else None
+                    ),
+                    embedding=embedding,
+                    recency_intent=recency_intent,
+                )
 
         logger.debug(
             "chat retrieval returned %d events with %s coverage.",

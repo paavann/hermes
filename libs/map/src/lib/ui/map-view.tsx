@@ -5,7 +5,9 @@ import { useMapStore } from '../store/store';
 import { useMapDataSync } from '../hooks/datasync';
 import { CornerReticle } from '@hermes/ui-components';
 
+import { ClusterList } from './components/ClusterList';
 import { EventPopup } from './components/EventPopup';
+import type { PopupInsets } from './components/EventPopup';
 import { StoryPanel } from './components/StoryPanel';
 import { TlPanel } from './components/TlPanel';
 import { EventsLoader } from './components/EventsLoader';
@@ -18,6 +20,7 @@ import { useMapConfig } from '../config-context';
 export interface MapViewProps {
   readonly threadId?: string | null;
   readonly onThreadChange?: (threadId: string | null) => void;
+  readonly popupInsets?: PopupInsets;
 }
 
 const createGeoJson = (events: MapEventResponse[]): FeatureCollection => ({
@@ -37,13 +40,20 @@ const createGeoJson = (events: MapEventResponse[]): FeatureCollection => ({
     })),
 });
 
-export function MapView({ threadId = null, onThreadChange }: MapViewProps) {
+export function MapView({
+  threadId = null,
+  onThreadChange,
+  popupInsets,
+}: MapViewProps) {
   const config = useMapConfig();
   mapboxgl.accessToken = config.mapboxToken;
 
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const [isMapReady, setIsMapReady] = useState(false);
+  const [clusterEvents, setClusterEvents] = useState<MapEventResponse[] | null>(
+    null,
+  );
   const setViewport = useMapStore((state) => state.setViewport);
   const { data: events, isFetching } = useMapDataSync();
   const setSelectedId = useMapStore((s) => s.setSelectedEventId);
@@ -86,20 +96,34 @@ export function MapView({ threadId = null, onThreadChange }: MapViewProps) {
       setIsMapReady(true);
 
       map.current?.on('click', 'hermes-unclustered-point', (e) => {
-        if (e.features && e.features[0] && map.current) {
-          const eventId = e.features[0].properties?.id;
-          if (eventId) {
-            const lngLat: [number, number] = [e.lngLat.lng, e.lngLat.lat];
-            setSelectedId(eventId, lngLat);
+        if (!map.current) return;
+        const rendered = map.current.queryRenderedFeatures(e.point, {
+          layers: ['hermes-unclustered-point'],
+        });
+        const stackedIds = rendered
+          .map((feature) => feature.properties?.id)
+          .filter((id): id is string => typeof id === 'string');
+        if (stackedIds.length === 0) return;
 
-            // Automatically pan the camera so the popup is perfectly centered
-            map.current.easeTo({
-              center: lngLat,
-              duration: 800,
-              easing: (t) => t * (2 - t), // smooth ease out
-            });
-          }
-        }
+        const currentId = useMapStore.getState().selectedEventId;
+        const position = currentId === null ? -1 : stackedIds.indexOf(currentId);
+        const eventId = stackedIds[(position + 1) % stackedIds.length];
+        const feature = rendered.find(
+          (candidate) => candidate.properties?.id === eventId,
+        );
+        const point = feature?.geometry;
+        const lngLat: [number, number] =
+          point?.type === 'Point'
+            ? [point.coordinates[0], point.coordinates[1]]
+            : [e.lngLat.lng, e.lngLat.lat];
+
+        setClusterEvents(null);
+        setSelectedId(eventId, lngLat);
+        map.current.easeTo({
+          center: lngLat,
+          duration: 800,
+          easing: (t) => t * (2 - t), // smooth ease out
+        });
       });
       map.current?.on('mouseenter', 'hermes-unclustered-point', () => {
         if (map.current) map.current.getCanvas().style.cursor = 'pointer';
@@ -130,30 +154,58 @@ export function MapView({ threadId = null, onThreadChange }: MapViewProps) {
         if (map.current) map.current.getCanvas().style.cursor = '';
       });
 
-      // Cluster robotic zoom interaction
+      // Cluster inspection: list every member so collocated pins stay reachable.
       map.current?.on('click', 'hermes-clusters', (e) => {
         const features = map.current?.queryRenderedFeatures(e.point, {
           layers: ['hermes-clusters'],
         });
-        if (!features || !features[0]) return;
+        const clusterFeature = features?.[0];
+        if (!clusterFeature || !map.current) return;
+        const clusterId = Number(clusterFeature.properties?.cluster_id);
+        if (!Number.isFinite(clusterId)) return;
 
-        const clusterId = features[0].properties?.cluster_id;
-        const source = map.current?.getSource(
+        const source = map.current.getSource(
           'events-source',
-        ) as mapboxgl.GeoJSONSource;
+        ) as mapboxgl.GeoJSONSource | undefined;
+        if (!source) return;
 
-        source.getClusterExpansionZoom(clusterId, (err, zoom) => {
-          if (err || !map.current || zoom == null) return;
+        source.getClusterLeaves(clusterId, 200, 0, (err, leaves) => {
+          if (err || !leaves || leaves.length === 0) return;
+          const members = leaves
+            .map((leaf) => leaf.properties)
+            .filter(
+              (properties): properties is MapEventResponse =>
+                properties !== null &&
+                typeof properties.id === 'string' &&
+                typeof properties.ai_headline === 'string' &&
+                typeof properties.category === 'string' &&
+                typeof properties.category_color === 'string' &&
+                typeof properties.importance_score === 'number' &&
+                (properties.location_name === null ||
+                  typeof properties.location_name === 'string') &&
+                typeof properties.longitude === 'number' &&
+                typeof properties.latitude === 'number',
+            )
+            .sort((left, right) => right.importance_score - left.importance_score);
+          if (members.length === 0) return;
 
-          const geometry = features[0].geometry;
-          if (geometry.type === 'Point') {
-            map.current.easeTo({
-              center: geometry.coordinates as [number, number],
-              zoom: zoom,
+          if (members.length === 1) {
+            const [member] = members;
+            const lngLat: [number, number] = [
+              member.longitude,
+              member.latitude,
+            ];
+            setClusterEvents(null);
+            setSelectedId(member.id, lngLat);
+            map.current?.easeTo({
+              center: lngLat,
               duration: 400,
-              easing: (t) => t, // Pure linear easing for robotic feel
+              easing: (t) => t,
             });
+            return;
           }
+
+          setClusterEvents(members);
         });
       });
 
@@ -171,7 +223,7 @@ export function MapView({ threadId = null, onThreadChange }: MapViewProps) {
           ? createGeoJson(events)
           : { type: 'FeatureCollection', features: [] },
         cluster: true,
-        clusterMaxZoom: 14,
+        clusterMaxZoom: 18,
         clusterRadius: 50,
       });
       map.current?.addLayer({
@@ -270,6 +322,19 @@ export function MapView({ threadId = null, onThreadChange }: MapViewProps) {
   }, [events]);
 
   useEffect(() => {
+    if (clusterEvents === null) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setClusterEvents(null);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [clusterEvents]);
+
+  useEffect(() => {
+    if (isTimelineMode) setClusterEvents(null);
+  }, [isTimelineMode]);
+
+  useEffect(() => {
     if (!map.current) return;
 
     const updateCitedSource = () => {
@@ -341,7 +406,31 @@ export function MapView({ threadId = null, onThreadChange }: MapViewProps) {
       <MapHud events={events ?? []} isFetching={isFetching} />
 
       {isMapReady && !isTimelineMode && (
-        <EventPopup map={map.current} onThreadOpen={onThreadChange} />
+        <EventPopup
+          map={map.current}
+          onThreadOpen={onThreadChange}
+          popupInsets={popupInsets}
+        />
+      )}
+      {isMapReady && !isTimelineMode && clusterEvents !== null && (
+        <ClusterList
+          events={clusterEvents}
+          hasRightPanel={threadId !== null}
+          onClose={() => setClusterEvents(null)}
+          onSelect={(event) => {
+            const lngLat: [number, number] = [
+              event.longitude,
+              event.latitude,
+            ];
+            setClusterEvents(null);
+            setSelectedId(event.id, lngLat);
+            map.current?.easeTo({
+              center: lngLat,
+              duration: 400,
+              easing: (t) => t,
+            });
+          }}
+        />
       )}
       {isMapReady && !isTimelineMode && threadId !== null && (
         <StoryPanel

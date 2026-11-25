@@ -7,7 +7,7 @@ from typing import Protocol, Self
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
-from hermes_ai.chat.models.scopes import ChatScope, ChatTurn
+from hermes_ai.chat.models.scopes import ChatMapContext, ChatScope, ChatTurn, ScopeType
 
 
 @dataclass(frozen=True, slots=True)
@@ -24,6 +24,7 @@ class Planner(Protocol):
         *,
         history: Sequence[ChatTurn] = (),
         scope: ChatScope,
+        map_context: ChatMapContext | None = None,
     ) -> PlannerOutcome: ...
 
 
@@ -46,6 +47,8 @@ class ChatPlan(BaseModel):
     needs_web: bool = False
     web_query: str | None = Field(default=None, max_length=400)
     recency_intent: bool = False
+    target_scope: ScopeType | None = None
+    browse: bool = False
 
     @field_validator("query")
     @classmethod

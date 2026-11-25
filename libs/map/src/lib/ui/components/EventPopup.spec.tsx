@@ -223,4 +223,72 @@ describe('EventPopup', () => {
 
     expect(outerClickHandler).not.toHaveBeenCalled();
   });
+
+  it('clamps the popup horizontally outside left rail and open drawer insets', () => {
+    const originalWidth = window.innerWidth;
+    const originalOffsetWidth = Object.getOwnPropertyDescriptor(
+      HTMLElement.prototype,
+      'offsetWidth',
+    );
+    const originalOffsetHeight = Object.getOwnPropertyDescriptor(
+      HTMLElement.prototype,
+      'offsetHeight',
+    );
+    Object.defineProperty(window, 'innerWidth', {
+      configurable: true,
+      value: 1280,
+    });
+    Object.defineProperty(HTMLElement.prototype, 'offsetWidth', {
+      configurable: true,
+      value: 384,
+    });
+    Object.defineProperty(HTMLElement.prototype, 'offsetHeight', {
+      configurable: true,
+      value: 300,
+    });
+
+    const westernMap = {
+      project: vi.fn().mockReturnValue({ x: 30, y: 300 }),
+    } as unknown as MapboxMap;
+
+    try {
+      useMapStore.setState({
+        selectedEventId: 'event-canada-123',
+        selectedEventLngLat: [-122.146, 37.44],
+      });
+
+      const { rerender } = render(
+        <EventPopup map={westernMap} popupInsets={{ left: 48, right: 0 }} />,
+      );
+      const region = screen.getByRole('region', { name: 'Event overview' });
+      const wrapper = region.parentElement as HTMLElement;
+      // minCenterX = 48 (rail) + 20 (padding) + 192 (width/2) = 260
+      expect(wrapper.style.transform).toContain('260px');
+
+      rerender(
+        <EventPopup map={westernMap} popupInsets={{ left: 384, right: 0 }} />,
+      );
+      // minCenterX = 384 (open chat) + 20 (padding) + 192 (width/2) = 596
+      expect(wrapper.style.transform).toContain('596px');
+    } finally {
+      Object.defineProperty(window, 'innerWidth', {
+        configurable: true,
+        value: originalWidth,
+      });
+      if (originalOffsetWidth) {
+        Object.defineProperty(
+          HTMLElement.prototype,
+          'offsetWidth',
+          originalOffsetWidth,
+        );
+      }
+      if (originalOffsetHeight) {
+        Object.defineProperty(
+          HTMLElement.prototype,
+          'offsetHeight',
+          originalOffsetHeight,
+        );
+      }
+    }
+  });
 });

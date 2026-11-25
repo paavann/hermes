@@ -71,7 +71,7 @@ export function ChatComposer({
           type="button"
           onClick={() =>
             onSend(
-              'Provide a concise situation briefing summarizing all recent events and developments in the current map scope.',
+              'Provide a concise global situation briefing summarizing recent events and key developments.',
             )
           }
           disabled={isStreaming}

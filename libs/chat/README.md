@@ -63,18 +63,7 @@ tab by `useChat` and never move the map.
 
 ## Scope contract
 
-The request scope is resolved from the session mode and the current map state:
-
-| Mode       | Resolution                                                     |
-| :--------- | :------------------------------------------------------------- |
-| `auto`     | selected event, else viewport, else global                     |
-| `event`    | selected event, else viewport, else global                     |
-| `viewport` | current viewport, else global                                  |
-| `global`   | global scope                                                   |
-
-An explicit mode is stored in the Zustand store and persists for the session.
-The underlying event ID and bounding box keep following the map, so an explicit
-`event` or `viewport` choice never freezes a stale value.
+`useChat` attaches `context: { event_id, bbox }` from the live map state to every request and lets the backend infer `event`, `viewport`, or `global` scope during query planning (`global` for vague summaries, `viewport` for screen-view queries, and `event` for selected-event follow-ups).
 
 ## Store
 
@@ -83,12 +72,12 @@ under the `hermes-chat` key:
 
 - `messages`: `{ id, role, content, status, stage, sources, done, error }[]`
 - `threadId`: server-side conversation key, sent as `thread_id`
-- `isOpen`, `isStreaming`, `activeId`, `scopeOverride`
-- `send`, `retry`, `cancel`, `clear`, `setOpen`, `toggleOpen`,
-  `setScopeOverride`, `applyEvent`, `fail`
+- `updatedAt`: epoch millisecond timestamp used to expire idle conversations after 12 hours (`CHAT_PERSIST_TTL_MS`)
+- `isOpen`, `isStreaming`, `activeId`
+- `send`, `retry`, `cancel`, `clear`, `setOpen`, `toggleOpen`, `applyEvent`, `fail`
 
-Only `threadId` and `messages` are persisted. Stale `streaming` messages
-rehydrate as `cancelled`. `clear` empties the conversation and generates a new
+Only `threadId`, `updatedAt`, and `messages` are persisted. Stale `streaming` messages
+rehydrate as `cancelled`, and threads older than `CHAT_PERSIST_TTL_MS` expire cleanly into a fresh `threadId`. `clear` empties the conversation and generates a new
 `threadId`, so the server starts a fresh memory thread.
 
 `stage` mirrors the latest `status` event (`accepted`, `planning`, `retrieving`,

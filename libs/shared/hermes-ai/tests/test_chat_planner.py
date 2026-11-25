@@ -9,11 +9,19 @@ from langchain_core.messages import BaseMessage
 from langchain_core.prompt_values import PromptValue
 from langchain_core.runnables import RunnableLambda
 
-from hermes_ai.chat.models import ChatPlan, ChatScope, ChatTurn, ScopeType
+from hermes_ai.chat.models import (
+    BoundingBox,
+    ChatMapContext,
+    ChatPlan,
+    ChatScope,
+    ChatTurn,
+    ScopeType,
+)
 from hermes_ai.chat.planner import (
     ChatPlanner,
     fallback_plan,
     render_history,
+    resolve_scope,
     sanitize_history,
 )
 from hermes_ai.core.config import AiConfig, ModelRoute, ModelTarget
@@ -265,3 +273,63 @@ def test_planner_isolates_history_and_question_with_per_turn_boundaries() -> Non
 def test_fallback_plan_strips_invisible_characters() -> None:
     plan = fallback_plan("  port\u200b\x00   strike\u202e  ")
     assert plan.query == "port strike"
+
+
+def test_resolve_scope_infers_global_viewport_and_event() -> None:
+    event_id = uuid.uuid4()
+    bbox = BoundingBox(north=45.0, south=25.0, east=-70.0, west=-125.0)
+    map_context = ChatMapContext(event_id=event_id, bbox=bbox)
+
+    global_scope, global_browse = resolve_scope(
+        "Summarize events",
+        ChatPlan(query="recent events"),
+        explicit_scope=None,
+        map_context=map_context,
+    )
+    assert global_scope.type is ScopeType.GLOBAL
+    assert global_browse is True
+
+    vp_scope, vp_browse = resolve_scope(
+        "what are the events am I seeing in my screen right now?",
+        ChatPlan(query="visible events", target_scope=ScopeType.EVENT),
+        explicit_scope=None,
+        map_context=map_context,
+    )
+    assert vp_scope.type is ScopeType.VIEWPORT
+    assert vp_scope.bbox == bbox
+    assert vp_browse is True
+
+    ev_scope, ev_browse = resolve_scope(
+        "can you tell me more about this event",
+        ChatPlan(query="meta officials", target_scope=ScopeType.EVENT),
+        explicit_scope=None,
+        map_context=map_context,
+    )
+    assert ev_scope.type is ScopeType.EVENT
+    assert ev_scope.event_id == event_id
+    assert ev_browse is False
+
+    topic_scope, topic_browse = resolve_scope(
+        "what is happening in Japan?",
+        ChatPlan(query="Japan news", location="Japan", target_scope=ScopeType.GLOBAL),
+        explicit_scope=None,
+        map_context=map_context,
+    )
+    assert topic_scope.type is ScopeType.GLOBAL
+    assert topic_browse is False
+
+
+def test_fallback_plan_infers_scope_and_browse_from_map_context() -> None:
+    bbox = BoundingBox(north=50.0, south=10.0, east=40.0, west=-10.0)
+    ctx = ChatMapContext(event_id=uuid.uuid4(), bbox=bbox)
+
+    screen_plan = fallback_plan("what I am seeing right now", map_context=ctx)
+    assert screen_plan.target_scope is ScopeType.VIEWPORT
+    assert screen_plan.browse is True
+
+    summary_plan = fallback_plan(
+        "Provide a concise global situation briefing summarizing recent events and key developments.",
+        map_context=ctx,
+    )
+    assert summary_plan.target_scope is ScopeType.GLOBAL
+    assert summary_plan.browse is True

@@ -18,6 +18,7 @@ class ChatRetriever(Protocol):
         scope: ChatScope,
         filters: RetrievalFilters | None = None,
         recency_intent: bool = False,
+        browse: bool = False,
     ) -> RetrievalResult: ...
 
 

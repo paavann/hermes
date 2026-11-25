@@ -12,7 +12,13 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import Runnable
 from langchain_litellm import ChatLiteLLMRouter
 
-from hermes_ai.chat.models import ChatPlan, ChatScope, ChatTurn
+from hermes_ai.chat.models import (
+    ChatMapContext,
+    ChatPlan,
+    ChatScope,
+    ChatTurn,
+    ScopeType,
+)
 from hermes_ai.chat.models.plan import PlannerOutcome
 from hermes_ai.core.config import AiConfig
 from hermes_ai.core.constants import PREDEFINED_CATEGORIES
@@ -34,13 +40,100 @@ MAX_MESSAGE_CHARS = 4000
 MAX_HISTORY_TURNS = 8
 
 CITATION_MARKER_RE = re.compile(r"\[(?:BG|[EATW]\d+)(?:\s*,\s*(?:BG|[EATW]\d+))*\]")
+VIEWPORT_PHRASE_RE = re.compile(
+    r"\b(?:on|in)\s+(?:my|the)?\s*(?:screen|view|viewport)\b"
+    r"|\bwhat\s+(?:i\s+am|i'm|am\s+i)\s+seeing\b"
+    r"|\bcurrently\s+(?:visible|shown)\b"
+    r"|\bvisible\s+(?:events?|pins?|markers?)\b"
+    r"|\bon\s+(?:this|the)\s+map\b",
+    re.IGNORECASE,
+)
+SELECTED_EVENT_PHRASE_RE = re.compile(
+    r"\bthis\s+(?:event|story|incident|report|pin)\b"
+    r"|\bthese\s+sources\b"
+    r"|\btell\s+me\s+more\s+about\s+(?:this|it)\b",
+    re.IGNORECASE,
+)
+_BROWSE_STOP_WORDS = frozenset(
+    {
+        "a",
+        "about",
+        "all",
+        "am",
+        "an",
+        "and",
+        "are",
+        "around",
+        "brief",
+        "briefing",
+        "concise",
+        "current",
+        "currently",
+        "developments",
+        "event",
+        "events",
+        "for",
+        "give",
+        "global",
+        "globally",
+        "happening",
+        "headline",
+        "headlines",
+        "here",
+        "i",
+        "in",
+        "is",
+        "key",
+        "latest",
+        "list",
+        "major",
+        "map",
+        "me",
+        "my",
+        "news",
+        "now",
+        "of",
+        "on",
+        "overview",
+        "please",
+        "provide",
+        "recent",
+        "right",
+        "screen",
+        "seeing",
+        "show",
+        "shown",
+        "situation",
+        "stories",
+        "story",
+        "summarize",
+        "summarizing",
+        "summary",
+        "tell",
+        "the",
+        "these",
+        "this",
+        "top",
+        "update",
+        "updates",
+        "view",
+        "viewport",
+        "visible",
+        "what",
+        "whats",
+        "world",
+        "worldwide",
+    }
+)
 
 PLANNER_SYSTEM_PROMPT = """You are the retrieval planner for a geospatial news \
 assistant. Rewrite the user's latest question into one standalone search query.
 Resolve pronouns and references using the conversation history. Do not answer the
 question. Do not emit latitude or longitude values.
 
-Today is {today}. The active map scope is {scope}.
+Today is {today}.
+Active map scope: {scope}.
+Available map context: {map_context}.
 
 Available category keys: {categories}.
 
@@ -63,6 +156,19 @@ Return a plan with these fields:
 - web_query: a short external search query when needs_web is true.
 - recency_intent: true when the user asks for the latest, today, this week, or
   otherwise emphasizes freshness.
+- target_scope: choose "event", "viewport", or "global":
+  - Choose "viewport" when the user explicitly asks about what is visible on their
+    screen or map view (for example: "in my screen", "on my screen", "what I am
+    seeing right now", "visible events", "in this view") AND viewport bounds are
+    present in map context.
+  - Choose "event" when selected_event_id is present AND the question asks about
+    that selected event ("this event", "tell me more about it", "sources for this",
+    or follow-ups referencing that selected event).
+  - Choose "global" by default for vague or contextless summaries (for example:
+    "summarize events", "what is happening") and for global or out-of-view queries.
+- browse: true when the user asks for a general overview, briefing, or list of top
+  or visible events without searching for a specific topic, entity, or event;
+  otherwise false.
 """
 
 PLANNER_HUMAN_PROMPT = """Conversation so far:
@@ -103,11 +209,80 @@ def render_history(history: Sequence[ChatTurn]) -> str:
     return "\n".join(lines)
 
 
-def fallback_plan(message: str) -> ChatPlan:
+def is_generic_browse_query(message: str) -> bool:
+    tokens = re.findall(r"[a-z0-9]+", message.lower().replace("'", ""))
+    if not tokens:
+        return False
+    remaining = [token for token in tokens if token not in _BROWSE_STOP_WORDS]
+    return not remaining
+
+
+def resolve_scope(
+    message: str,
+    plan: ChatPlan,
+    *,
+    explicit_scope: ChatScope | None,
+    map_context: ChatMapContext | None,
+) -> tuple[ChatScope, bool]:
+    if explicit_scope is not None:
+        return explicit_scope, plan.browse
+
+    generic_browse = is_generic_browse_query(message)
+    if (
+        VIEWPORT_PHRASE_RE.search(message)
+        and map_context is not None
+        and map_context.bbox is not None
+    ):
+        return (
+            ChatScope(type=ScopeType.VIEWPORT, bbox=map_context.bbox),
+            plan.browse or generic_browse,
+        )
+
+    if (
+        plan.target_scope is ScopeType.VIEWPORT
+        and map_context is not None
+        and map_context.bbox is not None
+    ):
+        return (
+            ChatScope(type=ScopeType.VIEWPORT, bbox=map_context.bbox),
+            plan.browse or generic_browse,
+        )
+
+    if (
+        map_context is not None
+        and map_context.event_id is not None
+        and (
+            plan.target_scope is ScopeType.EVENT
+            or (plan.target_scope is None and SELECTED_EVENT_PHRASE_RE.search(message))
+        )
+    ):
+        return ChatScope(type=ScopeType.EVENT, event_id=map_context.event_id), False
+
+    return ChatScope(type=ScopeType.GLOBAL), plan.browse or generic_browse
+
+
+def fallback_plan(
+    message: str, *, map_context: ChatMapContext | None = None
+) -> ChatPlan:
     query = (
         sanitize_query_text(message, limit=MAX_QUERY_CHARS) or "recent plotted events."
     )
-    return ChatPlan(query=query)
+    generic_browse = is_generic_browse_query(message)
+    target_scope: ScopeType | None = None
+    browse = False
+    if map_context is not None:
+        if VIEWPORT_PHRASE_RE.search(message) and map_context.bbox is not None:
+            target_scope = ScopeType.VIEWPORT
+            browse = generic_browse
+        elif (
+            SELECTED_EVENT_PHRASE_RE.search(message)
+            and map_context.event_id is not None
+        ):
+            target_scope = ScopeType.EVENT
+        else:
+            target_scope = ScopeType.GLOBAL
+            browse = generic_browse
+    return ChatPlan(query=query, target_scope=target_scope, browse=browse)
 
 
 class ChatPlanner:
@@ -143,6 +318,7 @@ class ChatPlanner:
                 model="plan",
                 streaming=False,
                 temperature=0,
+                request_timeout=config.chat_request_timeout_seconds,
                 model_kwargs=config.plan_model_kwargs,
             )
             self._runner = cast(
@@ -171,11 +347,15 @@ class ChatPlanner:
         *,
         history: Sequence[ChatTurn] = (),
         scope: ChatScope,
+        map_context: ChatMapContext | None = None,
         now: datetime | None = None,
         boundary: str | None = None,
     ) -> PlannerOutcome:
         current = now or datetime.now(UTC)
         nonce = boundary or generate_boundary()
+        context_text = (
+            map_context.describe() if map_context is not None else scope.describe()
+        )
         history_text = clean_xml_text(
             render_history(sanitize_history(history)),
             preserve_newlines=True,
@@ -195,6 +375,9 @@ class ChatPlanner:
                         "scope": clean_xml_text(
                             scope.describe(), limit=500, escape_quotes=False
                         ),
+                        "map_context": clean_xml_text(
+                            context_text, limit=500, escape_quotes=False
+                        ),
                         "categories": ", ".join(self._categories),
                         "boundary": nonce,
                         "history": history_text,
@@ -206,7 +389,7 @@ class ChatPlanner:
         except Exception as exc:
             logger.warning("chat planner degraded to raw query: %s.", exc)
             return PlannerOutcome(
-                plan=fallback_plan(message),
+                plan=fallback_plan(message, map_context=map_context),
                 degraded=True,
                 failure=str(exc),
             )
@@ -216,6 +399,8 @@ __all__ = [
     "ChatPlanner",
     "PlannerOutcome",
     "fallback_plan",
+    "is_generic_browse_query",
     "render_history",
+    "resolve_scope",
     "sanitize_history",
 ]

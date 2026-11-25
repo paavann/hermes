@@ -12,6 +12,9 @@ from hermes_ai.chat.models import (
     BoundingBox as EngineBoundingBox,
 )
 from hermes_ai.chat.models import (
+    ChatMapContext as EngineMapContext,
+)
+from hermes_ai.chat.models import (
     ChatScope,
     ChatStage,
     DoneEvent,
@@ -36,6 +39,7 @@ from hermes_api.schemas.chat import (
     ChatDoneEvent,
     ChatErrorEvent,
     ChatEventScope,
+    ChatMapContext,
     ChatProvenance,
     ChatRequest,
     ChatSource,
@@ -83,7 +87,8 @@ class PreparedTurn:
     message: str
     thread_id: str
     retry: bool
-    scope: ChatScope
+    scope: ChatScope | None
+    map_context: EngineMapContext | None
     reservation: BudgetReservation
     guards: ChatGuards
     _settled: bool = field(default=False, init=False)
@@ -225,17 +230,27 @@ class ChatService:
             thread_id=str(payload.thread_id),
             retry=payload.retry,
             scope=_engine_scope(payload),
+            map_context=_engine_map_context(payload),
             reservation=reservation,
             guards=guards,
         )
 
     async def stream(self, turn: PreparedTurn, request: Request) -> AsyncIterator[str]:
-        iterator = self._runtime.engine.stream(
-            turn.message,
-            thread_id=turn.thread_id,
-            scope=turn.scope,
-            retry=turn.retry,
-        )
+        if turn.map_context is not None:
+            iterator = self._runtime.engine.stream(
+                turn.message,
+                thread_id=turn.thread_id,
+                scope=turn.scope,
+                map_context=turn.map_context,
+                retry=turn.retry,
+            )
+        else:
+            iterator = self._runtime.engine.stream(
+                turn.message,
+                thread_id=turn.thread_id,
+                scope=turn.scope,
+                retry=turn.retry,
+            )
         pending: asyncio.Task[EngineEvent] | None = None
         disconnect_task: asyncio.Task[None] = asyncio.create_task(
             _wait_disconnect(request)
@@ -318,8 +333,10 @@ class ChatService:
                     turn.settle(None)
 
 
-def _engine_scope(payload: ChatRequest) -> ChatScope:
+def _engine_scope(payload: ChatRequest) -> ChatScope | None:
     scope = payload.scope
+    if scope is None:
+        return None if payload.context is not None else ChatScope(type=ScopeType.GLOBAL)
     if isinstance(scope, ChatEventScope):
         return ChatScope(type=ScopeType.EVENT, event_id=scope.event_id)
     if isinstance(scope, ChatViewportScope):
@@ -333,6 +350,23 @@ def _engine_scope(payload: ChatRequest) -> ChatScope:
             ),
         )
     return ChatScope(type=ScopeType.GLOBAL)
+
+
+def _engine_map_context(payload: ChatRequest) -> EngineMapContext | None:
+    context: ChatMapContext | None = payload.context
+    if context is None:
+        return None
+    bbox = (
+        EngineBoundingBox(
+            north=context.bbox.north,
+            south=context.bbox.south,
+            east=context.bbox.east,
+            west=context.bbox.west,
+        )
+        if context.bbox is not None
+        else None
+    )
+    return EngineMapContext(event_id=context.event_id, bbox=bbox)
 
 
 def _usage_tokens(usage: EngineUsage | None) -> int | None:

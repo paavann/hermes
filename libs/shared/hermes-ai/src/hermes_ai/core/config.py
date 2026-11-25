@@ -11,6 +11,8 @@ class ModelTarget:
     api_key: str
     rpm: int | None = None
     tpm: int | None = None
+    model_kwargs: dict[str, object] = field(default_factory=dict)
+    timeout_seconds: float | None = None
 
 
 @dataclass(frozen=True)
@@ -36,6 +38,9 @@ class AiConfig:
 
     chat_stream_include_usage: bool = True
     chat_max_output_tokens: int = 1200
+    chat_first_token_timeout_seconds: float = 30.0
+    chat_total_timeout_seconds: float = 120.0
+    chat_request_timeout_seconds: float | None = 20.0
     chat_model_kwargs: dict[str, object] = field(default_factory=dict)
     plan_model_kwargs: dict[str, object] = field(default_factory=dict)
     web_timeout_seconds: float = 8.0

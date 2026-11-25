@@ -66,11 +66,17 @@ class ChatGlobalScope(BaseModel):
 ChatScope = ChatEventScope | ChatViewportScope | ChatGlobalScope
 
 
+class ChatMapContext(BaseModel):
+    event_id: uuid.UUID | None = None
+    bbox: ChatBoundingBox | None = None
+
+
 class ChatRequest(BaseModel):
     message: str = Field(min_length=1, max_length=4000)
     thread_id: uuid.UUID
     retry: bool = False
-    scope: ChatScope = Field(default_factory=ChatGlobalScope)
+    scope: ChatScope | None = None
+    context: ChatMapContext | None = None
 
     @field_validator("message")
     @classmethod
@@ -176,6 +182,7 @@ __all__ = [
     "ChatErrorEvent",
     "ChatEventScope",
     "ChatGlobalScope",
+    "ChatMapContext",
     "ChatProvenance",
     "ChatRequest",
     "ChatScope",

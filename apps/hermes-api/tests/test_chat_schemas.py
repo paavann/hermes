@@ -8,7 +8,7 @@ from hermes_api.schemas.chat import (
     ChatDoneEvent,
     ChatErrorEvent,
     ChatEventScope,
-    ChatGlobalScope,
+    ChatMapContext,
     ChatProvenance,
     ChatRequest,
     ChatSource,
@@ -48,10 +48,35 @@ def test_request_strips_and_rejects_blank_message() -> None:
         ChatRequest(message="   ", thread_id=THREAD_ID)
 
 
-def test_request_defaults_to_global_scope_and_no_retry() -> None:
+def test_request_defaults_to_optional_scope_context_and_no_retry() -> None:
     request = ChatRequest(message="question", thread_id=THREAD_ID)
-    assert isinstance(request.scope, ChatGlobalScope)
+    assert request.scope is None
+    assert request.context is None
     assert request.retry is False
+
+
+def test_request_accepts_map_context_without_explicit_scope() -> None:
+    event_id = "3fa85f64-5717-4562-b3fc-2c963f66afa7"
+    request = ChatRequest.model_validate(
+        {
+            "message": "what am i seeing on my screen?",
+            "thread_id": THREAD_ID,
+            "context": {
+                "event_id": event_id,
+                "bbox": {
+                    "north": 45.0,
+                    "south": 25.0,
+                    "east": -70.0,
+                    "west": -125.0,
+                },
+            },
+        }
+    )
+    assert request.scope is None
+    assert isinstance(request.context, ChatMapContext)
+    assert str(request.context.event_id) == event_id
+    assert request.context.bbox is not None
+    assert request.context.bbox.west == -125.0
 
 
 def test_request_accepts_retry() -> None:
@@ -129,6 +154,7 @@ def test_request_json_snapshot() -> None:
             "type": "viewport",
             "bbox": {"north": 60.0, "south": 30.0, "east": 60.0, "west": 20.0},
         },
+        "context": None,
     }
 
 

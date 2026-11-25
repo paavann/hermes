@@ -78,6 +78,9 @@ class Settings(BaseSettings):
     CHAT_MODEL_KWARGS: dict[str, object] = Field(default_factory=dict)
     PLAN_MODEL_KWARGS: dict[str, object] = Field(default_factory=dict)
     CHAT_WEB_TIMEOUT_SECONDS: float = 8.0
+    CHAT_FIRST_TOKEN_TIMEOUT_SECONDS: float = 30.0
+    CHAT_TOTAL_TIMEOUT_SECONDS: float = 120.0
+    CHAT_REQUEST_TIMEOUT_SECONDS: float | None = 20.0
     CHAT_STREAM_INCLUDE_USAGE: bool = True
 
     # cors configuration.

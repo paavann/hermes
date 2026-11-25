@@ -3,6 +3,7 @@ import asyncio
 import logging
 from collections.abc import Mapping, Sequence
 from datetime import UTC, datetime, timedelta
+from hermes_ai.utils.sanitization import strip_html_text
 from hermes_db.enums import SourceType
 from hermes_db.services import (
     ArticleLedgerRow,
@@ -32,10 +33,42 @@ MAX_SUMMARY_CHARS: int = 4000
 def build_fetchers(settings: Settings) -> dict[SourceType, BaseArticleFetcher]:
     """Build one fetcher per supported source type for a single run."""
     return {
-        SourceType.RSS: RSSFetcher(user_agent=settings.NOMINATIM_USER_AGENT),
+        SourceType.RSS: RSSFetcher(user_agent=settings.ARTICLE_FETCH_USER_AGENT),
         SourceType.GDELT: GDELTFetcher(settings=settings),
         SourceType.SCRAPE: SitemapFetcher(settings=settings),
     }
+
+
+def _is_redundant_summary(title: str, summary: str) -> bool:
+    norm_title = " ".join(title.lower().split())
+    norm_summary = " ".join(summary.lower().split())
+    if not norm_summary:
+        return True
+    if norm_summary == norm_title:
+        return True
+    if norm_summary.startswith(norm_title):
+        remainder = norm_summary.removeprefix(norm_title).lstrip(" -–—|·•")
+        if len(remainder) <= 45 and len(remainder.split()) <= 5:
+            return True
+    return False
+
+
+def _select_feed_summary(
+    title: str,
+    description: str,
+    content: str | None,
+) -> str | None:
+    clean_desc = strip_html_text(description, limit=MAX_SUMMARY_CHARS)
+    clean_content = (
+        strip_html_text(content, limit=MAX_SUMMARY_CHARS) if content else ""
+    )
+    if _is_redundant_summary(title, clean_desc):
+        if clean_content and not _is_redundant_summary(title, clean_content):
+            return clean_content
+        return None
+    if clean_content and len(clean_content) > len(clean_desc):
+        return clean_content
+    return clean_desc or None
 
 
 def normalize_published_at(
@@ -103,7 +136,7 @@ def prepare_rows(
             continue
         seen.add(digest)
 
-        summary = " ".join(article.description.split())[:MAX_SUMMARY_CHARS]
+        summary = _select_feed_summary(title, article.description, article.content)
 
         rows.append(
             {
@@ -112,7 +145,7 @@ def prepare_rows(
                 "url": article.url,
                 "canonical_url": canonical,
                 "canonical_url_hash": digest,
-                "feed_summary": summary or None,
+                "feed_summary": summary,
                 "published_at": published_at,
                 "language": source.language,
             }

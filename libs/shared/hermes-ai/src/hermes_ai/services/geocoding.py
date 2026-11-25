@@ -80,6 +80,26 @@ def clean_location_name(loc: str) -> str | None:
 
     loc = loc.strip(" ,.-")
     lower_loc = loc.lower()
+    placeholder_names = frozenset(
+        {
+            "place",
+            "a place",
+            "the place",
+            "location",
+            "unspecified",
+            "unknown location",
+            "area",
+            "region",
+            "n/a",
+            "none",
+            "tbd",
+        }
+    )
+    segments = [seg.strip() for seg in lower_loc.split(",") if seg.strip()]
+    if lower_loc in placeholder_names or (
+        segments and segments[0] in placeholder_names
+    ):
+        return None
     unlocatable_tokens = (
         "multiple",
         "various",

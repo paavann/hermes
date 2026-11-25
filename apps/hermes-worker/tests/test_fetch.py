@@ -6,6 +6,7 @@ from hermes_worker.jobs.fetch import (
     BodyFetcher,
     FetchReason,
     IpAddress,
+    decode_legacy_google_news_url,
     is_public_ip,
 )
 
@@ -241,5 +242,74 @@ def test_fetch_rejects_credentials_and_unusual_ports() -> None:
 
         assert credentials.reason == FetchReason.INVALID_URL
         assert port.reason == FetchReason.INVALID_URL
+
+    asyncio.run(_test())
+
+
+def test_decode_legacy_google_news_url_extracts_publisher_link() -> None:
+    import base64
+
+    publisher = "https://www.reuters.com/technology/nvidia-report-2026"
+    payload = b"\x08\x13\"\x35" + publisher.encode("utf-8") + b"\xd2\x01\x00"
+    token = base64.urlsafe_b64encode(payload).decode("ascii").rstrip("=")
+    decoded = decode_legacy_google_news_url(
+        f"https://news.google.com/rss/articles/{token}?oc=5"
+    )
+    assert decoded == publisher
+
+    modern = decode_legacy_google_news_url(
+        "https://news.google.com/rss/articles/AU_yqL_mock_opaque_token"
+    )
+    assert modern is None
+
+
+def test_fetch_resolves_google_news_batchexecute_wrapper() -> None:
+    async def _test() -> None:
+        wrapper_html = (
+            '<html><body><c-wiz data-n-a-id="GN123" data-n-a-ts="1764000000" '
+            'data-n-a-sg="sig_xyz"></c-wiz></body></html>'
+        )
+        batchexecute_body = (
+            ")]}\'\n\n"
+            '[["wrb.fr","Fbv4je","[\\"garturlres\\",\\"https://publisher.example.com/story\\"]",null,null,null,"generic"]]'
+        )
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            if request.url.path == "/robots.txt":
+                return httpx.Response(200, text="User-agent: *\nAllow: /\n")
+            if (
+                request.url.host == "news.google.com"
+                and request.url.path.startswith("/rss/articles/")
+            ):
+                return httpx.Response(
+                    200,
+                    text=wrapper_html,
+                    headers={"content-type": "text/html"},
+                )
+            if (
+                request.url.host == "news.google.com"
+                and request.url.path == "/_/DotsSplashUi/data/batchexecute"
+            ):
+                return httpx.Response(200, text=batchexecute_body)
+            if (
+                request.url.host == "publisher.example.com"
+                and request.url.path == "/story"
+            ):
+                return httpx.Response(
+                    200,
+                    text=ARTICLE_HTML,
+                    headers={"content-type": "text/html"},
+                )
+            return httpx.Response(404)
+
+        async with _client(httpx.MockTransport(handler)) as client:
+            result = await _fetcher(client).fetch(
+                "https://news.google.com/rss/articles/AU_yqL_token?oc=5"
+            )
+
+        assert result.ok
+        assert result.url == "https://publisher.example.com/story"
+        assert result.text is not None
+        assert "magnitude 6.1 earthquake" in result.text
 
     asyncio.run(_test())

@@ -1,4 +1,5 @@
 from __future__ import annotations
+import asyncio
 import logging
 import uuid
 from collections.abc import Sequence
@@ -6,6 +7,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from hermes_ai import (
     DescribeEventInput,
+    DescribeExtractor,
     DescribeMemberFact,
     EventDescription,
 )
@@ -19,7 +21,6 @@ from hermes_db.services import (
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from hermes_worker.jobs.context import (
-    BudgetExhaustedError,
     JobContext,
     StageName,
     StageStats,
@@ -32,6 +33,9 @@ MAX_LOCATIONS = 3
 MAX_HEADLINE_CHARS = 120
 MAX_SUMMARY_CHARS = 900
 MAX_DESCRIBE_ROUNDS = 20
+DESCRIBE_CONCURRENCY = 5
+DESCRIBE_WINDOW_MULTIPLIER = 4
+_GEOCODE_LOCK = asyncio.Lock()
 
 
 @dataclass(frozen=True, slots=True)
@@ -50,13 +54,20 @@ class DescribeStage:
         stats = StageStats()
         processed: set[uuid.UUID] = set()
         rounds = 0
+        batch_size = ctx.settings.EVENT_DESCRIBE_BATCH_SIZE
+        selection_limit = batch_size * DESCRIBE_CONCURRENCY * DESCRIBE_WINDOW_MULTIPLIER
+        semaphore = asyncio.Semaphore(DESCRIBE_CONCURRENCY)
 
         while rounds < MAX_DESCRIBE_ROUNDS:
             if ctx.budget.remaining_llm_calls <= 0:
                 stats.add("budget_exhausted")
                 break
 
-            event_ids = await _candidate_ids(ctx, exclude=processed)
+            event_ids = await _candidate_ids(
+                ctx,
+                exclude=processed,
+                limit=min(selection_limit, ctx.budget.remaining_llm_calls * batch_size),
+            )
             stats.add("candidates", len(event_ids))
             if not event_ids:
                 break
@@ -70,63 +81,98 @@ class DescribeStage:
             if not facts:
                 continue
 
-            try:
-                ctx.budget.reserve_llm_calls(1)
-            except BudgetExhaustedError:
+            batches = [
+                facts[offset : offset + batch_size]
+                for offset in range(0, len(facts), batch_size)
+            ]
+            available = min(len(batches), ctx.budget.remaining_llm_calls)
+            if available < len(batches):
                 stats.add("budget_exhausted")
-                break
-            stats.add("describe_calls")
-            describer = ctx.require_ai().describer
-            inputs = [_describe_input(index, item) for index, item in enumerate(facts)]
-            response = await describer.describe(inputs)
-            if response is None:
-                stats.add("describe_failed")
+                batches = batches[:available]
+            if not batches:
                 break
 
-            by_index = {
-                description.index: description
-                for description in response.descriptions
-            }
-            now = datetime.now(UTC)
-            async with ctx.session_factory() as session:
-                for index, item in enumerate(facts):
-                    event = await session.get(Event, item.event.id)
-                    if event is None:
-                        continue
-                    previous_location = event.location_name
-                    description = by_index.get(index)
-                    if description is None:
-                        _apply_fallback(event, item)
-                        stats.add("described_fallback")
-                    else:
-                        _apply_description(event, description, item.members)
-                        stats.add("described_llm")
-                    if event.location_name and (
-                        description is not None
-                        or event.location_name != previous_location
-                        or event.location is None
-                    ):
-                        geocoded = await _geocode_event(ctx, event, stats)
-                        if not geocoded and (
-                            description is not None
-                            or event.location_name != previous_location
-                        ):
-                            event.location = None
-                    event.member_hash = item.hash
-                    event.version += 1
-                    event.last_updated_at = now
-                await session.commit()
+            ctx.budget.reserve_llm_calls(len(batches))
+            stats.add("describe_calls", len(batches))
+            describer = ctx.require_ai().describer
+            await asyncio.gather(
+                *(
+                    self._run_limited_batch(
+                        semaphore, ctx, describer, batch, stats
+                    )
+                    for batch in batches
+                )
+            )
 
         if rounds >= MAX_DESCRIBE_ROUNDS:
             stats.add("max_rounds")
         stats.add("pending_remaining", await _pending_count(ctx))
         return stats
 
+    async def _run_limited_batch(
+        self,
+        semaphore: asyncio.Semaphore,
+        ctx: JobContext,
+        describer: DescribeExtractor,
+        batch: Sequence[_EventFacts],
+        stats: StageStats,
+    ) -> None:
+        async with semaphore:
+            await self._describe_batch(ctx, describer, batch, stats)
+
+    @staticmethod
+    async def _describe_batch(
+        ctx: JobContext,
+        describer: DescribeExtractor,
+        facts: Sequence[_EventFacts],
+        stats: StageStats,
+    ) -> None:
+        inputs = [_describe_input(index, item) for index, item in enumerate(facts)]
+        response = await describer.describe(inputs)
+        if response is None:
+            stats.add("describe_failed")
+            return
+
+        by_index = {
+            description.index: description
+            for description in response.descriptions
+        }
+        now = datetime.now(UTC)
+        async with ctx.session_factory() as session:
+            for index, item in enumerate(facts):
+                event = await session.get(Event, item.event.id)
+                if event is None:
+                    continue
+                previous_location = event.location_name
+                description = by_index.get(index)
+                if description is None:
+                    _apply_fallback(event, item)
+                    stats.add("described_fallback")
+                else:
+                    _apply_description(event, description, item.members)
+                    stats.add("described_llm")
+                if event.location_name and (
+                    description is not None
+                    or event.location_name != previous_location
+                    or event.location is None
+                ):
+                    geocoded = await _geocode_event(ctx, event, stats)
+                    if not geocoded and (
+                        description is not None
+                        or event.location_name != previous_location
+                    ):
+                        event.location = None
+                event.member_hash = item.hash
+                event.version += 1
+                event.last_updated_at = now
+            await session.commit()
+
 
 async def _candidate_ids(
     ctx: JobContext,
     *,
     exclude: set[uuid.UUID],
+    limit: int,
 ) -> list[uuid.UUID]:
     stmt = (
         select(Event.id)
@@ -138,7 +184,7 @@ async def _candidate_ids(
             Event.latest_published_at.desc().nulls_last(),
             Event.first_reported_at.desc(),
         )
-        .limit(ctx.settings.EVENT_DESCRIBE_BATCH_SIZE)
+        .limit(limit)
     )
     if exclude:
         stmt = stmt.where(Event.id.notin_(exclude))
@@ -338,7 +384,9 @@ async def _geocode_event(
     geocoder = ctx.require_geocoder()
     for name, code in candidates[:MAX_LOCATIONS]:
         effective = code or event.country_code
-        geocoded = await geocoder.geocode(name, country_code=effective)
+        # The geocoder shares one cache session, so serialize cache access.
+        async with _GEOCODE_LOCK:
+            geocoded = await geocoder.geocode(name, country_code=effective)
         if geocoded is None:
             stats.add("geocode_miss")
             continue

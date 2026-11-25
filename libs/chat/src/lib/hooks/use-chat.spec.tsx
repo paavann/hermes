@@ -11,7 +11,7 @@ import type {
 
 import { ChatConfigProvider } from '../config-context';
 import { createThreadId, useChatStore } from '../store/chat-store';
-import { useChat, resolveScope } from './use-chat';
+import { buildMapContext, useChat } from './use-chat';
 import type { AutoScope, ChatStreamFn } from './use-chat';
 import type { StreamChatOptions } from '../types/sse.types';
 
@@ -111,8 +111,8 @@ function resetStore(): void {
   useChatStore.setState({
     messages: [],
     threadId: createThreadId(),
+    updatedAt: null,
     isOpen: false,
-    scopeOverride: 'auto',
     isStreaming: false,
     activeId: null,
   });
@@ -121,48 +121,25 @@ function resetStore(): void {
 
 beforeEach(resetStore);
 
-describe('resolveScope', () => {
-  it('prefers the selected event in auto mode', () => {
-    expect(resolveScope('auto', autoScope)).toEqual({
-      type: 'event',
+describe('buildMapContext', () => {
+  it('builds map context containing both selected event id and viewport bounds', () => {
+    expect(buildMapContext(autoScope)).toEqual({
       event_id: eventSource.event_id,
-    });
-  });
-
-  it('falls back from auto mode to the viewport and then global', () => {
-    expect(resolveScope('auto', { eventId: null, viewport })).toEqual({
-      type: 'viewport',
       bbox: viewport,
     });
-    expect(resolveScope('auto', { eventId: null, viewport: null })).toEqual({
-      type: 'global',
-    });
-  });
-
-  it('honors explicit viewport and global modes', () => {
-    expect(resolveScope('viewport', autoScope)).toEqual({
-      type: 'viewport',
+    expect(buildMapContext({ eventId: null, viewport })).toEqual({
+      event_id: null,
       bbox: viewport,
     });
-    expect(resolveScope('global', autoScope)).toEqual({ type: 'global' });
-  });
-
-  it('downgrades unavailable explicit modes', () => {
-    expect(resolveScope('event', { eventId: null, viewport })).toEqual({
-      type: 'viewport',
-      bbox: viewport,
+    expect(buildMapContext({ eventId: null, viewport: null })).toEqual({
+      event_id: null,
+      bbox: null,
     });
-    expect(resolveScope('event', { eventId: null, viewport: null })).toEqual({
-      type: 'global',
-    });
-    expect(resolveScope('viewport', { eventId: null, viewport: null })).toEqual(
-      { type: 'global' },
-    );
   });
 });
 
 describe('useChat', () => {
-  it('sends the thread id and resolved scope, then applies the stream', async () => {
+  it('sends the thread id and live map context, then applies the stream', async () => {
     const { stream, calls } = createTransport();
     const { result } = renderHook(
       () => useChat({ autoScope, transport: stream }),
@@ -181,7 +158,7 @@ describe('useChat', () => {
     expect(calls[0].payload).toEqual({
       message: 'What changed?',
       thread_id: threadId,
-      scope: { type: 'event', event_id: eventSource.event_id },
+      context: { event_id: eventSource.event_id, bbox: viewport },
     });
     expect(result.current.messages[1]).toMatchObject({
       content: 'Grounded answer [E1].',
@@ -394,7 +371,7 @@ describe('useChat', () => {
     });
   });
 
-  it('sets, persists, and clears the conversation', async () => {
+  it('persists and clears the conversation', async () => {
     const { stream } = createTransport();
     const { result } = renderHook(
       () => useChat({ autoScope, transport: stream }),
@@ -402,20 +379,16 @@ describe('useChat', () => {
     );
 
     act(() => {
-      result.current.setScopeOverride('global');
-    });
-    expect(result.current.scopeMode).toBe('global');
-    expect(result.current.scope).toEqual({ type: 'global' });
-
-    act(() => {
       result.current.send('question');
     });
     await waitFor(() => expect(result.current.isStreaming).toBe(false));
     expect(result.current.messages).toHaveLength(2);
+    expect(useChatStore.getState().updatedAt).toBeTypeOf('number');
 
     act(() => {
       result.current.clear();
     });
     expect(result.current.messages).toEqual([]);
+    expect(useChatStore.getState().updatedAt).toBeNull();
   });
 });

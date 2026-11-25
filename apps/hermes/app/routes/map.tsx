@@ -37,17 +37,23 @@ export const meta: Route.MetaFunction = () => [
 const DynamicMapContainer = lazy(async () => {
   const [
     { MapView, MapConfigProvider, useMapStore },
-    { ChatConfigProvider, ChatPanel },
+    { ChatConfigProvider, ChatPanel, useChatStore },
   ] = await Promise.all([import('@hermes/map'), import('@hermes/chat')]);
 
   function MapWithChat(): React.JSX.Element {
     const selectedEventId = useMapStore((state) => state.selectedEventId);
     const viewport = useMapStore((state) => state.viewport);
     const isTimelineMode = useMapStore((state) => state.isTlMode);
+    const isChatOpen = useChatStore((state) => state.isOpen);
     const focusEvent = useMapStore((state) => state.focusEvent);
     const setCitedEvents = useMapStore((state) => state.setCitedEvents);
     const [searchParams, setSearchParams] = useSearchParams();
     const threadId = searchParams.get('thread');
+    const isChatHidden = isTimelineMode || threadId !== null;
+    const popupInsets = {
+      left: isChatHidden ? 0 : isChatOpen ? 384 : 48,
+      right: !isTimelineMode && threadId !== null ? 384 : 0,
+    };
 
     const handleThreadChange = useCallback(
       (nextThreadId: string | null) => {
@@ -93,8 +99,12 @@ const DynamicMapContainer = lazy(async () => {
         <ChatConfigProvider
           config={{ baseUrl: MAP_CONFIG.baseUrl, apiVer: MAP_CONFIG.apiVer }}
         >
-          <MapView threadId={threadId} onThreadChange={handleThreadChange} />
-          <div hidden={isTimelineMode || threadId !== null}>
+          <MapView
+            threadId={threadId}
+            onThreadChange={handleThreadChange}
+            popupInsets={popupInsets}
+          />
+          <div hidden={isChatHidden}>
             <ChatPanel
               autoScope={{ eventId: selectedEventId, viewport }}
               onSources={handleSources}

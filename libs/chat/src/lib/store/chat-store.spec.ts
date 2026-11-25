@@ -46,8 +46,8 @@ function reset(): void {
   useChatStore.setState({
     messages: [],
     threadId: createThreadId(),
+    updatedAt: null,
     isOpen: false,
-    scopeOverride: 'auto',
     isStreaming: false,
     activeId: null,
   });
@@ -129,9 +129,10 @@ describe('chat store', () => {
     localStorage.setItem(
       'hermes-chat',
       JSON.stringify({
-        version: 1,
+        version: 2,
         state: {
           threadId: 'persisted-thread',
+          updatedAt: Date.now() - 1_000,
           messages: [
             {
               id: 'user-1',
@@ -163,6 +164,38 @@ describe('chat store', () => {
     expect(state.messages).toHaveLength(2);
     expect(state.messages[1].status).toBe('cancelled');
     expect(state.isStreaming).toBe(false);
+  });
+
+  it('expires persisted threads older than the 12-hour TTL', async () => {
+    const expiredAt = Date.now() - 12 * 60 * 60 * 1000 - 5_000;
+    localStorage.setItem(
+      'hermes-chat',
+      JSON.stringify({
+        version: 2,
+        state: {
+          threadId: 'stale-thread-id',
+          updatedAt: expiredAt,
+          messages: [
+            {
+              id: 'user-old',
+              role: 'user',
+              content: 'days old question',
+              status: 'complete',
+              sources: [],
+              done: null,
+              error: null,
+            },
+          ],
+        },
+      }),
+    );
+
+    await useChatStore.persist.rehydrate();
+
+    const state = useChatStore.getState();
+    expect(state.threadId).not.toBe('stale-thread-id');
+    expect(state.messages).toEqual([]);
+    expect(state.updatedAt).toBeNull();
   });
 
   it('retries by replacing the last assistant response', () => {
@@ -197,14 +230,6 @@ describe('chat store', () => {
     expect(state.messages[1].status).toBe('cancelled');
     expect(state.isStreaming).toBe(false);
     expect(state.activeId).toBeNull();
-  });
-
-  it('persists the scope override for the session', () => {
-    useChatStore.getState().setScopeOverride('event');
-    expect(useChatStore.getState().scopeOverride).toBe('event');
-
-    useChatStore.getState().setScopeOverride('global');
-    expect(useChatStore.getState().scopeOverride).toBe('global');
   });
 
   it('applies token, sources, and done events in order', () => {

@@ -9,8 +9,9 @@ import type {
   ChatStreamEvent,
 } from '@hermes/util-types';
 
-export type ChatScopeMode = 'auto' | 'event' | 'viewport' | 'global';
 export type ChatMessageStatus = 'streaming' | 'complete' | 'error' | 'cancelled';
+
+export const CHAT_PERSIST_TTL_MS = 12 * 60 * 60 * 1000;
 
 const CHAT_STAGES = [
   'accepted',
@@ -35,13 +36,12 @@ export interface ChatMessage {
 export interface ChatState {
   messages: ChatMessage[];
   threadId: string;
+  updatedAt: number | null;
   isOpen: boolean;
-  scopeOverride: ChatScopeMode;
   isStreaming: boolean;
   activeId: string | null;
   setOpen: (open: boolean) => void;
   toggleOpen: () => void;
-  setScopeOverride: (mode: ChatScopeMode) => void;
   send: (content: string) => string | null;
   retry: () => string | null;
   cancel: () => void;
@@ -52,6 +52,7 @@ export interface ChatState {
 
 interface ChatPersistedState {
   threadId: string;
+  updatedAt?: number | null;
   messages: PersistedChatMessage[];
 }
 
@@ -73,8 +74,8 @@ export function createThreadId(): string {
 export const INITIAL_CHAT_STATE = {
   messages: [] as ChatMessage[],
   threadId: createThreadId(),
+  updatedAt: null as number | null,
   isOpen: false,
-  scopeOverride: 'auto' as ChatScopeMode,
   isStreaming: false,
   activeId: null as string | null,
 };
@@ -149,6 +150,16 @@ function isPersistedState(value: unknown): value is ChatPersistedState {
   );
 }
 
+function isPersistedExpired(
+  updatedAt: unknown,
+  now: number = Date.now(),
+): boolean {
+  if (typeof updatedAt !== 'number' || !Number.isFinite(updatedAt)) {
+    return true;
+  }
+  return now - updatedAt > CHAT_PERSIST_TTL_MS;
+}
+
 function updateMessage(
   messages: ChatMessage[],
   activeId: string | null,
@@ -171,6 +182,7 @@ export const useChatStore = create<ChatState>()(
       ): void => {
         set((state) => ({
           ...storePatch,
+          updatedAt: Date.now(),
           messages: updateMessage(state.messages, state.activeId, updater),
         }));
       };
@@ -187,7 +199,6 @@ export const useChatStore = create<ChatState>()(
 
         setOpen: (isOpen) => set({ isOpen }),
         toggleOpen: () => set((state) => ({ isOpen: !state.isOpen })),
-        setScopeOverride: (scopeOverride) => set({ scopeOverride }),
 
         send: (content) => {
           const trimmed = content.trim();
@@ -210,6 +221,7 @@ export const useChatStore = create<ChatState>()(
               },
               assistant,
             ],
+            updatedAt: Date.now(),
             isStreaming: true,
             activeId: assistant.id,
           }));
@@ -228,6 +240,7 @@ export const useChatStore = create<ChatState>()(
           const assistant = createAssistantMessage();
           set({
             messages: [...state.messages.slice(0, lastUserIdx + 1), assistant],
+            updatedAt: Date.now(),
             isStreaming: true,
             activeId: assistant.id,
             isOpen: true,
@@ -246,6 +259,7 @@ export const useChatStore = create<ChatState>()(
           set({
             messages: [],
             threadId: createThreadId(),
+            updatedAt: null,
             isStreaming: false,
             activeId: null,
           }),
@@ -294,19 +308,27 @@ export const useChatStore = create<ChatState>()(
     },
     {
       name: 'hermes-chat',
-      version: 1,
+      version: 2,
       storage: createJSONStorage<ChatPersistedState>(() => localStorage),
+      migrate: (persisted) => persisted as ChatPersistedState,
       partialize: (state) => ({
         threadId: state.threadId,
+        updatedAt: state.updatedAt,
         messages: state.messages,
       }),
       merge: (persisted, current) => {
-        if (!isPersistedState(persisted)) {
-          return current;
+        if (!isPersistedState(persisted) || isPersistedExpired(persisted.updatedAt)) {
+          return {
+            ...current,
+            messages: [],
+            threadId: createThreadId(),
+            updatedAt: null,
+          };
         }
         return {
           ...current,
           threadId: persisted.threadId || current.threadId,
+          updatedAt: persisted.updatedAt ?? null,
           messages: persisted.messages
             .filter(isPersistedMessage)
             .map((message) => ({

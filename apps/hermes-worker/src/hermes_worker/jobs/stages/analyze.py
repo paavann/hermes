@@ -2,6 +2,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import uuid
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from itertools import batched
 from hermes_ai import ConfigurationError
@@ -25,6 +26,7 @@ from hermes_worker.jobs.fetch import BodyFetcher, FetchResult
 from hermes_worker.jobs.labels import (
     GateDecision,
     LabelPayload,
+    SelectedText,
     build_embedding_text,
     build_label_input,
     build_text_hashes,
@@ -40,6 +42,19 @@ from hermes_worker.jobs.runner import format_error
 
 
 logger = logging.getLogger(__name__)
+
+ANALYZE_CONCURRENCY = 3
+
+
+@dataclass(frozen=True, slots=True)
+class _PreparedGroup:
+    articles: tuple[AnalysisArticle, ...]
+    payloads: dict[uuid.UUID, LabelPayload]
+    decisions: dict[uuid.UUID, GateDecision]
+    vectors: dict[uuid.UUID, list[float]]
+    embedding_texts: dict[uuid.UUID, str]
+    selected: dict[uuid.UUID, SelectedText]
+    failures: tuple[tuple[AnalysisArticle, str], ...]
 
 
 class AnalyzeStage:
@@ -75,7 +90,7 @@ class AnalyzeStage:
 
         owned_fetcher = self._fetcher is None
         fetcher = self._fetcher or BodyFetcher(
-            user_agent=settings.NOMINATIM_USER_AGENT,
+            user_agent=settings.ARTICLE_FETCH_USER_AGENT,
             connect_timeout=settings.ARTICLE_FETCH_CONNECT_TIMEOUT_SECONDS,
             read_timeout=settings.ARTICLE_FETCH_READ_TIMEOUT_SECONDS,
             max_bytes=settings.ARTICLE_FETCH_MAX_BYTES,
@@ -83,35 +98,69 @@ class AnalyzeStage:
             per_host_concurrency=settings.ARTICLE_FETCH_PER_HOST_CONCURRENCY,
             min_body_chars=settings.ARTICLE_BODY_MIN_CHARS,
         )
-        try:
+        groups = [
+            list(group)
             for group in batched(
                 articles,
                 settings.ARTICLE_LABEL_BATCH_SIZE,
                 strict=False,
-            ):
-                try:
-                    await self._process_group(ctx, list(group), fetcher, stats)
-                except BudgetExhaustedError:
-                    await self._release(ctx, [article.id for article in group])
-                    stats.add("budget_exhausted")
-                    logger.warning("llm budget exhausted during analyze.")
-                    return stats
-                except ConfigurationError:
-                    raise
-                except Exception as exc:
-                    logger.error(
-                        "analyze group failed: %s.",
-                        format_error(exc),
-                        exc_info=True,
-                    )
-                    await self._fail_articles(
-                        ctx,
-                        [(article, format_error(exc)) for article in group],
-                        stats,
-                    )
+            )
+        ]
+        semaphore = asyncio.Semaphore(ANALYZE_CONCURRENCY)
+
+        async def prepare(
+            group: list[AnalysisArticle],
+        ) -> _PreparedGroup | None:
+            async with semaphore:
+                return await self._prepare_group(ctx, group, fetcher, stats)
+
+        try:
+            results = await asyncio.gather(
+                *(prepare(group) for group in groups),
+                return_exceptions=True,
+            )
         finally:
             if owned_fetcher:
                 await fetcher.aclose()
+
+        failures: list[tuple[AnalysisArticle, str]] = []
+        budget_exhausted = False
+        for group, result in zip(groups, results, strict=True):
+            if isinstance(result, BaseException):
+                if not isinstance(result, Exception):
+                    raise result
+                if isinstance(result, BudgetExhaustedError):
+                    await self._release(ctx, [article.id for article in group])
+                    budget_exhausted = True
+                    continue
+                if isinstance(result, ConfigurationError):
+                    raise result
+                logger.error(
+                    "analyze group failed: %s.",
+                    format_error(result),
+                    exc_info=True,
+                )
+                failures.extend(
+                    (article, format_error(result)) for article in group
+                )
+                continue
+            if result is None:
+                continue
+            try:
+                await self._persist_group(ctx, result, stats)
+            except Exception as exc:
+                logger.error(
+                    "analyze persistence failed: %s.",
+                    format_error(exc),
+                    exc_info=True,
+                )
+                failures.extend((article, format_error(exc)) for article in group)
+
+        if failures:
+            await self._fail_articles(ctx, failures, stats)
+        if budget_exhausted:
+            stats.add("budget_exhausted")
+            logger.warning("llm budget exhausted during analyze.")
 
         return stats
 
@@ -131,19 +180,17 @@ class AnalyzeStage:
             await session.commit()
         return [article.id for article in claimed]
 
-    async def _process_group(
+    async def _prepare_group(
         self,
         ctx: JobContext,
         articles: list[AnalysisArticle],
         fetcher: BodyFetcher,
         stats: StageStats,
-    ) -> None:
+    ) -> _PreparedGroup | None:
         if not articles:
-            return
-        settings = ctx.settings
+            return None
         ai = ctx.require_ai()
         labeler = ai.labels
-        model_name = labeler.model_name or settings.LLM_MODEL or "unknown"
 
         fetched = await asyncio.gather(
             *(self._fetch_one(fetcher, article, stats) for article in articles)
@@ -273,8 +320,34 @@ class AnalyzeStage:
                     vectors[article.id] = vector
                     stats.add("embedded")
 
+        return _PreparedGroup(
+            articles=tuple(articles),
+            payloads=payloads,
+            decisions=decisions,
+            vectors=vectors,
+            embedding_texts=embedding_text_by_id,
+            selected=selected_by_id,
+            failures=tuple(failures),
+        )
+
+    async def _persist_group(
+        self,
+        ctx: JobContext,
+        prepared: _PreparedGroup,
+        stats: StageStats,
+    ) -> None:
+        settings = ctx.settings
+        labeler = ctx.require_ai().labels
+        model_name = labeler.model_name or settings.LLM_MODEL or "unknown"
         now = datetime.now(UTC)
         candidate_since = now - timedelta(days=settings.ARTICLE_FAMILY_WINDOW_DAYS)
+        accepted = [
+            article
+            for article in prepared.articles
+            if (payload := prepared.payloads.get(article.id)) is not None
+            and not prepared.decisions[article.id].rejected
+        ]
+
         async with ctx.session_factory() as session:
             labels = ArticleLabelService(session)
             analysis = ArticleAnalysisService(session)
@@ -286,8 +359,8 @@ class AnalyzeStage:
                     limit=settings.ARTICLE_FAMILY_MAX_CANDIDATES,
                 )
 
-            for article in articles:
-                payload = payloads.get(article.id)
+            for article in prepared.articles:
+                payload = prepared.payloads.get(article.id)
                 if payload is None:
                     continue
                 await labels.upsert_label(
@@ -296,7 +369,7 @@ class AnalyzeStage:
                     model_name,
                     payload,
                 )
-                decision = decisions[article.id]
+                decision = prepared.decisions[article.id]
                 if decision.rejected:
                     await analysis.finalize(
                         article.id,
@@ -306,7 +379,7 @@ class AnalyzeStage:
                     )
                     continue
 
-                vector = vectors.get(article.id)
+                vector = prepared.vectors.get(article.id)
                 if vector is None:
                     retry_status = (
                         IngestStatus.NEW
@@ -325,12 +398,14 @@ class AnalyzeStage:
                     )
                     continue
 
-                text = selected_by_id[article.id]
+                text = prepared.selected[article.id]
                 await analysis.save_embedding(
                     article.id,
                     model=settings.EMBED_MODEL or "unknown",
                     embedding=vector,
-                    input_hash=embedding_input_hash(embedding_text_by_id[article.id]),
+                    input_hash=embedding_input_hash(
+                        prepared.embedding_texts[article.id]
+                    ),
                 )
                 title_hash, body_hash = build_text_hashes(
                     title=article.title,
@@ -394,8 +469,8 @@ class AnalyzeStage:
                 )
             await session.commit()
 
-        if failures:
-            await self._fail_articles(ctx, failures, stats)
+        if prepared.failures:
+            await self._fail_articles(ctx, list(prepared.failures), stats)
 
     @staticmethod
     def _merge_labels(

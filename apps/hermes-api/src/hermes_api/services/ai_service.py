@@ -109,6 +109,11 @@ class AiService:
                 langfuse_mask_content=config.LANGFUSE_MASK_CONTENT,
                 chat_stream_include_usage=config.CHAT_STREAM_INCLUDE_USAGE,
                 chat_max_output_tokens=config.CHAT_MAX_OUTPUT_TOKENS,
+                chat_first_token_timeout_seconds=(
+                    config.CHAT_FIRST_TOKEN_TIMEOUT_SECONDS
+                ),
+                chat_total_timeout_seconds=config.CHAT_TOTAL_TIMEOUT_SECONDS,
+                chat_request_timeout_seconds=config.CHAT_REQUEST_TIMEOUT_SECONDS,
                 chat_model_kwargs=config.CHAT_MODEL_KWARGS,
                 plan_model_kwargs=config.PLAN_MODEL_KWARGS,
                 web_timeout_seconds=config.CHAT_WEB_TIMEOUT_SECONDS,

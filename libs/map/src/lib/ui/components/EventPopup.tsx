@@ -78,9 +78,15 @@ function formatTimestamp(value: string | null | undefined): string | null {
     .toUpperCase()} UTC`;
 }
 
+export interface PopupInsets {
+  readonly left?: number;
+  readonly right?: number;
+}
+
 export interface EventPopupProps {
   readonly map: mapboxgl.Map | null;
   readonly onThreadOpen?: (threadId: string) => void;
+  readonly popupInsets?: PopupInsets;
 }
 
 const VERIFICATION_LABEL: Record<string, string> = {
@@ -99,7 +105,13 @@ const VERIFICATION_CLASS: Record<string, string> = {
   UNVERIFIED: 'text-slate-muted',
 };
 
-export function EventPopup({ map, onThreadOpen }: EventPopupProps) {
+export function EventPopup({
+  map,
+  onThreadOpen,
+  popupInsets,
+}: EventPopupProps) {
+  const leftInset = Math.max(0, popupInsets?.left ?? 0);
+  const rightInset = Math.max(0, popupInsets?.right ?? 0);
   const selectedEventId = useMapStore((s) => s.selectedEventId);
   const selectedEventLngLat = useMapStore((s) => s.selectedEventLngLat);
   const setSelectedEventId = useMapStore((s) => s.setSelectedEventId);
@@ -181,10 +193,18 @@ export function EventPopup({ map, onThreadOpen }: EventPopupProps) {
         const width = popupRef.current.offsetWidth;
         const height = popupRef.current.offsetHeight;
         const padding = 20;
-        x = Math.max(
-          width / 2 + padding,
-          Math.min(window.innerWidth - width / 2 - padding, x),
-        );
+        const minCenterX = leftInset + padding + width / 2;
+        const maxCenterX = window.innerWidth - rightInset - padding - width / 2;
+        if (minCenterX <= maxCenterX) {
+          x = Math.max(minCenterX, Math.min(maxCenterX, x));
+        } else {
+          const fallbackMin = width / 2 + padding;
+          const fallbackMax = window.innerWidth - width / 2 - padding;
+          x =
+            fallbackMin <= fallbackMax
+              ? Math.max(fallbackMin, Math.min(fallbackMax, x))
+              : window.innerWidth / 2;
+        }
         y = Math.max(
           height / 2 + 68,
           Math.min(window.innerHeight - height / 2 - 42, y),
@@ -202,7 +222,7 @@ export function EventPopup({ map, onThreadOpen }: EventPopupProps) {
 
     updatePosition();
     return () => cancelAnimationFrame(animationFrameId);
-  }, [map, selectedEventLngLat]);
+  }, [map, selectedEventLngLat, leftInset, rightInset]);
 
   useEffect(() => {
     if (event?.ai_summary === undefined || event.ai_summary.length === 0) {

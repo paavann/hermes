@@ -283,3 +283,10 @@ def test_call_nominatim_raises_geocoding_error_on_malformed_json() -> None:
             await service._call_nominatim("Atlantis")
 
     asyncio.run(_run())
+
+
+def test_clean_location_name_rejects_generic_placeholders() -> None:
+    assert clean_location_name("place") is None
+    assert clean_location_name("Place, Japan") is None
+    assert clean_location_name("location") is None
+    assert clean_location_name("Place de la Concorde, Paris") == "Place de la Concorde, Paris"

@@ -7,7 +7,6 @@ import { useChat } from '../hooks/use-chat';
 import type { AutoScope, ChatStreamFn } from '../hooks/use-chat';
 import { ChatComposer } from './ChatComposer';
 import { MessageList } from './MessageList';
-import { ScopeSelector } from './ScopeSelector';
 
 export interface ChatPanelProps {
   autoScope: AutoScope;
@@ -107,15 +106,12 @@ export function ChatPanel({
         </div>
       </header>
 
-      <ScopeSelector mode={chat.scopeMode} onChange={chat.setScopeOverride} />
-
       <MessageList
         messages={chat.messages}
         isStreaming={chat.isStreaming}
         onRetry={chat.retry}
         onCitationActivate={chat.activateCitation}
         onSendPrompt={chat.send}
-        scopeMode={chat.scopeMode}
       />
 
       <ChatComposer

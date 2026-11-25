@@ -11,6 +11,8 @@ from langchain_core.tools import BaseTool
 
 from hermes_ai.chat.engine import ChatEngine
 from hermes_ai.chat.models import (
+    BoundingBox,
+    ChatMapContext,
     ChatPlan,
     ChatRole,
     ChatScope,
@@ -129,6 +131,7 @@ class FakePlanner:
         self._plan = plan
         self.degraded = degraded
         self.calls: list[tuple[str, Sequence[ChatTurn], ChatScope]] = []
+        self.map_contexts: list[ChatMapContext | None] = []
 
     async def plan(
         self,
@@ -136,8 +139,10 @@ class FakePlanner:
         *,
         history: Sequence[ChatTurn] = (),
         scope: ChatScope,
+        map_context: ChatMapContext | None = None,
     ) -> PlannerOutcome:
         self.calls.append((message, history, scope))
+        self.map_contexts.append(map_context)
         return PlannerOutcome(plan=self._plan, degraded=self.degraded)
 
 
@@ -146,6 +151,7 @@ class FakeRetriever:
         self.result = result
         self.delay_seconds = delay_seconds
         self.calls: list[tuple[str, ChatScope, RetrievalFilters | None, bool]] = []
+        self.browse_calls: list[bool] = []
 
     async def retrieve(
         self,
@@ -154,8 +160,10 @@ class FakeRetriever:
         scope: ChatScope,
         filters: RetrievalFilters | None = None,
         recency_intent: bool = False,
+        browse: bool = False,
     ) -> RetrievalResult:
         self.calls.append((query, scope, filters, recency_intent))
+        self.browse_calls.append(browse)
         if self.delay_seconds:
             await asyncio.sleep(self.delay_seconds)
         return self.result
@@ -691,3 +699,56 @@ def test_retry_discards_last_turn_from_the_checkpoint() -> None:
         "HumanMessage",
         "AIMessage",
     ]
+
+
+def test_reasoning_chunks_do_not_trigger_first_token_timeout() -> None:
+    class ReasoningStreamAnswer:
+        def astream(
+            self, _input: Sequence[BaseMessage]
+        ) -> AsyncIterator[BaseMessageChunk]:
+            async def generate() -> AsyncIterator[BaseMessageChunk]:
+                for _ in range(4):
+                    await asyncio.sleep(0.025)
+                    yield AIMessageChunk(
+                        content="",
+                        additional_kwargs={"reasoning_content": "thinking step"},
+                    )
+                yield AIMessageChunk(content="Answer [BG].")
+
+            return generate()
+
+    engine = _engine(
+        planner=FakePlanner(ChatPlan(query="flooding")),
+        retriever=FakeRetriever(_result(events=[_event()])),
+        answer=ReasoningStreamAnswer(),
+        first_token_timeout_seconds=0.05,
+    )
+
+    events = _collect(engine)
+    assert any(isinstance(event, DoneEvent) for event in events)
+    assert not any(isinstance(event, ErrorEvent) for event in events)
+
+
+def test_map_context_switches_planner_scope_and_forwards_browse() -> None:
+    bbox = BoundingBox(north=45.0, south=25.0, east=-70.0, west=-125.0)
+    event_id = uuid.uuid4()
+    planner = FakePlanner(ChatPlan(query="visible events", target_scope=ScopeType.EVENT))
+    retriever = FakeRetriever(_result(events=[_event()]))
+    answer = FakeAnswer([AIMessageChunk(content="Visible events [E1].")])
+    engine = _engine(planner=planner, retriever=retriever, answer=answer)
+
+    async def _run() -> list[EngineEvent]:
+        return [
+            event
+            async for event in engine.stream(
+                "what am I seeing in my screen right now?",
+                thread_id="screen-thread",
+                map_context=ChatMapContext(event_id=event_id, bbox=bbox),
+            )
+        ]
+
+    events = asyncio.run(_run())
+    assert any(isinstance(event, DoneEvent) for event in events)
+    assert retriever.calls[0][1].type is ScopeType.VIEWPORT
+    assert retriever.calls[0][1].bbox == bbox
+    assert retriever.browse_calls == [True]

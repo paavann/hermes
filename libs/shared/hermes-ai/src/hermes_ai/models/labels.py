@@ -162,12 +162,10 @@ class ArticleLabelExtraction(BaseModel):
         description="The occurrence time in ISO 8601 with a timezone.",
     )
     locations: list[LabelLocation] = Field(
-        default_factory=list,
         max_length=3,
         description="At most three location names; never coordinates.",
     )
     entities: list[LabelEntity] = Field(
-        default_factory=list,
         max_length=8,
         description="The most relevant named entities.",
     )
@@ -239,6 +237,19 @@ class ArticleLabelExtraction(BaseModel):
             return None
         cleaned = coerce_to_str(value)
         return cleaned or None
+
+    @model_validator(mode="before")
+    @classmethod
+    def default_required_collections(cls, data: object) -> object:
+        """Keep arrays required in the JSON schema while tolerating omissions."""
+        if not isinstance(data, dict):
+            return data
+        defaults = {
+            key: []
+            for key in ("locations", "entities")
+            if data.get(key) is None
+        }
+        return {**data, **defaults} if defaults else data
 
     @model_validator(mode="after")
     def populate_missing_event_fields(self) -> ArticleLabelExtraction:

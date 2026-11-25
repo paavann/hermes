@@ -326,3 +326,35 @@ class TestFetchFeed:
                 await RSSFetcher().fetch_articles(source)
 
         asyncio.run(run())
+
+    def test_fetch_feed_strips_html_from_summary_and_content(self):
+        rss_xml = """<?xml version="1.0" encoding="UTF-8" ?>
+        <rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+          <channel>
+            <title>Test Feed</title>
+            <item>
+              <title>Nvidia CEO returns</title>
+              <link>https://news.google.com/rss/articles/CBMi123?oc=5</link>
+              <description>&lt;a href="https://news.google.com/rss/articles/CBMi123"&gt;Nvidia CEO returns&lt;/a&gt;&amp;nbsp;&lt;font color="#6f6f6f"&gt;Reuters&lt;/font&gt;</description>
+              <content:encoded>&lt;p&gt;Nvidia chief &lt;b&gt;Jensen Huang&lt;/b&gt; resumed Silicon Valley operations Tuesday.&lt;/p&gt;</content:encoded>
+            </item>
+          </channel>
+        </rss>"""
+
+        async def run():
+            mock_resp = MagicMock()
+            mock_resp.text = rss_xml
+            mock_resp.url = "https://news.google.com/rss/search"
+            mock_resp.raise_for_status = MagicMock()
+
+            with patch("httpx.AsyncClient.get", new_callable=AsyncMock, return_value=mock_resp):
+                articles = await fetch_feed("https://news.google.com/rss/search")
+
+            assert len(articles) == 1
+            assert articles[0].description == "Nvidia CEO returns Reuters"
+            assert (
+                articles[0].content
+                == "Nvidia chief Jensen Huang resumed Silicon Valley operations Tuesday."
+            )
+
+        asyncio.run(run())
