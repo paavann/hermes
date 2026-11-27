@@ -28,23 +28,49 @@ When an event is selected, the map SHALL prominently highlight all relationship 
 - **WHEN** the user closes the selected event popup
 - **THEN** partner target rings clear and visible arcs return to default viewport opacity
 
+### Requirement: High-contrast color-coded relationship arcs with persistent selection styling and glow
+The live map SHALL render `Event <-> Event` arcs using persistent neon type colors (`CAUSED` amber, `FOLLOW_UP` cyan, `REACTION` magenta, `RELATED` violet) preserved across both inactive and selected states, backed by an outer halo glow layer and higher contrast baseline/active opacity instead of collapsing selected links to a single color.
+
+#### Scenario: Relationship arcs preserve distinct type colors when selected
+- **WHEN** the user selects an event that has both an incoming `REACTION` arc and an outgoing `CAUSED` arc
+- **THEN** the `REACTION` arc stays vivid magenta (`#ff4fd8`) and the `CAUSED` arc stays bright amber (`#ffb454`) with increased width and halo glow instead of collapsing both edges to uniform cyan
+
+#### Scenario: Baseline arcs remain clearly readable at global zoom
+- **WHEN** the live map displays viewport relationship edges over satellite terrain and bright map borders with `[LINKS]` enabled
+- **THEN** each arc renders with higher baseline opacity (`~0.70`) and an underlying glow casing so all four relationship types remain immediately distinguishable
+
+### Requirement: Distinct cross-border dashed actor-origin vectors (`WHO` <-> `WHERE`)
+When a plotted event retains a `WHO` actor geocoded in a distinct country or location from the `WHERE` pin, the map SHALL render a dashed geodesic vector from the actor's coordinates to the event pin, displayed subtly when `[LINKS]` is ON and highlighted with non-event diamond/ring Actor Anchor badges on selection or hover.
+
+#### Scenario: Cross-border attack connects actor origin to incident pin without faking a second event
+- **WHEN** an event such as `"Israeli attacks on Gaza kill eight people"` is plotted at `Gaza Strip` with cross-border actor `"Israel"` and `[LINKS]` is enabled
+- **THEN** a dashed actor vector links `Israel`'s coordinates to the `Gaza Strip` event pin in a distinct style from solid `Event <-> Event` arcs, and hovering or selecting the `Gaza Strip` pin illuminates the dashed vector and shows a non-event Actor Anchor badge at `Israel`
+
+#### Scenario: Deselecting hides temporary actor anchor badges while preserving subtle preview
+- **WHEN** the user closes the selected event popup while `[LINKS]` remains ON
+- **THEN** the highlighted Actor Anchor badge clears and cross-border actor vectors return to subtle dashed preview state (or hide entirely when `[LINKS]` is toggled OFF)
+
 ### Requirement: Timeline mode layer isolation
-The map SHALL hide all live relationship arc and connected-partner highlight layers while timeline inspection mode is active and restore them when returning to the live map.
+The map SHALL hide all live relationship arc, halo glow, partner highlight, actor vector, and actor anchor layers while timeline inspection mode is active and restore them when returning to the live map.
 
-#### Scenario: Switching to causal lineage timeline hides live links
+#### Scenario: Switching to causal lineage timeline hides live links and actor vectors
 - **WHEN** the user opens historical timeline mode from an event popup
-- **THEN** live event relationship arcs and partner target rings are hidden until timeline mode closes
+- **THEN** live event relationship arcs, glow halos, partner target rings, actor vectors, and actor anchor badges are hidden until timeline mode closes
 
-### Requirement: Connected-event navigation in event popup
-When an event has one or more active relationships, its detail popup SHALL list each connected event with its directional relationship label, category indicator, headline, location, and rationale, and activating an entry SHALL focus the map on that counterpart event and open its popup.
+### Requirement: Inline link-type legend, retained actors, and color-coded popup badges
+When `[LINKS]` is active in `MapHud`, the HUD SHALL display a compact inline color legend identifying `CAUSED`, `FOLLOW_UP`, `REACTION`, `RELATED`, and dashed cross-border `ACTOR` links; inside `EventPopup`, retained `WHO` actors SHALL appear with role/country badges alongside `WHERE` location, and each `CONNECTED EVENTS` entry SHALL render its relationship badge using the matching type color.
 
-#### Scenario: User navigates from reaction event to primary event
-- **WHEN** the user opens the Islamabad event popup and clicks the connected China Tiangong entry
+#### Scenario: HUD displays link type legend when `[LINKS]` is toggled ON
+- **WHEN** `[LINKS]` is active in the map HUD
+- **THEN** a compact color legend shows the swatches for `CAUSED`, `FOLLOW_UP`, `REACTION`, `RELATED`, and dashed `ACTOR`, and hides cleanly when `[LINKS]` is toggled OFF
+
+#### Scenario: User navigates from reaction event to primary event via color-coded popup entry
+- **WHEN** the user opens the Islamabad event popup and clicks the color-coded connected China Tiangong entry
 - **THEN** the map camera moves to the China event coordinates and opens the China event detail popup
 
-#### Scenario: Event with no relationships omits connected section
-- **WHEN** an event has zero active relationships
-- **THEN** the detail popup renders without an empty connected-events section
+#### Scenario: Event with retained actors displays WHO alongside WHERE in popup
+- **WHEN** the user opens an event popup that retains external or institutional actors (such as `"Israel"` for a Gaza event or `"China"` / `"SUPARCO"` for a Pakistan event)
+- **THEN** the popup displays an `ACTORS` section with each actor's name and role/country while preserving the `WHERE` incident header, and omits `CONNECTED EVENTS` if zero `Event <-> Event` edges exist
 
 ### Requirement: Link indicators on map pins and cluster inspection
 Plotted unclustered pins and cluster inspection entries SHALL indicate when an event participates in one or more relationships so co-located linked events remain discoverable before opening individual popups.

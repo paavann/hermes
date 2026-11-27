@@ -56,3 +56,29 @@ The event-building pipeline SHALL evaluate candidate duplicate event pairs acros
 #### Scenario: Late follow-up duplicate within 48 hours merges before linking
 - **WHEN** a duplicate event pin was updated `36` hours after the original event pin
 - **THEN** reconciliation evaluates and merges the duplicate before relationship analysis runs on active events
+
+### Requirement: Dedicated event-to-event merge adjudication
+Event reconciliation SHALL evaluate gray-band event pairs using a dedicated event-merge adjudication prompt (`merge-v1`) rather than the article-to-event ingestion clustering prompt (`adjudicate-v1`), incorporating retained actors alongside locations and timestamps so multi-outlet coverage of the same official release or single milestone transition merges cleanly without collapsing distinct cross-border reactions.
+
+#### Scenario: Same statistical release with differing secondary entities merges
+- **WHEN** two active UK politics events report the same provisional `77,000` ONS net migration figure for the year ending June 2026 while citing different secondary entities such as `"Home Office"` vs `"Liberal Democrats"`
+- **THEN** event-merge adjudication classifies the pair as `SAME` and collapses them into one canonical event pin
+
+#### Scenario: Scheduled announcement and execution of the same milestone merge
+- **WHEN** one event reports that astronaut `Muhammad Zeeshan Ali` is set to board China's Tiangong space station launching Wednesday and a second event reports that `Zeeshan Ali` boarded China's space station
+- **THEN** event-merge adjudication classifies the two China event cards as `SAME` and merges them into one canonical China event pin
+
+#### Scenario: Distinct regional reaction event stays separate during merge check
+- **WHEN** the China Tiangong boarding event is compared against an Islamabad SUPARCO watch-party event involving crowds in Pakistan
+- **THEN** event-merge adjudication classifies the pair as `DIFFERENT` so both distinct geographic events remain plotted and available for relationship linking
+
+### Requirement: Structured actor inclusion and prompt-version cache isolation
+Pair reconciliation SHALL include retained event actors when computing entity similarity and SHALL isolate merge adjudication decisions under a versioned event-merge key so prior `adjudicate-v1` `DIFFERENT` rejections do not block re-evaluation under `merge-v1`.
+
+#### Scenario: Event whose source articles lacked label entities reconciles via event actors
+- **WHEN** an older event has empty `article_labels.entities` while carrying retained `Event.actors`
+- **THEN** pair reconciliation uses the retained actors for candidate similarity and LLM merge adjudication instead of treating the event as entity-empty
+
+#### Scenario: Prompt version bump re-evaluates previously rejected duplicate pair
+- **WHEN** a pair previously received a cached `DIFFERENT` verdict under `adjudicate-v1` and reconciliation runs after upgrading to `merge-v1`
+- **THEN** the pair hash misses the old cache entry and re-evaluates cleanly under `merge-v1`
