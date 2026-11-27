@@ -9,6 +9,9 @@ from hermes_ai.models.describe import (
     DescribeEventInput,
     DescribeImpact,
     DescribeMemberFact,
+    EventActor,
+    EventActorKind,
+    EventActorRole,
     EventDescription,
     EventDescriptionBatchResponse,
 )
@@ -24,6 +27,14 @@ from hermes_ai.models.labels import (
     LabelEventForm,
     LabelLocation,
     LabelScope,
+)
+from hermes_ai.models.relationship import (
+    RelationshipBatchResponse,
+    RelationshipDecision,
+    RelationshipDirection,
+    RelationshipEvalInput,
+    RelationshipEventSide,
+    RelationshipKind,
 )
 from hermes_ai.models.thread import (
     ThreadAssignment,
@@ -48,6 +59,9 @@ __all__ = [
     "DescribeEventInput",
     "DescribeImpact",
     "DescribeMemberFact",
+    "EventActor",
+    "EventActorKind",
+    "EventActorRole",
     "EventDescription",
     "EventDescriptionBatchResponse",
     "GroundedTlNode",
@@ -65,6 +79,12 @@ __all__ = [
     "PairAdjudicationResponse",
     "PairDecision",
     "PairSide",
+    "RelationshipBatchResponse",
+    "RelationshipDecision",
+    "RelationshipDirection",
+    "RelationshipEvalInput",
+    "RelationshipEventSide",
+    "RelationshipKind",
     "ThreadAssignment",
     "ThreadAssignmentInput",
     "ThreadAssignmentResponse",

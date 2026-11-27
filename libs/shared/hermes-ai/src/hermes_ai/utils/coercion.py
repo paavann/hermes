@@ -20,3 +20,16 @@ def coerce_to_str(v: object) -> str:
             return " ".join(parts)
         case _:
             return str(v).strip()
+
+
+def normalize_enum_token(value: object) -> object:
+    if isinstance(value, str):
+        return value.strip().upper().replace("-", "_").replace(" ", "_")
+    return value
+
+
+def coerce_country_code(value: object) -> str | None:
+    if value is None:
+        return None
+    cleaned = coerce_to_str(value).upper()
+    return cleaned if len(cleaned) == 2 and cleaned.isalpha() else None

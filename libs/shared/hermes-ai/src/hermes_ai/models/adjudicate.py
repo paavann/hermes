@@ -4,6 +4,8 @@ import enum
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from hermes_ai.utils.coercion import normalize_enum_token
+
 
 class PairDecision(enum.StrEnum):
     SAME = "SAME"
@@ -20,6 +22,7 @@ class PairSide(BaseModel):
     fact: str | None = Field(default=None, max_length=400)
     summary: str | None = Field(default=None, max_length=1_500)
     entities: list[str] = Field(default_factory=list, max_length=8)
+    actors: list[str] = Field(default_factory=list, max_length=8)
     location: str | None = Field(default=None, max_length=255)
     occurred_at: str | None = None
     category: str = Field(max_length=100)
@@ -43,9 +46,7 @@ class PairAdjudication(BaseModel):
     @field_validator("decision", mode="before")
     @classmethod
     def normalize_decision(cls, value: object) -> object:
-        if isinstance(value, str):
-            return value.strip().upper().replace("-", "_").replace(" ", "_")
-        return value
+        return normalize_enum_token(value)
 
 
 class PairAdjudicationResponse(BaseModel):

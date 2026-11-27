@@ -18,6 +18,7 @@ from hermes_ai.exceptions import (
 from hermes_ai.extractors.adjudicate import PairAdjudicator
 from hermes_ai.extractors.describe import DescribeExtractor
 from hermes_ai.extractors.labels import LabelExtractor
+from hermes_ai.extractors.relationship import RelationshipExtractor
 from hermes_ai.extractors.thread import ThreadAssigner
 from hermes_ai.extractors.tl import TlExtractor
 from hermes_ai.models.adjudicate import (
@@ -31,6 +32,9 @@ from hermes_ai.models.describe import (
     DescribeEventInput,
     DescribeImpact,
     DescribeMemberFact,
+    EventActor,
+    EventActorKind,
+    EventActorRole,
     EventDescription,
     EventDescriptionBatchResponse,
 )
@@ -46,6 +50,14 @@ from hermes_ai.models.labels import (
     LabelEventForm,
     LabelLocation,
     LabelScope,
+)
+from hermes_ai.models.relationship import (
+    RelationshipBatchResponse,
+    RelationshipDecision,
+    RelationshipDirection,
+    RelationshipEvalInput,
+    RelationshipEventSide,
+    RelationshipKind,
 )
 from hermes_ai.models.thread import (
     ThreadAssignment,
@@ -77,6 +89,10 @@ from hermes_ai.utils.prompts import (
     EVENT_DESCRIBE_SYSTEM_PROMPT,
     PAIR_ADJUDICATION_PROMPT_VERSION,
     PAIR_ADJUDICATION_SYSTEM_PROMPT,
+    PAIR_MERGE_PROMPT_VERSION,
+    PAIR_MERGE_SYSTEM_PROMPT,
+    RELATIONSHIP_PROMPT_VERSION,
+    RELATIONSHIP_SYSTEM_PROMPT,
     THREAD_ASSIGNMENT_PROMPT_VERSION,
     THREAD_ASSIGNMENT_SYSTEM_PROMPT,
     TL_SYSTEM_PROMPT,
@@ -101,6 +117,9 @@ __all__ = [
     "EmbeddingInputType",
     "EVENT_DESCRIBE_PROMPT_VERSION",
     "EVENT_DESCRIBE_SYSTEM_PROMPT",
+    "EventActor",
+    "EventActorKind",
+    "EventActorRole",
     "EventDescription",
     "EventDescriptionBatchResponse",
     "GeocodeCacheProtocol",
@@ -127,6 +146,8 @@ __all__ = [
     "NominatimResilienceManager",
     "PAIR_ADJUDICATION_PROMPT_VERSION",
     "PAIR_ADJUDICATION_SYSTEM_PROMPT",
+    "PAIR_MERGE_PROMPT_VERSION",
+    "PAIR_MERGE_SYSTEM_PROMPT",
     "PairAdjudication",
     "PairAdjudicationInput",
     "PairAdjudicationResponse",
@@ -134,7 +155,16 @@ __all__ = [
     "PairDecision",
     "PairSide",
     "PREDEFINED_CATEGORIES",
+    "RELATIONSHIP_PROMPT_VERSION",
+    "RELATIONSHIP_SYSTEM_PROMPT",
     "RateLimitExceededError",
+    "RelationshipBatchResponse",
+    "RelationshipDecision",
+    "RelationshipDirection",
+    "RelationshipEvalInput",
+    "RelationshipEventSide",
+    "RelationshipExtractor",
+    "RelationshipKind",
     "SchemaValidationError",
     "TL_SYSTEM_PROMPT",
     "TL_TRIAGE_SYSTEM_PROMPT",

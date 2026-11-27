@@ -9,11 +9,15 @@ from hermes_ai.models.describe import (
     DescribeEventInput,
     DescribeImpact,
     DescribeMemberFact,
+    EventActor,
+    EventActorKind,
+    EventActorRole,
     EventDescription,
     EventDescriptionBatchResponse,
 )
 from hermes_ai.models.labels import LabelLocation, LabelScope
 from hermes_ai.services.llm import LlmService
+from hermes_ai.utils.prompts import EVENT_DESCRIBE_PROMPT_VERSION
 
 
 def _config() -> AiConfig:
@@ -182,3 +186,29 @@ def test_describe_keeps_valid_items_if_retry_still_fails_or_errors() -> None:
         assert [desc.index for desc in result.descriptions] == [0]
 
     asyncio.run(_run())
+
+
+def test_describe_retains_structured_actors_separately_from_where_location() -> None:
+    actor = EventActor(
+        name="  Israel  ",
+        kind="state",  # type: ignore[arg-type]
+        role="actor",  # type: ignore[arg-type]
+        location_name="Israel",
+        country_code="il",
+    )
+    desc = EventDescription(
+        index=0,
+        headline="Israeli air strikes kill eight in Gaza Strip",
+        summary="Israeli forces struck targets in the Gaza Strip, killing eight people.",
+        impact_level=DescribeImpact.MAJOR,
+        scope=LabelScope.CITY,
+        locations=[LabelLocation(name="Gaza Strip", country_code="PS")],
+        actors=[actor],
+    )
+
+    assert EVENT_DESCRIBE_PROMPT_VERSION == "describe-v5"
+    assert desc.locations[0].country_code == "PS"
+    assert desc.actors[0].name == "Israel"
+    assert desc.actors[0].kind == EventActorKind.STATE
+    assert desc.actors[0].role == EventActorRole.ACTOR
+    assert desc.actors[0].country_code == "IL"
