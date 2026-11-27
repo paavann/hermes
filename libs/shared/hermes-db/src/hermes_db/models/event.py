@@ -158,8 +158,13 @@ class Event(Base, TimestampMixin, UUIDPrimaryKeyMixin):
     first_seen_at: Mapped[datetime | None] = mapped_column(nullable=True)
     last_member_added_at: Mapped[datetime | None] = mapped_column(nullable=True)
     embedding_model: Mapped[str | None] = mapped_column(String(128), nullable=True)
-    # Ordered primary/secondary location names selected by the describer.
+
     locations: Mapped[list[dict[str, object]]] = mapped_column(
+        JSONB,
+        default=list,
+        server_default="[]",
+    )
+    actors: Mapped[list[dict[str, object]]] = mapped_column(
         JSONB,
         default=list,
         server_default="[]",
@@ -184,7 +189,7 @@ class Event(Base, TimestampMixin, UUIDPrimaryKeyMixin):
         server_default=func.now(), nullable=False
     )
 
-    # Ledger articles grouped under this event. The FK is SET NULL, so there is
+    # ledger articles grouped under this event. The FK is SET NULL, so there is
     # deliberately no ORM delete cascade here.
     articles: Mapped[list[Article]] = relationship(
         back_populates="event",

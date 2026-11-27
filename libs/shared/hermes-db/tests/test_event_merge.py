@@ -6,8 +6,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 from conftest import make_async_session, make_uuid, run
 
-from hermes_db.enums import EventStatus
+from hermes_db.enums import EventRelationshipType, EventScope, EventStatus
 from hermes_db.models.event import Event
+from hermes_db.models.event_relationship import EventRelationship
 from hermes_db.services.event_merge import EventMergeService
 
 
@@ -163,7 +164,7 @@ class TestMerge:
             )
 
         assert merged is True
-        assert session.execute.await_count == 3
+        assert session.execute.await_count == 5
         assert membership.recompute.await_args_list[0].args == (loser.id,)
         assert membership.recompute.await_args_list[1].args == (survivor.id,)
         session.flush.assert_awaited_once()
@@ -224,3 +225,115 @@ class TestMerge:
             )
 
         assert loser.merged_into_id == survivor_id
+
+    def test_repoints_unique_edges_and_deletes_conflicting_edges(self):
+        survivor = _event(event_id=make_uuid())
+        loser = _event(event_id=make_uuid())
+        third_unique = make_uuid()
+        third_shared = make_uuid()
+
+        survivor_to_shared = EventRelationship(
+            id=make_uuid(),
+            source_event_id=survivor.id,
+            target_event_id=third_shared,
+            relationship_type=EventRelationshipType.RELATED,
+            confidence=0.9,
+            rationale="Existing link",
+            pair_hash="h1",
+        )
+        loser_to_unique = EventRelationship(
+            id=make_uuid(),
+            source_event_id=loser.id,
+            target_event_id=third_unique,
+            relationship_type=EventRelationshipType.REACTION,
+            confidence=0.85,
+            rationale="Watch party",
+            pair_hash="h2",
+        )
+        loser_to_shared = EventRelationship(
+            id=make_uuid(),
+            source_event_id=third_shared,
+            target_event_id=loser.id,
+            relationship_type=EventRelationshipType.CAUSED,
+            confidence=0.75,
+            rationale="Duplicate third-party link",
+            pair_hash="h3",
+        )
+
+        empty_result = MagicMock()
+        select_result = MagicMock()
+        select_scalars = MagicMock()
+        select_scalars.all.return_value = [
+            survivor_to_shared,
+            loser_to_unique,
+            loser_to_shared,
+        ]
+        select_result.scalars.return_value = select_scalars
+
+        session = make_async_session()
+        session.scalar = AsyncMock(return_value=None)
+        session.get = AsyncMock(side_effect=[loser, survivor])
+        session.execute = AsyncMock(
+            side_effect=[
+                empty_result,
+                empty_result,
+                empty_result,
+                empty_result,
+                select_result,
+                empty_result,
+            ]
+        )
+
+        aggregate = MagicMock()
+        aggregate.latest_published_at = NOW
+        with patch(
+            "hermes_db.services.event_merge.EventMembershipService"
+        ) as membership_cls:
+            membership_cls.return_value.recompute = AsyncMock(return_value=aggregate)
+            merged = run(
+                EventMergeService(session).merge(
+                    survivor_id=survivor.id,
+                    loser_id=loser.id,
+                    reason="dup",
+                    now=NOW,
+                )
+            )
+
+        assert merged is True
+        assert loser_to_unique.source_event_id == survivor.id
+        assert session.execute.await_count == 6
+        delete_stmt = session.execute.call_args_list[-1].args[0]
+        assert loser_to_shared.id in delete_stmt.compile().params["id_1"]
+
+
+class TestRecentStates:
+    def test_hydrates_actors_on_event_pair_state(self):
+        event_id = make_uuid()
+        row = MagicMock()
+        row.id = event_id
+        row.ai_headline = "Israeli attacks on Gaza"
+        row.ai_summary = "Summary"
+        row.category = "CONFLICT"
+        row.event_time = NOW
+        row.latest_published_at = NOW
+        row.first_reported_at = NOW
+        row.country_code = "PS"
+        row.location_name = "Gaza Strip"
+        row.latitude = 31.54
+        row.longitude = 34.46
+        row.embedding = [0.1, 0.2]
+        row.embedding_model = "embed-1"
+        row.member_hash = "mh"
+        row.article_count = 1
+        row.thread_id = None
+        row.status = EventStatus.ACTIVE
+        row.scope = EventScope.CITY
+        row.actors = [{"name": "Israel", "kind": "STATE", "role": "ACTOR", "country_code": "IL"}]
+
+        session = make_async_session(execute_all=[row])
+        states = run(EventMergeService(session).recent_states(since=NOW, limit=10))
+
+        assert len(states) == 1
+        assert states[0].actors == (
+            {"name": "Israel", "kind": "STATE", "role": "ACTOR", "country_code": "IL"},
+        )

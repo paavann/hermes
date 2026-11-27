@@ -34,6 +34,7 @@ from hermes_db.enums import (
 from hermes_db.models.article import Article
 from hermes_db.models.article_label import ArticleLabel
 from hermes_db.models.event import Event
+from hermes_db.models.event_relationship import EventRelationship
 from hermes_db.models.event_tl import EventTl
 from hermes_db.models.geocode_cache import GeocodeCache
 from hermes_db.models.source import Source
@@ -352,6 +353,7 @@ class TestEventModel:
             "last_member_added_at",
             "embedding_model",
             "locations",
+            "actors",
             "merged_into_id",
             "merged_at",
             "merge_reason",
@@ -379,6 +381,12 @@ class TestEventModel:
     def test_embedding_column_present(self):
         cols = {c.name for c in inspect(Event).columns}
         assert "embedding" in cols
+
+    def test_actors_column_has_empty_array_server_default(self):
+        col = inspect(Event).columns["actors"]
+        assert col.nullable is False
+        assert col.server_default is not None
+        assert col.server_default.arg == "[]"
 
     def test_status_default(self):
         """status column default must be EventStatus.ACTIVE."""
@@ -826,6 +834,7 @@ class TestModelsPackage:
             "Article",
             "ArticleLabel",
             "Event",
+            "EventRelationship",
             "EventTl",
             "Source",
             "Thread",
@@ -840,6 +849,7 @@ class TestModelsPackage:
             "Article",
             "ArticleLabel",
             "Event",
+            "EventRelationship",
             "EventTl",
             "Source",
             "Thread",
@@ -853,9 +863,63 @@ class TestModelsPackage:
                     "articles",
                     "article_labels",
                     "events",
+                    "event_relationships",
                     "event_timelines",
                     "sources",
                     "threads",
                     "geocode_cache",
                 ]
             }
+
+
+# ---------------------------------------------------------------------------
+# EventRelationship
+# ---------------------------------------------------------------------------
+
+
+class TestEventRelationshipModel:
+    def test_tablename(self):
+        assert EventRelationship.__tablename__ == "event_relationships"
+
+    def test_required_columns_present(self):
+        cols = {c.name for c in inspect(EventRelationship).columns}
+        required = {
+            "id",
+            "source_event_id",
+            "target_event_id",
+            "relationship_type",
+            "confidence",
+            "rationale",
+            "pair_hash",
+            "created_at",
+            "updated_at",
+        }
+        assert required.issubset(cols)
+
+    def test_foreign_keys_cascade_on_delete(self):
+        for col_name in ("source_event_id", "target_event_id"):
+            col = inspect(EventRelationship).columns[col_name]
+            assert col.nullable is False
+            fk = next(iter(col.foreign_keys))
+            assert fk.target_fullname == "events.id"
+            assert fk.ondelete == "CASCADE"
+
+    def test_constraints_and_indexes_defined(self):
+        checks = {
+            c.name
+            for c in EventRelationship.__table__.constraints
+            if isinstance(c, CheckConstraint)
+        }
+        assert "ck_event_relationships_no_self_loop" in checks
+        assert "ck_event_relationships_confidence_range" in checks
+
+        indexes = {idx.name: idx for idx in EventRelationship.__table__.indexes}
+        assert "uq_event_relationships_unordered_pair" in indexes
+        assert indexes["uq_event_relationships_unordered_pair"].unique is True
+        assert "idx_event_relationships_source" in indexes
+        assert "idx_event_relationships_target" in indexes
+
+    def test_relationships_use_raise_lazy(self):
+        for rel_name in ("source_event", "target_event"):
+            rel = inspect(EventRelationship).relationships[rel_name]
+            assert rel.lazy == "raise"

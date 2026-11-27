@@ -179,3 +179,15 @@ def test_event_timestamp_defaults_are_utc() -> None:
     event = MagicMock(spec=Event)
     event.first_reported_at = datetime.now(UTC)
     assert event.first_reported_at.tzinfo is UTC
+
+
+def test_relationship_counts_delegates_to_relationship_service() -> None:
+    first = make_uuid()
+    second = make_uuid()
+    session = make_async_session(execute_all=[(first, second)])
+    service = EventService(session)
+
+    counts = run(service.relationship_counts([first, second]))
+
+    assert counts == {first: 1, second: 1}
+    session.execute.assert_awaited_once()

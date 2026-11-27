@@ -337,5 +337,3 @@ class EventMembershipService:
         )
         result = await self._session.execute(stmt)
         return bool(isinstance(result, CursorResult) and result.rowcount)
-
-

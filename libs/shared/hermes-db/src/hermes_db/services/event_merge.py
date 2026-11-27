@@ -6,13 +6,14 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 
 from geoalchemy2.functions import ST_X, ST_Y
-from sqlalchemy import select, update
+from sqlalchemy import and_, delete, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from hermes_db.enums import EventStatus, EventTlStatus
+from hermes_db.enums import EventScope, EventStatus, EventTlStatus
 from hermes_db.models.article import Article
 from hermes_db.models.event import Event
 from hermes_db.models.event_member import EventMember
+from hermes_db.models.event_relationship import EventRelationship
 from hermes_db.models.event_tl import EventTl
 from hermes_db.services.event_membership import EventMembershipService
 from hermes_db.utils.datetime import ensure_utc
@@ -37,6 +38,8 @@ class EventPairState:
     article_count: int
     thread_id: uuid.UUID | None
     status: EventStatus
+    scope: EventScope = EventScope.COUNTRY
+    actors: tuple[dict[str, object], ...] = ()
 
 
 class EventMergeService:
@@ -84,6 +87,8 @@ class EventMergeService:
                 Event.article_count,
                 Event.thread_id,
                 Event.status,
+                Event.scope,
+                Event.actors,
             )
             .where(Event.status.in_([EventStatus.ACTIVE, EventStatus.STALE]))
             .where(Event.merged_into_id.is_(None))
@@ -97,6 +102,10 @@ class EventMergeService:
             embedding: tuple[float, ...] | None = None
             if row.embedding is not None:
                 embedding = tuple(float(value) for value in row.embedding)
+            raw_actors = getattr(row, "actors", None) or ()
+            actors = tuple(
+                dict(actor) for actor in raw_actors if isinstance(actor, dict)
+            )
             states.append(
                 EventPairState(
                     id=row.id,
@@ -126,6 +135,8 @@ class EventMergeService:
                     article_count=row.article_count,
                     thread_id=row.thread_id,
                     status=row.status,
+                    scope=EventScope(row.scope),
+                    actors=actors,
                 )
             )
         return states
@@ -223,6 +234,10 @@ class EventMergeService:
             )
             .execution_options(synchronize_session=False)
         )
+        await self._repoint_relationships(
+            survivor_id=survivor_id,
+            loser_id=loser_id,
+        )
 
         if survivor.thread_id is None and loser.thread_id is not None:
             survivor.thread_id = loser.thread_id
@@ -244,3 +259,62 @@ class EventMergeService:
         survivor.version += 1
         survivor.last_updated_at = moment
         return True
+
+    async def _repoint_relationships(
+        self,
+        *,
+        survivor_id: uuid.UUID,
+        loser_id: uuid.UUID,
+    ) -> None:
+        await self._session.execute(
+            delete(EventRelationship).where(
+                or_(
+                    and_(
+                        EventRelationship.source_event_id == survivor_id,
+                        EventRelationship.target_event_id == loser_id,
+                    ),
+                    and_(
+                        EventRelationship.source_event_id == loser_id,
+                        EventRelationship.target_event_id == survivor_id,
+                    ),
+                )
+            )
+        )
+        stmt = select(EventRelationship).where(
+            or_(
+                EventRelationship.source_event_id == survivor_id,
+                EventRelationship.target_event_id == survivor_id,
+                EventRelationship.source_event_id == loser_id,
+                EventRelationship.target_event_id == loser_id,
+            )
+        )
+        edges = list((await self._session.execute(stmt)).scalars().all())
+        survivor_neighbors: set[uuid.UUID] = set()
+        loser_edges: list[EventRelationship] = []
+        for edge in edges:
+            if edge.source_event_id == survivor_id:
+                survivor_neighbors.add(edge.target_event_id)
+            elif edge.target_event_id == survivor_id:
+                survivor_neighbors.add(edge.source_event_id)
+            else:
+                loser_edges.append(edge)
+
+        duplicate_ids: list[uuid.UUID] = []
+        for edge in loser_edges:
+            other_id = (
+                edge.target_event_id
+                if edge.source_event_id == loser_id
+                else edge.source_event_id
+            )
+            if other_id == survivor_id or other_id in survivor_neighbors:
+                duplicate_ids.append(edge.id)
+                continue
+            survivor_neighbors.add(other_id)
+            if edge.source_event_id == loser_id:
+                edge.source_event_id = survivor_id
+            else:
+                edge.target_event_id = survivor_id
+        if duplicate_ids:
+            await self._session.execute(
+                delete(EventRelationship).where(EventRelationship.id.in_(duplicate_ids))
+            )

@@ -13,6 +13,7 @@ from hermes_db.enums import EventScope, EventStatus, SelectionTier
 from hermes_db.models.article import Article
 from hermes_db.models.event import Event
 from hermes_db.models.thread import Thread
+from hermes_db.services.event_relationship import EventRelationshipService
 
 
 logger = logging.getLogger(__name__)
@@ -153,3 +154,11 @@ class EventService:
                     }
 
         return list(unique_events.values())
+
+    async def relationship_counts(
+        self,
+        event_ids: Sequence[uuid.UUID],
+    ) -> dict[uuid.UUID, int]:
+        return await EventRelationshipService(self._session).counts_for_events(
+            event_ids
+        )

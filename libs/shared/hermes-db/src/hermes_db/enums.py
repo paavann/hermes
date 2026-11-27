@@ -174,3 +174,10 @@ class CredibilityTier(enum.StrEnum):
     TIER_2 = "TIER_2"
     TIER_3 = "TIER_3"
     TIER_4 = "TIER_4"
+
+
+class EventRelationshipType(enum.StrEnum):
+    CAUSED = "CAUSED"
+    FOLLOW_UP = "FOLLOW_UP"
+    REACTION = "REACTION"
+    RELATED = "RELATED"

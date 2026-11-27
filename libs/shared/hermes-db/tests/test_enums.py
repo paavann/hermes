@@ -11,6 +11,7 @@ import pytest
 from hermes_db.enums import (
     ArticleType,
     CredibilityTier,
+    EventRelationshipType,
     EventScope,
     EventStatus,
     EventTlStatus,
@@ -280,3 +281,21 @@ class TestThreadKind:
 class TestThreadStatus:
     def test_all_members_present(self):
         assert {m.value for m in ThreadStatus} == {"ACTIVE", "DORMANT", "ENDED"}
+
+
+# ---------------------------------------------------------------------------
+# EventRelationshipType
+# ---------------------------------------------------------------------------
+
+
+class TestEventRelationshipType:
+    def test_all_members_present(self):
+        expected = {"CAUSED", "FOLLOW_UP", "REACTION", "RELATED"}
+        assert {m.value for m in EventRelationshipType} == expected
+
+    @pytest.mark.parametrize(
+        "value",
+        ["CAUSED", "FOLLOW_UP", "REACTION", "RELATED"],
+    )
+    def test_string_equality(self, value: str):
+        assert EventRelationshipType(value) == value

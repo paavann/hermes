@@ -10,6 +10,7 @@ from .article_label import ArticleLabel
 from .cluster_decision import ClusterDecision
 from .event import Event
 from .event_member import EventMember
+from .event_relationship import EventRelationship
 from .event_tl import EventTl
 from .geocode_cache import GeocodeCache
 from .source import Source
@@ -23,6 +24,7 @@ __all__ = [
     "ClusterDecision",
     "Event",
     "EventMember",
+    "EventRelationship",
     "EventTl",
     "GeocodeCache",
     "Source",

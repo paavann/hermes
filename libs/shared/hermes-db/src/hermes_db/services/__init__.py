@@ -23,6 +23,14 @@ from hermes_db.services.event_membership import (
     MemberRecord,
 )
 from hermes_db.services.event_merge import EventMergeService, EventPairState
+from hermes_db.services.event_relationship import (
+    EventRelationshipService,
+    EventRelationshipView,
+    MapRelationshipView,
+    RelationshipAnchorEvent,
+    RelationshipDirection,
+    canonical_pair_key,
+)
 from hermes_db.services.event_scoring import (
     EventScoreState,
     EventScoringService,
@@ -93,6 +101,8 @@ __all__ = [
     "EventMembershipService",
     "EventMergeService",
     "EventPairState",
+    "EventRelationshipService",
+    "EventRelationshipView",
     "EventScoreState",
     "EventScoringService",
     "EventService",
@@ -101,8 +111,11 @@ __all__ = [
     "GeocodeCacheService",
     "LifecycleResult",
     "MaintenanceService",
+    "MapRelationshipView",
     "MemberEvidence",
     "MemberRecord",
+    "RelationshipAnchorEvent",
+    "RelationshipDirection",
     "RetentionResult",
     "ScoreResult",
     "SearchArticle",
@@ -123,6 +136,7 @@ __all__ = [
     "ThreadService",
     "VerificationResult",
     "canonical_domain_from_url",
+    "canonical_pair_key",
     "compute_score",
     "compute_verification",
     "load_sources_config",
