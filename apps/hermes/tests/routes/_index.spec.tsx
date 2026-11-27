@@ -34,6 +34,8 @@ vi.mock('@hermes/map', () => {
 vi.mock('@hermes/chat', () => ({
   ChatConfigProvider: ({ children }: { children: ReactNode }) => children,
   ChatPanel: () => <div data-testid="chat-panel" />,
+  useChatStore: <T,>(selector: (value: { isOpen: boolean }) => T): T =>
+    selector({ isOpen: false }),
 }));
 
 describe('Map Route', () => {
