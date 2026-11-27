@@ -39,7 +39,7 @@ class Settings(BaseSettings):
     LLM_MODEL: str = ""
     LLM_MODEL_1: str | None = None
     LLM_MODEL_KWARGS: dict[str, object] = Field(default_factory=dict)
-    LLM_REQUEST_TIMEOUT_SECONDS: float = Field(default=60.0, gt=0)
+    LLM_REQUEST_TIMEOUT_SECONDS: float = Field(default=120.0, gt=0)
 
     # primary and fallback embedding credentials.
     EMBED_API: SecretStr = SecretStr("")
@@ -124,7 +124,7 @@ class Settings(BaseSettings):
 
     # article analysis: fetch, labeling, embeddings, families.
     ARTICLE_ANALYZE_BATCH_SIZE: int = Field(default=50, gt=0)
-    ARTICLE_LABEL_BATCH_SIZE: int = Field(default=10, gt=0, le=20)
+    ARTICLE_LABEL_BATCH_SIZE: int = Field(default=5, gt=0, le=20)
     ARTICLE_BODY_MIN_CHARS: int = Field(default=300, ge=0)
     ARTICLE_FETCH_USER_AGENT: str = (
         "Mozilla/5.0 (compatible; HermesNewsBot/1.0; "
