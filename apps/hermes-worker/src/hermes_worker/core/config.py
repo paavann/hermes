@@ -9,7 +9,7 @@ from sqlalchemy import URL
 
 # anchor paths relative to this file rather than the current working directory.
 # adjust `.parents[2]` depending on how deep this file sits inside your repo.
-SERVICE_DIR = Path(__file__).resolve().parent
+SERVICE_DIR = Path(__file__).resolve().parents[3]
 REPO_ROOT = SERVICE_DIR.parents[1]
 
 
@@ -60,6 +60,9 @@ class Settings(BaseSettings):
     THREAD_MODEL: str | None = None
     THREAD_API: SecretStr | None = None
     THREAD_MODEL_KWARGS: dict[str, object] | None = None
+    RELATIONSHIP_MODEL: str | None = None
+    RELATIONSHIP_API: SecretStr | None = None
+    RELATIONSHIP_MODEL_KWARGS: dict[str, object] | None = None
 
     # rate limits.
     RPM_LIMIT: int = Field(default=26, gt=0)
@@ -107,9 +110,18 @@ class Settings(BaseSettings):
     THREAD_MIN_GROUP: int = Field(default=2, ge=2)
 
     # duplicate event reconciliation.
-    EVENT_RECONCILE_WINDOW_HOURS: int = Field(default=24, gt=0)
+    EVENT_RECONCILE_WINDOW_HOURS: int = Field(default=48, gt=0)
     EVENT_RECONCILE_LIMIT: int = Field(default=200, gt=0)
     EVENT_MERGE_LLM_PAIRS_PER_RUN: int = Field(default=10, ge=0)
+
+    # pairwise event relationships.
+    RELATIONSHIP_EVENT_LIMIT: int = Field(default=100, gt=0)
+    RELATIONSHIP_WINDOW_DAYS: int = Field(default=10, gt=0)
+    RELATIONSHIP_NEIGHBORS_PER_EVENT: int = Field(default=8, gt=0)
+    RELATIONSHIP_MIN_EMBEDDING_SIM: float = Field(default=0.62, ge=0.0, le=1.0)
+    RELATIONSHIP_MIN_CONFIDENCE: float = Field(default=0.70, ge=0.0, le=1.0)
+    RELATIONSHIP_BATCH_SIZE: int = Field(default=8, gt=0, le=20)
+    RELATIONSHIP_LLM_PAIRS_PER_RUN: int = Field(default=30, ge=0)
 
     # article claim queue and per-run budgets.
     ARTICLE_CLAIM_BATCH_SIZE: int = Field(default=50, gt=0)

@@ -27,6 +27,7 @@ class StageName(enum.StrEnum):
     SCORE = "score"
     THREAD = "thread"
     RECONCILE = "reconcile"
+    RELATIONSHIP = "relationship"
     REQUEUE_CLAIMS = "requeue-claims"
     REQUEUE_ARTICLES = "requeue-articles"
     EVENT_LIFECYCLE = "event-lifecycle"

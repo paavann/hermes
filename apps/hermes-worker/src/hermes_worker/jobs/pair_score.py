@@ -1,5 +1,6 @@
 from __future__ import annotations
 import math
+import re
 from dataclasses import dataclass
 from datetime import datetime
 from hermes_db.enums import EventForm, EventScope
@@ -16,14 +17,15 @@ ACTION_WEIGHT = 0.10
 AUTO_ATTACH_THRESHOLD = 0.80
 LLM_BAND_THRESHOLD = 0.60
 
-MERGE_AUTO_THRESHOLD = 0.92
-MERGE_GRAY_THRESHOLD = 0.85
-MERGE_EMBEDDING_WEIGHT = 0.40
-MERGE_ENTITY_WEIGHT = 0.20
-MERGE_LOCATION_WEIGHT = 0.15
-MERGE_TIME_WEIGHT = 0.10
+MERGE_AUTO_THRESHOLD = 0.90
+MERGE_GRAY_THRESHOLD = 0.74
+MERGE_EMBEDDING_WEIGHT = 0.58
+MERGE_ENTITY_WEIGHT = 0.18
+MERGE_LOCATION_WEIGHT = 0.11
+MERGE_TIME_WEIGHT = 0.08
 MERGE_CATEGORY_WEIGHT = 0.05
-MERGE_FAMILY_WEIGHT = 0.10
+MERGE_FAMILY_BONUS = 0.04
+ENTITY_VETO_EMBEDDING_BYPASS = 0.86
 
 TIME_HALF_LIFE_HOURS = 48.0
 MAX_TIME_DELTA_DAYS = 7
@@ -177,15 +179,88 @@ def article_entities(article: AssignableArticle) -> frozenset[str]:
     return normalize_entities(article.entities)
 
 
-def _jaccard(left: frozenset[str], right: frozenset[str]) -> float:
+_CAPITALIZED_SPAN_RE = re.compile(
+    r"\b[A-Z][A-Za-z0-9'’.-]*(?:\s+[A-Z][A-Za-z0-9'’.-]*)*"
+)
+
+
+def extract_headline_entities(headline: str) -> frozenset[str]:
+    """Extract proper-noun spans from a headline when DB entity metadata is empty."""
+    split_possessives = re.sub(r"(?:'s|’s)\b", " | ", headline)
+    extracted: set[str] = set()
+    for match in _CAPITALIZED_SPAN_RE.finditer(split_possessives):
+        raw = match.group(0).strip()
+        words = raw.split()
+        is_acronym = len(raw) >= 2 and raw.isupper()
+        if match.start() == 0 and len(words) < 2 and not is_acronym:
+            continue
+        normalized = _normalize_name(" ".join(words))
+        if len(normalized) >= 2:
+            extracted.add(normalized)
+    return frozenset(extracted)
+
+
+def _entity_tokens(name: str) -> frozenset[str]:
+    return frozenset(normalize_tokens(name))
+
+
+def _entities_compatible(left: str, right: str) -> float:
+    if left == right:
+        return 1.0
+    left_tokens = _entity_tokens(left)
+    right_tokens = _entity_tokens(right)
+    if not left_tokens or not right_tokens:
+        return 0.0
+    shorter, longer = (
+        (left_tokens, right_tokens)
+        if len(left_tokens) <= len(right_tokens)
+        else (right_tokens, left_tokens)
+    )
+    if len(shorter) >= 2 and shorter <= longer:
+        return 0.85
+    union = left_tokens | right_tokens
+    if union and (len(left_tokens & right_tokens) / len(union)) >= 0.6:
+        return 0.85
+    return 0.0
+
+
+def _soft_entity_overlap_sum(
+    left: frozenset[str],
+    right: frozenset[str],
+) -> float:
+    matched_left = 0.0
+    matched_right: dict[str, float] = {}
+    for l_item in left:
+        best_for_left = 0.0
+        for r_item in right:
+            score = _entities_compatible(l_item, r_item)
+            if score > best_for_left:
+                best_for_left = score
+            if score > matched_right.get(r_item, 0.0):
+                matched_right[r_item] = score
+        matched_left += best_for_left
+    return (matched_left + sum(matched_right.values())) / 2.0
+
+
+def soft_entity_similarity(left: frozenset[str], right: frozenset[str]) -> float:
+    """Compute soft entity Jaccard using exact and multi-token containment matches."""
     if not left and not right:
         return 0.5
     if not left or not right:
         return 0.0
-    union = left | right
-    if not union:
+    overlap = _soft_entity_overlap_sum(left, right)
+    union = len(left) + len(right) - overlap
+    if union <= 0.0:
         return 0.5
-    return len(left & right) / len(union)
+    return min(1.0, overlap / union)
+
+
+def has_soft_entity_overlap(left: frozenset[str], right: frozenset[str]) -> bool:
+    for l_item in left:
+        for r_item in right:
+            if _entities_compatible(l_item, r_item) > 0.0:
+                return True
+    return False
 
 
 def _time_proximity(
@@ -299,6 +374,14 @@ def _event_location_match(
         and left.country_code.upper() != right.country_code.upper()
     ):
         return 0.0, True
+    same_country = bool(
+        left.country_code
+        and right.country_code
+        and left.country_code.upper() == right.country_code.upper()
+    )
+    broad_scope = (
+        left.scope not in LOCAL_SCOPES or right.scope not in LOCAL_SCOPES
+    )
     if (
         left.latitude is not None
         and left.longitude is not None
@@ -312,6 +395,8 @@ def _event_location_match(
             right.longitude,
         )
         if distance > LOCATION_VETO_METERS:
+            if same_country and broad_scope:
+                return 0.6, False
             return 0.0, True
         return 1.0 - distance / LOCATION_VETO_METERS, False
     if (
@@ -320,7 +405,7 @@ def _event_location_match(
         and _normalize_name(left.location_name) == _normalize_name(right.location_name)
     ):
         return 1.0, False
-    if left.country_code and left.country_code == right.country_code:
+    if same_country:
         return 0.6, False
     return 0.4, False
 
@@ -345,9 +430,6 @@ def score_event_pair(
     if location_veto:
         return PairScore(score=0.0, components={"veto": 0.0}, veto="location")
 
-    if left_entities and right_entities and not (left_entities & right_entities):
-        return PairScore(score=0.0, components={"veto": 0.0}, veto="entities")
-
     embedding_score = 0.0
     if (
         left.embedding is not None
@@ -359,24 +441,49 @@ def score_event_pair(
             cosine_similarity(left.embedding, right.embedding),
         )
 
+    used_fallback = False
+    effective_left = left_entities
+    effective_right = right_entities
+    if not effective_left:
+        effective_left = extract_headline_entities(left.ai_headline)
+        used_fallback = bool(effective_left)
+    if not effective_right:
+        effective_right = extract_headline_entities(right.ai_headline)
+        used_fallback = used_fallback or bool(effective_right)
+
+    if (
+        effective_left
+        and effective_right
+        and not has_soft_entity_overlap(effective_left, effective_right)
+        and embedding_score < ENTITY_VETO_EMBEDDING_BYPASS
+    ):
+        return PairScore(score=0.0, components={"veto": 0.0}, veto="entities")
+
+    if used_fallback and effective_left and effective_right:
+        overlap = _soft_entity_overlap_sum(effective_left, effective_right)
+        entity_score = min(1.0, overlap / min(len(effective_left), len(effective_right)))
+    else:
+        entity_score = soft_entity_similarity(effective_left, effective_right)
+
+    family_bonus = MERGE_FAMILY_BONUS * min(1.0, shared_families / 2.0)
     components = {
         "embedding": round(embedding_score, 4),
-        "entities": round(_jaccard(left_entities, right_entities), 4),
+        "entities": round(entity_score, 4),
         "location": round(location_score, 4),
         "time": round(time_score, 4),
         "category": 1.0 if left.category == right.category else 0.0,
         "family": round(min(1.0, shared_families / 2.0), 4),
     }
-    score = (
+    raw_score = (
         MERGE_EMBEDDING_WEIGHT * components["embedding"]
         + MERGE_ENTITY_WEIGHT * components["entities"]
         + MERGE_LOCATION_WEIGHT * components["location"]
         + MERGE_TIME_WEIGHT * components["time"]
         + MERGE_CATEGORY_WEIGHT * components["category"]
-        + MERGE_FAMILY_WEIGHT * components["family"]
+        + family_bonus
     )
     return PairScore(
-        score=round(score, 4),
+        score=round(min(1.0, raw_score), 4),
         components=components,
         auto_threshold=MERGE_AUTO_THRESHOLD,
         gray_threshold=MERGE_GRAY_THRESHOLD,
@@ -414,15 +521,6 @@ def score_pair(
     if location_veto:
         return PairScore(score=0.0, components={"veto": 0.0}, veto="location")
 
-    article_entity_set = article_entities(article)
-    event_entity_set = candidate.entities
-    if (
-        article_entity_set
-        and event_entity_set
-        and not (article_entity_set & event_entity_set)
-    ):
-        return PairScore(score=0.0, components={"veto": 0.0}, veto="entities")
-
     embedding_score = 0.0
     if (
         article.embedding is not None
@@ -434,9 +532,21 @@ def score_pair(
             cosine_similarity(article.embedding, candidate.embedding),
         )
 
+    article_entity_set = article_entities(article)
+    event_entity_set = candidate.entities
+    if (
+        article_entity_set
+        and event_entity_set
+        and not has_soft_entity_overlap(article_entity_set, event_entity_set)
+        and embedding_score < ENTITY_VETO_EMBEDDING_BYPASS
+    ):
+        return PairScore(score=0.0, components={"veto": 0.0}, veto="entities")
+
     components = {
         "embedding": round(embedding_score, 4),
-        "entities": round(_jaccard(article_entity_set, event_entity_set), 4),
+        "entities": round(
+            soft_entity_similarity(article_entity_set, event_entity_set), 4
+        ),
         "location": round(location_score, 4),
         "time": round(time_score, 4),
         "action": round(_action_overlap(article, candidate), 4),

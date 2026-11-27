@@ -15,6 +15,7 @@ from hermes_db.services import (
     EventScoringService,
     ThreadService,
 )
+from hermes_worker.jobs.actors import actor_name_keys, format_actor_label
 from hermes_worker.jobs.context import (
     BudgetExhaustedError,
     JobContext,
@@ -72,6 +73,9 @@ class ReconcileStage:
             event_ids = [item.id for item in states]
             families = await service.family_sets(event_ids)
             entities = await service.candidate_entities(event_ids)
+        for item in states:
+            if item.actors:
+                entities.setdefault(item.id, set()).update(actor_name_keys(item.actors))
         state.counts = {item.id: item.article_count for item in states}
         state.stats.add("events", len(states))
         if len(states) < 2:
@@ -124,7 +128,7 @@ class ReconcileStage:
         if not pairs:
             return {}
         adjudicator = ctx.require_ai().adjudicator
-        prompt_version = adjudicator.prompt_version
+        prompt_version = adjudicator.merge_prompt_version
         decisions: dict[tuple[uuid.UUID, uuid.UUID], tuple[str, float | None]] = {}
         uncached: list[_EventPair] = []
 
@@ -163,7 +167,7 @@ class ReconcileStage:
                 logger.warning("llm budget exhausted during event reconciliation.")
                 break
             state.stats.add("adjudication_calls")
-            response = await adjudicator.decide(inputs)
+            response = await adjudicator.decide_merge(inputs)
             if response is None:
                 state.stats.add("adjudication_failed")
                 continue
@@ -292,11 +296,17 @@ def _survivor(
 def _event_side(state: EventPairState, entities: frozenset[str]) -> PairSide:
     occurred_at = state.event_time or state.latest_published_at
     summary = state.ai_summary
+    actors = [
+        formatted
+        for actor in state.actors[:8]
+        if (formatted := format_actor_label(actor))
+    ]
     return PairSide(
         headline=state.ai_headline[:500],
         fact=(summary or "")[:400] or None,
         summary=summary,
         entities=sorted(entities)[:8],
+        actors=actors,
         location=state.location_name,
         occurred_at=occurred_at.isoformat() if occurred_at is not None else None,
         category=state.category,

@@ -15,6 +15,7 @@ from hermes_worker.jobs.stages import (
     IngestStage,
     MaintenanceStage,
     ReconcileStage,
+    RelationshipStage,
     RequeueArticlesStage,
     RequeueStaleClaimsStage,
     ScoreStage,
@@ -30,8 +31,9 @@ BUILD_STAGES: tuple[Stage, ...] = (
     ClusterStage(),
     DescribeStage(),
     ScoreStage(),
-    ThreadStage(),
     ReconcileStage(),
+    RelationshipStage(),
+    ThreadStage(),
 )
 MAINTAIN_STAGES: tuple[Stage, ...] = (
     RequeueStaleClaimsStage(),

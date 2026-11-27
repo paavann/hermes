@@ -4,7 +4,12 @@ import asyncio
 import uuid
 from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
-from hermes_db.enums import EventStatus
+from hermes_ai import (
+    PairAdjudication,
+    PairAdjudicationResponse,
+    PairDecision,
+)
+from hermes_db.enums import EventScope, EventStatus
 from hermes_db.services import EventPairState
 from hermes_worker.core.config import Settings
 from hermes_worker.jobs.context import JobContext, LlmBudget, WorkerIdentity
@@ -64,6 +69,8 @@ def _state(
     event_time: datetime = NOW,
     embedding: tuple[float, ...] | None = None,
     category: str = "CONFLICT",
+    scope: EventScope = EventScope.CITY,
+    actors: tuple[dict[str, object], ...] = (),
 ) -> EventPairState:
     return EventPairState(
         id=uuid.uuid4(),
@@ -83,6 +90,8 @@ def _state(
         article_count=article_count,
         thread_id=None,
         status=EventStatus.ACTIVE,
+        scope=scope,
+        actors=actors,
     )
 
 
@@ -124,6 +133,38 @@ class TestCandidatePairs:
         )
 
         assert pairs == []
+
+    def test_recalls_cross_category_partial_entity_tiangong_pair(self) -> None:
+        left = _state(
+            country_code="CN",
+            location_name="China",
+            latitude=34.79,
+            longitude=103.71,
+            category="SCIENCE",
+            scope=EventScope.COUNTRY,
+            embedding=(1.0, 0.0) * 4,
+        )
+        right = _state(
+            country_code="CN",
+            location_name="China",
+            latitude=34.79,
+            longitude=103.71,
+            category="TECHNOLOGY",
+            scope=EventScope.COUNTRY,
+            embedding=(0.86, 0.51) * 4,
+        )
+
+        pairs = _candidate_pairs(
+            [left, right],
+            families={},
+            entities={
+                left.id: {"muhammad zeeshan ali", "tiangong"},
+                right.id: {"zeeshan ali", "tiangong"},
+            },
+        )
+
+        assert len(pairs) == 1
+        assert pairs[0].score.band == "llm"
 
     def test_drops_vetoed_pairs(self) -> None:
         left = _state(country_code="UA")
@@ -222,9 +263,9 @@ class TestAdjudicationBudget:
     def test_stops_without_calling_llm_when_budget_is_empty(self) -> None:
         async def _test() -> None:
             adjudicator = MagicMock()
-            adjudicator.prompt_version = "merge-v1"
+            adjudicator.merge_prompt_version = "merge-v1"
             adjudicator.model_name = "test-model"
-            adjudicator.decide = AsyncMock()
+            adjudicator.decide_merge = AsyncMock()
             ai = MagicMock()
             ai.adjudicator = adjudicator
 
@@ -258,7 +299,7 @@ class TestAdjudicationBudget:
 
             assert decisions == {}
             assert state.stats.counters["adjudication_budget_spent"] == 1
-            adjudicator.decide.assert_not_awaited()
+            adjudicator.decide_merge.assert_not_awaited()
 
         asyncio.run(_test())
 
@@ -279,5 +320,92 @@ class TestReconcileRun:
                 stats = await ReconcileStage().run(ctx)
 
             assert stats.counters == {"events": 1}
+
+        asyncio.run(_test())
+
+    def test_uses_event_actors_and_decide_merge_with_merge_v1(self) -> None:
+        async def _test() -> None:
+            left = _state(
+                article_count=1,
+                country_code="GB",
+                location_name="UK",
+                latitude=54.7,
+                longitude=-3.27,
+                scope=EventScope.COUNTRY,
+                category="POLITICS",
+                embedding=(0.78, 0.625, 0.0, 0.0),
+                actors=(
+                    {
+                        "name": "Office for National Statistics",
+                        "kind": "ORGANIZATION",
+                        "role": "ACTOR",
+                        "country_code": "GB",
+                    },
+                ),
+            )
+            right = _state(
+                article_count=2,
+                country_code="GB",
+                location_name="London",
+                latitude=51.5,
+                longitude=-0.12,
+                scope=EventScope.CITY,
+                category="SCIENCE",
+                embedding=(1.0, 0.0, 0.0, 0.0),
+                actors=(
+                    {
+                        "name": "Office for National Statistics",
+                        "kind": "ORGANIZATION",
+                        "role": "ACTOR",
+                        "country_code": "GB",
+                    },
+                ),
+            )
+
+            adjudicator = MagicMock()
+            adjudicator.merge_prompt_version = "merge-v1"
+            adjudicator.model_name = "test-model"
+            adjudicator.decide_merge = AsyncMock(
+                return_value=PairAdjudicationResponse(
+                    decisions=[
+                        PairAdjudication(
+                            index=0,
+                            decision=PairDecision.SAME,
+                            confidence=0.95,
+                        )
+                    ]
+                )
+            )
+            ctx, _session = _context(_settings(), ai=MagicMock(adjudicator=adjudicator))
+
+            with (
+                patch(
+                    "hermes_worker.jobs.stages.reconcile.EventMergeService"
+                ) as service_cls,
+                patch(
+                    "hermes_worker.jobs.stages.reconcile.ClusterDecisionService"
+                ) as cache_cls,
+                patch(
+                    "hermes_worker.jobs.stages.reconcile.EventScoringService"
+                ) as scoring_cls,
+            ):
+                service = service_cls.return_value
+                service.recent_states = AsyncMock(return_value=[left, right])
+                service.family_sets = AsyncMock(return_value={})
+                service.candidate_entities = AsyncMock(return_value={})
+                service.merge = AsyncMock(return_value=True)
+                cache_cls.return_value.get = AsyncMock(return_value=None)
+                cache_cls.return_value.save = AsyncMock()
+                scoring_cls.return_value.rescore = AsyncMock()
+
+                stats = await ReconcileStage().run(ctx)
+
+            assert stats.counters["merged"] == 1
+            adjudicator.decide_merge.assert_awaited_once()
+            sent_pair = adjudicator.decide_merge.await_args.args[0][0]
+            assert sent_pair.left.actors == [
+                "Office for National Statistics (ORGANIZATION/ACTOR/GB)"
+            ]
+            assert cache_cls.return_value.save.await_args.kwargs["prompt_version"] == "merge-v1"
 
         asyncio.run(_test())

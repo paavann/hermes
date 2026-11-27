@@ -49,8 +49,8 @@ class TestWorkerSettingsDefaults:
 
     def test_lifecycle_defaults(self):
         s = _make_settings()
-        assert s.EVENT_STALE_HOURS == 72
-        assert s.EVENT_ARCHIVE_HOURS == 168
+        assert s.EVENT_STALE_HOURS == 96
+        assert s.EVENT_ARCHIVE_HOURS == 240
 
     def test_claim_queue_defaults(self):
         s = _make_settings()
@@ -58,6 +58,20 @@ class TestWorkerSettingsDefaults:
         assert s.ARTICLE_CLAIM_STALE_MINUTES == 30
         assert s.ARTICLE_MAX_ATTEMPTS == 3
         assert s.MAX_LLM_CALLS_PER_RUN == 120
+
+    def test_reconcile_and_relationship_defaults(self):
+        s = _make_settings()
+        assert s.EVENT_RECONCILE_WINDOW_HOURS == 48
+        assert s.RELATIONSHIP_MODEL is None
+        assert s.RELATIONSHIP_API is None
+        assert s.RELATIONSHIP_MODEL_KWARGS is None
+        assert s.RELATIONSHIP_EVENT_LIMIT == 100
+        assert s.RELATIONSHIP_WINDOW_DAYS == 10
+        assert s.RELATIONSHIP_NEIGHBORS_PER_EVENT == 8
+        assert s.RELATIONSHIP_MIN_EMBEDDING_SIM == 0.62
+        assert s.RELATIONSHIP_MIN_CONFIDENCE == 0.70
+        assert s.RELATIONSHIP_BATCH_SIZE == 8
+        assert s.RELATIONSHIP_LLM_PAIRS_PER_RUN == 30
 
     def test_claim_batch_size_must_be_positive(self):
         with pytest.raises(ValidationError):

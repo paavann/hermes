@@ -115,7 +115,7 @@ class TestWorkerAiClientFactory:
     def test_task_routes_default_to_primary_llm_route(self) -> None:
         client = create_ai_client(_settings())
 
-        for task in ("label", "adjudicate", "describe"):
+        for task in ("label", "adjudicate", "describe", "relationship"):
             route = client.config.routes[task]
             assert route.primary.model == "mistral/mistral-large"
             assert route.primary.api_key == "mock-llm-key"

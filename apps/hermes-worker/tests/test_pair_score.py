@@ -1,6 +1,7 @@
 """Unit tests for article→event and event→event pair scoring."""
 
 import uuid
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from hermes_db.enums import (
     ArticleCategory,
@@ -111,6 +112,7 @@ def _event_state(
     longitude: float | None = 30.52,
     location_name: str | None = "Kyiv",
     category: str = "CONFLICT",
+    scope: EventScope = EventScope.CITY,
 ) -> EventPairState:
     return EventPairState(
         id=uuid.uuid4(),
@@ -130,6 +132,7 @@ def _event_state(
         article_count=2,
         thread_id=None,
         status=EventStatus.ACTIVE,
+        scope=scope,
     )
 
 
@@ -397,5 +400,162 @@ def test_event_pair_gray_band_requires_llm() -> None:
     )
 
     assert result.veto is None
-    assert 0.85 <= result.score < 0.92
+    assert 0.85 <= result.score < 0.90
+    assert result.band == "llm"
+
+
+def test_article_pair_matches_partial_person_name_variants() -> None:
+    embedding = tuple([0.5] * 8)
+    article = _article(
+        entities=({"name": "Muhammad Zeeshan Ali"}, {"name": "Tiangong"}),
+        embedding=embedding,
+        event_time=NOW,
+    )
+    candidate = _candidate(
+        entities=frozenset({"zeeshan ali", "tiangong"}),
+        embedding=embedding,
+        country_code="CN",
+        latitude=34.79,
+        longitude=103.71,
+        locations=({"name": "China", "country_code": "CN"},),
+    )
+
+    result = score_pair(
+        article,
+        candidate,
+        article_location=GeoLocation(name="China", country_code="CN"),
+    )
+
+    assert result.veto is None
+    assert result.components["entities"] > 0.7
+    assert result.band == "auto"
+
+
+def test_high_cosine_bypasses_disjoint_entity_veto() -> None:
+    embedding = tuple([0.6] * 8)
+    article = _article(
+        entities=({"name": "Tiangong"},),
+        embedding=embedding,
+    )
+    candidate = _candidate(
+        entities=frozenset({"china space station"}),
+        embedding=embedding,
+    )
+
+    result = score_pair(article, candidate, article_location=None)
+
+    assert result.veto is None
+    assert result.components["embedding"] == 1.0
+
+
+def test_event_pair_allows_country_centroid_and_city_in_same_country() -> None:
+    embedding = tuple([0.5] * 8)
+    left = _event_state(
+        country_code="CN",
+        location_name="China",
+        latitude=34.79,
+        longitude=103.71,
+        category="SCIENCE",
+        scope=EventScope.COUNTRY,
+        embedding=embedding,
+    )
+    right = _event_state(
+        country_code="CN",
+        location_name="Beijing, China",
+        latitude=39.9042,
+        longitude=116.4074,
+        category="TECHNOLOGY",
+        scope=EventScope.CITY,
+        embedding=embedding,
+    )
+
+    result = score_event_pair(
+        left,
+        right,
+        left_entities=frozenset({"muhammad zeeshan ali", "tiangong"}),
+        right_entities=frozenset({"zeeshan ali", "china"}),
+        shared_families=0,
+    )
+
+    assert result.veto is None
+    assert result.components["location"] == 0.6
+    assert result.score >= 0.74
+    assert result.band == "llm"
+
+
+def test_event_pair_auto_merges_without_shared_families() -> None:
+    embedding = tuple([0.5] * 8)
+    left = _event_state(
+        country_code="CN",
+        location_name="China",
+        latitude=34.79,
+        longitude=103.71,
+        category="SCIENCE",
+        scope=EventScope.COUNTRY,
+        embedding=embedding,
+    )
+    right = _event_state(
+        country_code="CN",
+        location_name="China",
+        latitude=34.79,
+        longitude=103.71,
+        category="SCIENCE",
+        scope=EventScope.COUNTRY,
+        embedding=embedding,
+    )
+
+    result = score_event_pair(
+        left,
+        right,
+        left_entities=frozenset({"tiangong"}),
+        right_entities=frozenset({"tiangong"}),
+        shared_families=0,
+    )
+
+    assert result.score == 1.0
+    assert result.band == "auto"
+
+
+def test_event_pair_falls_back_to_headline_entities_when_side_empty() -> None:
+    left = replace(
+        _event_state(
+            country_code="CN",
+            location_name="China",
+            latitude=34.54,
+            longitude=108.92,
+            category="SCIENCE",
+            scope=EventScope.GLOBAL,
+            event_time=NOW - timedelta(hours=22),
+            embedding=(1.0, 0.0, 0.0, 0.0),
+        ),
+        ai_headline="Muhammad Zeeshan Ali boards China's Tiangong",
+    )
+    right = replace(
+        _event_state(
+            country_code="CN",
+            location_name="China",
+            latitude=34.54,
+            longitude=108.92,
+            category="TECHNOLOGY",
+            scope=EventScope.COUNTRY,
+            event_time=NOW,
+            embedding=(0.8415, 0.5403, 0.0, 0.0),
+        ),
+        ai_headline=(
+            "Zeeshan Ali makes history as the first foreign national "
+            "to board China’s space station."
+        ),
+    )
+
+    result = score_event_pair(
+        left,
+        right,
+        left_entities=frozenset(),
+        right_entities=frozenset({"zeeshan ali", "space station", "china"}),
+        shared_families=0,
+    )
+
+    assert result.veto is None
+    assert result.components["entities"] > 0.5
+    assert result.score >= 0.74
     assert result.band == "llm"

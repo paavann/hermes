@@ -10,6 +10,7 @@ from hermes_ai import (
     DescribeExtractor,
     DescribeMemberFact,
     EventDescription,
+    GeocodingResult,
 )
 from hermes_db.enums import EventScope, EventStatus, ImpactLevel
 from hermes_db.models.event import Event
@@ -30,6 +31,8 @@ from hermes_worker.jobs.context import (
 logger = logging.getLogger(__name__)
 
 MAX_LOCATIONS = 3
+MAX_ACTORS = 6
+MAX_ACTOR_GEOCODES = 3
 MAX_HEADLINE_CHARS = 120
 MAX_SUMMARY_CHARS = 900
 MAX_DESCRIBE_ROUNDS = 20
@@ -162,6 +165,15 @@ class DescribeStage:
                         or event.location_name != previous_location
                     ):
                         event.location = None
+                if event.actors and (
+                    description is not None
+                    or any(
+                        actor.get("latitude") is None
+                        for actor in event.actors
+                        if _actor_query_target(actor, event) is not None
+                    )
+                ):
+                    await _geocode_actors(ctx, event, stats)
                 event.member_hash = item.hash
                 event.version += 1
                 event.last_updated_at = now
@@ -333,6 +345,29 @@ def _apply_description(
         if isinstance(code, str) and len(code) == 2:
             event.country_code = code
 
+    actors: list[dict[str, object]] = []
+    seen_actors: set[tuple[str, str]] = set()
+    for actor in description.actors[:MAX_ACTORS]:
+        actor_name = " ".join(actor.name.split())[:120]
+        if not actor_name:
+            continue
+        dedupe_key = (actor_name.casefold(), actor.role.value)
+        if dedupe_key in seen_actors:
+            continue
+        seen_actors.add(dedupe_key)
+        actors.append(
+            {
+                "name": actor_name,
+                "kind": actor.kind.value,
+                "role": actor.role.value,
+                "location_name": actor.location_name[:160] if actor.location_name else None,
+                "country_code": actor.country_code.upper() if actor.country_code else None,
+                "latitude": None,
+                "longitude": None,
+            }
+        )
+    event.actors = actors
+
 
 def _apply_fallback(event: Event, item: _EventFacts) -> None:
     facts = [member.fact for member in item.members if member.fact]
@@ -351,6 +386,120 @@ def _apply_fallback(event: Event, item: _EventFacts) -> None:
         code = locations[0]["country_code"]
         if isinstance(code, str) and len(code) == 2:
             event.country_code = code
+    if not getattr(event, "actors", None):
+        event.actors = _member_actors(item.members)
+
+
+def _actor_query_target(
+    actor: dict[str, object],
+    event: Event,
+) -> tuple[str, str | None] | None:
+    """Return a clean geocoding query for cross-border actor origins."""
+    raw_loc = actor.get("location_name")
+    raw_name = actor.get("name")
+    kind = str(actor.get("kind") or "").upper()
+    loc_name = (
+        raw_loc.strip()
+        if isinstance(raw_loc, str) and raw_loc.strip()
+        else (
+            raw_name.strip()
+            if kind == "STATE" and isinstance(raw_name, str) and raw_name.strip()
+            else None
+        )
+    )
+    if loc_name is None:
+        return None
+    raw_cc = actor.get("country_code")
+    actor_cc = raw_cc.upper() if isinstance(raw_cc, str) and len(raw_cc) == 2 else None
+    event_cc = (
+        event.country_code.upper()
+        if isinstance(event.country_code, str) and len(event.country_code) == 2
+        else None
+    )
+    event_loc = (event.location_name or "").strip().casefold()
+    same_country = actor_cc is not None and event_cc is not None and actor_cc == event_cc
+    same_place = bool(event_loc) and loc_name.casefold() == event_loc
+    if same_place or (same_country and (raw_loc is None or kind == "STATE")):
+        return None
+    return loc_name[:160], actor_cc
+
+
+async def _geocode_actors(
+    ctx: JobContext,
+    event: Event,
+    stats: StageStats,
+) -> None:
+    """Populate external actor coordinates exclusively from GeocodingService."""
+    if not event.actors:
+        return
+    geocoder = ctx.require_geocoder()
+    local_cache: dict[tuple[str, str | None], GeocodingResult | None] = {}
+    lookups = 0
+    updated: list[dict[str, object]] = []
+
+    for actor in event.actors:
+        entry = dict(actor)
+        target = _actor_query_target(entry, event)
+        if target is None:
+            entry["latitude"] = None
+            entry["longitude"] = None
+            updated.append(entry)
+            continue
+        if target not in local_cache:
+            if lookups >= MAX_ACTOR_GEOCODES:
+                entry["latitude"] = None
+                entry["longitude"] = None
+                updated.append(entry)
+                continue
+            lookups += 1
+            async with _GEOCODE_LOCK:
+                geocoded = await geocoder.geocode(target[0], country_code=target[1])
+            local_cache[target] = geocoded
+            stats.add("actor_geocoded" if geocoded is not None else "actor_geocode_miss")
+        result = local_cache[target]
+        if result is not None:
+            entry["latitude"] = result.latitude
+            entry["longitude"] = result.longitude
+            if not entry.get("location_name"):
+                entry["location_name"] = target[0]
+        else:
+            entry["latitude"] = None
+            entry["longitude"] = None
+        updated.append(entry)
+
+    event.actors = updated
+
+
+def _member_actors(members: Sequence[MemberRecord]) -> list[dict[str, object]]:
+    actors: list[dict[str, object]] = []
+    seen: set[str] = set()
+    for member in members:
+        for entity in member.entities:
+            raw_kind = str(entity.get("kind") or "").upper()
+            if raw_kind not in {"PERSON", "ORGANIZATION"}:
+                continue
+            raw_name = entity.get("name")
+            if not isinstance(raw_name, str) or not raw_name.strip():
+                continue
+            cleaned = " ".join(raw_name.split())[:120]
+            key = cleaned.casefold()
+            if key in seen:
+                continue
+            seen.add(key)
+            actors.append(
+                {
+                    "name": cleaned,
+                    "kind": raw_kind,
+                    "role": "PARTICIPANT",
+                    "location_name": None,
+                    "country_code": None,
+                    "latitude": None,
+                    "longitude": None,
+                }
+            )
+            if len(actors) >= MAX_ACTORS:
+                return actors
+    return actors
 
 
 async def _geocode_event(

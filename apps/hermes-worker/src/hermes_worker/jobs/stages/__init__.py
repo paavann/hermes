@@ -12,6 +12,7 @@ from hermes_worker.jobs.stages.maintenance import (
     ThreadLifecycleStage,
 )
 from hermes_worker.jobs.stages.reconcile import ReconcileStage
+from hermes_worker.jobs.stages.relationship import RelationshipStage
 from hermes_worker.jobs.stages.score import ScoreStage
 from hermes_worker.jobs.stages.thread import ThreadStage
 
@@ -25,6 +26,7 @@ __all__ = [
     "IngestStage",
     "MaintenanceStage",
     "ReconcileStage",
+    "RelationshipStage",
     "RequeueArticlesStage",
     "RequeueStaleClaimsStage",
     "ScoreStage",

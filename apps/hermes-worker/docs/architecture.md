@@ -42,9 +42,10 @@ flowchart LR
     Analyze --> Cluster["Cluster\nincident-level events"]
     Cluster --> Describe["Describe\nevent synthesis"]
     Describe --> Score["Score\nimportance_score"]
-    Score --> Thread["Thread\npersistent topic grouping"]
-    Thread --> Reconcile["Reconcile\nduplicate-event merge"]
-    Reconcile --> Serve["API + map"]
+    Score --> Reconcile["Reconcile\nduplicate-event merge"]
+    Reconcile --> Relationship["Relationship\ntyped cross-event links"]
+    Relationship --> Thread["Thread\npersistent topic grouping"]
+    Thread --> Serve["API + map"]
 ```
 
 ### 2.1 Command Cadence
@@ -52,7 +53,7 @@ flowchart LR
 | Command | Schedule | Scope | LLM |
 | :--- | :--- | :--- | :--- |
 | `ingest-articles` | every 15 min | Fetch feeds, write the article ledger, label, embed, and assign syndication families | yes |
-| `build-events` | hourly | Cluster articles into events, describe, verify, score, update threads | yes |
+| `build-events` | hourly | Cluster articles into events, describe, verify, score, merge duplicates, discover pairwise relationships, update threads | yes |
 | `maintain-events` | daily | Requeue stale claims, lifecycle transitions, retention, consistency checks | no |
 | `healthcheck` | on demand | Connectivity, schema, queue depth, stale claims | no |
 
@@ -220,8 +221,9 @@ jobs/
     cluster.py      incident clustering, adjudication, verification
     describe.py     event synthesis from family facts, geocoding
     score.py        importance score recompute for all active events
-    thread.py       thread assignment, ANN candidate scoring, creation
     reconcile.py    event merge deduplication, gray adjudication
+    relationship.py pairwise cross-event relationship classification and upsert
+    thread.py       thread assignment, ANN candidate scoring, creation
     maintenance.py  stale claims, event lifecycle, thread lifecycle,
                     count reconciliation, retention, consistency report
     healthcheck.py  connectivity, schema, queue depth, stale claims
@@ -232,7 +234,7 @@ jobs/
 | Command | Stages | Purpose | LLM | Lock |
 | :--- | :--- | :--- | :--- | :--- |
 | `ingest-articles` | `INGEST`, `ANALYZE` | Sync sources, write ledger, label, embed, assign families | yes | yes |
-| `build-events` | `CLUSTER`, `DESCRIBE`, `SCORE`, `THREAD`, `RECONCILE` | Cluster → synthesize → score → thread → merge duplicate events | yes | yes |
+| `build-events` | `CLUSTER`, `DESCRIBE`, `SCORE`, `RECONCILE`, `RELATIONSHIP`, `THREAD` | Cluster → synthesize → score → merge duplicate events → discover pairwise relationships → thread | yes | yes |
 | `maintain-events` | `REQUEUE_CLAIMS`, `EVENT_LIFECYCLE`, `THREAD_LIFECYCLE`, `MAINTENANCE` | Recover claims, lifecycle transitions, retention, consistency report | no | yes |
 | `healthcheck` | `HEALTHCHECK` | Read-only readiness probe | no | no |
 
@@ -254,7 +256,7 @@ A run-telemetry table is intentionally not part of the design; it duplicated log
 
 `LlmService.complete_json(...)` adds a schema-repair retry for structured stages. Usage accounting (`LlmUsage`) records calls, input/output tokens, and repairs per process.
 
-The worker builds generic `label`, `adjudicate`, `describe`, and `thread` routes that default to `LLM_MODEL` / `LLM_API` and accept per-task overrides (`ADJUDICATE_MODEL/API`, `DESCRIBE_MODEL/API`, `THREAD_MODEL/API`). Every stage reserves calls through `JobContext.budget` before invoking `complete_json`; exceeding `MAX_LLM_CALLS_PER_RUN` stops the stage cleanly and leaves remaining work queued.
+The worker builds generic `label`, `adjudicate`, `describe`, `relationship`, and `thread` routes that default to `LLM_MODEL` / `LLM_API` and accept per-task overrides (`ADJUDICATE_MODEL/API`, `DESCRIBE_MODEL/API`, `RELATIONSHIP_MODEL/API`, `THREAD_MODEL/API`). Every stage reserves calls through `JobContext.budget` before invoking `complete_json`; exceeding `MAX_LLM_CALLS_PER_RUN` stops the stage cleanly and leaves remaining work queued.
 
 ### 5.5 Schema Guard
 
@@ -402,27 +404,31 @@ The `RECONCILE` stage detects and merges duplicate events that survived clusteri
 **Merge pair score** (`score_event_pair` in `pair_score.py`):
 
 ```
-score = 0.40 * embedding_cosine
-      + 0.20 * entity_jaccard
-      + 0.15 * location_compatibility
-      + 0.10 * time_proximity
-      + 0.05 * category_match
-      + 0.10 * family_overlap
+base = 0.58 * embedding_cosine
+     + 0.18 * entity_jaccard
+     + 0.11 * location_compatibility
+     + 0.08 * time_proximity
+     + 0.05 * category_match
+score = min(1.0, base + 0.04 * family_overlap)
 ```
 
-Same hard vetoes apply: > 7 days, > 100 km + different country, disjoint top entities.
+Hard vetoes: > 7 days, > 100 km + different country (bypassed to compatible for same-country `COUNTRY`/`GLOBAL` vs `CITY` scopes when distance exceeds 100 km), and disjoint top entities (soft multi-token matching via `_entities_compatible`, bypassed when `embedding_cosine >= 0.86`).
 
 **Merge bands**:
 
 | Score | Action |
 | :--- | :--- |
-| ≥ 0.92 | Auto-merge |
-| 0.85–0.92 | Batched LLM adjudication (max `EVENT_MERGE_LLM_PAIRS_PER_RUN`) |
-| < 0.85 | No merge |
+| ≥ 0.90 | Auto-merge |
+| 0.74–0.90 | Batched LLM adjudication (max `EVENT_MERGE_LLM_PAIRS_PER_RUN`) |
+| < 0.74 | No merge |
 
 Decisions are cached in `cluster_decisions` keyed by sorted event IDs + both `member_hash` values + prompt version.
 
-**Survivor selection**: more members wins; on a tie, the older event wins. Loser members are reassigned to survivor; loser is marked `MERGED` with a redirect (`merged_into_id`). The API resolves redirect chains; events are never deleted. Merge clears survivor `member_hash` (triggering a re-describe) and bumps `version` on both.
+**Survivor selection**: more members wins; on a tie, the older event wins. Loser members are reassigned to survivor; loser is marked `MERGED` with a redirect (`merged_into_id`), and `EventMergeService` deletes direct survivor↔loser edges and repoints third-party `event_relationships` rows to the survivor. The API resolves redirect chains; events are never deleted. Merge clears survivor `member_hash` (triggering a re-describe) and bumps `version` on both.
+
+#### Pairwise Event Relationships (`RELATIONSHIP` stage)
+
+After duplicate merges settle in `RECONCILE`, `RelationshipStage` recalls distinct active event pairs within `RELATIONSHIP_WINDOW_DAYS` using pgvector ANN similarity (`>= RELATIONSHIP_MIN_EMBEDDING_SIM`, up to `RELATIONSHIP_NEIGHBORS_PER_EVENT` per event) plus soft shared-entity fallback without country restrictions. Pairs not already upserted or cached in `cluster_decisions` (keyed by `"rel|<id1>|<id2>|<hash1>|<hash2>|<prompt_version>"`, capped at `RELATIONSHIP_LLM_PAIRS_PER_RUN`) are classified via `HermesAi.relationships` into `CAUSED`, `FOLLOW_UP`, `REACTION`, `RELATED`, `SAME_INCIDENT`, or `NONE`, persisting directed confidence-gated (`>= RELATIONSHIP_MIN_CONFIDENCE`) edges to `event_relationships`.
 
 ### 6.6 Maintenance (Phase 7)
 

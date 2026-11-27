@@ -4,7 +4,13 @@ import asyncio
 import uuid
 from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock
-from hermes_ai import EventDescription, GeocodingResult
+from hermes_ai import (
+    EventActor,
+    EventActorKind,
+    EventActorRole,
+    EventDescription,
+    GeocodingResult,
+)
 from hermes_ai.models.describe import DescribeImpact
 from hermes_ai.models.labels import LabelLocation, LabelScope
 from hermes_db.enums import EventScope, ImpactLevel
@@ -17,6 +23,7 @@ from hermes_worker.jobs.stages.describe import (
     _apply_description,
     _apply_fallback,
     _EventFacts,
+    _geocode_actors,
     _geocode_event,
     _member_locations,
     _one_per_family,
@@ -86,8 +93,8 @@ class TestOnePerFamily:
         assert selected == [earlier, standalone]
 
     def test_uses_article_id_when_family_is_missing(self) -> None:
-        first = _member()
-        second = _member()
+        first = _member(article_id=uuid.UUID(int=1))
+        second = _member(article_id=uuid.UUID(int=2))
 
         assert _one_per_family([first, second]) == [first, second]
 
@@ -307,5 +314,61 @@ class TestGeocodeEvent:
             assert geocoded is False
             geocoder.geocode.assert_not_awaited()
             assert stats.counters == {}
+
+        asyncio.run(_test())
+
+
+class TestActorsSeparationAndGeocoding:
+    def test_apply_description_retains_actors_and_geocodes_only_external_origin(self) -> None:
+        async def _test() -> None:
+            geocoder = MagicMock()
+            geocoder.geocode = AsyncMock(
+                return_value=GeocodingResult(
+                    latitude=31.0461,
+                    longitude=34.8516,
+                    display_name="Israel",
+                )
+            )
+            ctx = _context(geocoder)
+            event = MagicMock()
+            event.locations = []
+            event.location_name = None
+            event.country_code = None
+
+            desc = _description(
+                headline="Israeli air strikes kill eight in Gaza Strip",
+                summary="Israeli forces struck Gaza Strip, killing eight people including Khaled Abu Nada.",
+                locations=[LabelLocation(name="Gaza Strip", country_code="PS")],
+                actors=[
+                    EventActor(
+                        name="Israel",
+                        kind=EventActorKind.STATE,
+                        role=EventActorRole.ACTOR,
+                        location_name="Israel",
+                        country_code="IL",
+                    ),
+                    EventActor(
+                        name="Khaled Abu Nada",
+                        kind=EventActorKind.PERSON,
+                        role=EventActorRole.TARGET,
+                        location_name="Gaza Strip",
+                        country_code="PS",
+                    ),
+                ],
+            )
+            _apply_description(event, desc, ())
+            assert event.location_name == "Gaza Strip"
+            assert event.country_code == "PS"
+            assert len(event.actors) == 2
+
+            stats = StageStats()
+            await _geocode_actors(ctx, event, stats)
+
+            geocoder.geocode.assert_awaited_once_with("Israel", country_code="IL")
+            assert event.actors[0]["latitude"] == 31.0461
+            assert event.actors[0]["longitude"] == 34.8516
+            assert event.actors[1]["latitude"] is None
+            assert event.actors[1]["longitude"] is None
+            assert stats.counters == {"actor_geocoded": 1}
 
         asyncio.run(_test())

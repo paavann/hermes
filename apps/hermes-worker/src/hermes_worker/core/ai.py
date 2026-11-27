@@ -96,6 +96,12 @@ def create_ai_client(settings: Settings) -> HermesAi:
             settings.THREAD_API,
             settings.THREAD_MODEL_KWARGS,
         ),
+        (
+            "relationship",
+            settings.RELATIONSHIP_MODEL,
+            settings.RELATIONSHIP_API,
+            settings.RELATIONSHIP_MODEL_KWARGS,
+        ),
     )
 
     specs: list[_RouteSpec] = []
