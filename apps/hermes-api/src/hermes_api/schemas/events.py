@@ -1,6 +1,8 @@
 import uuid
 from datetime import datetime
+from typing import Literal
 from hermes_db.enums import (
+    EventRelationshipType,
     EventScope,
     EventStatus,
     EventTlStatus,
@@ -8,7 +10,7 @@ from hermes_db.enums import (
     SelectionTier,
     VerificationStatus,
 )
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class ArticleResponse(BaseModel):
@@ -17,6 +19,61 @@ class ArticleResponse(BaseModel):
     url: str
     published_at: datetime | None
     source_name: str | None = None
+    model_config = ConfigDict(from_attributes=True)
+
+
+EventActorKind = Literal["STATE", "ORGANIZATION", "PERSON", "GROUP"]
+EventActorRole = Literal["ACTOR", "TARGET", "PARTICIPANT"]
+
+
+class EventActorItem(BaseModel):
+    name: str
+    kind: EventActorKind
+    role: EventActorRole
+    location_name: str | None = None
+    country_code: str | None = None
+    latitude: float | None = None
+    longitude: float | None = None
+    model_config = ConfigDict(from_attributes=True)
+
+
+class EventRelationshipItem(BaseModel):
+    id: uuid.UUID
+    relationship_type: EventRelationshipType
+    direction: Literal["OUTGOING", "INCOMING"]
+    confidence: float
+    rationale: str
+    related_event_id: uuid.UUID
+    related_headline: str
+    related_category: str
+    related_category_color: str
+    related_location_name: str | None
+    related_latitude: float | None
+    related_longitude: float | None
+    related_importance_score: float
+    related_event_time: datetime | None
+    model_config = ConfigDict(from_attributes=True)
+
+
+class MapRelationshipEdgeResponse(BaseModel):
+    id: uuid.UUID
+    source_event_id: uuid.UUID
+    target_event_id: uuid.UUID
+    source_headline: str
+    source_category: str
+    source_category_color: str
+    source_location_name: str | None
+    source_latitude: float
+    source_longitude: float
+    target_headline: str
+    target_category: str
+    target_category_color: str
+    target_location_name: str | None
+    target_latitude: float
+    target_longitude: float
+    relationship_type: EventRelationshipType
+    confidence: float
+    rationale: str
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -36,6 +93,8 @@ class EventResponse(BaseModel):
     source_count: int
     family_count: int
     independent_origin_count: int
+    relationship_count: int = 0
+    actors: list[EventActorItem] = Field(default_factory=list)
     thread_id: uuid.UUID | None
     thread_name: str | None = None
     status: EventStatus
@@ -48,6 +107,7 @@ class EventResponse(BaseModel):
 class EventDetailResponse(EventResponse):
     ai_summary: str
     articles: list[ArticleResponse]
+    relationships: list[EventRelationshipItem] = Field(default_factory=list)
 
 
 class MapEventResponse(BaseModel):
@@ -68,6 +128,8 @@ class MapEventResponse(BaseModel):
     source_count: int
     family_count: int
     independent_origin_count: int
+    relationship_count: int = 0
+    actors: list[EventActorItem] = Field(default_factory=list)
     thread_id: uuid.UUID | None
     thread_name: str | None = None
     model_config = ConfigDict(from_attributes=True)

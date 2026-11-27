@@ -18,7 +18,7 @@ This document details the architectural decisions, design tradeoffs, execution p
   - *The Why*: Maintaining ORM models across multiple backend packages invites schema drift and disjoint migration trees.
   - *The Boundary*: All SQLAlchemy 2.0 ORM models ([`Event`](../../../libs/shared/hermes-db/src/hermes_db/models/event.py), [`Article`](../../../libs/shared/hermes-db/src/hermes_db/models/article.py), [`EventTl`](../../../libs/shared/hermes-db/src/hermes_db/models/event_tl.py), [`Source`](../../../libs/shared/hermes-db/src/hermes_db/models/source.py), [`GeocodeCache`](../../../libs/shared/hermes-db/src/hermes_db/models/geocode_cache.py)) and Alembic migrations reside exclusively in [`libs/shared/hermes-db`](../../../libs/shared/hermes-db). `hermes-api` imports models and services directly and never declares local ORM schemas.
 - **Strict Dependency Injection**:
-  - Route handlers in [`api/v1/`](../src/hermes_api/api/v1) never instantiate database sessions or business services directly; they consume them via FastAPI `Depends()` (`get_db`, `get_event_service`, `get_tl_service`). This decouples request routing from persistence mechanics and allows test mocking via `dependency_overrides`.
+  - Route handlers in [`api/v1/`](../src/hermes_api/api/v1) never instantiate database sessions or business services directly; they consume them via FastAPI `Depends()` (`get_db`, `get_event_service`, `get_relationship_service`, `get_tl_service`). This decouples request routing from persistence mechanics and allows test mocking via `dependency_overrides`.
 
 ---
 
@@ -49,6 +49,7 @@ sequenceDiagram
 1. **Sub-10ms Spatial Index Scan**: PostGIS executes an R-tree search over the spatial GiST index (`idx_events_location`), testing candidate geometries using `ST_Within(location, ST_MakeEnvelope(west, south, east, north, 4326))`.
 2. **Direct Coordinate Projection**: Rather than deserializing Well-Known Binary (WKB) geometry objects in Python, the query projects `ST_X(Event.location)` and `ST_Y(Event.location)` directly in SQL. This strips binary geometry deserialization overhead and transmits native floating-point coordinates directly to Pydantic serialization.
 3. **Partial Index Filtering**: Inactive events are excluded using PostGIS partial indexes (`status = 'ACTIVE'`), keeping the working set small and bounded.
+4. **Viewport Relationship Links**: `GET /api/v1/events/bbox` and `GET /api/v1/events/` attach `relationship_count` per event via `EventService.relationship_counts`, `GET /api/v1/events/relationships` (registered before `/{event_id}`) returns cross-event `MapRelationshipEdgeResponse` edges for events intersecting the bounding box, and `GET /api/v1/events/{event_id}` includes connected `EventRelationshipItem` links.
 
 ---
 
