@@ -8,11 +8,16 @@ import type { MapEventResponse } from '@hermes/util-types';
 import { MapConfigProvider } from '../config-context';
 import type { MapConfig } from '../config-context';
 import { useMapDataSync } from '../hooks/datasync';
+import { useMapRelationships } from '../hooks/useMapRelationships';
 import { useMapStore } from '../store/store';
 import { MapView } from './map-view';
 
 vi.mock('../hooks/datasync', () => ({
   useMapDataSync: vi.fn(),
+}));
+
+vi.mock('../hooks/useMapRelationships', () => ({
+  useMapRelationships: vi.fn(),
 }));
 
 vi.mock('../hooks/eventDetails', () => ({
@@ -196,6 +201,7 @@ const EVENTS: MapEventResponse[] = [
 ];
 
 const useMapDataSyncMock = vi.mocked(useMapDataSync);
+const useMapRelationshipsMock = vi.mocked(useMapRelationships);
 
 function renderMapView(): ReturnType<typeof render> {
   const client = new QueryClient({
@@ -227,6 +233,10 @@ describe('MapView', () => {
       data: EVENTS,
       isFetching: false,
     } as unknown as ReturnType<typeof useMapDataSync>);
+    useMapRelationshipsMock.mockReturnValue({
+      data: [],
+      isFetching: false,
+    } as unknown as ReturnType<typeof useMapRelationships>);
     useMapStore.setState({
       viewport: null,
       selectedEventId: null,
@@ -235,6 +245,7 @@ describe('MapView', () => {
       tlTargetId: null,
       citedEvents: [],
       focusRequest: null,
+      showRelationships: true,
     });
   });
 
@@ -283,13 +294,53 @@ describe('MapView', () => {
       expect.objectContaining({
         type: 'geojson',
         cluster: true,
-        clusterMaxZoom: 14,
+        clusterMaxZoom: 18,
         clusterRadius: 50,
       }),
     );
     expect(instance.addSource).toHaveBeenCalledWith(
       'cited-events-source',
       expect.objectContaining({ type: 'geojson' }),
+    );
+    expect(instance.addSource).toHaveBeenCalledWith(
+      'relationship-edges-source',
+      expect.objectContaining({ type: 'geojson' }),
+    );
+    expect(instance.addSource).toHaveBeenCalledWith(
+      'actor-vectors-source',
+      expect.objectContaining({ type: 'geojson' }),
+    );
+    expect(instance.addSource).toHaveBeenCalledWith(
+      'actor-anchors-source',
+      expect.objectContaining({ type: 'geojson' }),
+    );
+    expect(instance.addSource).toHaveBeenCalledWith(
+      'relationship-partners-source',
+      expect.objectContaining({ type: 'geojson' }),
+    );
+    expect(instance.addLayer).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'hermes-relationship-arcs-glow',
+        source: 'relationship-edges-source',
+      }),
+    );
+    expect(instance.addLayer).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'hermes-relationship-arcs',
+        source: 'relationship-edges-source',
+      }),
+    );
+    expect(instance.addLayer).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'hermes-actor-vectors',
+        source: 'actor-vectors-source',
+      }),
+    );
+    expect(instance.addLayer).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'hermes-actor-anchors',
+        source: 'actor-anchors-source',
+      }),
     );
     expect(instance.addLayer).toHaveBeenCalledWith(
       expect.objectContaining({ id: 'hermes-clusters', source: 'events-source' }),
@@ -302,6 +353,12 @@ describe('MapView', () => {
     );
     expect(instance.addLayer).toHaveBeenCalledWith(
       expect.objectContaining({ id: 'hermes-cited-points' }),
+    );
+    expect(instance.addLayer).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'hermes-relationship-partners',
+        source: 'relationship-partners-source',
+      }),
     );
 
     const eventsCall = instance.addSource.mock.calls.find(
@@ -343,6 +400,132 @@ describe('MapView', () => {
     );
     expect(instance.setLayoutProperty).toHaveBeenCalledWith(
       'hermes-cited-points',
+      'visibility',
+      'none',
+    );
+    expect(instance.setLayoutProperty).toHaveBeenCalledWith(
+      'hermes-relationship-arcs-glow',
+      'visibility',
+      'none',
+    );
+    expect(instance.setLayoutProperty).toHaveBeenCalledWith(
+      'hermes-relationship-arcs',
+      'visibility',
+      'none',
+    );
+    expect(instance.setLayoutProperty).toHaveBeenCalledWith(
+      'hermes-actor-vectors',
+      'visibility',
+      'none',
+    );
+    expect(instance.setLayoutProperty).toHaveBeenCalledWith(
+      'hermes-actor-anchors',
+      'visibility',
+      'none',
+    );
+    expect(instance.setLayoutProperty).toHaveBeenCalledWith(
+      'hermes-relationship-partners',
+      'visibility',
+      'none',
+    );
+  });
+
+  it('highlights ego-network arcs while preserving persistent type colors and dims unrelated arcs', () => {
+    useMapRelationshipsMock.mockReturnValue({
+      data: [
+        {
+          id: 'edge-1',
+          source_event_id: 'event-a',
+          target_event_id: 'event-b',
+          source_headline: 'A',
+          source_category: 'CONFLICT',
+          source_category_color: '#ffb454',
+          source_location_name: 'Loc A',
+          source_latitude: 10.123456,
+          source_longitude: 20.654321,
+          target_headline: 'B',
+          target_category: 'CONFLICT',
+          target_category_color: '#ffb454',
+          target_location_name: 'Loc B',
+          target_latitude: 11,
+          target_longitude: 21,
+          relationship_type: 'CAUSED',
+          confidence: 0.9,
+          rationale: 'Causal link',
+        },
+      ],
+      isFetching: false,
+    } as unknown as ReturnType<typeof useMapRelationships>);
+
+    renderMapView();
+    emit('load');
+
+    const instance = mapbox.instances[0];
+    const arcsLayer = instance.addLayer.mock.calls.find(
+      ([layer]) => layer.id === 'hermes-relationship-arcs',
+    )?.[0];
+    expect(arcsLayer?.paint?.['line-color']).toEqual([
+      'match',
+      ['get', 'relationship_type'],
+      'CAUSED',
+      '#ffb454',
+      'FOLLOW_UP',
+      '#00f0ff',
+      'REACTION',
+      '#ff4fd8',
+      'RELATED',
+      '#b388ff',
+      '#b388ff',
+    ]);
+
+    expect(instance.setPaintProperty).toHaveBeenCalledWith(
+      'hermes-relationship-arcs',
+      'line-opacity',
+      ['case', ['==', ['get', 'is_active'], true], 1.0, 0.72],
+    );
+
+    act(() => {
+      useMapStore.getState().setSelectedEventId('event-a', [20.654321, 10.123456]);
+    });
+
+    expect(instance.setPaintProperty).toHaveBeenCalledWith(
+      'hermes-relationship-arcs',
+      'line-opacity',
+      ['case', ['==', ['get', 'is_active'], true], 1.0, 0.14],
+    );
+  });
+
+  it('hides relationship and actor layers when showRelationships toggles off', () => {
+    renderMapView();
+    emit('load');
+
+    act(() => {
+      useMapStore.getState().toggleRelationships();
+    });
+
+    const instance = mapbox.instances[0];
+    expect(instance.setLayoutProperty).toHaveBeenCalledWith(
+      'hermes-relationship-arcs-glow',
+      'visibility',
+      'none',
+    );
+    expect(instance.setLayoutProperty).toHaveBeenCalledWith(
+      'hermes-relationship-arcs',
+      'visibility',
+      'none',
+    );
+    expect(instance.setLayoutProperty).toHaveBeenCalledWith(
+      'hermes-actor-vectors',
+      'visibility',
+      'none',
+    );
+    expect(instance.setLayoutProperty).toHaveBeenCalledWith(
+      'hermes-actor-anchors',
+      'visibility',
+      'none',
+    );
+    expect(instance.setLayoutProperty).toHaveBeenCalledWith(
+      'hermes-relationship-partners',
       'visibility',
       'none',
     );

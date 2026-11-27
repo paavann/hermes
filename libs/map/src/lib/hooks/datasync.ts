@@ -1,9 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
-import { useMapStore } from '../store/store';
+
 import type { MapEventResponse } from '@hermes/util-types';
 
 import { useMapConfig } from '../config-context';
+import { useMapStore } from '../store/store';
+import { clampBoundingBox } from './bbox';
 
 export function useMapDataSync() {
   const config = useMapConfig();
@@ -13,17 +15,11 @@ export function useMapDataSync() {
     queryKey: ['events', viewport],
     queryFn: async () => {
       if (!viewport) return [];
-      let { north, south, east, west } = viewport;
-
-      // Clamp coordinates to valid ranges expected by the backend
-      north = Math.min(Math.max(north, -90), 90);
-      south = Math.min(Math.max(south, -90), 90);
-      east = Math.min(Math.max(east, -180), 180);
-      west = Math.min(Math.max(west, -180), 180);
+      const params = clampBoundingBox(viewport);
 
       const url = `${config.baseUrl}/api/${config.apiVer}/events/bbox`;
       const res = await axios.get<MapEventResponse[]>(url, {
-        params: { north, south, east, west },
+        params,
       });
       return res.data;
     },

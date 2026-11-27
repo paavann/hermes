@@ -8,6 +8,7 @@ import { cn } from '@hermes/ui-components';
 
 import { useMapStore } from '../../store/store';
 import { useEventDetails } from '../../hooks/eventDetails';
+import { relationshipTypeColor } from '../relationship-theme';
 
 function getOutletTag(
   sourceName: string | null | undefined,
@@ -116,6 +117,7 @@ export function EventPopup({
   const selectedEventLngLat = useMapStore((s) => s.selectedEventLngLat);
   const setSelectedEventId = useMapStore((s) => s.setSelectedEventId);
   const setTlMode = useMapStore((s) => s.setTlMode);
+  const focusEvent = useMapStore((s) => s.focusEvent);
 
   const { data: event, isLoading, isError } = useEventDetails(selectedEventId);
   const [pos, setPos] = useState({ x: -9999, y: -9999 });
@@ -437,6 +439,106 @@ export function EventPopup({
                 <span>ANALYZE LINEAGE</span>
                 <span aria-hidden="true">→</span>
               </button>
+
+              {(event.actors?.length ?? 0) > 0 ? (
+                <div>
+                  <div className="mb-2 flex items-center justify-between text-[9px] uppercase tracking-[0.18em] text-slate-muted/50">
+                    <span className="text-bone/80">ACTORS (WHO)</span>
+                    <span className="tabular-nums">
+                      {String(event.actors?.length ?? 0).padStart(2, '0')}
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {(event.actors ?? []).map((actor, idx) => (
+                      <span
+                        key={`${actor.name}-${actor.role}-${idx}`}
+                        className="inline-flex items-center gap-1.5 border border-border-subtle bg-onyx px-2 py-1 text-[9px] uppercase tracking-[0.12em] text-bone/85"
+                      >
+                        <span className="font-bold text-ivory">{actor.name}</span>
+                        <span className="text-slate-muted/55">{actor.role}</span>
+                        {actor.country_code ? (
+                          <span className="text-signal-amber/80">
+                            {actor.country_code}
+                          </span>
+                        ) : null}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+
+              {(event.relationships?.length ?? 0) > 0 ? (
+                <div>
+                  <div className="mb-2 flex items-center justify-between text-[9px] uppercase tracking-[0.18em] text-slate-muted/50">
+                    <span className="text-signal-amber">CONNECTED EVENTS</span>
+                    <span className="tabular-nums">
+                      {String(event.relationships?.length ?? 0).padStart(2, '0')}
+                    </span>
+                  </div>
+                  <ul className="border-t border-border-subtle">
+                    {(event.relationships ?? []).map((rel) => (
+                      <li
+                        key={rel.id}
+                        className="border-b border-border-subtle/60"
+                      >
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (
+                              rel.related_longitude !== null &&
+                              rel.related_latitude !== null
+                            ) {
+                              focusEvent(rel.related_event_id, [
+                                rel.related_longitude,
+                                rel.related_latitude,
+                              ]);
+                              return;
+                            }
+                            setSelectedEventId(rel.related_event_id, null);
+                          }}
+                          className="group flex w-full cursor-pointer flex-col gap-1 py-2.5 text-left transition-colors hover:bg-white/[0.02] focus-visible:outline-1 focus-visible:outline-neon-blue focus-visible:outline-offset-2"
+                        >
+                          <div className="flex items-center justify-between gap-2 text-[9px] uppercase tracking-[0.14em]">
+                            <span
+                              className="flex items-center gap-1.5 font-bold"
+                              style={{
+                                color: relationshipTypeColor(
+                                  rel.relationship_type,
+                                ),
+                              }}
+                            >
+                              <span
+                                className="h-1.5 w-1.5 shrink-0"
+                                style={{
+                                  backgroundColor: relationshipTypeColor(
+                                    rel.relationship_type,
+                                  ),
+                                }}
+                                aria-hidden="true"
+                              />
+                              <span>
+                                {rel.direction === 'OUTGOING'
+                                  ? `${rel.relationship_type} →`
+                                  : `← ${rel.relationship_type}`}
+                              </span>
+                            </span>
+                            <span className="truncate text-slate-muted/55">
+                              {rel.related_location_name ?? rel.related_category}
+                            </span>
+                          </div>
+                          <span className="line-clamp-2 text-[10px] leading-snug text-bone/85 group-hover:text-ivory">
+                            {rel.related_headline}
+                          </span>
+                          <span className="line-clamp-2 text-[9px] leading-relaxed text-slate-muted/55">
+                            {rel.rationale}
+                          </span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
 
               <div>
                 <div className="mb-2 flex items-center justify-between text-[9px] uppercase tracking-[0.18em] text-slate-muted/50">

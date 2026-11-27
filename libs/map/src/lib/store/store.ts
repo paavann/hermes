@@ -28,6 +28,7 @@ interface MapState {
   tlTargetId: string | null;
   citedEvents: CitedEvent[];
   focusRequest: FocusRequest | null;
+  showRelationships: boolean;
 
   setSelectedEventId: (
     id: string | null,
@@ -37,6 +38,7 @@ interface MapState {
   setTlMode: (active: boolean, targetId?: string | null) => void;
   setCitedEvents: (events: CitedEvent[]) => void;
   focusEvent: (eventId: string, lngLat: [number, number]) => void;
+  toggleRelationships: () => void;
 }
 
 let focusNonce = 0;
@@ -49,6 +51,7 @@ export const useMapStore = create<MapState>((set) => ({
   tlTargetId: null,
   citedEvents: [],
   focusRequest: null,
+  showRelationships: true,
   setSelectedEventId: (id, lngLat = null) =>
     set({ selectedEventId: id, selectedEventLngLat: lngLat }),
   setViewport: (viewport) => set({ viewport }),
@@ -63,4 +66,6 @@ export const useMapStore = create<MapState>((set) => ({
       selectedEventLngLat: lngLat,
     });
   },
+  toggleRelationships: () =>
+    set((state) => ({ showRelationships: !state.showRelationships })),
 }));

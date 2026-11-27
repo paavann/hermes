@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { MapEventResponse } from '@hermes/util-types';
@@ -40,6 +40,7 @@ describe('MapHud', () => {
     useMapStore.setState({
       viewport: null,
       citedEvents: [],
+      showRelationships: true,
     });
   });
 
@@ -110,5 +111,30 @@ describe('MapHud', () => {
     unmount();
 
     expect(clearIntervalSpy).toHaveBeenCalled();
+  });
+
+  it('renders [LINKS] toggle and inline link legend active by default and toggles store state', () => {
+    render(<MapHud events={[]} isFetching={false} />);
+
+    const toggle = screen.getByRole('button', {
+      name: /toggle event relationship links/i,
+    });
+    expect(toggle.getAttribute('aria-pressed')).toBe('true');
+    expect(screen.getByLabelText('Relationship link legend')).toBeTruthy();
+    expect(screen.getByText('CAUSED')).toBeTruthy();
+    expect(screen.getByText('FOLLOW UP')).toBeTruthy();
+    expect(screen.getByText('REACTION')).toBeTruthy();
+    expect(screen.getByText('RELATED')).toBeTruthy();
+    expect(screen.getByText('ACTOR')).toBeTruthy();
+
+    fireEvent.click(toggle);
+    expect(useMapStore.getState().showRelationships).toBe(false);
+    expect(toggle.getAttribute('aria-pressed')).toBe('false');
+    expect(screen.queryByLabelText('Relationship link legend')).toBeNull();
+
+    fireEvent.click(toggle);
+    expect(useMapStore.getState().showRelationships).toBe(true);
+    expect(toggle.getAttribute('aria-pressed')).toBe('true');
+    expect(screen.getByLabelText('Relationship link legend')).toBeTruthy();
   });
 });

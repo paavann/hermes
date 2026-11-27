@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import type { MapEventResponse } from '@hermes/util-types';
 
 import { useMapStore } from '../../store/store';
+import { RELATIONSHIP_LEGEND_ITEMS } from '../relationship-theme';
 
 export interface MapHudProps {
   readonly events: readonly MapEventResponse[];
@@ -43,6 +44,8 @@ function useUtcClock(): string {
  */
 export function MapHud({ events, isFetching }: MapHudProps): React.JSX.Element {
   const viewport = useMapStore((state) => state.viewport);
+  const showRelationships = useMapStore((state) => state.showRelationships);
+  const toggleRelationships = useMapStore((state) => state.toggleRelationships);
   const clock = useUtcClock();
 
   const centerLat =
@@ -105,17 +108,20 @@ export function MapHud({ events, isFetching }: MapHudProps): React.JSX.Element {
         </div>
 
         <div className="flex shrink-0 items-center gap-3">
-          {/* <span className="flex items-center gap-1.5 text-[9px] uppercase tracking-[0.18em] text-slate-muted/60">
-            <span
-              className={cn(
-                'h-1.5 w-1.5',
-                isFetching ? 'animate-pulse bg-signal-amber' : 'bg-emerald-400',
-              )}
-              aria-hidden="true"
-            />
-            <span>{isFetching ? 'SYNCING' : 'LIVE'}</span>
-          </span>
-          <span className="h-3 w-px bg-border-subtle" aria-hidden="true" /> */}
+          <button
+            type="button"
+            onClick={toggleRelationships}
+            aria-pressed={showRelationships}
+            aria-label="Toggle event relationship links"
+            className={`cursor-pointer border px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.16em] transition-colors focus-visible:outline-1 focus-visible:outline-neon-blue focus-visible:outline-offset-2 ${
+              showRelationships
+                ? 'border-neon-blue/70 bg-neon-blue/10 text-neon-blue hover:border-neon-blue'
+                : 'border-border-subtle bg-transparent text-slate-muted/60 hover:border-border-bright hover:text-bone'
+            }`}
+          >
+            CONNECTIONS
+          </button>
+          <span className="h-3 w-px bg-border-subtle" aria-hidden="true" />
           <span className="tabular-nums text-[10px] tracking-[0.12em] text-bone/80">
             {clock}
           </span>
@@ -152,6 +158,36 @@ export function MapHud({ events, isFetching }: MapHudProps): React.JSX.Element {
             </span>
           )}
         </div>
+
+        {showRelationships ? (
+          <div
+            aria-label="Relationship link legend"
+            className="hidden shrink-0 items-center gap-3 md:flex"
+          >
+            {RELATIONSHIP_LEGEND_ITEMS.map((item) => (
+              <span
+                key={item.key}
+                className="flex shrink-0 items-center gap-1.5 text-slate-muted/70"
+                title={item.label}
+              >
+                {item.dashed ? (
+                  <span
+                    className="inline-block w-3 border-t-2 border-dashed"
+                    style={{ borderColor: item.color }}
+                    aria-hidden="true"
+                  />
+                ) : (
+                  <span
+                    className="inline-block h-0.5 w-3"
+                    style={{ backgroundColor: item.color }}
+                    aria-hidden="true"
+                  />
+                )}
+                <span>{item.label}</span>
+              </span>
+            ))}
+          </div>
+        ) : null}
 
         {/* <div className="flex shrink-0 items-center gap-2 tabular-nums">
           <span className="hidden text-slate-muted/35 sm:inline">VIEWPORT</span>

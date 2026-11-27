@@ -26,6 +26,7 @@ describe('useMapStore', () => {
       tlTargetId: null,
       citedEvents: [],
       focusRequest: null,
+      showRelationships: true,
     });
   });
 
@@ -38,6 +39,15 @@ describe('useMapStore', () => {
     expect(state.tlTargetId).toBeNull();
     expect(state.citedEvents).toEqual([]);
     expect(state.focusRequest).toBeNull();
+    expect(state.showRelationships).toBe(true);
+  });
+
+  it('toggles relationship arc visibility', () => {
+    expect(useMapStore.getState().showRelationships).toBe(true);
+    useMapStore.getState().toggleRelationships();
+    expect(useMapStore.getState().showRelationships).toBe(false);
+    useMapStore.getState().toggleRelationships();
+    expect(useMapStore.getState().showRelationships).toBe(true);
   });
 
   it('updates selected event ID and coordinates', () => {

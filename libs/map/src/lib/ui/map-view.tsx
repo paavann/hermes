@@ -3,6 +3,7 @@ import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { useMapStore } from '../store/store';
 import { useMapDataSync } from '../hooks/datasync';
+import { useMapRelationships } from '../hooks/useMapRelationships';
 import { CornerReticle } from '@hermes/ui-components';
 
 import { ClusterList } from './components/ClusterList';
@@ -13,6 +14,8 @@ import { TlPanel } from './components/TlPanel';
 import { EventsLoader } from './components/EventsLoader';
 import { MapHud } from './components/MapHud';
 import { createCitedGeoJson } from './cited-geojson';
+import { buildActorGeoJson, buildRelationshipGeoJson } from './relationship-geojson';
+import { ACTOR_VECTOR_COLOR, RELATIONSHIP_COLORS } from './relationship-theme';
 import type { FeatureCollection } from 'geojson';
 import type { MapEventResponse } from '@hermes/util-types';
 import { useMapConfig } from '../config-context';
@@ -51,16 +54,23 @@ export function MapView({
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const [isMapReady, setIsMapReady] = useState(false);
+  const [hoveredEventId, setHoveredEventId] = useState<string | null>(null);
   const [clusterEvents, setClusterEvents] = useState<MapEventResponse[] | null>(
     null,
   );
   const setViewport = useMapStore((state) => state.setViewport);
   const { data: events, isFetching } = useMapDataSync();
+  const { data: relationships } = useMapRelationships();
   const setSelectedId = useMapStore((s) => s.setSelectedEventId);
 
+  const selectedEventId = useMapStore((s) => s.selectedEventId);
+  const showRelationships = useMapStore((s) => s.showRelationships);
   const isTimelineMode = useMapStore((s) => s.isTlMode);
   const citedEvents = useMapStore((s) => s.citedEvents);
   const focusRequest = useMapStore((s) => s.focusRequest);
+  const activeLinksEventId = isTimelineMode
+    ? null
+    : (selectedEventId ?? hoveredEventId);
 
   useEffect(() => {
     if (!mapContainer.current || map.current) return;
@@ -125,11 +135,16 @@ export function MapView({
           easing: (t) => t * (2 - t), // smooth ease out
         });
       });
-      map.current?.on('mouseenter', 'hermes-unclustered-point', () => {
+      map.current?.on('mouseenter', 'hermes-unclustered-point', (e) => {
         if (map.current) map.current.getCanvas().style.cursor = 'pointer';
+        const hoveredId = e.features?.[0]?.properties?.id;
+        if (typeof hoveredId === 'string') {
+          setHoveredEventId(hoveredId);
+        }
       });
       map.current?.on('mouseleave', 'hermes-unclustered-point', () => {
         if (map.current) map.current.getCanvas().style.cursor = '';
+        setHoveredEventId(null);
       });
 
       map.current?.on('click', 'hermes-cited-points', (e) => {
@@ -151,6 +166,33 @@ export function MapView({
         if (map.current) map.current.getCanvas().style.cursor = 'pointer';
       });
       map.current?.on('mouseleave', 'hermes-cited-points', () => {
+        if (map.current) map.current.getCanvas().style.cursor = '';
+      });
+
+      map.current?.on('click', 'hermes-relationship-partners', (e) => {
+        if (e.features && e.features[0] && map.current) {
+          const eventId = e.features[0].properties?.id;
+          if (typeof eventId === 'string') {
+            const point = e.features[0].geometry;
+            const lngLat: [number, number] =
+              point.type === 'Point'
+                ? [point.coordinates[0], point.coordinates[1]]
+                : [e.lngLat.lng, e.lngLat.lat];
+            setClusterEvents(null);
+            setSelectedId(eventId, lngLat);
+
+            map.current.easeTo({
+              center: lngLat,
+              duration: 800,
+              easing: (t) => t * (2 - t),
+            });
+          }
+        }
+      });
+      map.current?.on('mouseenter', 'hermes-relationship-partners', () => {
+        if (map.current) map.current.getCanvas().style.cursor = 'pointer';
+      });
+      map.current?.on('mouseleave', 'hermes-relationship-partners', () => {
         if (map.current) map.current.getCanvas().style.cursor = '';
       });
 
@@ -217,6 +259,89 @@ export function MapView({
       });
 
       updateBounds();
+      const initialLinksVisible =
+        useMapStore.getState().showRelationships &&
+        !useMapStore.getState().isTlMode;
+      const arcColorExpression: mapboxgl.ExpressionSpecification = [
+        'match',
+        ['get', 'relationship_type'],
+        'CAUSED',
+        RELATIONSHIP_COLORS.CAUSED,
+        'FOLLOW_UP',
+        RELATIONSHIP_COLORS.FOLLOW_UP,
+        'REACTION',
+        RELATIONSHIP_COLORS.REACTION,
+        'RELATED',
+        RELATIONSHIP_COLORS.RELATED,
+        RELATIONSHIP_COLORS.RELATED,
+      ];
+
+      map.current?.addSource('relationship-edges-source', {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: [] },
+      });
+      map.current?.addSource('relationship-partners-source', {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: [] },
+      });
+      map.current?.addSource('actor-vectors-source', {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: [] },
+      });
+      map.current?.addSource('actor-anchors-source', {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: [] },
+      });
+      map.current?.addLayer({
+        id: 'hermes-relationship-arcs-glow',
+        type: 'line',
+        source: 'relationship-edges-source',
+        layout: {
+          visibility: initialLinksVisible ? 'visible' : 'none',
+          'line-cap': 'round',
+          'line-join': 'round',
+        },
+        paint: {
+          'line-color': arcColorExpression,
+          'line-width': ['case', ['==', ['get', 'is_active'], true], 9.0, 5.0],
+          'line-blur': ['case', ['==', ['get', 'is_active'], true], 5.0, 3.5],
+          'line-opacity': ['case', ['==', ['get', 'is_active'], true], 0.48, 0.28],
+          'line-emissive-strength': 1,
+        },
+      });
+      map.current?.addLayer({
+        id: 'hermes-relationship-arcs',
+        type: 'line',
+        source: 'relationship-edges-source',
+        layout: {
+          visibility: initialLinksVisible ? 'visible' : 'none',
+          'line-cap': 'round',
+          'line-join': 'round',
+        },
+        paint: {
+          'line-color': arcColorExpression,
+          'line-width': ['case', ['==', ['get', 'is_active'], true], 3.2, 2.0],
+          'line-opacity': ['case', ['==', ['get', 'is_active'], true], 1.0, 0.72],
+          'line-emissive-strength': 1,
+        },
+      });
+      map.current?.addLayer({
+        id: 'hermes-actor-vectors',
+        type: 'line',
+        source: 'actor-vectors-source',
+        layout: {
+          visibility: initialLinksVisible ? 'visible' : 'none',
+          'line-cap': 'round',
+          'line-join': 'round',
+        },
+        paint: {
+          'line-color': ACTOR_VECTOR_COLOR,
+          'line-dasharray': [2.2, 2.2],
+          'line-width': ['case', ['==', ['get', 'is_active'], true], 2.4, 1.4],
+          'line-opacity': ['case', ['==', ['get', 'is_active'], true], 0.95, 0.35],
+          'line-emissive-strength': 1,
+        },
+      });
       map.current?.addSource('events-source', {
         type: 'geojson',
         data: events
@@ -269,9 +394,24 @@ export function MapView({
         paint: {
           'circle-color': ['get', 'category_color'],
           'circle-radius': ['match', ['get', 'rank'], 1, 18, 2, 14, 3, 10, 6],
-          'circle-stroke-width': 1.5,
-          'circle-stroke-color': '#f1ede2',
-          'circle-stroke-opacity': 0.45,
+          'circle-stroke-width': [
+            'case',
+            ['>', ['coalesce', ['get', 'relationship_count'], 0], 0],
+            2.2,
+            1.5,
+          ],
+          'circle-stroke-color': [
+            'case',
+            ['>', ['coalesce', ['get', 'relationship_count'], 0], 0],
+            '#00f0ff',
+            '#f1ede2',
+          ],
+          'circle-stroke-opacity': [
+            'case',
+            ['>', ['coalesce', ['get', 'relationship_count'], 0], 0],
+            0.85,
+            0.45,
+          ],
           'circle-emissive-strength': 1,
         },
       });
@@ -289,6 +429,42 @@ export function MapView({
           'circle-stroke-width': 3,
           'circle-stroke-color': '#00f0ff',
           'circle-stroke-opacity': 0.95,
+        },
+      });
+      map.current?.addLayer({
+        id: 'hermes-relationship-partners',
+        type: 'circle',
+        source: 'relationship-partners-source',
+        layout: {
+          visibility: initialLinksVisible ? 'visible' : 'none',
+        },
+        paint: {
+          'circle-radius': 18,
+          'circle-color': 'rgba(0, 0, 0, 0)',
+          'circle-stroke-width': 2.5,
+          'circle-stroke-color': '#ffb454',
+          'circle-stroke-opacity': 0.95,
+          'circle-emissive-strength': 1,
+        },
+      });
+      map.current?.addLayer({
+        id: 'hermes-actor-anchors',
+        type: 'symbol',
+        source: 'actor-anchors-source',
+        layout: {
+          visibility: initialLinksVisible ? 'visible' : 'none',
+          'text-field': ['concat', '◇ ', ['get', 'name']],
+          'text-font': ['JetBrains Mono Regular', 'Arial Unicode MS Bold'],
+          'text-size': 10,
+          'text-allow-overlap': true,
+          'text-offset': [0, -1.1],
+        },
+        paint: {
+          'text-color': ACTOR_VECTOR_COLOR,
+          'text-halo-color': '#0b0d10',
+          'text-halo-width': 1.5,
+          'text-opacity': 0.95,
+          'text-emissive-strength': 1,
         },
       });
     });
@@ -354,6 +530,77 @@ export function MapView({
 
   useEffect(() => {
     const mapInstance = map.current;
+    if (!mapInstance) return;
+
+    const updateRelationshipSources = () => {
+      const geojson = buildRelationshipGeoJson(
+        relationships ?? [],
+        activeLinksEventId,
+      );
+      const actorGeojson = buildActorGeoJson(
+        events ?? [],
+        activeLinksEventId,
+      );
+      const edgesSource = mapInstance.getSource(
+        'relationship-edges-source',
+      ) as mapboxgl.GeoJSONSource | undefined;
+      const partnersSource = mapInstance.getSource(
+        'relationship-partners-source',
+      ) as mapboxgl.GeoJSONSource | undefined;
+      const actorVectorsSource = mapInstance.getSource(
+        'actor-vectors-source',
+      ) as mapboxgl.GeoJSONSource | undefined;
+      const actorAnchorsSource = mapInstance.getSource(
+        'actor-anchors-source',
+      ) as mapboxgl.GeoJSONSource | undefined;
+
+      edgesSource?.setData(geojson.edges);
+      partnersSource?.setData(geojson.partners);
+      actorVectorsSource?.setData(actorGeojson.vectors);
+      actorAnchorsSource?.setData(actorGeojson.anchors);
+
+      if (mapInstance.getLayer('hermes-relationship-arcs-glow')) {
+        mapInstance.setPaintProperty(
+          'hermes-relationship-arcs-glow',
+          'line-opacity',
+          [
+            'case',
+            ['==', ['get', 'is_active'], true],
+            0.48,
+            activeLinksEventId !== null ? 0.06 : 0.28,
+          ],
+        );
+      }
+
+      if (mapInstance.getLayer('hermes-relationship-arcs')) {
+        mapInstance.setPaintProperty('hermes-relationship-arcs', 'line-opacity', [
+          'case',
+          ['==', ['get', 'is_active'], true],
+          1.0,
+          activeLinksEventId !== null ? 0.14 : 0.72,
+        ]);
+      }
+
+      if (mapInstance.getLayer('hermes-actor-vectors')) {
+        mapInstance.setPaintProperty('hermes-actor-vectors', 'line-opacity', [
+          'case',
+          ['==', ['get', 'is_active'], true],
+          0.95,
+          activeLinksEventId !== null ? 0.12 : 0.35,
+        ]);
+      }
+    };
+
+    if (mapInstance.getSource('relationship-edges-source')) {
+      updateRelationshipSources();
+    } else {
+      mapInstance.once('load', updateRelationshipSources);
+      mapInstance.once('style.load', updateRelationshipSources);
+    }
+  }, [relationships, events, activeLinksEventId]);
+
+  useEffect(() => {
+    const mapInstance = map.current;
     if (!mapInstance || focusRequest === null) return;
 
     const flyToCitation = () => {
@@ -380,6 +627,8 @@ export function MapView({
   useEffect(() => {
     if (!map.current) return;
     const visibility = isTimelineMode ? 'none' : 'visible';
+    const relationshipVisibility =
+      !isTimelineMode && showRelationships ? 'visible' : 'none';
 
     [
       'hermes-clusters',
@@ -391,7 +640,25 @@ export function MapView({
         map.current.setLayoutProperty(layer, 'visibility', visibility);
       }
     });
-  }, [isTimelineMode]);
+
+    [
+      'hermes-relationship-arcs-glow',
+      'hermes-relationship-arcs',
+      'hermes-relationship-partners',
+      'hermes-actor-vectors',
+      'hermes-actor-anchors',
+    ].forEach(
+      (layer) => {
+        if (map.current?.getLayer(layer)) {
+          map.current.setLayoutProperty(
+            layer,
+            'visibility',
+            relationshipVisibility,
+          );
+        }
+      },
+    );
+  }, [isTimelineMode, showRelationships]);
 
   return (
     <>

@@ -205,6 +205,113 @@ describe('EventPopup', () => {
     expect(useMapStore.getState().selectedEventId).toBeNull();
   });
 
+  it('renders connected events and focuses the map when clicked', () => {
+    vi.mocked(eventDetailsModule.useEventDetails).mockReturnValue({
+      data: {
+        ...mockCanadaEvent,
+        relationship_count: 1,
+        relationships: [
+          {
+            id: 'rel-1',
+            relationship_type: 'REACTION',
+            direction: 'OUTGOING',
+            confidence: 0.91,
+            rationale: 'Crowds watched the orbital boarding.',
+            related_event_id: 'event-china-999',
+            related_headline: 'Pakistani astronaut boards Tiangong',
+            related_category: 'SCIENCE',
+            related_category_color: '#a855f7',
+            related_location_name: 'China',
+            related_latitude: 34.79,
+            related_longitude: 103.71,
+            related_importance_score: 35,
+            related_event_time: '2026-11-25T08:11:00Z',
+          },
+        ],
+      },
+      isLoading: false,
+      isError: false,
+    } as unknown as ReturnType<typeof eventDetailsModule.useEventDetails>);
+
+    useMapStore.setState({
+      selectedEventId: 'event-canada-123',
+      selectedEventLngLat: [-107.124, 60.8108],
+      focusRequest: null,
+    });
+
+    render(<EventPopup map={mockMap} />);
+
+    expect(screen.getByText('CONNECTED EVENTS')).toBeTruthy();
+    const badgeText = screen.getByText('REACTION →');
+    expect(badgeText).toBeTruthy();
+    expect(badgeText.parentElement?.style.color).toBe('rgb(255, 79, 216)');
+    expect(
+      screen.getByText('Pakistani astronaut boards Tiangong'),
+    ).toBeTruthy();
+    expect(
+      screen.getByText('Crowds watched the orbital boarding.'),
+    ).toBeTruthy();
+
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: /pakistani astronaut boards tiangong/i,
+      }),
+    );
+
+    const state = useMapStore.getState();
+    expect(state.selectedEventId).toBe('event-china-999');
+    expect(state.selectedEventLngLat).toEqual([103.71, 34.79]);
+    expect(state.focusRequest?.eventId).toBe('event-china-999');
+  });
+
+  it('omits connected events section when an event has no relationships', () => {
+    useMapStore.setState({
+      selectedEventId: 'event-canada-123',
+      selectedEventLngLat: [-107.124, 60.8108],
+    });
+
+    render(<EventPopup map={mockMap} />);
+
+    expect(screen.queryByText('CONNECTED EVENTS')).toBeNull();
+  });
+
+  it('displays retained WHO actors alongside WHERE metadata', () => {
+    vi.mocked(eventDetailsModule.useEventDetails).mockReturnValue({
+      data: {
+        ...mockCanadaEvent,
+        location_name: 'Gaza Strip',
+        actors: [
+          {
+            name: 'Israel',
+            kind: 'STATE',
+            role: 'ACTOR',
+            location_name: 'Israel',
+            country_code: 'IL',
+            latitude: 31.0461,
+            longitude: 34.8516,
+          },
+        ],
+        relationship_count: 0,
+        relationships: [],
+      },
+      isLoading: false,
+      isError: false,
+    } as unknown as ReturnType<typeof eventDetailsModule.useEventDetails>);
+
+    useMapStore.setState({
+      selectedEventId: 'event-canada-123',
+      selectedEventLngLat: [34.4634, 31.5411],
+    });
+
+    render(<EventPopup map={mockMap} />);
+
+    expect(screen.getByText('ACTORS (WHO)')).toBeTruthy();
+    expect(screen.getByText('Israel')).toBeTruthy();
+    expect(screen.getByText('ACTOR')).toBeTruthy();
+    expect(screen.getByText('IL')).toBeTruthy();
+    expect(screen.queryByText('CONNECTED EVENTS')).toBeNull();
+  });
+
   it('stops click propagation to outer layers when clicking inside the popup', () => {
     useMapStore.setState({
       selectedEventId: 'event-canada-123',

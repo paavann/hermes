@@ -62,6 +62,12 @@ export function ClusterList({
                 {event.location_name !== null ? (
                   <span className="truncate">{event.location_name}</span>
                 ) : null}
+                {(event.relationship_count ?? 0) > 0 ? (
+                  <span className="shrink-0 border border-neon-blue/40 bg-neon-blue/10 px-1 py-px tabular-nums text-neon-blue">
+                    {event.relationship_count}{' '}
+                    {event.relationship_count === 1 ? 'LINK' : 'LINKS'}
+                  </span>
+                ) : null}
                 <span className="ml-auto shrink-0 tabular-nums text-signal-amber">
                   {Math.round(event.importance_score)}
                 </span>
