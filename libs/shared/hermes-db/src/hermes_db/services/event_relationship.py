@@ -163,8 +163,6 @@ def _anchor_select():
 
 
 class EventRelationshipService:
-    """Persistence and retrieval for pairwise event relationships."""
-
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
         self._membership = EventMembershipService(session)

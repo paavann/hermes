@@ -11,12 +11,72 @@ export type ImpactLevel = 'CRITICAL' | 'MAJOR' | 'MODERATE' | 'MINOR';
 
 export type EventScope = 'GLOBAL' | 'COUNTRY' | 'STATE' | 'CITY' | 'LOCAL';
 
+export type EventRelationshipType =
+  | 'CAUSED'
+  | 'FOLLOW_UP'
+  | 'REACTION'
+  | 'RELATED';
+
+export type RelationshipDirection = 'OUTGOING' | 'INCOMING';
+
+export type EventActorKind = 'STATE' | 'ORGANIZATION' | 'PERSON' | 'GROUP';
+
+export type EventActorRole = 'ACTOR' | 'TARGET' | 'PARTICIPANT';
+
+export interface EventActorItem {
+  name: string;
+  kind: EventActorKind;
+  role: EventActorRole;
+  location_name: string | null;
+  country_code: string | null;
+  latitude: number | null;
+  longitude: number | null;
+}
+
 export interface ArticleResponse {
   id: string;
   title: string;
   url: string;
   published_at: string | null;
   source_name?: string | null;
+}
+
+export interface EventRelationshipItem {
+  id: string;
+  relationship_type: EventRelationshipType;
+  direction: RelationshipDirection;
+  confidence: number;
+  rationale: string;
+  related_event_id: string;
+  related_headline: string;
+  related_category: string;
+  related_category_color: string;
+  related_location_name: string | null;
+  related_latitude: number | null;
+  related_longitude: number | null;
+  related_importance_score: number;
+  related_event_time: string | null;
+}
+
+export interface MapRelationshipEdgeResponse {
+  id: string;
+  source_event_id: string;
+  target_event_id: string;
+  source_headline: string;
+  source_category: string;
+  source_category_color: string;
+  source_location_name: string | null;
+  source_latitude: number;
+  source_longitude: number;
+  target_headline: string;
+  target_category: string;
+  target_category_color: string;
+  target_location_name: string | null;
+  target_latitude: number;
+  target_longitude: number;
+  relationship_type: EventRelationshipType;
+  confidence: number;
+  rationale: string;
 }
 
 export interface MapEventResponse {
@@ -37,6 +97,8 @@ export interface MapEventResponse {
   source_count: number;
   family_count: number;
   independent_origin_count: number;
+  relationship_count?: number;
+  actors?: EventActorItem[];
   thread_id: string | null;
   thread_name?: string | null;
 }
@@ -57,6 +119,8 @@ export interface EventResponse {
   source_count: number;
   family_count: number;
   independent_origin_count: number;
+  relationship_count?: number;
+  actors?: EventActorItem[];
   thread_id: string | null;
   thread_name?: string | null;
   status: string;
@@ -68,6 +132,7 @@ export interface EventResponse {
 export interface EventDetailResponse extends EventResponse {
   ai_summary: string;
   articles: ArticleResponse[];
+  relationships?: EventRelationshipItem[];
 }
 
 export type ThreadKind = 'DEVELOPING' | 'TOPIC';

@@ -12,6 +12,10 @@ import type {
   ChatStreamEvent,
   ChatTokenEvent,
   ChatViewportScope,
+  EventDetailResponse,
+  EventRelationshipItem,
+  MapEventResponse,
+  MapRelationshipEdgeResponse,
 } from './api-types.js';
 
 import doneFixture from '../../fixtures/chat/done.json';
@@ -197,5 +201,97 @@ describe('chat contract fixtures', () => {
       'done:sufficient',
       'error:MODEL_TIMEOUT',
     ]);
+  });
+});
+
+describe('event relationship contracts', () => {
+  it('models map relationship edges and event detail links', () => {
+    const mapEdge: MapRelationshipEdgeResponse = {
+      id: 'rel-1',
+      source_event_id: 'evt-china',
+      target_event_id: 'evt-pakistan',
+      source_headline: 'Pakistani astronaut boards China space station',
+      source_category: 'SCIENCE',
+      source_category_color: '#a855f7',
+      source_location_name: 'China',
+      source_latitude: 34.79,
+      source_longitude: 103.71,
+      target_headline: 'SUPARCO watch party in Islamabad celebrates launch',
+      target_category: 'TECHNOLOGY',
+      target_category_color: '#00f0ff',
+      target_location_name: 'Islamabad, Pakistan',
+      target_latitude: 33.6946,
+      target_longitude: 73.0646,
+      relationship_type: 'REACTION',
+      confidence: 0.91,
+      rationale: 'Public gathering organized to celebrate the docking.',
+    };
+
+    const relationshipItem: EventRelationshipItem = {
+      id: 'rel-1',
+      relationship_type: 'REACTION',
+      direction: 'OUTGOING',
+      confidence: 0.91,
+      rationale: 'Public gathering organized to celebrate the docking.',
+      related_event_id: 'evt-pakistan',
+      related_headline: 'SUPARCO watch party in Islamabad celebrates launch',
+      related_category: 'TECHNOLOGY',
+      related_category_color: '#00f0ff',
+      related_location_name: 'Islamabad, Pakistan',
+      related_latitude: 33.6946,
+      related_longitude: 73.0646,
+      related_importance_score: 28,
+      related_event_time: '2026-11-25T10:42:00Z',
+    };
+
+    const mapEvent: MapEventResponse = {
+      id: 'evt-china',
+      ai_headline: 'Pakistani astronaut boards China space station',
+      category: 'SCIENCE',
+      category_color: '#a855f7',
+      location_name: 'China',
+      latitude: 34.79,
+      longitude: 103.71,
+      importance_score: 35,
+      verification_status: 'CORROBORATED',
+      selection_tier: 'PRIMARY',
+      impact_level: 'MAJOR',
+      scope: 'COUNTRY',
+      event_time: '2026-11-25T08:11:00Z',
+      article_count: 4,
+      source_count: 3,
+      family_count: 2,
+      independent_origin_count: 2,
+      relationship_count: 1,
+      actors: [
+        {
+          name: 'China',
+          kind: 'STATE',
+          role: 'ACTOR',
+          location_name: 'China',
+          country_code: 'CN',
+          latitude: 34.79,
+          longitude: 103.71,
+        },
+      ],
+      thread_id: null,
+      thread_name: null,
+    };
+
+    const detailEvent: EventDetailResponse = {
+      ...mapEvent,
+      score_breakdown: { version: 'score-v1' },
+      status: 'ACTIVE',
+      first_reported_at: '2026-11-25T08:11:00Z',
+      last_updated_at: '2026-11-25T10:42:00Z',
+      ai_summary: 'Astronaut boarded the orbital laboratory.',
+      articles: [],
+      relationships: [relationshipItem],
+    };
+
+    expect(mapEdge.relationship_type).toBe('REACTION');
+    expect(detailEvent.relationship_count).toBe(1);
+    expect(detailEvent.relationships?.[0].direction).toBe('OUTGOING');
+    expect(detailEvent.actors?.[0].role).toBe('ACTOR');
   });
 });
