@@ -22,12 +22,12 @@ Hermes is a real-time geospatial intelligence engine that transforms fragmented 
 
 Traditional news aggregators suffer from narrative duplication, click-driven recency bias, and a lack of physical geographic context. Hermes addresses this through an automated, multi-stage processing pipeline:
 
-1. **Autonomous Ingestion**: Ingests articles across global wire services, major outlets, and GDELT.
-2. **Vector Deduplication & Clustering**: Generates high-dimensional embeddings (`halfvec(2048)`) and uses HNSW index cosine distance to match incoming articles to active events.
-3. **Verified Geocoding**: Extracts locations via LLM and grounds coordinates strictly using OpenStreetMap Nominatim with token-bucket rate limiting and negative caching.
-4. **Objective Ranking**: Computes one explainable `importance_score` (0–100) from independent-family strength, impact level, verification status, and label quality, then applies impact-tiered exponential decay and a single-source cap.
-5. **Causal Timeline Synthesis**: Reconstructs the historical context of any breaking story by querying Wikipedia and generating an interactive antecedent timeline DAG.
-6. **Grounded Conversational RAG**: Answers analyst questions over the current map scope with hybrid lexical/semantic retrieval, inline citations, and Server-Sent Events streaming.
+1. **Autonomous Ingestion & Labeling**: Fetches articles across global RSS/Atom wire services, news sitemaps, Google News fallbacks, and GDELT (`ingest-articles`), then transiently fetches full text and extracts structured claims, entities, and locations.
+2. **Syndication Families & Incident Clustering**: Embeds claims (`halfvec(2048)`), groups wire reprints into syndication families so duplicate wires never inflate corroboration, and clusters articles into physical incident events (`CLUSTER` + `RECONCILE`).
+3. **Verified Geocoding**: Extracts locations and key actor home cities via LLM and grounds coordinates strictly using OpenStreetMap Nominatim with token-bucket rate limiting and negative caching.
+4. **Objective Ranking**: Computes one explainable `importance_score` (0–100, `score-v2`) from independent-family strength, impact level, verification status, and reporting quality with impact-tiered exponential decay, single-source capping (`65`), and hysteresis visibility tiers (`PRIMARY` / `FILLER` / `DROP`).
+5. **Relationships, Story Threads & Causality Timelines**: Discovers typed cross-event relationships (`CAUSED`, `FOLLOW_UP`, `REACTION`, `RELATED`), links developing story threads, and reconstructs historical antecedent DAGs via Wikipedia (`POST /api/v1/events/tl/{id}`).
+6. **Grounded Conversational RAG**: Answers analyst questions over live map context or the globe with hybrid lexical/semantic retrieval, optional Tavily web search, inline citations, PostgreSQL-backed (with in-memory fallback) conversation checkpoints, and Server-Sent Events streaming.
 
 > [!NOTE]
 > Detailed system architecture diagrams, data pipelines, and design decisions are documented in [docs/architecture.md](docs/architecture.md).
@@ -36,12 +36,12 @@ Traditional news aggregators suffer from narrative duplication, click-driven rec
 
 ## Core Capabilities
 
-- **Interactive Tactical Map**: Full-screen WebGL map engine built on Mapbox GL JS with GPU canvas layer clustering, dynamic bounding-box synchronization (`/api/v1/events/bbox`), and camera transitions.
-- **Editorial Consensus Engine**: Corroborates multiple independent reports into single unified events, tracking sources and syndication factors.
-- **Historical Causality DAGs**: On-demand timeline synthesis (`/api/v1/events/tl/{id}`) that connects today's events to historical milestones extracted from Wikipedia.
-- **Grounded Chat**: Scope-aware conversational answers (`POST /api/v1/chat`) streamed over SSE, with hybrid retrieval, optional Tavily web search, and citations that focus the map.
-- **Traceability & Observability**: Integrated with [Langfuse](https://langfuse.com) for real-time span tracking, token usage accounting, latency monitoring, and model fallback observability across batch ingestion and on-demand synthesis.
-- **Resilient Pipeline**: Token-bucket rate limiting, circuit breaking, and schema-level LLM fallback extractors prevent failures during external API degradation.
+- **Interactive Tactical Map**: Full-screen WebGL map engine built on Mapbox GL JS with GPU layer clustering, cross-event relationship arcs and actor vectors (`/api/v1/events/relationships`), dynamic bounding-box synchronization (`/api/v1/events/bbox`), cluster drill-down, story thread drawers, and camera transitions.
+- **Editorial Consensus & Reconciliation Engine**: Corroborates independent reporting families into single incident pins (`CONFIRMED`, `CORROBORATED`, `SINGLE_SOURCE`, `CONFLICTING`) and merges duplicate incidents non-destructively via redirect chains.
+- **Historical Causality DAGs & Threads**: On-demand timeline synthesis (`/api/v1/events/tl/{id}`) connecting breaking incidents to Wikipedia historical milestones alongside multi-event story thread narratives (`/api/v1/threads/{id}`).
+- **Grounded Chat**: Context-aware conversational answers (`POST /api/v1/chat`) streamed over SSE, with hybrid retrieval, optional Tavily web search, and citations that focus the map.
+- **Traceability & Observability**: Integrated with [Langfuse](https://langfuse.com) for span tracking, content masking, token accounting, latency monitoring, and model fallback observability across batch ingestion and on-demand synthesis.
+- **Resilient Pipeline**: Token-bucket rate limiting, circuit breaking, SSRF-safe transient fetching, and schema-level LLM fallback extractors prevent failures during external API degradation.
 
 ---
 
@@ -112,7 +112,7 @@ hermes/
    ```bash
    cp .env.example .env
    ```
-   Ensure your `.env` contains database settings, Clerk authentication keys, and your Mapbox public token. For LLM capabilities, configure `LLM_API` and `EMBED_API` in `apps/hermes-api/.env.local`; chat additionally reads the `CHAT_*` and optional `TAVILY_API_KEY` settings. To enable Langfuse trace observability, add `LANGFUSE_PUBLIC_KEY` and `LANGFUSE_SECRET_KEY` to `.env`.
+   Ensure your `.env` contains database settings, Clerk authentication keys (`apps/hermes/.env` holds Vite client `VITE_*` variables per `apps/hermes/vite.config.mts`), and your Mapbox public token. For LLM capabilities, configure `LLM_API` and `EMBED_API` in `apps/hermes-api/.env.local` (and `apps/hermes-worker/.env.local`); chat additionally reads `CHAT_*` and optional `TAVILY_API_KEY` settings. To enable Langfuse trace observability, add `LANGFUSE_PUBLIC_KEY` and `LANGFUSE_SECRET_KEY`.
 
 4. **Start the local database**:
    ```bash
@@ -133,9 +133,15 @@ hermes/
    npx nx dev hermes
    ```
 
-7. **(Optional) Run worker maintenance**:
+7. **(Optional) Run the worker pipeline**:
    ```bash
-   # Requeues abandoned article claims and applies event lifecycle transitions
+   # Ingest feeds and label/embed articles
+   npx nx run hermes-worker:ingest-articles
+
+   # Cluster events, synthesize descriptions/actors, score, merge, link, and thread
+   npx nx run hermes-worker:build-events
+
+   # Requeue abandoned article claims and apply event/thread lifecycle transitions
    npx nx run hermes-worker:maintain-events
    ```
 
@@ -167,6 +173,7 @@ npx nx affected -t typecheck --base=master
   - [Worker CLI Ingestion Engine](apps/hermes-worker/README.md)
 - [**Library Guides**]:
   - [Map Engine & Visualization](libs/map/README.md)
+  - [Conversational Chat Client](libs/chat/README.md)
   - [AI & Geocoding Services](libs/shared/hermes-ai/README.md)
   - [Database Schemas & Models](libs/shared/hermes-db/README.md)
   - [UI Component Library](libs/shared/ui-components/README.md)

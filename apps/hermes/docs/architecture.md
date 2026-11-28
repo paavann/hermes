@@ -43,8 +43,8 @@ In `apps/hermes/app/routes/map.tsx`, the map and chat containers are wrapped ins
 
 ## 4. Map Rendering & Interaction Boundaries
 
-- **GPU Canvas Rendering vs. DOM Markers**: Map pins and clustered event counts are rendered directly through WebGL circle and symbol layers on the GPU canvas. Avoid creating off-screen or per-pin DOM elements; mounting extensive collections of DOM nodes is believed (not measured) to degrade frame rates and cause DOM bloat.
-- **Accessible Overlays**: Because WebGL canvas contents are opaque to screen readers, accessible interaction occurs through HTML overlay panels (`EventPopup`, `TlPanel`, and HUD widgets). These overlays must maintain semantic markup, keyboard accessibility, and ARIA roles.
+- **GPU Canvas Rendering vs. DOM Markers**: Map pins, cluster counts, cross-event relationship arcs (`hermes-relationship-arcs`, `hermes-relationship-arcs-glow`), partner rings, and actor vectors/anchors render directly through WebGL layers on the GPU canvas. Avoid creating off-screen or per-pin DOM elements; mounting extensive collections of DOM nodes degrades frame rates and causes DOM bloat.
+- **Accessible Overlays**: Because WebGL canvas contents are opaque to screen readers, accessible interaction occurs through HTML overlay panels (`EventPopup`, `ClusterList`, `StoryPanel`, `TlPanel`, `ChatPanel`, and `MapHud` widgets). These overlays must maintain semantic markup, keyboard accessibility, and ARIA roles.
 
 ## 5. Design System Integration
 
@@ -71,27 +71,18 @@ Suspense (MapLoadingFallback)
 └── DynamicMapContainer (React.lazy)
     └── MapConfigProvider
         └── ChatConfigProvider
-            ├── MapView
-            └── div[hidden = isTlMode]
-                └── ChatPanel
+            ├── MapView (threadId, onThreadChange, popupInsets)
+            └── div[hidden = isTlMode || threadId !== null]
+                └── ChatPanel (autoScope)
 ```
 
 ## 7. Conversational RAG UI & Map Integration
 
 ### Composition
-`ChatPanel` is an overlay, not a route. It owns its `useChat` hook and renders a closed-state tab when `isOpen` is false. The map remains full-bleed, visible, and interactive; closing the panel aborts an in-flight stream, marks the partial answer `cancelled`, clears cited-event highlights, and flips `isOpen`. The module-level Zustand store preserves the conversation and map viewport across close/reopen. The panel is hidden (not unmounted) while timeline inspection mode is active, so an in-flight stream and the conversation survive a mode switch without competing with `TlPanel`.
+`ChatPanel` is an overlay, not a route. It owns its `useChat` hook and renders a closed-state tab when `isOpen` is false. The map remains full-bleed, visible, and interactive; closing the panel aborts an in-flight stream, marks the partial answer `cancelled`, clears cited-event highlights, and flips `isOpen`. The module-level Zustand store preserves the conversation and map viewport across close/reopen. The panel is hidden (not unmounted) while timeline inspection mode (`isTlMode`) or a story thread drawer (`threadId !== null`) is active, so an in-flight stream and the conversation survive a mode switch without competing with `TlPanel` or `StoryPanel`. `popupInsets` offsets `EventPopup` horizontally to stay clear of the active left chat overlay and right story thread drawer.
 
-### Scope Resolution
-The panel receives `autoScope` from the map store (`selectedEventId` and `viewport`) and resolves each request:
-
-| Mode       | Resolution                                                     |
-| :--------- | :------------------------------------------------------------- |
-| `auto`     | selected event, else viewport, else global                     |
-| `event`    | selected event, else viewport, else global                     |
-| `viewport` | current viewport, else global                                  |
-| `global`   | global scope                                                   |
-
-The explicit mode persists in the chat store, while the underlying event ID and bounding box keep following the map.
+### Context & Planner Scope Resolution
+The panel receives `autoScope` (`selectedEventId`, `viewport`) from `useMapStore` and attaches `context: { event_id, bbox }` (`ChatMapContext`) on every request. The backend planner infers `event` (selected-event follow-ups), `viewport` (spatial screen-view questions), or `global` scope dynamically; callers may still pass an explicit `scope` override programmatically via `useChat`.
 
 ### Citation Focus
 `ChatPanel.onCitationActivate` is wired to `useMapStore.focusEvent` for event, article, and timeline sources that have an `event_id` and coordinates. `focusEvent` records a monotonically increasing `FocusRequest.nonce`, sets `selectedEventId`/`selectedEventLngLat` (opening `EventPopup`), and `MapView` flies to the coordinates at a minimum zoom of 6 on every nonce. Web citations are opened in a new tab by `useChat` and never move the map; sources without coordinates render as inert text.

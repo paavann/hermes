@@ -7,9 +7,10 @@ citations, and exposes the HUD chat panel.
 
 The library never talks to a model provider directly; it posts to
 `POST /api/{apiVer}/chat` and consumes the stream. Server-side conversation
-memory is owned by the API: the current deployment checkpoints turns in process
-memory, so a server restart starts a fresh memory thread even though the client
-keeps its transcript.
+memory is owned by the API: it uses `AsyncPostgresSaver` when configured/reachable
+and falls back to process-local `InMemorySaver` otherwise, so checkpoints reset
+if PostgreSQL checkpointing is unavailable during a server restart (while the
+client retains its `localStorage` transcript).
 
 ## Composition
 

@@ -21,8 +21,8 @@ flowchart TD
     end
 
     subgraph BatchLayer["Autonomous Ingestion Layer (AWS ap-southeast-2)"]
-        EventBridge["Amazon EventBridge\nSchedule: 3x daily"]
-        ECR["Amazon ECR\nhermes-worker:latest (~319 MB)"]
+        EventBridge["Amazon EventBridge\n(ingest / build / maintain)"]
+        ECR["Amazon ECR\nhermes-worker:latest"]
         Fargate["AWS ECS Fargate Task\n0.25 vCPU • 512 MB RAM • Ephemeral CLI"]
         CloudWatch["Amazon CloudWatch Logs\n/ecs/hermes-worker"]
     end
@@ -31,7 +31,7 @@ flowchart TD
         PgBouncer["PgBouncer Connection Pooler\nTransaction Pooling (Port 5432/6543)"]
         PostGIS["PostGIS 3.4 Spatial Engine\nGeometry(POINT, 4326) • GiST Index"]
         PgVector["pgvector Extension\nhalfvec(2048) • HNSW Index"]
-        Relational["Relational Tables\nevents, articles, sources, event_timelines, geocode_cache"]
+        Relational["Relational Tables\nevents, articles, article_labels,\narticle_families, event_members,\nevent_relationships, cluster_decisions,\nthreads, event_timelines, sources,\ngeocode_cache, chat checkpoints"]
     end
 
     subgraph ExternalServices["External Intelligence and Inference APIs"]
@@ -39,6 +39,7 @@ flowchart TD
         GDELT["GDELT 2.0 Doc API\nGlobal Event Database"]
         Nominatim["OpenStreetMap Nominatim\nToken-Bucket Rate Limited (1 req/s)"]
         Wikipedia["MediaWiki REST API\nHistorical Archive Querying"]
+        Tavily["Tavily Search API\nExternal News Fallback (opt-in)"]
         LiteLLM["LiteLLM Inference Router"]
         Mistral["Primary LLM:\nmistral/ministral-8b-latest"]
         NvidiaNim["Fallback LLM:\nnvidia_nim/openai/gpt-oss-20b\nEmbeddings:\nnvidia_nim/nvidia/nemotron-3-embed-1b"]
@@ -48,14 +49,15 @@ flowchart TD
     %% User interactions
     User -->|"HTTPS / WebGL Map Interactions"| VercelEdge
     VercelEdge -->|"Server-Side Auth Validation"| ClerkAuth
-    User -->|"Direct REST Queries (/events/bbox, /events/tl, /chat)"| LightsailApi
+    User -->|"Direct REST Queries (/events/*, /threads/*, /events/tl, /chat)"| LightsailApi
 
     %% API to Database
-    LightsailApi -->|"asyncpg / SQLAlchemy 2.0 (SSL)"| PgBouncer
+    LightsailApi -->|"asyncpg / SQLAlchemy 2.0 + psycopg Checkpointer"| PgBouncer
 
     %% API to AI & Wikipedia
     LightsailApi -->|"Timeline & Chat Inference"| LiteLLM
     LightsailApi -->|"Historical Article Search"| Wikipedia
+    LightsailApi -->|"Optional Web Fallback"| Tavily
     LightsailApi -->|"Historical Node Geocoding"| Nominatim
 
     %% Worker Execution
@@ -93,21 +95,20 @@ flowchart TD
 ### B. REST API Service (`apps/hermes-api`)
 - **Hosting Platform**: **Amazon Lightsail Container Services** (`hermes-api`, Nano tier).
 - **Runtime**: Python 3.14 + Uvicorn running FastAPI with a single worker.
-- **Read & Synthesis Contract**: The API service executes zero background jobs, schedulers, or ingestion loops. It serves three read-optimized workloads:
-  1. High-frequency spatial bounding box queries (`GET /api/v1/events/bbox`) parameterized by viewport bounds (`north`, `south`, `east`, `west`).
+- **Read & Synthesis Contract**: The API service executes zero background jobs, schedulers, or ingestion loops. It serves read-optimized spatial/relationship queries and on-demand AI workloads:
+  1. High-frequency spatial bounding-box and relationship queries (`GET /api/v1/events/bbox`, `GET /api/v1/events/relationships`), merge-aware event details (`GET /api/v1/events/{id}`), and narrative story threads (`GET /api/v1/threads/*`).
   2. On-demand causal timeline synthesis (`POST /api/v1/events/tl/{id}`) that discovers historical antecedents and generates causal DAGs.
-  3. Conversational RAG (`POST /api/v1/chat`) streamed over Server-Sent Events, scoped to an event, viewport, or the globe.
-- **Process-Local State**: Chat conversation memory and chat guardrails are held in process memory. A restart clears both; the client keeps its transcript in `localStorage` and can start a new server thread. The `ChatRuntime` accepts any LangGraph `BaseCheckpointSaver`, so a persistent saver can be introduced without changing the API contract.
+  3. Conversational RAG (`POST /api/v1/chat`) streamed over Server-Sent Events, resolved to an event, viewport, or global scope.
+- **Checkpoint Memory & Guards**: Conversation memory is keyed per `thread_id` via LangGraph, preferring `AsyncPostgresSaver` at startup (`CHECKPOINT_DB_URL` or `DB_*`) and falling back to process-local `InMemorySaver` on failure. `ChatGuards` (rate limit, token budget, concurrency semaphore) are process-local.
 - **CORS Handling**: Handlers in [`core/errors.py`](../apps/hermes-api/src/hermes_api/core/errors.py) explicitly inject access headers (`_cors_headers(request)`) to prevent Starlette `ExceptionMiddleware` from masking application exceptions behind browser CORS errors.
 - **Graceful Degradation**: If external LLM API credentials are not provisioned, spatial and event retrieval endpoints remain operational, while timeline synthesis and chat return explicit `503` responses.
 
 ### C. Ingestion & Lifecycle Worker (`apps/hermes-worker`)
 - **Hosting Platform**: **AWS ECS Fargate** (Sydney region: `ap-southeast-2`).
-- **Compute Sizing**: `0.25 vCPU` and `512 MB RAM` running an ARM64 (AWS Graviton) Linux container image (~319 MB) hosted in a private **Amazon ECR** repository.
-- **Scheduling**: **Amazon EventBridge** triggers one-shot executions via ECS `RunTask`. Production currently runs the legacy schedule three times daily (`cron(0 0,8,16 * * ? *)`); cutover splits it into ingest, build, and maintenance schedules.
+- **Compute Sizing**: `0.25 vCPU` and `512 MB RAM` running an ARM64 (AWS Graviton) Linux container image hosted in a private **Amazon ECR** repository.
+- **Scheduling**: **Amazon EventBridge** triggers one-shot executions via ECS `RunTask` across separate scheduled worker commands: `ingest-articles`, `build-events`, and `maintain-events`.
 - **Ephemeral Run-and-Die Execution Model**:
-  - The worker process spins up on demand, wraps database connections within [`db_lifespan()`](../apps/hermes-worker/src/hermes_worker/core/lifespan.py), and executes one command such as `hermes-worker maintain-events`.
-  - Typical runtime is **5 to 10 minutes**. At cutover, EventBridge schedules are split across `ingest-articles`, `build-events`, and `maintain-events`.
+  - The worker process spins up on demand, wraps database connections within [`db_lifespan()`](../apps/hermes-worker/src/hermes_worker/core/lifespan.py), and executes one command (`ingest-articles`, `build-events`, `maintain-events`, or `healthcheck`).
   - Upon task completion, the container terminates cleanly (`sys.exit(0)` on success or `sys.exit(1)` on error). Fargate deallocates compute resources immediately, terminating billing charges.
   - Telemetry and stdout/stderr logs stream to **Amazon CloudWatch Logs** under `/ecs/hermes-worker`.
 
@@ -124,44 +125,44 @@ flowchart TD
 
 ---
 
-## 3. Ingestion Worker & Job Foundation
+## 3. Ingestion Worker & Staged Pipeline
 
-The worker no longer runs a monolithic ingestion service. Ingestion and event construction are being rebuilt as one staged pipeline with explicit, separately scheduled commands. Phase 1 ships the runtime and maintenance surface; Phase 2 adds `ingest-articles` and the deduplicated article ledger; `build-events` follows with its stages.
+The worker executes a staged pipeline across separately scheduled commands with PostgreSQL advisory locking per mutating command ([`apps/hermes-worker/docs/architecture.md`](../apps/hermes-worker/docs/architecture.md)):
 
 ```mermaid
 flowchart LR
-    EventBridge["Amazon EventBridge\n(ingest / build / maintain schedules)"] -->|"ecs:RunTask"| Fargate["Hermes Worker (Fargate)"]
+    EventBridge["Amazon EventBridge\n(ingest / build / maintain)"] -->|"ecs:RunTask"| Fargate["Hermes Worker (Fargate)"]
     Fargate --> Lifespan["db_lifespan()\ninit_db -> close_db"]
     Lifespan --> Jobs["jobs/ runner\nordered stages + advisory lock"]
     Jobs --> Neon[("Neon PostgreSQL\n(PostGIS + pgvector)")]
-    Jobs --> AI["LiteLLM routes\nlabel / adjudicate / describe"]
+    Jobs --> AI["LiteLLM routes\nlabel / adjudicate / describe /\nrelationship / thread"]
     Jobs --> Nom["OSM Nominatim\n1 req/s"]
 ```
 
 ### 3.1 Command Surface
 
-| Command | Schedule | Purpose |
+| Command | Schedule | Stages & Purpose |
 | :--- | :--- | :--- |
-| `ingest-articles` | every 15 min | Sync sources, fetch due feeds, and write the deduplicated article ledger. Labeling, embeddings, and families arrive in Phase 3. |
-| `build-events` | hourly | Cluster articles into events, describe, verify, score, update threads. Added in Phase 4/5. |
-| `maintain-events` | daily | Requeue abandoned article claims and apply event lifecycle transitions. |
-| `healthcheck` | on demand | Read-only connectivity, schema, queue depth, and stale-claim probe. |
+| `ingest-articles` | every 15 min | `INGEST -> ANALYZE`: Sync `sources.json`, fetch due RSS/Google News/GDELT feeds, write the canonical ledger, transiently fetch `FULL_TEXT` bodies, label, embed (`halfvec(2048)`), and assign syndication families. |
+| `build-events` | hourly | `CLUSTER -> DESCRIBE -> SCORE -> RECONCILE -> RELATIONSHIP -> THREAD`: Cluster labeled articles into incident events, synthesize headlines/actors, compute `importance_score`, merge duplicate events, classify cross-event relationships, and group story threads. |
+| `maintain-events` | daily | `REQUEUE_CLAIMS -> EVENT_LIFECYCLE -> THREAD_LIFECYCLE -> MAINTENANCE`: Requeue stale claims, transition event/thread lifecycles, reconcile aggregate counters, prune retention windows, and check consistency. |
+| `healthcheck` | on demand | `HEALTHCHECK`: Read-only connectivity, schema, queue depth, and stale-claim probe. |
 
-`ingest-articles`, `maintain-events`, and `healthcheck` exist today. `audit-sources` is a read-only feed probe used to keep the source registry evidence-based. There is no feature flag and no parallel legacy path.
+All four scheduled commands plus standalone utilities (`audit-sources`, `reset-db`) are implemented. `audit-sources` is a read-only feed probe without database access. There is no feature flag and no parallel legacy path.
 
 ### 3.2 Work Queue and Execution Record
 
-- `articles.ingest_status` is the only work queue: `NEW → ANALYZING → LABELED → CLUSTERED`, with `REJECTED` and `FAILED` as terminal states.
-- Claims use `UPDATE … WHERE id IN (SELECT … FOR UPDATE SKIP LOCKED) … RETURNING`, bounded by `ARTICLE_CLAIM_BATCH_SIZE`.
-- An abandoned `ANALYZING` claim older than `ARTICLE_CLAIM_STALE_MINUTES` is requeued by `maintain-events`; exhausted attempts become `FAILED`.
-- There is no run-telemetry table. The execution record is the exit code, structured stage logs, and the article claim fields (`claimed_at`, `claimed_by`, `attempt_count`, `last_error`).
+- `articles.ingest_status` tracks the work queue: `NEW → ANALYZING → LABELED → CLUSTERED`, with `REJECTED` (gated out at `LABEL` or `GATE`) and `FAILED` as terminal states.
+- Claims use `UPDATE … WHERE id IN (SELECT … FOR UPDATE SKIP LOCKED) … RETURNING`, bounded by `ARTICLE_CLAIM_BATCH_SIZE` (`50`).
+- An abandoned `ANALYZING` claim older than `ARTICLE_CLAIM_STALE_MINUTES` (`30`) is requeued by `maintain-events`; exhausted attempts (`ARTICLE_MAX_ATTEMPTS = 3`) become `FAILED`.
+- There is no run-telemetry table. The execution record is the exit code, structured stage logs, and article claim fields (`claimed_at`, `claimed_by`, `attempt_count`, `last_error`).
 - Stages own their transaction boundaries. Domain services never commit; a crash before commit leaves the claim recoverable.
 
 ### 3.3 Bounded Work and Memory
 
-- The Fargate task has 0.25 vCPU and 512 MB RAM. Feeds, articles, bodies, and LLM calls are processed in bounded batches.
-- Network calls are rate-limited: Nominatim at 1 req/s, plus per-route LLM/embedding token buckets.
-- Every stage reserves LLM calls through a per-run budget; exhaustion fails the stage and leaves remaining work queued.
+- The Fargate task has 0.25 vCPU and 512 MB RAM. Feeds, articles, transient bodies, and LLM prompts are processed in bounded batches.
+- Network calls are rate-limited: Nominatim at 1 req/s, plus per-route LLM/embedding token buckets (`RPM_LIMIT`, `EMBED_RPM_LIMIT`).
+- LLM stages reserve calls against `MAX_LLM_CALLS_PER_RUN` (`120`). `ANALYZE` stops cleanly on exhaustion and releases remaining claims for the next run.
 
 ### 3.4 Grounded Geocoding Shield
 
@@ -169,71 +170,69 @@ LLMs never generate coordinates. They return normalized location names, which [`
 
 ---
 
-## 4. Multi-Factor Trending & Ranking Algorithm
+## 4. Verification, Unified Importance Scoring & Relationships
 
-Event prominence is calculated using an objective mathematical model incorporating editorial credibility, geopolitical diversity, reporting velocity, and continuous exponential time decay.
+Hermes computes one authoritative, deterministic `importance_score` (0–100, `SCORE_VERSION = "score-v2"`) in [`EventScoringService`](../libs/shared/hermes-db/src/hermes_db/services/event_scoring.py) from each event's active syndication-deduplicated members, impact, verification, and age.
 
-### The Scoring Formulation
+### 4.1 Verification & Syndication Independence
 
-When an incoming article $a$ is attached to an event $E$, the event's score updates according to:
+[`compute_verification`](../libs/shared/hermes-db/src/hermes_db/services/verification.py) groups articles by `ArticleFamily` (title/body SimHash or cosine `>= 0.97` within 36 hours) and publisher `origin_group` so wire reprints count as a single independent origin:
+- `CONFIRMED` (`1.00`): `>= 2` independent origins AND `>= 1` member has `certainty == CONFIRMED`.
+- `CORROBORATED` (`0.85`): `>= 2` independent origins without `CONFIRMED` certainty.
+- `SINGLE_SOURCE` (`0.75`): `1` independent origin.
+- `CONFLICTING` (`0.50`): any member reports `certainty == DISPUTED`.
 
-$$\Delta S = W_{\text{cred}}(a) \times F_{\text{synd}}(a) \times M_{\text{impact}}(E) \times D_{\text{shannon}}(E) \times V_{\text{mult}}(E)$$
+### 4.2 The Scoring Formula & Selection Tiers
 
-Where:
+$$\text{base} = 100 \times \left( 0.40 \times \text{strength} + 0.30 \times \text{impact} + 0.15 \times \text{verify} + 0.15 \times \text{quality} \right)$$
 
-- **Credibility Weight ($W_{\text{cred}}$)**: Calibrated by source tier:
-  - Tier 1 (Wire Services: Reuters, AP, AFP): **3.0**
-  - Tier 2 (Major Global Outlets: BBC, NYT, DW, France24): **2.0**
-  - Tier 3 (Regional / Secondary Outlets): **1.0**
-  - Tier 4 (Aggregators / Unverified Outlets): **0.5**
+$$\text{freshness} = e^{-\frac{\text{age\_hours}}{\text{half\_life}}}, \quad \text{score} = \text{base} \times \text{freshness}$$
 
-- **Syndication Dampening ($F_{\text{synd}}$)**: Dampens repetitive reporting from the same publisher:
-  $$F_{\text{synd}} = \frac{1}{\sqrt{N_{\text{source}}}}$$
-  *(where $N_{\text{source}}$ is the count of articles contributed by that specific source).*
+- **Source Strength ($\text{strength}$)**: $\min(1.0, \sum(\max \text{credibility per family}) / 9.0)$ with `TIER_1 = 3.0`, `TIER_2 = 2.0`, `TIER_3/4 = 1.0`.
+- **Impact Level ($\text{impact}$)**: `CRITICAL = 1.0`, `MAJOR = 0.8`, `MODERATE = 0.55`, `MINOR = 0.3`.
+- **Reporting Quality ($\text{quality}$)**: $\text{clamp}(1.0 - 0.15 \times (5 - \text{specificity}) - 0.10 \times (5 - \text{consequence}), 0.5, 1.0)$.
+- **Impact-Calibrated Exponential Decay**: `age_hours` anchors on `latest_published_at or event_time` with half-lives of **18h** (`CRITICAL`), **36h** (`MAJOR`), and **96h** (`MODERATE`/`MINOR`).
+- **Cap & Breaking Override**: `SINGLE_SOURCE` scores are capped at **`65.0`**. If `age_hours <= 2.0`, `impact` is `CRITICAL` or `MAJOR`, any member is `BREAKING`, and post-cap `score >= 35.0`, `select_tier()` forces `PRIMARY` visibility.
+- **Selection Tiers (`±5.0` Hysteresis)**: Initial cutoffs are `PRIMARY >= 50.0`, `FILLER 22.0–50.0`, `DROP < 22.0` (`DROP` events are hidden from public API queries). Events transition `ACTIVE -> STALE` after **96 hours** without new reporting and `STALE -> ARCHIVED` after **240 hours (10 days)**; new members reactivate `STALE` events to `ACTIVE`.
 
-- **Geopolitical Shannon Diversity ($D_{\text{shannon}}$)**: Rewards cross-bloc corroboration. Sources are mapped into 6 geopolitical blocs: `GLOBAL_WIRE`, `NORTH_AMERICA`, `EUROPE`, `ASIA_PACIFIC`, `MIDDLE_EAST_AFRICA`, `LATIN_AMERICA`. The Shannon entropy $H$ of the bloc distribution scales the score:
-  $$H = -\sum_{b} p_b \ln(p_b), \quad D_{\text{shannon}} = 1.0 + 0.5 \times \min(H, 1.0)$$
+### 4.3 Cross-Event Relationships & Story Threads
 
-- **Velocity Multiplier ($V_{\text{mult}}$)**: Measures publishing frequency over elapsed hours $\Delta t$:
-  $$\text{velocity} = \frac{N_{\text{articles}}}{\max(\Delta t, 1.0)}, \quad V_{\text{mult}} = 1.0 + \min((\text{velocity} - 1.0) \times 0.2, 1.0)$$
-
-- **Organic Half-Life Time Decay**:
-  Trending scores diminish organically over time via an 18-hour half-life model:
-  $$\lambda = 2^{-\frac{1}{18}} \approx 0.9622 \text{ per hour}$$
-  During every worker lifecycle pass, scores decay according to elapsed time. Events transition from `ACTIVE` $\rightarrow$ `STALE` after 24 hours without new reporting, and `STALE` $\rightarrow$ `ARCHIVED` after 48 hours. Any new corroborated article immediately reactivates a `STALE` event to `ACTIVE`.
+- **Pairwise Relationships**: `RelationshipStage` links active/stale events within `10` days using vector similarity, shared actors, and entity overlap, persisting `CAUSED`, `FOLLOW_UP`, `REACTION`, and `RELATED` edges in `event_relationships` (and triggering guarded `SAME_INCIDENT` auto-merges when warranted).
+- **Actors**: `DescribeStage` extracts structured `STATE`/`ORGANIZATION`/`PERSON`/`GROUP` actors (`Event.actors`), geocoding cross-border actor home coordinates via Nominatim.
+- **Story Threads**: `ThreadStage` groups developing and topical arcs into `threads` (`ACTIVE -> DORMANT` at 7 days, `-> ENDED` at 30 days).
 
 ---
 
 ## 5. Spatial Query & WebGL Viewport Synchronization
 
-Serving live event pins across a global map without lag requires tight coordination between Mapbox GL, TanStack Query, and PostGIS:
+Serving live event pins, relationship arcs, and story threads across a global map requires tight coordination between Mapbox GL, TanStack Query, and PostGIS:
 
 ```mermaid
 sequenceDiagram
     autonumber
     participant UI as Mapbox GL Canvas (apps/hermes)
     participant Store as Zustand (useMapStore)
-    participant Hook as useMapDataSync (TanStack Query)
+    participant Hook as TanStack Query (useMapDataSync / useMapRelationships)
     participant Api as FastAPI (hermes-api)
     participant DB as PostGIS (Neon PostgreSQL)
 
     UI->>Store: User pans/zooms map -> triggers onMoveEnd()
     Store->>Hook: Updates viewport bounds {north, south, east, west}
-    Hook->>Api: GET /api/v1/events/bbox?north=...&south=...&east=...&west=...
-    Note over Hook: Debounced query (staleTime: 5000ms)
+    Hook->>Api: GET /api/v1/events/bbox & /api/v1/events/relationships
+    Note over Hook: Debounced queries (staleTime: 5s events, 10s edges)
     Api->>DB: ST_Within(location, ST_MakeEnvelope(west, south, east, north, 4326))
     Note over DB: Evaluated in sub-10ms using spatial GiST index
     DB-->>Api: Projects ST_X(location) as lon, ST_Y(location) as lat
-    Api-->>Hook: Returns MapEventResponse[] (JSON)
-    Hook->>UI: Updates Mapbox GeoJSON Source
-    Note over UI: GPU Canvas renders clusters and pins via circle/symbol layers
+    Api-->>Hook: Returns MapEventResponse[] + MapRelationshipEdgeResponse[]
+    Hook->>UI: Updates Mapbox GeoJSON Sources (pins, arcs, actor vectors)
+    Note over UI: GPU Canvas renders clusters, pins, arcs, and vectors via WebGL layers
 ```
 
 ### Spatial Optimization Decisions
 
 1. **Direct Coordinate Projection**: Rather than serializing and transmitting Well-Known Binary (WKB) geometry objects from PostgreSQL and parsing them on the client, the query executes `ST_X(Event.location)` and `ST_Y(Event.location)` directly in the SQL select projection.
-2. **GPU Canvas Layers**: Map markers are rendered as Mapbox GL WebGL `circle` and `symbol` layers rather than DOM elements (`new mapboxgl.Marker()`). This enables thousands of concurrent data points to be rendered and clustered at 60 FPS without DOM thrashing.
-3. **Decoupled Viewport State**: Viewport coordinates are tracked in a global Zustand store ([`useMapStore`](../libs/map/src/lib/store/store.ts)). React components subscribe to fine-grained state slices, preventing cascading re-renders across the Mapbox container when popups or drawers toggle.
+2. **GPU Canvas Layers**: Event pins, clusters (`hermes-clusters`, `hermes-cluster-count`), relationship great-circle arcs (`hermes-relationship-arcs`, `hermes-relationship-arcs-glow`), partner rings, actor vectors/anchors, and citation rings render as Mapbox GL WebGL layers rather than DOM markers (`new mapboxgl.Marker()`). Floating overlays (`EventPopup`, `ClusterList`, `StoryPanel`) handle accessible drill-down.
+3. **Decoupled Viewport State**: Viewport coordinates, selected events, cited rings, and the relationship toggle (`showRelationships`) live in [`useMapStore`](../libs/map/src/lib/store/store.ts), while active thread IDs synchronize cleanly via URL `?thread=<id>`.
 
 ---
 
@@ -269,9 +268,9 @@ flowchart TD
 
 ---
 
-## 7. Conversational RAG & Process-Local Memory
+## 7. Conversational RAG & Checkpoint Memory
 
-`POST /api/v1/chat` answers questions about the current map scope and streams the response over Server-Sent Events. The request carries only the new message, a `thread_id`, and a discriminated `scope` (`event`, `viewport`, or `global`).
+`POST /api/v1/chat` answers questions about the map or global developments and streams the response over Server-Sent Events. Each request carries the new message, a `thread_id`, and an optional explicit `scope` (`event`, `viewport`, or `global`) plus live map `context` (`ChatMapContext`: `event_id`, `bbox`) for automatic planner scope inference.
 
 ```mermaid
 sequenceDiagram
@@ -284,11 +283,11 @@ sequenceDiagram
     participant DB as Neon PostgreSQL
     participant LLM as LiteLLM Router
 
-    UI->>API: POST { message, thread_id, scope }
+    UI->>API: POST { message, thread_id, context, [scope] }
     API->>Guards: rate, budget, and concurrency preflight
     API-->>UI: text/event-stream
     Engine->>Engine: load thread messages
-    Engine->>LLM: plan retrieval (history-aware)
+    Engine->>LLM: plan retrieval & resolve scope (history-aware)
     Engine->>Retriever: retrieve ranked evidence
     Retriever->>DB: hybrid lexical + semantic query
     DB-->>Retriever: events, articles, timelines
@@ -297,7 +296,7 @@ sequenceDiagram
     Engine-->>UI: status / token / sources / done
 ```
 
-- **Memory**: `ChatEngine` compiles a LangGraph `StateGraph` and checkpoints the `messages` channel per `thread_id`. The API currently prefers `AsyncPostgresSaver` when a checkpoint connection is available and falls back to `InMemorySaver`; the in-memory saver is the baseline deployment mode. Because a process restart or scale-out loses in-memory threads, `ChatRuntime` accepts any `BaseCheckpointSaver` so persistence can be enabled at the composition root without changing the client contract.
+- **Memory**: `ChatEngine` compiles a LangGraph `StateGraph` and checkpoints the `messages` channel per `thread_id`. At startup `hermes-api` connects `AsyncPostgresSaver` (`CHECKPOINT_DB_URL` or `DB_*`) and runs `setup()`, falling back cleanly to process-local `InMemorySaver` if PostgreSQL checkpoint setup fails.
 - **Retrieval**: `DbChatRetriever` opens a short-lived session, runs hybrid full-text + pgvector retrieval, and closes the session before generation. Tavily is consulted when local coverage is thin or stale; failures degrade to local-only answers.
 - **Guards**: Per-client rate limiting, a daily token budget, and a concurrency semaphore live in `ChatGuards`. They are process-local and reset on restart, matching the single-worker deployment.
 - **Citations**: The `sources` SSE event feeds `@hermes/chat` citation rendering and `useMapStore.citedEvents`. Closing the panel aborts an active stream, marks it `cancelled`, and keeps the client transcript; clearing the conversation generates a new `thread_id`.
@@ -310,9 +309,9 @@ The intelligence layer ([`hermes-ai`](../libs/shared/hermes-ai)) provides unifie
 
 | Capability | Primary Engine | Fallback Engine | Rationale |
 | :--- | :--- | :--- | :--- |
-| **Event & Timeline Extraction** | `mistral/ministral-8b-latest` | `nvidia_nim/openai/gpt-oss-20b` | High-throughput structured JSON extraction with automatic failover on network timeouts or Pydantic `ValidationError`. |
-| **Chat Answer & Planning** | `CHAT_MODEL` / `PLAN_MODEL` (defaults to `LLM_MODEL`, typically Mistral) | Optional `CHAT_MODEL_1` / `PLAN_MODEL_1` | History-aware retrieval planning and grounded answer generation; both groups inherit the same LiteLLM router and failover rules. |
-| **Vector Embeddings** | `nvidia_nim/nvidia/nemotron-3-embed-1b` | None | Produces 2048-dimensional dense semantic vectors optimized for retrieval and deduplication. |
+| **Worker Pipeline & Timelines** | `LLM_MODEL` (`mistral/ministral-8b-latest`) + optional worker overrides (`LABEL_*`, `ADJUDICATE_*`, `DESCRIBE_*`, `RELATIONSHIP_*`, `THREAD_*`) | Optional `LLM_MODEL_1` (`nvidia_nim/openai/gpt-oss-20b`) | High-throughput structured JSON extraction with automatic failover on network timeouts or Pydantic `ValidationError`. |
+| **Chat Answer & Planning** | `CHAT_MODEL` / `PLAN_MODEL` (defaults to `LLM_MODEL`, typically Mistral) | Optional `CHAT_MODEL_1` / `PLAN_MODEL_1` | History-aware retrieval planning, dynamic scope inference, and grounded streaming answer generation. |
+| **Vector Embeddings** | `EMBED_MODEL` (`nvidia_nim/nvidia/nemotron-3-embed-1b`) | Optional `EMBED_MODEL_1` | Produces 2048-dimensional dense semantic vectors optimized for retrieval and deduplication. |
 | **Geocoding** | OpenStreetMap Nominatim | Local Negative Cache | Token-bucket rate-limited (1 req/s) with a 120-second circuit breaker cooldown on persistent HTTP 429s. |
 
 ### Schema-Level Validation Failover
@@ -323,11 +322,17 @@ Hermes instruments LLM operations using the **Langfuse Python SDK v3** (`langfus
 
 | Span Identifier | Component | Purpose |
 | :--- | :--- | :--- |
+| `article-label` | `LabelExtractor.label_batch` | Captures batch article classification, claims, entities, and locations. |
+| `event-adjudicate` | `PairAdjudicator.adjudicate_articles` | Records gray-band article-to-event clustering adjudication. |
+| `event-merge-adjudicate` | `PairAdjudicator.adjudicate_events` | Records gray-band duplicate-event merge decisions. |
+| `event-describe` | `DescribeExtractor.describe` | Measures event headline, summary, and actor extraction. |
+| `event-relationship` | `RelationshipExtractor.classify` | Traces cross-event relationship classification and `SAME_INCIDENT` checks. |
+| `thread-assign` | `ThreadAssigner.assign` | Traces story thread matching and creation naming. |
 | `tl-analyze` | `TlExtractor.analyze` | Records headline triage evaluation and Wikipedia query generation. |
 | `tl-extract` | `TlExtractor.extract` | Measures Wikipedia prose extraction, milestone node structuring, and causal edge linking. |
 
-- **Telemetry Architecture**: `LlmService` registers the Langfuse SDK client singleton on startup. Extractor methods use the `@observe(as_type="span", ...)` decorator to create spans without manual context propagation.
-- **Privacy Controls**: All `@observe` spans configure `capture_input=False` and `capture_output=False` to prevent raw news article text and generated summaries from persisting to telemetry stores.
+- **Telemetry Architecture**: `LlmService` registers the Langfuse SDK client singleton on startup. Extractor methods use the `@observe(as_type="span", ...)` decorator to create spans without manual context propagation; chat calls reuse the same `LlmService` client.
+- **Privacy Controls**: All `@observe` spans configure `capture_input=False` and `capture_output=False`, and `LANGFUSE_MASK_CONTENT=true` scrubs sensitive text attributes before export.
 - **Teardown Flush Guarantee**: On process or task shutdown, `LlmService.aclose()` invokes `get_client().flush()`. This synchronous drain ensures zero trace loss in ephemeral compute contexts like AWS Fargate.
 - **Context Filtering**: Traces include service-level metadata tags (`["hermes-api", ENV]` or `["hermes-worker", ENV]`), allowing engineers to filter and analyze production vs. local executions within the Langfuse console.
 
@@ -337,7 +342,7 @@ Hermes instruments LLM operations using the **Langfuse Python SDK v3** (`langfus
 
 | Scenario | Impact | Mitigation Strategy |
 | :--- | :--- | :--- |
-| **API Restart or Redeploy** | In-memory chat threads and process-local rate/budget guards are lost. Clients retain their transcript but the server starts a fresh memory thread. | `@hermes/chat` persists `threadId` and messages in `localStorage` and can clear/restart a thread. A persistent LangGraph checkpointer can be injected through `ChatRuntime` when cross-restart memory is required. |
+| **API Restart or Redeploy** | Process-local `ChatGuards` (rate/budget counters) reset; when PostgreSQL checkpointing falls back to `InMemorySaver`, server chat memory resets too. | `AsyncPostgresSaver` persists `thread_id` checkpoints when reachable; `@hermes/chat` keeps its transcript in `localStorage` and starts fresh threads cleanly. |
 | **Nominatim 429 Rate Limiting** | OpenStreetMap blocks excessive request volumes. | `NominatimResilienceManager` enforces a 1 req/s token bucket, in-flight request deduplication, exponential backoff with `Retry-After` parsing, and a 120-second circuit breaker. |
 | **LLM Provider Outage** | External inference API becomes unavailable or credentials expire. | `hermes-api` catches client initialization errors and returns `HTTP 503` for timeline synthesis while keeping spatial map queries fully operational. |
 | **PgBouncer Transaction Pooling** | Prepared statement conflicts across pooled connections. | SQLAlchemy async engines instantiate with `connect_args={"statement_cache_size": 0}` across both API and Worker processes. |

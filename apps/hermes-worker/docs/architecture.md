@@ -1,6 +1,6 @@
 # Hermes Worker — Architecture & Design Rationale
 
-This document describes the worker's execution model, the complete news ingestion pipeline, and operational runbooks. All phases (1–9) are fully implemented on `refactor/news-ingestion`.
+This document describes the worker's execution model, the complete staged ingestion and event construction pipeline, and operational runbooks. All pipeline commands and stages (Phases 1–9 plus pairwise cross-event relationships and actor extraction) are implemented.
 
 ---
 
@@ -12,7 +12,7 @@ This document describes the worker's execution model, the complete news ingestio
 flowchart TB
     EventBridge["Amazon EventBridge\n(ingest / build / maintain schedules)"] -->|"ecs:RunTask"| Fargate["ECS Fargate Task\n0.25 vCPU • 512 MB RAM"]
     Fargate --> Lifespan["db_lifespan()\ninit_db -> close_db"]
-    Lifespan --> Command["One command\ningest-articles / maintain-events / healthcheck"]
+    Lifespan --> Command["One command\ningest-articles / build-events / maintain-events / healthcheck"]
     Command --> Neon[("Neon PostgreSQL\nPostGIS + pgvector")]
     Command -->|"exit 0 / 1"| Teardown["Pool disposal\nContainer destroyed"]
 ```
@@ -57,7 +57,7 @@ flowchart LR
 | `maintain-events` | daily | Requeue stale claims, lifecycle transitions, retention, consistency checks | no |
 | `healthcheck` | on demand | Connectivity, schema, queue depth, stale claims | no |
 
-Phase 1 registers `maintain-events` and `healthcheck`; Phase 2 registers `ingest-articles`; Phase 4 registers `build-events`. All four commands are fully implemented. There is no feature flag and no parallel legacy path.
+All four scheduled commands (`ingest-articles`, `build-events`, `maintain-events`, `healthcheck`) plus standalone utilities (`audit-sources`, `reset-db`) are implemented. There is no feature flag and no parallel legacy path.
 
 ### 2.2 Article Ledger and Claim Queue
 
@@ -90,7 +90,7 @@ stateDiagram-v2
 5. Canonicalize URLs (`jobs/urls.py`) and insert ledger rows with `ON CONFLICT DO NOTHING`.
 6. Record source success/failure health.
 
-The ledger stores `title`, original `url`, `canonical_url`, `canonical_url_hash`, `source_id`, `published_at`, `feed_summary`, and `language`. It does not store article bodies; `feed_content` remains unread and is removed at cleanup.
+The ledger stores `title`, original `url`, `canonical_url`, `canonical_url_hash`, `source_id`, `published_at`, `feed_summary`, and `language`. Raw article bodies are processed transiently in memory and never persisted to disk.
 
 `canonical_url_hash` has a partial unique index where `duplicate_of_id IS NULL`. Re-running the same feed inserts zero rows. `duplicate_of_id` is reserved for the migration backfill and explicit reconciliation; ingest never sets it.
 
@@ -172,10 +172,10 @@ Articles are grouped into families by shared syndication origin. Verification is
 
 | Status | Rule |
 | :--- | :--- |
-| `SINGLE_SOURCE` | One family only. Visible but capped and badged. |
-| `CORROBORATED` | At least two independent families agree. |
-| `CONFIRMED` | Corroborated and includes a tier-1 family. |
-| `CONFLICTING` | Families disagree on a material fact. |
+| `SINGLE_SOURCE` | One independent origin group or family only. Visible but capped (`65.0`) unless breaking-news override applies. |
+| `CORROBORATED` | At least two independent origin groups agree (without `CONFIRMED` certainty). |
+| `CONFIRMED` | At least two independent origin groups agree AND at least one member carries `certainty == CONFIRMED`. |
+| `CONFLICTING` | Any member article reports `certainty == DISPUTED`. |
 
 ### 4.2 One Authoritative Score
 
@@ -203,8 +203,10 @@ if SINGLE_SOURCE: score = min(score, 65)
 
 ```
 jobs/
+  actors.py         normalized actor labels and coordinates
   context.py        JobContext, LlmBudget, Stage, StageStats, WorkerIdentity
   runner.py         ordered stage execution and optional advisory lock
+  errors.py         error formatting helpers
   locks.py          per-command Postgres advisory locks
   queue.py          ArticleQueue claim/mark/fail/requeue
   urls.py           URL canonicalization and ledger hash
@@ -219,11 +221,11 @@ jobs/
     ingest.py       source sync, feed fetch, ledger insert, source health
     analyze.py      transient fetch, labels, embeddings, family assignment
     cluster.py      incident clustering, adjudication, verification
-    describe.py     event synthesis from family facts, geocoding
+    describe.py     event synthesis, actor extraction, geocoding
     score.py        importance score recompute for all active events
     reconcile.py    event merge deduplication, gray adjudication
     relationship.py pairwise cross-event relationship classification and upsert
-    thread.py       thread assignment, ANN candidate scoring, creation
+    thread.py       thread assignment, candidate scoring, creation
     maintenance.py  stale claims, event lifecycle, thread lifecycle,
                     count reconciliation, retention, consistency report
     healthcheck.py  connectivity, schema, queue depth, stale claims
@@ -256,7 +258,7 @@ A run-telemetry table is intentionally not part of the design; it duplicated log
 
 `LlmService.complete_json(...)` adds a schema-repair retry for structured stages. Usage accounting (`LlmUsage`) records calls, input/output tokens, and repairs per process.
 
-The worker builds generic `label`, `adjudicate`, `describe`, `relationship`, and `thread` routes that default to `LLM_MODEL` / `LLM_API` and accept per-task overrides (`ADJUDICATE_MODEL/API`, `DESCRIBE_MODEL/API`, `RELATIONSHIP_MODEL/API`, `THREAD_MODEL/API`). Every stage reserves calls through `JobContext.budget` before invoking `complete_json`; exceeding `MAX_LLM_CALLS_PER_RUN` stops the stage cleanly and leaves remaining work queued.
+The worker builds generic `extractor`, `label`, `adjudicate`, `describe`, `relationship`, and `thread` routes that default to `LLM_MODEL` / `LLM_API` (and `LLM_MODEL_KWARGS`, with `LLM_REQUEST_TIMEOUT_SECONDS = 120.0`) and accept per-task overrides (`LABEL_MODEL/API/KWARGS`, `ADJUDICATE_MODEL/API/KWARGS`, `DESCRIBE_MODEL/API/KWARGS`, `RELATIONSHIP_MODEL/API/KWARGS`, `THREAD_MODEL/API/KWARGS`). Every stage reserves calls through `JobContext.budget` before invoking `complete_json`; exceeding `MAX_LLM_CALLS_PER_RUN` stops the stage cleanly and leaves remaining work queued.
 
 ### 5.5 Schema Guard
 
@@ -311,14 +313,14 @@ Candidate events come from: ANN top-20 by embedding + same-country block; total 
 
 **On attach**: `event_members` row inserted, `articles.event_id` updated, event centroid recomputed (weighted mean), counts incremented, `member_hash` cleared (triggering describe), `latest_published_at` updated. Verification is recomputed from family membership.
 
-### 6.2 Event Synthesis (Phase 5)
+### 6.2 Event Synthesis (Phase 5 + Actors)
 
-The `DESCRIBE` stage synthesizes a unified description for every event whose `member_hash` is unset (i.e., membership changed since last describe).
+The `DESCRIBE` stage synthesizes a unified description and structured actor list for every event whose `member_hash` is unset (i.e., membership changed since last describe).
 
 - Input: up to `EVENT_DESCRIBE_MAX_FAMILIES` (default 8) independent family facts, source, published time, entities, locations, scale facts.
-- Output: headline ≤ 120 chars, 2–3 sentence summary, primary/secondary locations, impact, scope.
+- Output: headline ≤ 120 chars, summary ≤ 900 chars, up to `MAX_LOCATIONS = 3` locations, impact, scope, and up to `MAX_ACTORS = 6` key actors (`name`, `kind`: `STATE`/`ORGANIZATION`/`PERSON`/`GROUP`, `role`: `ACTOR`/`TARGET`/`PARTICIPANT`, plus optional home location).
 - Numeric fidelity: every number in the output must appear in the input; one retry; fallback to template headline on second failure.
-- Primary location is geocoded through the shared `GeocodingService` instance (never LLM coordinates). Only a changed location triggers a geocoder call.
+- Grounded Geocoding: primary event location and up to `MAX_ACTOR_GEOCODES = 3` cross-border actor home locations are resolved through the shared `GeocodingService` instance (never LLM coordinates). Only a changed location triggers a geocoder call.
 - `member_hash` is set after success; `event.version` bumps only on a material field change.
 
 ### 6.3 Importance Scoring (Phase 5)
@@ -343,7 +345,7 @@ half_life = 18h (CRITICAL), 36h (MAJOR), 96h (otherwise)
 if SINGLE_SOURCE: score = min(score, 65)      # single-source cap
 
 breaking override: age ≤ 2h AND article_type=BREAKING AND impact ≥ MAJOR
-                   AND base_score ≥ 35 → bypass cap
+                   AND score ≥ 35 → bypass DROP/FILLER tiers to PRIMARY
 ```
 
 `score_breakdown` JSONB stores value, weight, contribution, freshness multiplier, and cap flag per component.
@@ -377,7 +379,7 @@ The `THREAD` stage assigns events to persistent topic groups.
 score = 0.70 * embedding_cosine + 0.30 * entity_jaccard
 ```
 
-Candidates are found via embedding ANN and normalized entity-pair blocking.
+`ThreadService.candidates` loads up to `THREAD_CANDIDATE_LIMIT` (default `100`) `ACTIVE` and `DORMANT` threads ordered by `last_event_at DESC`, and `ranked_candidates` scores and sorts them in Python so entity blocking does not require a dedicated JSONB index.
 
 **Assignment bands**:
 
@@ -428,14 +430,19 @@ Decisions are cached in `cluster_decisions` keyed by sorted event IDs + both `me
 
 #### Pairwise Event Relationships (`RELATIONSHIP` stage)
 
-After duplicate merges settle in `RECONCILE`, `RelationshipStage` recalls distinct active event pairs within `RELATIONSHIP_WINDOW_DAYS` using pgvector ANN similarity (`>= RELATIONSHIP_MIN_EMBEDDING_SIM`, up to `RELATIONSHIP_NEIGHBORS_PER_EVENT` per event) plus soft shared-entity fallback without country restrictions. Pairs not already upserted or cached in `cluster_decisions` (keyed by `"rel|<id1>|<id2>|<hash1>|<hash2>|<prompt_version>"`, capped at `RELATIONSHIP_LLM_PAIRS_PER_RUN`) are classified via `HermesAi.relationships` into `CAUSED`, `FOLLOW_UP`, `REACTION`, `RELATED`, `SAME_INCIDENT`, or `NONE`, persisting directed confidence-gated (`>= RELATIONSHIP_MIN_CONFIDENCE`) edges to `event_relationships`.
+After duplicate merges settle in `RECONCILE`, `RelationshipStage` recalls distinct active/stale non-dropped event pairs within `RELATIONSHIP_WINDOW_DAYS` (default `10`) using:
+1. pgvector ANN similarity (`>= RELATIONSHIP_MIN_EMBEDDING_SIM`, default `0.62`, up to `RELATIONSHIP_NEIGHBORS_PER_EVENT = 8` per anchor),
+2. Shared extracted actors (`MAX_ACTOR_NEIGHBORS_PER_EVENT = 6` per anchor), and
+3. Soft shared-entity fallback without country restrictions (pairs sharing only 1 entity require embedding cosine `>= 0.50` when both vectors share a model).
+
+Pairs not already upserted or cached in `cluster_decisions` (keyed by `"rel|<id1>|<id2>|<hash1>|<hash2>|<prompt_version>"`, capped at `RELATIONSHIP_LLM_PAIRS_PER_RUN = 30`) are classified via `HermesAi.relationships` into `CAUSED`, `FOLLOW_UP`, `REACTION`, `RELATED`, `SAME_INCIDENT`, or `NONE`. Confidence-gated relationships (`>= RELATIONSHIP_MIN_CONFIDENCE = 0.70`) persist to `event_relationships`, while high-confidence `SAME_INCIDENT` classifications trigger guarded `_try_auto_merge_same_incident` merges followed by survivor rescoring and thread recomputation.
 
 ### 6.6 Maintenance (Phase 7)
 
 `maintain-events` runs four stages daily:
 
 1. **`REQUEUE_CLAIMS`**: Returns `ANALYZING` articles older than `ARTICLE_CLAIM_STALE_MINUTES` to `NEW` (up to `ARTICLE_MAX_ATTEMPTS`; then `FAILED`).
-2. **`EVENT_LIFECYCLE`**: Applies `ACTIVE → STALE → ARCHIVED` transitions, purges embeddings for events archived > 30 days.
+2. **`EVENT_LIFECYCLE`**: Applies `ACTIVE → STALE → ARCHIVED` transitions, purges `events.embedding` (`EventLifecycleService.purge_archived_embeddings`) for events archived > 30 days.
 3. **`THREAD_LIFECYCLE`**: Applies `ACTIVE → DORMANT → ENDED` transitions for story threads.
 4. **`MAINTENANCE`**: Reconciles `article_count`, `source_count`, `family_count`, `independent_origin_count` from `event_members`; applies retention; produces consistency report.
 
@@ -445,7 +452,7 @@ After duplicate merges settle in `RECONCILE`, `RelationshipStage` recalls distin
 | :--- | :--- |
 | `cluster_decisions` | 90 days |
 | Removed `event_members` (`is_current=false`) | 180 days |
-| `articles.embedding` for archived events | 30 days after archive |
+| `events.embedding` (`embedding_model`) for archived events | 30 days after archive |
 | Article metadata and labels | Forever (audit evidence) |
 
 **Reprocessing**: `maintain-events --requeue --since <YYYY-MM-DD>` resets `FAILED`/`REJECTED` articles published on or after that date back to `NEW`.
@@ -527,9 +534,9 @@ After duplicate merges settle in `RECONCILE`, `RelationshipStage` recalls distin
 
 ---
 
-## 10. Phase 8 — Cutover Checklist
+## 10. Historical Cutover Reference Checklist
 
-> **Policy**: No Phase 8 steps run against production without explicit approval. No schema drops occur in this phase.
+> **Policy**: Operational cutover runbook reference (historical production cutover steps; Alembic head has since advanced to `219faff153a6`). No schema steps run against production without explicit approval.
 
 ### Pre-Cutover
 

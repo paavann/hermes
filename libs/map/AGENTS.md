@@ -14,12 +14,12 @@ Run commands from the workspace root using project `@hermes/map`. See root `AGEN
 
 ## 2. Invariants
 
-- **Store Authority**: `useMapStore` is the single source of truth for viewport bounding box (`viewport`), event selection (`selectedEventId`, `selectedEventLngLat`), timeline inspection mode (`isTlMode`, `tlTargetId`), citation focus requests (`focusEvent` nonce), and cited-event highlights (`citedEvents`).
+- **Store Authority**: `useMapStore` is the single source of truth for viewport bounding box (`viewport`), event selection (`selectedEventId`, `selectedEventLngLat`), timeline inspection mode (`isTlMode`, `tlTargetId`), citation focus requests (`focusEvent` nonce), cited-event highlights (`citedEvents`), and relationship layer visibility (`showRelationships`, `toggleRelationships`).
 - **Map Instance Storage**: Store `mapboxgl.Map` exclusively in `useRef<mapboxgl.Map | null>(null)`. Never store it in React `useState`.
 - **Pure Rendering Sink**: The `mapboxgl.Map` instance is a pure rendering sink; never maintain internal map state that diverges from `useMapStore`. User map interactions dispatch directly into the store.
-- **GPU Canvas Rendering**: Render clustered nodes and unclustered pins directly via WebGL canvas layers (`circle` and `symbol` layers in Mapbox). Never mount HTML DOM marker nodes (`new mapboxgl.Marker()`).
+- **GPU Canvas Rendering**: Render clustered nodes, unclustered pins, relationship arcs, and actor vectors directly via WebGL canvas layers (`circle`, `line`, and `symbol` layers in Mapbox). Never mount HTML DOM marker nodes (`new mapboxgl.Marker()`).
 - **Decoupled Configuration**: Supply credentials and endpoints via `<MapConfigProvider>`; never access `process.env` or `import.meta.env` directly within `libs/map`.
-- **Declarative Synchronization**: `useMapDataSync` observes the store's `viewport` and updates map GeoJSON sources without cyclical re-renders.
+- **Declarative Synchronization**: `useMapDataSync` and `useMapRelationships` observe the store's `viewport` and update map GeoJSON sources without cyclical re-renders. Active story thread selection (`threadId`) is controlled externally via props so it can synchronize with URL search parameters (`?thread=<id>`).
 
 ## 3. Domain Triggers
 

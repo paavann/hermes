@@ -7,9 +7,10 @@ Coding standards, layer authoring conventions, and WebGL lifecycle patterns for 
 ## 1. WebGL Layer Authoring & Expressions
 
 - **Data-Driven Styling**: Style circle radius, colors, and opacity using Mapbox GL expressions (e.g., `['step', ['get', 'point_count'], ...]`) bound to GeoJSON feature properties. Never run imperative JavaScript loops across feature arrays to adjust styles.
-- **Layer Architecture**: Clustered event sources feed two distinct layers:
-  - `hermes-clusters`: WebGL circle and symbol count layer for aggregate clusters.
-  - `hermes-unclustered-point`: WebGL circle and label layer for individual incidents.
+- **Layer Architecture**: Map sources feed distinct WebGL layers:
+  - `events-source`: `hermes-clusters` (circle clusters), `hermes-cluster-count` (cluster totals), and `hermes-unclustered-point` (individual pins, accented when `relationship_count > 0`).
+  - `cited-events-source`: `hermes-cited-points` (chat citation rings).
+  - `relationship-edges-source` / `relationship-partners-source` / `actor-vectors-source` / `actor-anchors-source`: `hermes-relationship-arcs-glow`, `hermes-relationship-arcs`, `hermes-relationship-partners`, `hermes-actor-vectors`, and `hermes-actor-anchors` (toggled via `showRelationships`, hidden in timeline mode).
 - **Dynamic Layer Teardown**: Dynamic inspection overlays (`TlPanel`) must inject sources and layers on mount and cleanly remove them on unmount (`map.removeLayer`, `map.removeSource`). Check `map.getLayer(layerId)` before removing or toggling visibility; never rely on `map.isStyleLoaded()`, which returns `false` during network tile streaming and falsely blocks transitions.
 - **Re-mount Trigger Pattern**: When an overlay component depends on dynamic layer lifecycle across re-opens while retaining a stable `map` ref, track panel activations using a mutable `mountId = useRef({})` dependency inside `useEffect`.
 

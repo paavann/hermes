@@ -13,7 +13,8 @@ Foundational asynchronous persistence library providing SQLAlchemy 2.0 models, P
 
 ## 2. Tunables
 
-- Similarity thresholds: Cosine distance literals in `libs/shared/hermes-db/src/hermes_db/services/event.py`
+- Verification derivation: `compute_verification` and `_origin_key` in `libs/shared/hermes-db/src/hermes_db/services/verification.py`
+- Similarity & read queries: `cosine_distance` thresholds in `libs/shared/hermes-db/src/hermes_db/services/event_assignment.py` and `libs/shared/hermes-db/src/hermes_db/services/event_relationship.py`
 - Event scoring: `SCORING_CREDIBILITY`, `IMPACT_VALUE`, `VERIFY_VALUE`, half-lives, and tier cutoffs in `libs/shared/hermes-db/src/hermes_db/services/event_scoring.py`
 - Event lifecycle: `DEFAULT_STALE_HOURS` and `DEFAULT_ARCHIVE_HOURS` in `libs/shared/hermes-db/src/hermes_db/services/event_lifecycle.py`
 - Thread lifecycle: `THREAD_DORMANT_DAYS`, `THREAD_ENDED_DAYS`, and `THREAD_IMPORTANCE_HALF_LIFE_HOURS` in `libs/shared/hermes-db/src/hermes_db/services/thread.py`

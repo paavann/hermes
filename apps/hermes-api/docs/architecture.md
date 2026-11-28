@@ -13,10 +13,10 @@ This document details the architectural decisions, design tradeoffs, execution p
 - **Scheduler Isolation**:
   - *The Why*: In production, the API runs as a managed container service on **Amazon Lightsail**. Executing background ingestion loops, RSS polling, or score decay inside the API process causes Python `asyncio` event-loop starvation during network-intensive scraping spikes.
   - *The Boundary*: `hermes-api` executes **zero background schedulers or ingestion loops**. All RSS feed harvesting, embedding generation, and time decay are isolated to [`apps/hermes-worker`](../../hermes-worker). This lets the API boot rapidly and scale without lock contention.
-  - *Process-local state*: Chat conversation memory and chat guardrails live in process memory. A restart clears both. The client keeps its transcript in `localStorage`, and `ChatRuntime` accepts any LangGraph `BaseCheckpointSaver`, so durable memory is a composition-root decision rather than an API contract change.
+  - *Memory & process-local guards*: Chat conversation checkpoints prefer `AsyncPostgresSaver` initialized during FastAPI lifespan (`settings.checkpoint_db_url`) and fall back to process-local `InMemorySaver` on failure. `ChatGuards` (rate limit, token budget, concurrency semaphore) remain in process memory and reset on restart.
 - **Externalized Persistence Layer**:
   - *The Why*: Maintaining ORM models across multiple backend packages invites schema drift and disjoint migration trees.
-  - *The Boundary*: All SQLAlchemy 2.0 ORM models ([`Event`](../../../libs/shared/hermes-db/src/hermes_db/models/event.py), [`Article`](../../../libs/shared/hermes-db/src/hermes_db/models/article.py), [`EventTl`](../../../libs/shared/hermes-db/src/hermes_db/models/event_tl.py), [`Source`](../../../libs/shared/hermes-db/src/hermes_db/models/source.py), [`GeocodeCache`](../../../libs/shared/hermes-db/src/hermes_db/models/geocode_cache.py)) and Alembic migrations reside exclusively in [`libs/shared/hermes-db`](../../../libs/shared/hermes-db). `hermes-api` imports models and services directly and never declares local ORM schemas.
+  - *The Boundary*: All SQLAlchemy 2.0 ORM models (`Event`, `Article`, `ArticleLabel`, `ArticleFamily`, `EventMember`, `EventRelationship`, `ClusterDecision`, `Thread`, `EventTl`, `Source`, `GeocodeCache`) and Alembic migrations reside exclusively in [`libs/shared/hermes-db`](../../../libs/shared/hermes-db). `hermes-api` imports models and services directly and never declares local ORM schemas.
 - **Strict Dependency Injection**:
   - Route handlers in [`api/v1/`](../src/hermes_api/api/v1) never instantiate database sessions or business services directly; they consume them via FastAPI `Depends()` (`get_db`, `get_event_service`, `get_relationship_service`, `get_tl_service`). This decouples request routing from persistence mechanics and allows test mocking via `dependency_overrides`.
 
@@ -48,8 +48,8 @@ sequenceDiagram
 
 1. **Sub-10ms Spatial Index Scan**: PostGIS executes an R-tree search over the spatial GiST index (`idx_events_location`), testing candidate geometries using `ST_Within(location, ST_MakeEnvelope(west, south, east, north, 4326))`.
 2. **Direct Coordinate Projection**: Rather than deserializing Well-Known Binary (WKB) geometry objects in Python, the query projects `ST_X(Event.location)` and `ST_Y(Event.location)` directly in SQL. This strips binary geometry deserialization overhead and transmits native floating-point coordinates directly to Pydantic serialization.
-3. **Partial Index Filtering**: Inactive events are excluded using PostGIS partial indexes (`status = 'ACTIVE'`), keeping the working set small and bounded.
-4. **Viewport Relationship Links**: `GET /api/v1/events/bbox` and `GET /api/v1/events/` attach `relationship_count` per event via `EventService.relationship_counts`, `GET /api/v1/events/relationships` (registered before `/{event_id}`) returns cross-event `MapRelationshipEdgeResponse` edges for events intersecting the bounding box, and `GET /api/v1/events/{event_id}` includes connected `EventRelationshipItem` links.
+3. **Filtered Read Set**: Viewport queries exclude merged events (`merged_into_id IS NULL`), `DROP`-tier events, and inactive statuses (`status = 'ACTIVE'`), keeping payloads bounded.
+4. **Viewport Actors & Relationship Links**: `GET /api/v1/events/bbox` and `GET /api/v1/events/` attach `relationship_count` per event via `EventService.relationship_counts` and extracted `actors` (`EventActorItem[]`). `GET /api/v1/events/relationships` (registered before `/{event_id}`) returns cross-event `MapRelationshipEdgeResponse` edges for events intersecting the bounding box (`limit` default `400`, max `1000`), and `GET /api/v1/events/{event_id}` follows `merged_into_id` redirect chains and includes `actors` and connected `EventRelationshipItem` links.
 
 ---
 
@@ -126,7 +126,7 @@ sequenceDiagram
 
 ## 4. Conversational RAG Pipeline (`POST /api/v1/chat`)
 
-The chat endpoint answers natural-language questions about events in a selected scope and streams the answer over Server-Sent Events (SSE). Conversation turns are checkpointed per `thread_id` by LangGraph; the baseline deployment uses a process-local `InMemorySaver`, and the client sends only the new message and the current scope.
+The chat endpoint answers natural-language questions about events in a selected scope and streams the answer over Server-Sent Events (SSE). Conversation turns are checkpointed per `thread_id` by LangGraph using `AsyncPostgresSaver` at startup (with `InMemorySaver` fallback if PostgreSQL setup fails); the client sends only the new message, `thread_id`, and an optional explicit `scope` or live `context` (`ChatMapContext`).
 
 ```mermaid
 sequenceDiagram
@@ -184,7 +184,7 @@ sequenceDiagram
 
 ### Scope Resolution & Retrieval
 
-- The request `scope` is a discriminated union: `event` (one `event_id`, bypasses hybrid ranking), `viewport` (a bounding box split at the antimeridian when needed), or `global`.
+- Requests may provide an explicit `scope` (`event`, `viewport`, or `global`) and/or live `context` (`ChatMapContext`: `event_id`, `bbox`). When `scope` is omitted (the map overlay default), the planner resolves `event`, `viewport`, or `global` dynamically from the message intent and live map context (viewport bounding boxes are split at the antimeridian when needed).
 - `DbChatRetriever` bridges `hermes-ai`'s `ChatRetriever` protocol to `SearchService`. It opens a short-lived `AsyncSessionLocal` per retrieval, loads the ranked events plus linked articles and ready timeline nodes, then closes the session **before** answer generation starts. No database session is held during streaming.
 - Lexical and semantic candidate branches are built directly over `Event` columns so the weighted `idx_events_fts` GIN index is used; semantic search uses the pgvector embedding column. Fusion uses reciprocal rank fusion with bounded recency/trending boosts. When the embedding call fails, retrieval degrades to lexical-only and reports `semantic_unavailable`.
 - Tavily is consulted by the search node when local coverage is thin or recency-stale. The answer model may also call the `web_search` tool when the supplied evidence is insufficient. Failures degrade to a local-only answer with `web_unavailable`.
@@ -257,7 +257,7 @@ flowchart TD
 The production workload is hosted on the **Nano tier** (`0.25 vCPU`, `512 MB RAM`):
 
 - **Single-Worker Concurrency (`--workers 1`)**:
-  In [`Dockerfile`](../Dockerfile), the production entrypoint configures `--workers ${WORKERS:-1}`. Because FastAPI is built on `asyncio` and `uvloop`, a single process handles 50–100 concurrent I/O-bound requests (database lookups, external HTTP calls) without blocking. Running a single worker eliminates the memory overhead of multi-process duplication.
+  In [`Dockerfile`](../Dockerfile), the production entrypoint runs FastAPI on port `8000` under `uvicorn` (single process by default). Because FastAPI is built on `asyncio`, a single process handles 50–100 concurrent I/O-bound requests (database lookups, external HTTP calls) without blocking while eliminating multi-process memory duplication.
 - **Strict Memory Envelope**:
   - *Baseline Idle Footprint*: ~160 MB (Python 3.14 runtime, FastAPI, Pydantic-core, SQLAlchemy 2.0, `asyncpg`, GeoAlchemy2).
   - *Active Viewport Queries (`GET /events/bbox`)*: Transmits native coordinate projections with transient Pydantic validation (~185 MB total).
@@ -356,7 +356,7 @@ flowchart LR
 2. **Instrumented Spans**:
    - `tl-analyze`: Generated by `TlExtractor.analyze`, measuring the latency and decision logic of event headline triage.
    - `tl-extract`: Generated by `TlExtractor.extract`, tracing Wikipedia prose analysis, milestone node structuring, and causal edge inference.
-   - Both spans explicitly configure `capture_input=False` and `capture_output=False` to prevent sensitive prompt content and raw article text from persisting to telemetry backends.
+   - Both extractor spans explicitly configure `capture_input=False` and `capture_output=False` to prevent sensitive prompt content and raw text from persisting to telemetry backends. Chat planning and streaming calls execute through the same `LlmService` singleton under Langfuse masking.
 
 3. **Opt-in Activation & Graceful Degradation**:
    Tracing is active only if both `LANGFUSE_PUBLIC_KEY` and `LANGFUSE_SECRET_KEY` are populated. In environments without Langfuse credentials, the system runs with zero tracing overhead. No exceptions are raised if telemetry endpoints are unreachable.

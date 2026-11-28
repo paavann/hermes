@@ -58,25 +58,30 @@ Mapbox GL JS requires browser globals (`window`, `document`, and WebGL contexts)
 ```mermaid
 flowchart LR
     subgraph ClientUI ["React 19 Frontend (apps/hermes)"]
-        MapView["MapView (WebGL Canvas)"]
-        Zustand["useMapStore (Zustand)\nViewport Bounding Box"]
-        ReactQuery["useMapDataSync (TanStack Query)\nDebounced BBox Query"]
+        MapView["MapView (WebGL Canvas)\nClusters • Relationships • StoryPanel"]
+        Zustand["useMapStore (Zustand)\nViewport • Selection • Links Toggle"]
+        ReactQuery["TanStack Query Hooks\nuseMapDataSync • useMapRelationships\nuseEventDetails • useThreadDetails"]
     end
 
     subgraph BackendAPI ["FastAPI REST Service (hermes-api)"]
         BboxEndpoint["GET /api/v1/events/bbox\n(Spatial PostGIS Query)"]
+        RelEndpoint["GET /api/v1/events/relationships\n(Cross-Event Edges)"]
+        ThreadEndpoint["GET /api/v1/threads/{id}\n(Story Narrative)"]
     end
 
     MapView -->|"Pan / Zoom (onMoveEnd)"| Zustand
     Zustand -->|"Updates viewport bounds"| ReactQuery
     ReactQuery -->|"HTTP GET"| BboxEndpoint
+    ReactQuery -->|"HTTP GET"| RelEndpoint
+    ReactQuery -->|"HTTP GET"| ThreadEndpoint
     BboxEndpoint -->|"MapEventResponse[]"| ReactQuery
-    ReactQuery -->|"setData()"| MapView
+    RelEndpoint -->|"MapRelationshipEdgeResponse[]"| ReactQuery
+    ReactQuery -->|"GeoJSON sources setData()"| MapView
 ```
 
-- **Single Source of Truth**: Viewport coordinates (`north`, `south`, `east`, `west`), event selection (`selectedEventId`), timeline mode (`isTlMode`), and chat citation highlights (`citedEvents`) reside in [`useMapStore`](../../libs/map/src/lib/store/store.ts).
+- **Single Source of Truth**: Viewport coordinates (`north`, `south`, `east`, `west`), event selection (`selectedEventId`), timeline mode (`isTlMode`), relationship layer visibility (`showRelationships`), and chat citation highlights (`citedEvents`) reside in [`useMapStore`](../../libs/map/src/lib/store/store.ts). Active story thread selection syncs with the URL `?thread=<id>` query parameter in [`app/routes/map.tsx`](app/routes/map.tsx).
 - **Decoupled Configuration**: Credentials and API base URLs are provided declaratively to domain hooks via [`MapConfigProvider`](../../libs/map/src/lib/config-context.tsx) and [`ChatConfigProvider`](../../libs/chat), preventing libraries from directly referencing `import.meta.env`.
-- **Conversational RAG**: [`ChatPanel`](../../libs/chat) is an overlay over the map, not a route. It resolves `auto` scope from the selected event/viewport, streams answers from `POST /api/v1/chat`, renders citations, and forwards cited event coordinates to `useMapStore.focusEvent`.
+- **Conversational RAG**: [`ChatPanel`](../../libs/chat) is an overlay over the map, not a route. It attaches live map `context` (`selectedEventId`, `viewport`) so the planner resolves scope automatically, streams answers from `POST /api/v1/chat`, renders citations, and forwards cited event coordinates to `useMapStore.focusEvent`. While timeline mode or a story thread drawer is open, the chat overlay is hidden (not unmounted) to keep its conversation state intact.
 
 ---
 
@@ -85,7 +90,7 @@ flowchart LR
 The application enforces a high-density, mission-control visual theme:
 
 - **Zero Border Radius**: Border radius utility tokens are globally reset (`--radius-*: initial;`) in [`styles.css`](styles.css). Components strictly avoid `rounded-*` utility classes.
-- **Monospace Typography**: `JetBrains Mono` is the display and UI face, with `Fira Code` as the fallback stack.
+- **Monospace Typography**: `JetBrains Mono` is the display, sans, and mono font family in `styles.css`, with `Fira Code` and system monospace fallbacks.
 - **Tactical Palette**: Pure black canvas (`#000000`) with solid obsidian (`#07080A`), onyx (`#0B0D10`), and graphite (`#12151A`) surfaces, cyan primary accent (`#00F0FF`), warm bone/ivory text (`#D7D0BF` / `#F1EDE2`), and amber signal accents (`#FFB454`).
 - **Strictly Solid Surfaces**: Panels use opaque fills and `1px` hairline borders; glassmorphism, backdrop blur, and glow shadows are prohibited.
 - **Shared UI Primitives**: shadcn-style primitives (buttons, inputs) are maintained in [`libs/shared/ui-components`](../../libs/shared/ui-components), never created ad-hoc in `apps/hermes`.
@@ -94,7 +99,7 @@ The application enforces a high-density, mission-control visual theme:
 
 ## Environment Configuration
 
-The application consumes environment variables configured in the repository root `.env` or set in the deployment dashboard:
+Client `VITE_*` variables are loaded from `apps/hermes/` (`vite.config.mts` sets `envDir: import.meta.dirname`) or set in the deployment dashboard; server runtime variables (`CLERK_SECRET_KEY`, `CLERK_PROXY_URL`) are read from `process.env`:
 
 | Variable | Required | Description |
 | :--- | :--- | :--- |

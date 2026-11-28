@@ -4,8 +4,8 @@ Shared asynchronous persistence library for Hermes. It defines the SQLAlchemy 2.
 
 ## Responsibilities
 
-- Own the database schema as the single source of truth: `Source`, `Article`, `Event`, `EventTl`, and `GeocodeCache`.
-- Provide async services for ingestion, event lifecycle, ranking, hybrid search, timelines, and geocode caching.
+- Own the database schema as the single source of truth across 11 ORM models: `Source`, `Article`, `ArticleLabel`, `ArticleFamily`, `Event`, `EventMember`, `EventRelationship`, `ClusterDecision`, `Thread`, `EventTl`, and `GeocodeCache`.
+- Provide async services for ingestion queues, article analysis, syndication families, event clustering, verification, deterministic importance scoring, story threads, non-destructive merges, pairwise event relationships, hybrid search, timelines, maintenance/retention, and geocode caching.
 - Initialize the engine and session factory from a URL supplied by the consumer.
 - Apply every schema change through Alembic.
 
@@ -15,25 +15,43 @@ The library never reads `.env` files or `os.environ`. Consumers validate configu
 
 | Model | Table | Notes |
 | :--- | :--- | :--- |
-| `Source` | `sources` | Publisher/feed configuration, soft-disabled via `is_active`. |
-| `Article` | `articles` | Globally unique URL, cascading event/source FKs, `source` relationship eager-loaded with `selectin`. |
-| `Event` | `events` | Denormalized map/feed aggregate with `geometry(POINT, 4326)`, `halfvec(2048)` embedding, score, velocity, and lifecycle timestamps. |
-| `EventTl` | `event_timelines` | One-to-one timeline graph stored as JSONB `nodes`/`edges`. |
+| `Source` | `sources` | Publisher/feed configuration, provider/fetch policy, health tracking, soft-disabled via `is_active`. |
+| `Article` | `articles` | Ingestion ledger & `FOR UPDATE SKIP LOCKED` queue, canonical URL identity, SimHash digests, deferred `halfvec(2048)` embedding. |
+| `ArticleLabel` | `article_labels` | Structured factual extraction per article (`is_event`, `certainty`, `severity`, `specificity`, `consequence`, `entities`, `locations`). |
+| `ArticleFamily` | `article_families` | Wire/syndication copy groupings anchored to a representative article to prevent duplicate corroboration. |
+| `Event` | `events` | Denormalized incident aggregate with `geometry(POINT, 4326)`, `halfvec(2048)` embedding, `importance_score`, `selection_tier`, `actors` JSONB, and merge redirects (`merged_into_id`). |
+| `EventMember` | `event_members` | Historical membership join table enforcing at most one current event per article (`is_current`). |
+| `EventRelationship` | `event_relationships` | Directed typed edges (`CAUSED`, `FOLLOW_UP`, `REACTION`, `RELATED`) between distinct events with unordered-pair uniqueness. |
+| `ClusterDecision` | `cluster_decisions` | Pairwise LLM adjudication cache keyed by deterministic `pair_hash` across clustering, merges, threads, and relationships. |
+| `Thread` | `threads` | Persistent topic/developing story groupings with `halfvec(2048)` centroids, `importance`, and `ACTIVE`/`DORMANT`/`ENDED` status. |
+| `EventTl` | `event_timelines` | One-to-one historical causality DAG stored as JSONB `nodes`/`edges` with `event_version` staleness tracking. |
 | `GeocodeCache` | `geocode_cache` | Normalized location-name cache; `NULL` coordinates act as a negative cache. |
 
-All `datetime` columns map to `TIMESTAMPTZ`, and application code writes aware UTC. `Event.articles` uses `lazy="raise"`; read paths must eager-load it explicitly.
+All `datetime` columns map to `TIMESTAMPTZ`, and application code writes aware UTC. `Event.articles`, `Event.memberships`, and `EventRelationship` relations use `lazy="raise"`; read paths must eager-load explicitly.
 
 ## Services
 
-| Service | Focus |
+| Module / Class | Focus |
 | :--- | :--- |
-| `ArticleService` | URL existence checks and idempotent article creation. |
-| `EventService` | Event creation, corroboration, bbox queries, active-context queries, and lifecycle transitions. |
-| `SearchService` | Hybrid lexical + semantic retrieval with RRF, scope filters, coverage classification, and context hydration. |
-| `SourceService` | Due-source selection, fetch cursors, and source-catalog sync. |
-| `EventTlService` | Timeline creation, status transitions, generated-graph persistence, and deletion. |
-| `GeocodeCacheService` | First-write-wins geocode cache with negative-cache semantics. |
-| `ranking` | Credibility weights, diversity, velocity, and time-decay scoring helpers. |
+| `ArticleService` (`article.py`) | URL existence checks, ledger queries, and idempotent article insertion. |
+| `ArticleAnalysisService` (`article_analysis.py`) | Analysis result persistence, embeddings, and rejection/labeling state updates. |
+| `ArticleFamilyService` (`article_family.py`) | Syndication family creation, candidate lookup, and attachment. |
+| `ArticleLabelService` (`article_label.py`) | `ArticleLabel` creation and uniqueness lookup per prompt version. |
+| `ClusterDecisionService` (`cluster_decision.py`) | `pair_hash` lookup and persistence for cached LLM adjudications. |
+| `EventService` (`event.py`) | Read-side queries (map bbox, FTS, hybrid search, redirect-aware event detail, relationship counts). |
+| `EventAssignmentService` (`event_assignment.py`) | ANN + country-blocked candidate loading for article clustering. |
+| `EventLifecycleService` (`event_lifecycle.py`) | Deterministic `ACTIVE -> STALE -> ARCHIVED` transitions and stale embedding pruning. |
+| `EventMembershipService` (`event_membership.py`) | Member attachment/detachment, origin/count aggregation, centroid updates, and `member_hash` tracking. |
+| `EventMergeService` (`event_merge.py`) | Non-destructive duplicate event merging, relationship repointing, timeline invalidation, and redirect chain resolution. |
+| `EventRelationshipService` (`event_relationship.py`) | Relationship candidate recall, upsert, unordered-pair cache checks, bbox edge projection, and event detail links. |
+| `EventScoringService` (`event_scoring.py`) | Deterministic `score-v2` `importance_score` formula, exponential decay, single-source cap, and hysteresis `SelectionTier` classification. |
+| `GeocodeCacheService` (`geocode.py`) | First-write-wins geocode cache with negative-cache semantics. |
+| `MaintenanceService` (`maintenance.py`) | Count reconciliation, consistency drift reporting, stale-claim requeuing helpers, and retention purges. |
+| `SearchService` (`search.py`) | Hybrid lexical + semantic retrieval with RRF, scope filters, coverage classification, and context hydration for chat. |
+| `SourceService` (`source.py`) | Due-source selection, fetch health tracking, and `sources.json` catalog sync. |
+| `ThreadService` (`thread.py`) | Story thread CRUD, candidate scoring (`0.70` cosine + `0.30` entity Jaccard), importance recomputation, and `ACTIVE`/`DORMANT`/`ENDED` lifecycle. |
+| `EventTlService` (`tl.py`) | Timeline creation, status transitions, generated-graph persistence, and deletion. |
+| `verification.py` (`compute_verification`) | Independent origin-group derivation and `VerificationStatus` classification. |
 
 ## Session Lifecycle
 
@@ -49,7 +67,7 @@ await close_db()
 
 ## Migrations
 
-The chain is linear: 16 revisions from root `2ec3541646e8` to head `9e1bb45d1cba`. Revision 16 hardened timestamps to `TIMESTAMPTZ` and added the missing `articles.updated_at` and `geocode_cache.updated_at` columns.
+The chain is linear: 28 revisions from root `2ec3541646e8` to head `219faff153a6`. Recent revisions introduced typed cross-event relationships (`33ae8a869e4e`, creating `event_relationships`) and structured actor extraction (`219faff153a6`, adding `events.actors`).
 
 ```bash
 npx nx run hermes-db:makemigrations -- -m "<message>"

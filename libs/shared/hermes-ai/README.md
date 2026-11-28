@@ -28,12 +28,19 @@ The library is completely decoupled from database ORM models and persistence lay
 
 ## Observability & Langfuse Integration
 
-Langfuse tracing provides visibility into model routing, latencies, and token spend across all extraction pipelines:
+Langfuse tracing provides visibility into model routing, latencies, and token spend across all extraction and chat pipelines:
 
 - **Opt-in Activation**: Initialized when both `langfuse_public_key` and `langfuse_secret_key` are provided in `AiConfig`. If omitted, extraction and geocoding run without telemetry overhead.
-- **Instrumented Spans**:
-  - `tl-analyze` (`TlExtractor.analyze`): Records headline triage and Wikipedia search query derivation.
-  - `tl-extract` (`TlExtractor.extract`): Captures Wikipedia prose extraction, milestone resolution, and causal DAG generation.
+- **Instrumented Spans** (all configured with `capture_input=False, capture_output=False`):
+  - `article-label` (`LabelExtractor.label_batch`): Batch article classification, fact extraction, entities, and location tagging.
+  - `event-adjudicate` (`PairAdjudicator.adjudicate_articles`): Pairwise article-to-event clustering adjudication.
+  - `event-merge-adjudicate` (`PairAdjudicator.adjudicate_events`): Pairwise duplicate-event merge adjudication.
+  - `event-describe` (`DescribeExtractor.describe`): Event headline, summary, impact/scope, location, and actor extraction.
+  - `event-relationship` (`RelationshipExtractor.classify`): Pairwise cross-event relationship classification (`CAUSED`, `FOLLOW_UP`, `REACTION`, `RELATED`, `SAME_INCIDENT`, `NONE`).
+  - `thread-assign` (`ThreadAssigner.assign`): Story thread assignment or new thread naming.
+  - `tl-analyze` (`TlExtractor.analyze`): Headline triage and Wikipedia search query derivation.
+  - `tl-extract` (`TlExtractor.extract`): Wikipedia prose extraction, milestone resolution, and causal DAG generation.
+- **Content Masking**: When `langfuse_mask_content=True` (default), `LlmService` scrubs `input`, `output`, `content`, `messages`, `prompt`, `answer`, `snippet`, and `web_query` values via Langfuse masking and OpenTelemetry span sanitization.
 - **Flush-on-Shutdown Guarantee**: The SDK client is cleanly drained via `LlmService.aclose()` -> `get_client().flush()`, ensuring telemetry batches are delivered before process exit or container teardown.
 - **Service Tags**: Consumers specify tags (e.g. `["hermes-api", "production"]` or `["hermes-worker", "development"]`) to segment traces in the Langfuse dashboard.
 
@@ -45,7 +52,7 @@ The library is configured via the frozen dataclass `AiConfig`:
 
 | Parameter | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
-| `routes` | `dict[str, ModelRoute]` | *Required* | Route definitions mapping logical model groups (`extractor`, `chat`, `plan`, `embed`) to a `ModelRoute(primary=..., fallbacks=...)`. |
+| `routes` | `dict[str, ModelRoute]` | *Required* | Route definitions mapping logical model groups (e.g. `extractor`, `chat`, `plan`, `embed`, or worker task routes `label`, `adjudicate`, `describe`, `relationship`, `thread`) to a `ModelRoute(primary=..., fallbacks=...)`. Each `ModelTarget` supports `rpm`, `tpm`, `model_kwargs`, and `timeout_seconds`. |
 | `num_retries` | `int` | `2` | LiteLLM retries per request before failing over or raising. |
 | `cooldown_time` | `int` | `180` | Router cooldown in seconds after a deployment failure. |
 | `retry_after` | `bool` | `True` | Honor provider `Retry-After` headers. |
@@ -58,6 +65,9 @@ The library is configured via the frozen dataclass `AiConfig`:
 | `langfuse_mask_content` | `bool` | `True` | Redact prompt/answer/snippet content from traces. |
 | `chat_stream_include_usage` | `bool` | `True` | Request token usage in streamed chat responses. |
 | `chat_max_output_tokens` | `int` | `1200` | Answer completion budget. |
+| `chat_first_token_timeout_seconds` | `float` | `30.0` | Timeout waiting for the first token from the answer model. |
+| `chat_total_timeout_seconds` | `float` | `120.0` | End-to-end streaming timeout for a single chat turn. |
+| `chat_request_timeout_seconds` | `float \| None` | `20.0` | Per-request LLM timeout for chat completions. |
 | `chat_model_kwargs` / `plan_model_kwargs` | `dict[str, object]` | `{}` | Extra provider parameters for the answer and planner model groups. |
 | `web_timeout_seconds` | `float` | `8.0` | Tavily request timeout. |
 | `tavily_api_key` | `str \| None` | `None` | Enables external news search when present. |
@@ -66,7 +76,7 @@ The library is configured via the frozen dataclass `AiConfig`:
 
 ## Programmatic Usage
 
-All external consumers interact with the high-level `HermesAi` facade:
+All external consumers interact with the high-level `HermesAi` facade, which exposes `llm`, `labels`, `timelines`, `adjudicator`, `describer`, `relationships`, `threads`, and `create_chat_engine()`:
 
 ```python
 from hermes_ai import AiConfig, HermesAi, ModelRoute, ModelTarget
@@ -112,12 +122,14 @@ The host application supplies a `ChatRetriever` and, optionally, a LangGraph che
 
 ```python
 engine = ai.create_chat_engine(retriever, checkpointer=None)
-async for event in engine.stream(message, thread_id=thread_id, scope=scope):
+async for event in engine.stream(
+    message, thread_id=thread_id, scope=scope, map_context=map_context
+):
     # Forward status/token/sources/done events to the transport layer.
     ...
 ```
 
-The API wires `DbChatRetriever` to `hermes-db`'s `SearchService` and currently passes a process-local `InMemorySaver`; a persistent saver can be supplied without changing the chat contract.
+The API wires `DbChatRetriever` to `hermes-db`'s `SearchService` and configures `AsyncPostgresSaver` at startup (with `InMemorySaver` fallback if PostgreSQL setup fails).
 
 ---
 

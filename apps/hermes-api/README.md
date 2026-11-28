@@ -16,11 +16,11 @@
 `hermes-api` operates strictly as a **read and synthesis service**:
 
 - **No Background Work**: The API contains zero background schedulers, cron tasks, or ingestion loops. All RSS harvesting, vector embeddings generation, and score decay processes are isolated in [`apps/hermes-worker`](../hermes-worker).
-- **Externalized Data Layer**: All SQLAlchemy 2.0 ORM models (`Event`, `Article`, `EventTl`, `Source`, `GeocodeCache`) and Alembic migrations reside in [`libs/shared/hermes-db`](../../libs/shared/hermes-db). The API interacts through async sessions (`get_db`) and service facades (`EventService`, `EventTlService`).
+- **Externalized Data Layer**: All SQLAlchemy 2.0 ORM models (`Event`, `Article`, `ArticleLabel`, `ArticleFamily`, `EventMember`, `EventRelationship`, `Thread`, `EventTl`, `ClusterDecision`, `Source`, `GeocodeCache`) and Alembic migrations reside in [`libs/shared/hermes-db`](../../libs/shared/hermes-db). The API interacts through async sessions (`get_db`) and service facades (`EventService`, `EventRelationshipService`, `ThreadService`, `SearchService`, `EventTlService`, `GeocodeCacheService`).
 - **Grounded Geocoding**: The API never prompts LLMs for geographic coordinates. Historical and event locations are resolved strictly through [`GeocodingService`](../../libs/shared/hermes-ai/src/hermes_ai/services/geocoding.py) (OpenStreetMap Nominatim with negative caching).
 - **CORS Error Handling**: Custom exception handlers in [`core/errors.py`](src/hermes_api/core/errors.py) explicitly inject origin headers (`_cors_headers(request)`) to prevent Starlette's `ExceptionMiddleware` from masking internal errors behind opaque browser CORS failures.
 - **Graceful Degradation**: If LLM credentials are unconfigured, the server remains operational for spatial queries and gracefully returns `HTTP 503` from timeline synthesis and chat endpoints instead of crashing.
-- **Conversational RAG**: `POST /api/v1/chat` streams grounded answers over Server-Sent Events. Each request carries only its message, map scope, and `thread_id`; retrieval opens a short-lived database session that is closed before generation starts. Conversation memory is checkpointed per `thread_id` by LangGraph and is process-local in the current deployment, so it does not survive a restart.
+- **Conversational RAG**: `POST /api/v1/chat` streams grounded answers over Server-Sent Events. Each request carries its message, `thread_id`, and optional explicit `scope` or live `context` (`ChatMapContext`); retrieval opens a short-lived database session that is closed before generation starts. Conversation memory is checkpointed per `thread_id` by LangGraph using `AsyncPostgresSaver` against `checkpoint_db_url` (falling back to process-local `InMemorySaver` if unavailable).
 
 > [!NOTE]
 > For in-depth architectural sequence diagrams, state machine transitions, and design tradeoffs, see [apps/hermes-api/docs/architecture.md](docs/architecture.md).
@@ -36,13 +36,14 @@ All application endpoints are mounted under the configurable `API_BASE_PATH` pre
 | Method | Path | Description | Response Model |
 | :--- | :--- | :--- | :--- |
 | `GET` | `/` | Health check endpoint returning server liveness status. | `{"message": "hermes is running..."}` |
-| `GET` | `/api/v1/events/` | Retrieves a ranked list of events ordered by descending `importance_score`. | `list[EventResponse]` |
-| `GET` | `/api/v1/events/bbox` | Spatial bounding box query returning active, non-dropped events within the viewport. | `list[MapEventResponse]` |
-| `GET` | `/api/v1/events/{event_id}` | Retrieves full event detail, summary, and linked news articles. | `EventDetailResponse` |
+| `GET` | `/api/v1/events/` | Retrieves a ranked list of events ordered by descending `importance_score` (excludes `DROP` and merged events unless filtering). | `list[EventResponse]` |
+| `GET` | `/api/v1/events/bbox` | Spatial bounding box query returning active, non-dropped events with actors and relationship counts within the viewport. | `list[MapEventResponse]` |
+| `GET` | `/api/v1/events/relationships` | Returns directed cross-event relationship edges for events intersecting the viewport bounding box (`limit` default `400`, max `1000`). | `list[MapRelationshipEdgeResponse]` |
+| `GET` | `/api/v1/events/{event_id}` | Follows merge redirects and retrieves full event detail, extracted actors, connected relationships, and up to 50 recent articles. | `EventDetailResponse` |
 | `GET` | `/api/v1/threads/` | Lists active and dormant story threads ordered by importance. | `list[ThreadResponse]` |
-| `GET` | `/api/v1/threads/{thread_id}` | Retrieves one thread and its member events in time order. | `ThreadDetailResponse` |
+| `GET` | `/api/v1/threads/{thread_id}` | Retrieves one thread and its member events in chronological order. | `ThreadDetailResponse` |
 | `POST` | `/api/v1/events/tl/{event_id}` | On-demand timeline synthesis generating an antecedent historical DAG. | `TlResponse` |
-| `POST` | `/api/v1/chat` | Streams a grounded conversational answer for the current map scope. | `text/event-stream` |
+| `POST` | `/api/v1/chat` | Streams a grounded conversational answer for the current map scope/context. | `text/event-stream` |
 
 ---
 
@@ -70,7 +71,10 @@ Returns events sorted by `importance_score`:
 #### 3. Thread Queries (`GET /api/v1/threads/`, `GET /api/v1/threads/{thread_id}`)
 `/threads/` lists `ACTIVE` and `DORMANT` threads by importance. `/{thread_id}` returns the thread metadata plus its member events ordered by `event_time`; the map story panel uses this to filter and focus pins. Threads never replace event pins.
 
-#### 3. On-Demand Timeline Synthesis (`POST /api/v1/events/tl/{event_id}`)
+#### 4. Event Relationships (`GET /api/v1/events/relationships`)
+Accepts the viewport `north`/`south`/`east`/`west` bounds plus an optional `limit` (`1..1000`, default `400`) and returns `MapRelationshipEdgeResponse` objects for cross-event edges (`CAUSED`, `FOLLOW_UP`, `REACTION`, `RELATED`) involving active non-dropped events in view. `GET /api/v1/events/{event_id}` resolves `merged_into_id` redirects and returns `actors` and `relationships` alongside articles.
+
+#### 5. On-Demand Timeline Synthesis (`POST /api/v1/events/tl/{event_id}`)
 Synthesizes a causal historical lineage by triaging the headline, querying the MediaWiki REST API, extracting chronological milestones via LiteLLM, geocoding locations, and stitching the breaking event as the terminal leaf node:
 
 ```bash
@@ -83,8 +87,8 @@ curl -X POST "http://localhost:8000/api/v1/events/tl/3fa85f64-5717-4562-b3fc-2c9
 - `NO_CONTENT`: Event triaged as non-historical or no relevant Wikipedia pages found.
 - `FAILED`: Upstream extraction or Wikipedia search failed.
 
-#### 4. Conversational Chat (`POST /api/v1/chat`)
-Streams a grounded answer about events in the requested map scope. Conversation memory is keyed by `thread_id` in a LangGraph checkpointer. The current deployment runs with process-local memory (`InMemorySaver`); a persistent `BaseCheckpointSaver` can be injected at the composition root later without changing this contract. Send the same `thread_id` on every turn; the client starts a new thread when the user clears the conversation.
+#### 6. Conversational Chat (`POST /api/v1/chat`)
+Streams a grounded answer about events in the requested map scope. Conversation memory is keyed by `thread_id` in a LangGraph checkpointer. At startup the lifespan initializes `AsyncPostgresSaver` against `CHECKPOINT_DB_URL` (calling `saver.setup()`), falling back to process-local `InMemorySaver` if PostgreSQL checkpoint setup fails. Send the same `thread_id` on every turn; the client starts a new thread when the user clears the conversation.
 
 ```bash
 curl -N -X POST "http://localhost:8000/api/v1/chat" \
@@ -93,8 +97,8 @@ curl -N -X POST "http://localhost:8000/api/v1/chat" \
   -d '{
     "message": "What changed in the ceasefire talks this week?",
     "thread_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-    "scope": {
-      "type": "viewport",
+    "context": {
+      "event_id": null,
       "bbox": { "north": 60, "south": 30, "east": 60, "west": 20 }
     }
   }'
@@ -104,7 +108,8 @@ curl -N -X POST "http://localhost:8000/api/v1/chat" \
 - `message`: 1–4,000 characters, stripped.
 - `thread_id`: UUID that identifies the server-side conversation.
 - `retry`: when `true`, the server removes the last user turn from the thread before answering again.
-- `scope`: discriminated union of `event` (`event_id`), `viewport` (`bbox` with `north`/`south`/`east`/`west`), or `global` (default).
+- `scope`: optional explicit discriminated union of `event` (`event_id`), `viewport` (`bbox` with `north`/`south`/`east`/`west`), or `global`.
+- `context`: optional `ChatMapContext` (`event_id`, `bbox`) allowing the planner to infer `event`, `viewport`, or `global` scope dynamically when `scope` is omitted.
 
 **SSE event order**:
 
@@ -150,25 +155,29 @@ Settings are managed via `pydantic-settings` in [`core/config.py`](src/hermes_ap
 
 | Variable | Default | Description |
 | :--- | :--- | :--- |
-| `API_PORT` | `8000` | HTTP port for the Uvicorn listener. |
+| `ENV` | `development` | Execution environment (`development`, `staging`, `production`). |
+| `API_PORT` | *Required* | HTTP port for the Uvicorn listener. |
 | `API_BASE_PATH` | `/api/v1` | URL route prefix for all API endpoints. |
 | `DB_HOST` | `localhost` | PostgreSQL / Neon database host. |
 | `DB_PORT` | `5432` | PostgreSQL database port. |
-| `DB_USER` | `postgres` | Database username. |
+| `DB_USER` | *Required* | Database username. |
 | `DB_PASSWORD` | *Required* | Database password. |
-| `DB_NAME` | `hermes` | Database name. |
-| `CHECKPOINT_DB_URL` | `""` | Optional psycopg URL for a persistent LangGraph checkpointer. Defaults to the `DB_*` settings with `ssl` mapped to `sslmode`. Without a reachable saver, chat falls back to process-local `InMemorySaver`. |
+| `DB_NAME` | *Required* | Database name. |
+| `CHECKPOINT_DB_URL` | `""` | Optional psycopg URL for `AsyncPostgresSaver`. Defaults to the `DB_*` settings with `ssl` mapped to `sslmode`. Without a reachable saver, chat falls back to process-local `InMemorySaver`. |
 | `LLM_API` | `""` | Primary LLM API key (e.g. Mistral). |
 | `LLM_MODEL` | `""` | Primary LLM identifier (e.g. `mistral/ministral-8b-latest`). |
 | `LLM_API_1` | `None` | Fallback LLM API key (e.g. NVIDIA NIM). |
 | `LLM_MODEL_1` | `None` | Fallback model identifier (e.g. `nvidia_nim/openai/gpt-oss-20b`). |
-| `EMBED_API` | `""` | Embedding model API key. |
-| `EMBED_MODEL` | `""` | Embedding model identifier (`nvidia_nim/nvidia/nemotron-3-embed-1b`). |
+| `EMBED_API` / `EMBED_MODEL` | `""` | Primary embedding API key and model identifier (`nvidia_nim/nvidia/nemotron-3-embed-1b`). |
+| `EMBED_API_1` / `EMBED_MODEL_1` | `None` | Optional fallback embedding route. |
+| `RPM_LIMIT` / `EMBED_RPM_LIMIT` | `26` / `90` | Token-bucket limits (req/min) for extractor LLM and embedding routes. |
+| `NOMINATIM_USER_AGENT` | `Hermes...` | Custom User-Agent header for OpenStreetMap Nominatim. |
 | `CHAT_ENABLED` | `true` | Kill switch for `POST /api/v1/chat`. When false, the endpoint returns `503 CHAT_UNAVAILABLE`. |
 | `CHAT_MODEL` / `CHAT_API` | `""` | Answer model group. Falls back to `LLM_MODEL` / `LLM_API`. |
 | `CHAT_MODEL_1` / `CHAT_API_1` | `None` | Optional fallback answer model group. |
 | `PLAN_MODEL` / `PLAN_API` | `""` | Planner model group. Falls back to the resolved chat model. |
 | `PLAN_MODEL_1` / `PLAN_API_1` | `None` | Optional fallback planner model group. |
+| `CHAT_MODEL_KWARGS` / `PLAN_MODEL_KWARGS` | `{}` | Extra JSON kwargs forwarded to chat and planner model deployments. |
 | `TAVILY_API_KEY` | `""` | Tavily news search key. When absent, chat runs without external search. |
 | `CHAT_RPM_LIMIT` | `60` | Deployment-level requests-per-minute for the chat and plan router groups. |
 | `CHAT_RATE_LIMIT_REQUESTS` | `10` | Per-client request limit within the sliding window. |
@@ -183,7 +192,10 @@ Settings are managed via `pydantic-settings` in [`core/config.py`](src/hermes_ap
 | `CHAT_FRESHNESS_HOURS` | `24` | Age after which coverage is marked recency-stale. |
 | `CHAT_MAX_MESSAGE_CHARS` | `4000` | Maximum current-message length. |
 | `CHAT_MAX_OUTPUT_TOKENS` | `1200` | Answer completion budget and budget-reservation component. |
-| `CHAT_WEB_TIMEOUT_SECONDS` | `8` | Tavily request timeout. |
+| `CHAT_WEB_TIMEOUT_SECONDS` | `8` | Tavily request timeout in seconds. |
+| `CHAT_FIRST_TOKEN_TIMEOUT_SECONDS` | `30.0` | Timeout waiting for the first answer token before raising `MODEL_TIMEOUT`. |
+| `CHAT_TOTAL_TIMEOUT_SECONDS` | `120.0` | Total stream duration cap (`STREAM_TIMEOUT`). |
+| `CHAT_REQUEST_TIMEOUT_SECONDS` | `20.0` | Per-request timeout on answer model calls. |
 | `CHAT_STREAM_INCLUDE_USAGE` | `true` | Request token usage in the answer stream. |
 | `CORS_ORIGINS` | `["*"]` | Allowed origins for browser CORS headers. |
 | `LANGFUSE_PUBLIC_KEY` | `""` | Langfuse project public key. When set with secret key, activates trace observability. |
@@ -225,7 +237,7 @@ npx nx lint hermes-api
 npx nx run hermes-api:format
 
 # Apply database migrations to head
-npx nx run hermes-api:migrate
+npx nx run hermes-db:migrate
 
 # Sync Python virtual environment dependencies
 npx nx run hermes-api:sync

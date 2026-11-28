@@ -4,14 +4,14 @@ Request-scoped FastAPI REST API, conversational RAG endpoint, and on-demand hist
 
 ## 1. Invariants
 
-- **Request-Scoped Operation**: Never add cron runners, background workers, or ingestion loops. All harvesting and decay belong in `hermes-worker`. Chat memory is the only process-local exception and is documented in the chat section.
+- **Request-Scoped Operation**: Never add cron runners, background workers, or ingestion loops. All harvesting and decay belong in `hermes-worker`. For chat memory, the API initializes LangGraph's `AsyncPostgresSaver` at startup (falling back to `InMemorySaver` on failure), while `ChatGuards` remain process-local.
 - **Dependency Injection**: Route handlers in `api/v1/` must never instantiate database sessions or services directly; consume them via FastAPI `Depends()`.
 - **CORS Exception Headers**: Handlers in `core/errors.py` bypass Starlette's `CORSMiddleware`. Every custom exception handler must explicitly include origin headers via `_cors_headers(request)`.
 - **Lifespan Pool Management**: Initialize and dispose database connection pools inside `lifespan` in `main.py` via `init_db` and `close_db`. Never initialize connections at module import time.
 - **Graceful Degradation**: When LLM credentials are missing, keep the server operational for spatial queries and return HTTP 503 from timeline synthesis endpoints instead of crashing.
 - **Observability Lifecycle**: When Langfuse keys are configured, `AiService` initializes tracing tagged with `["hermes-api", ENV]`. Ensure `client.close()` is executed on application shutdown to flush queued telemetry before Uvicorn termination.
 - **No Local ORM Models**: All database models and migrations reside in `libs/shared/hermes-db`. Never define SQLAlchemy models in `hermes-api`.
-- **Chat Guardrails & Contracts**: Route all conversational RAG queries through `chat_guards.py` and `chat_service.py`; mirror any `schemas/chat.py` or `schemas/events.py` response changes in `libs/shared/util-types/src/lib/api-types.ts`.
+- **Chat Guardrails & Contracts**: Route all conversational RAG queries through `chat_guards.py` and `chat_service.py`; mirror any `schemas/chat.py`, `schemas/events.py`, or `schemas/threads.py` response changes in `libs/shared/util-types/src/lib/api-types.ts`.
 
 ## 2. Domain Triggers (Code Modifications Only)
 

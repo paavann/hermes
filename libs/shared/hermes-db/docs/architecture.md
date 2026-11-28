@@ -16,9 +16,9 @@ The design goal is strict encapsulation of all database concerns: consumer appli
 
 ### 1.1 Core Responsibilities
 
-- **Canonical Data Models**: Declare SQLAlchemy 2.0 models for sources, article ingestion ledgers, article labels, syndication families, events, event membership history, pairwise cluster decisions, persistent story threads, causality timelines, and geocoding cache.
+- **Canonical Data Models**: Declare SQLAlchemy 2.0 models for sources, article ingestion ledgers, article labels, syndication families, events (including extracted actors), event membership history, pairwise cross-event relationships, pairwise cluster decisions, persistent story threads, causality timelines, and geocoding cache.
 - **Alembic Schema Authority**: Own every database migration revision and execution environment.
-- **Asynchronous Persistence Services**: Provide domain services for article claiming and lifecycle queues, syndication family grouping, event creation, membership aggregation, deterministic scoring, thread clustering, non-destructive event merging, and scheduled retention sweeps.
+- **Asynchronous Persistence Services**: Provide domain services for article claiming and lifecycle queues, syndication family grouping, event creation, membership aggregation, verification, deterministic scoring, thread clustering, non-destructive event merging, relationship discovery/querying, and scheduled retention sweeps.
 - **Spatial & Vector Primitives**: Manage PostGIS geometry points (SRID 4326 WGS 84), spatial bounding-box filters, coordinate projection via SQL `ST_X` / `ST_Y`, and pgvector `HALFVEC(2048)` HNSW indexing with cosine distance.
 - **Lexical & Semantic Search**: Provide full-text search indexes (`tsvector`), weighted document rankers, and hybrid vector retrieval.
 
@@ -34,8 +34,8 @@ The design goal is strict encapsulation of all database concerns: consumer appli
 
 | Consumer | Invocation Mechanism | Primary Services & Models |
 | :--- | :--- | :--- |
-| `apps/hermes-api` | FastAPI lifespan `init_db` / `close_db`, `Depends(get_db)` | `EventService` (map bbox, FTS, hybrid search), `EventTlService`, `ThreadService`, `GeocodeCacheService` |
-| `apps/hermes-worker` | CLI batch jobs via `db_lifespan()` | `ArticleService`, `ArticleAnalysisService`, `ArticleFamilyService`, `EventAssignmentService`, `EventScoringService`, `EventMembershipService`, `EventMergeService`, `EventLifecycleService`, `ThreadService`, `MaintenanceService` |
+| `apps/hermes-api` | FastAPI lifespan `init_db` / `close_db`, `Depends(get_db)` | `EventService` (map bbox, FTS, detail), `SearchService`, `EventRelationshipService`, `EventTlService`, `ThreadService`, `GeocodeCacheService` |
+| `apps/hermes-worker` | CLI batch jobs via `db_lifespan()` | `ArticleService`, `ArticleAnalysisService`, `ArticleFamilyService`, `EventAssignmentService`, `EventScoringService`, `EventMembershipService`, `EventMergeService`, `EventRelationshipService`, `EventLifecycleService`, `ThreadService`, `MaintenanceService` |
 | Alembic CLI | `npx nx run hermes-db:migrate` / `makemigrations` | `migrations/env.py`, `Base.metadata` |
 | Unit Tests | Pure in-memory SQLite / mock session tests | Models, Enums, Math formulas, SQL expression compilation |
 
@@ -65,6 +65,7 @@ erDiagram
     EVENTS ||--o{ EVENT_MEMBERS : "contains"
     EVENTS }o--o| THREADS : "grouped under"
     EVENTS ||--o{ EVENT_TIMELINES : "causality timeline"
+    EVENTS ||--o{ EVENT_RELATIONSHIPS : "links to"
     EVENTS }o--o| EVENTS : "merged_into_id"
     ARTICLES }o--o| ARTICLES : "duplicate_of_id"
 
@@ -169,6 +170,8 @@ erDiagram
         int independent_origin_count
         string member_hash
         int version
+        jsonb locations
+        jsonb actors
         halfvec_2048 embedding
         string embedding_model
         timestamp event_time
@@ -176,6 +179,18 @@ erDiagram
         timestamp latest_published_at
         timestamp scored_at
         timestamp selected_at
+    }
+
+    EVENT_RELATIONSHIPS {
+        uuid id PK
+        uuid source_event_id FK
+        uuid target_event_id FK
+        string relationship_type
+        float confidence
+        string rationale
+        string pair_hash
+        timestamp created_at
+        timestamp updated_at
     }
 
     EVENT_MEMBERS {
@@ -317,10 +332,11 @@ Wire services (Reuters, AP, AFP) are syndicated across hundreds of regional publ
 - **Grouping Unit**: Syndication families represent *wire distribution*, not topic grouping.
 - **Representative Article**: The earliest published article in the cluster becomes `representative_article_id`.
 - **Match Criteria**: An article attaches to an existing family if:
-  1. Title SimHash Hamming distance $\le 3$; OR
-  2. Title SimHash distance $\le 6$ AND Body SimHash distance $\le 10$; OR
-  3. Text embedding cosine similarity $\ge 0.97$;
-  4. AND published within a 36-hour window.
+  1. Published within a 36-hour window (`MAX_DAY_DELTA = timedelta(hours=36)`); AND
+  2. Any one of the following holds:
+     - Title SimHash Hamming distance $\le 3$; OR
+     - Body SimHash Hamming distance $\le 6$; OR
+     - Text embedding cosine similarity $\ge 0.97$.
 - **Verification Impact**: When corroborating an event, multiple articles belonging to the same `family_id` count as a single piece of origin evidence.
 
 ---
@@ -376,18 +392,18 @@ The verification engine (`libs/shared/hermes-db/src/hermes_db/services/verificat
 
 | Status | Verification Rule | Weight in Scoring |
 | :--- | :--- | :--- |
-| `CONFIRMED` | $\ge 2$ independent origin groups agree AND $\ge 1$ Tier-1 source confirms | 1.00 |
-| `CORROBORATED` | $\ge 2$ independent origin groups agree on the core fact | 0.85 |
-| `SINGLE_SOURCE` | Exactly 1 independent origin group or family | 0.40 |
-| `CONFLICTING` | Any member article reports `certainty == DISPUTED` | 0.25 |
-| `UNVERIFIED` | Internal state: no members or no origin evidence | 0.00 |
+| `CONFIRMED` | $\ge 2$ independent origin groups AND $\ge 1$ member reports `certainty == CONFIRMED` | 1.00 |
+| `CORROBORATED` | $\ge 2$ independent origin groups agree (without `CONFIRMED` certainty) | 0.85 |
+| `SINGLE_SOURCE` | Exactly 1 independent origin group or family | 0.75 |
+| `CONFLICTING` | Any member article reports `certainty == DISPUTED` | 0.50 |
+| `UNVERIFIED` | Internal state: zero members | 0.00 |
 
 ### 6.2 Origin Group Resolution
 
 To determine true independence, `_origin_key()` resolves each member article into an origin identifier:
-1. If the article belongs to an `ArticleFamily`, use `family:{family_origin_group or family_id}`.
-2. Otherwise, if the source has a configured `source_origin_group` (e.g. News Corp, Hearst), use `origin:{source_origin_group}`.
-3. Otherwise, use `origin:{source_slug}`.
+1. If the article belongs to an `ArticleFamily`, use `family:{family_origin_group or source_origin_group or family_id}`.
+2. Otherwise, if the source has a configured `source_origin_group` (e.g. News Corp, Hearst), use `origin:{source_origin_group}`; otherwise `origin:{source_slug}`.
+3. Fallback (no family/source): `article:{article_id}`.
 
 Ten regional newspapers publishing the exact same AP wire story share one family origin key, correctly evaluating to `SINGLE_SOURCE`.
 
@@ -395,18 +411,18 @@ Ten regional newspapers publishing the exact same AP wire story share one family
 
 ## 7. Unified Importance Scoring & Selection Tiers
 
-Hermes uses a single, authoritative, explainable `importance_score` (0–100) computed by `EventScoringService`. All legacy metrics (`trending_score`, `popularity_score`, `velocity`, `confidence`) have been removed.
+Hermes uses a single, authoritative, explainable `importance_score` (0–100) computed by `EventScoringService` (`SCORE_VERSION = "score-v2"`). Legacy metrics (`trending_score`, `popularity_score`, `velocity`, `confidence`) have been removed.
 
 ### 7.1 The Scoring Formula
 
-$$\text{importance\_score} = \text{round}(\text{base} \times \text{freshness}, 2)$$
+$$\text{importance\_score} = \text{round}(\text{score}, 2), \quad \text{score} = \min(\text{SINGLE\_SOURCE\_CAP}, \text{base} \times \text{freshness}) \text{ when SINGLE\_SOURCE}$$
 
 #### 1. Base Score (0–100)
 $$\text{base} = 100 \times \left( 0.40 \times \text{strength} + 0.30 \times \text{impact} + 0.15 \times \text{verify} + 0.15 \times \text{quality} \right)$$
 
 - **Source Strength** ($\text{strength} \in [0.0, 1.0]$):
   $$\text{strength} = \min\left(1.0, \frac{\sum \text{family\_credibility}}{9.0}\right)$$
-  Where the maximum credibility tier per unique origin family contributes:
+  Where the maximum credibility tier per unique `ArticleFamily` (or individual `Article` when ungrouped) contributes:
   - `TIER_1` = 3.0 (e.g. Reuters, BBC, AP)
   - `TIER_2` = 2.0 (e.g. Major national dailies)
   - `TIER_3` / `TIER_4` = 1.0 (Regional / niche outlets)
@@ -418,42 +434,46 @@ $$\text{base} = 100 \times \left( 0.40 \times \text{strength} + 0.30 \times \tex
 - **Verification Multiplier** ($\text{verify} \in [0.0, 1.0]$):
   - `CONFIRMED` = 1.00
   - `CORROBORATED` = 0.85
-  - `SINGLE_SOURCE` = 0.40
-  - `CONFLICTING` = 0.25
+  - `SINGLE_SOURCE` = 0.75
+  - `CONFLICTING` = 0.50
+  - `UNVERIFIED` = 0.00
 - **Reporting Quality** ($\text{quality} \in [0.5, 1.0]$):
   $$\text{quality} = \min\left(1.0, \max\left(0.5, 1.0 - 0.15 \times (5 - \text{specificity}) - 0.10 \times (5 - \text{consequence})\right)\right)$$
+  *(Using the maximum `specificity` and `consequence` across active members, defaulting unset values to `3`.)*
 
 #### 2. Freshness Decay
-$$\text{freshness} = 2^{-\frac{\text{age\_hours}}{\text{half\_life}}}$$
+$$\text{freshness} = e^{-\frac{\text{age\_hours}}{\text{half\_life}}}$$
 
-Age is measured against $\max(\text{latest\_published\_at}, \text{event\_time})$. Half-lives are dynamically calibrated to impact:
+Age is anchored on `latest_published_at or event_time` (falling back to `0.0` if neither is set). Decay time constants (`half_life`) are calibrated by impact:
 - `CRITICAL`: 18.0 hours
 - `MAJOR`: 36.0 hours
-- `MODERATE` / `MINOR`: 72.0 hours
+- `MODERATE` / `MINOR`: 96.0 hours
 
 #### 3. Single-Source Cap & Breaking Override
-- **Cap**: Uncorroborated single-source events are strictly capped at $\text{importance\_score} \le 45.0$.
-- **Breaking News Override**: If $\text{age} \le 2.0\text{ hours}$, `article_type == BREAKING`, $\text{impact} \ge \text{MAJOR}$, and $\text{score} \ge 45.0$, the cap is bypassed to allow high-consequence breaking stories to surface immediately on the primary map tier.
+- **Cap**: Single-source events are capped at $\text{SINGLE\_SOURCE\_CAP} = 65.0$ (`score = min(score, 65.0)`).
+- **Breaking News Override**: Evaluated after capping: if $\text{age\_hours} \le 2.0$, `impact in {CRITICAL, MAJOR}`, any member has `article_type == BREAKING`, and $\text{score} \ge 35.0$ (`BREAKING_MIN_SCORE`), `select_tier()` forces `SelectionTier.PRIMARY` (`breaking_override`).
 
 ### 7.2 Selection Tiers & Hysteresis
 
-Events are classified into map visibility tiers with a $\pm 5.0$ point hysteresis buffer to prevent UI thrashing during score decay:
+Events are classified into map visibility tiers using `PRIMARY_THRESHOLD = 50.0`, `FILLER_THRESHOLD = 22.0`, and a `HYSTERESIS = 5.0` band to prevent UI thrashing during score decay:
 
 ```mermaid
 stateDiagram-v2
-    [*] --> PRIMARY : Score >= 55 (or Breaking Override)
-    [*] --> FILLER : 30 <= Score < 55
-    [*] --> DROP : Score < 30
+    [*] --> PRIMARY : Score >= 50.0 (or Breaking Override)
+    [*] --> FILLER : 22.0 <= Score < 50.0
+    [*] --> DROP : Score < 22.0
 
-    PRIMARY --> FILLER : Score < 50.0 (Demoted)
-    FILLER --> PRIMARY : Score >= 55.0 (Promoted)
-    FILLER --> DROP : Score < 25.0 (Dropped)
-    DROP --> FILLER : Score >= 35.0 (Promoted)
+    PRIMARY --> FILLER : 17.0 <= Score < 45.0
+    PRIMARY --> DROP : Score < 17.0
+    FILLER --> PRIMARY : Score >= 50.0
+    FILLER --> DROP : Score < 17.0
+    DROP --> PRIMARY : Score >= 50.0
+    DROP --> FILLER : 27.0 <= Score < 50.0
 ```
 
-- **PRIMARY** ($\ge 55.0$): Displayed as prominent pins at all zoom levels.
-- **FILLER** ($30.0 - 55.0$): Rendered at closer zoom levels or in dense clusters.
-- **DROP** ($< 30.0$): Hidden from the public map canvas.
+- **PRIMARY** (initial $\ge 50.0$, holds down to $\ge 45.0$, or breaking override): Prominent pins rendered with highest priority.
+- **FILLER** (initial $22.0 - 50.0$, holds down to $\ge 17.0$, `DROP` promotes at $\ge 27.0$): Standard map pins rendered across viewports.
+- **DROP** (initial $< 22.0$, demotes below $17.0$): Excluded from public map and search API responses.
 
 ---
 
@@ -465,9 +485,9 @@ stateDiagram-v2
 
 - **Identifiers**: `name` (display title) and `name_norm` (casefolded and whitespace-normalized for deterministic blocking).
 - **Taxonomy**: `kind` (`DEVELOPING`, `TOPIC`).
-- **Semantic Representation**: Deferred `HALFVEC(2048)` embedding and `embedding_model` capturing the composite theme of member events.
-- **Extracted Aggregates**: `entities` (JSONB) and `keywords` (JSONB) for fast candidate filtering.
-- **Aggregate Metrics**: `event_count` and `importance` (summed and decayed with a 168-hour / 7-day half-life).
+- **Semantic Representation**: Deferred `HALFVEC(2048)` embedding (centroid of active/stale non-merged member events) and `embedding_model`.
+- **Extracted Aggregates**: `entities` (JSONB top 12 entity name/kind pairs) and `keywords` (JSONB top 10 terms) derived from member facts.
+- **Aggregate Metrics**: `event_count` and `importance`, where $\text{importance} = \max(\text{member.importance\_score}) \times e^{-\text{age\_hours} / 168.0}$ anchored on `last_event_at` (`THREAD_IMPORTANCE_HALF_LIFE_HOURS = 168.0`).
 
 ### 8.2 Thread Lifecycle
 
@@ -491,18 +511,19 @@ sequenceDiagram
     participant DB as Postgres (Session)
 
     Worker->>MergeSvc: merge(survivor_id, victim_id)
-    MergeSvc->>DB: Reassign active EventMembers (victim -> survivor)
+    MergeSvc->>DB: Reassign active EventMembers & Articles (victim -> survivor)
+    MergeSvc->>DB: Mark victim EventTl rows FAILED (clear nodes/edges)
+    MergeSvc->>DB: Delete direct edges & repoint third-party EventRelationships
     MergeSvc->>DB: Set victim status = MERGED, merged_into_id = survivor_id
-    MergeSvc->>DB: Reassign existing EventTl timelines
-    MergeSvc->>DB: Recompute survivor aggregates & member_hash
+    MergeSvc->>DB: Recompute survivor aggregates & clear member_hash
     Note over DB: Caller commits transaction
 ```
 
 1. **Resolution**: `resolve_event_id()` traces existing redirect chains to ensure neither target is already merged into another entity.
-2. **Member Reassignment**: All current `event_members` belonging to the victim are updated with `event_id = survivor.id`.
-3. **Status Update**: The victim event is marked `EventStatus.MERGED`, its `merged_into_id` is set to `survivor.id`, and its coordinates and summary are preserved for auditability.
-4. **Timeline Migration**: Any existing `EventTl` causality timelines pointing to the victim are updated to reference the survivor.
-5. **Re-aggregation**: `EventMembershipService.recompute(survivor.id)` refreshes source counts, independent origin counts, location bounding centroids, and marks `member_hash` as dirty for re-synthesis.
+2. **Member & Article Reassignment**: Current `event_members` and `articles` belonging to the victim are updated with `event_id = survivor.id`.
+3. **Timeline Invalidation & Relationship Repointing**: Existing `EventTl` rows on the victim are marked `EventTlStatus.FAILED` with cleared graphs (`event_version=None`). Direct survivor↔victim `EventRelationship` rows are deleted, and third-party `event_relationships` referencing the victim are repointed to the survivor (deduplicating pair collisions via `_repoint_relationships`).
+4. **Status Update & Inheritance**: The victim is marked `EventStatus.MERGED` with `merged_into_id = survivor.id` (preserving coordinates/summary for auditability). If the survivor lacks a `thread_id`, it inherits the victim's `thread_id`.
+5. **Re-aggregation**: `EventMembershipService.recompute(survivor.id)` refreshes source counts, independent origin counts, verification status, centroid location, and clears `member_hash` for re-synthesis.
 
 ---
 
@@ -565,6 +586,7 @@ Used for evolving taxonomies and domain classifications:
 - `eventtlstatus`: `READY`, `GENERATING`, `FAILED`, `NO_CONTENT`
 - `impactlevel`: `CRITICAL`, `MAJOR`, `MODERATE`, `MINOR`
 - `credibilitytier`: `TIER_1`, `TIER_2`, `TIER_3`, `TIER_4`
+- `eventrelationshiptype`: `CAUSED`, `FOLLOW_UP`, `REACTION`, `RELATED`
 
 **Rationale**: Non-native enums are stored as standard `VARCHAR` columns with named `CHECK` constraints. Modifying values requires a standard `DROP CONSTRAINT` and `ADD CONSTRAINT` migration, which is fully transactional and requires zero table rewriting.
 
@@ -572,36 +594,38 @@ Used for evolving taxonomies and domain classifications:
 
 ## 12. Complete Migration History
 
-All migrations are maintained linearly in `libs/shared/hermes-db/migrations/versions/`:
+All 28 migrations are maintained linearly in `libs/shared/hermes-db/migrations/versions/`:
 
 | Revision | Down Revision | Description & Key Schema Alterations |
 | :--- | :--- | :--- |
 | `2ec3541646e8` | *base* | Initial schema: baseline `sources`, `articles`, `events`, PostGIS setup |
-| `a1b2c3d4e5f6` | `2ec3541646e8` | Add unique constraint on `articles.url` |
-| `b8446b410d52` | `a1b2c3d4e5f6` | Make `events.location` geometry nullable |
-| `c1d2e3f4a5b6` | `b8446b410d52` | Create `geocode_cache` table for cached Nominatim lookups |
-| `ce3d9051b570` | `c1d2e3f4a5b6` | Create `event_edges` table |
-| `d159bcfd1e94` | `ce3d9051b570` | Add `lineage_target_id` to events |
-| `64fc96ec0afd` | `d159bcfd1e94` | Teardown old event lineage fields and constraints |
-| `db402a499ebd` | `64fc96ec0afd` | Create `story_allowlist` table |
-| `67c2d30edccd` | `db402a499ebd` | Create initial `event_timeline` table |
-| `e3f4a5b6c7d8` | `67c2d30edccd` | Standardize `event_timelines` schema |
-| `d2e3f4a5b6c7` | `e3f4a5b6c7d8` | Add pgvector vector extension and event embeddings |
-| `b1c2d3e4f5a6` | `d2e3f4a5b6c7` | Add `impact_level` and velocity to events |
+| `b8446b410d52` | `2ec3541646e8` | Make `events.location` geometry nullable |
+| `a1b2c3d4e5f6` | `b8446b410d52` | Add unique constraint on `articles.url` |
+| `c1d2e3f4a5b6` | `a1b2c3d4e5f6` | Create `geocode_cache` table for cached Nominatim lookups |
+| `d2e3f4a5b6c7` | `c1d2e3f4a5b6` | Add pgvector extension and `events.embedding` |
+| `e3f4a5b6c7d8` | `d2e3f4a5b6c7` | Create `event_timelines` table |
+| `d159bcfd1e94` | `e3f4a5b6c7d8` | Add `lineage_target_id` to `events` |
+| `ce3d9051b570` | `d159bcfd1e94` | Create `event_edges` table |
+| `db402a499ebd` | `ce3d9051b570` | Create `story_allowlist` table |
+| `64fc96ec0afd` | `db402a499ebd` | Teardown old event lineage fields and constraints |
+| `67c2d30edccd` | `64fc96ec0afd` | Recreate canonical `event_timelines` table |
+| `e4f5a6b7c8d9` | `67c2d30edccd` | Upgrade vector columns from `vector` to `HALFVEC(2048)` |
+| `f5a6b7c8d9e0` | `e4f5a6b7c8d9` | Purge null coordinate entries from `geocode_cache` |
+| `b1c2d3e4f5a6` | `f5a6b7c8d9e0` | Add `impact_level` and `velocity` to `events` |
 | `c2d3e4f5a6b7` | `b1c2d3e4f5a6` | Add `events` PostgreSQL full-text search GIN index (`event_fts_expression`) |
-| `d5e6f7a8b9c0` | `c2d3e4f5a6b7` | Create `threads` table and source health tracking |
-| `9e1bb45d1cba` | `d5e6f7a8b9c0` | Harden event indexes, foreign keys, and convert timestamps to `TIMESTAMPTZ` |
-| `f5a6b7c8d9e0` | `9e1bb45d1cba` | Purge null coordinate entries from `geocode_cache` |
-| `e4f5a6b7c8d9` | `f5a6b7c8d9e0` | Upgrade vector columns from standard vector to `HALFVEC(2048)` |
-| `c4d5e6f7a8b9` | `e4f5a6b7c8d9` | Create article ledger, `article_labels`, SimHash columns |
-| `e5f6a7b8c9d0` | `c4d5e6f7a8b9` | Add article claim queue fields (`ingest_status`, `claimed_at`, `attempt_count`) |
+| `9e1bb45d1cba` | `c2d3e4f5a6b7` | Harden event schema indexes and convert timestamps to `TIMESTAMPTZ` |
+| `c4d5e6f7a8b9` | `9e1bb45d1cba` | Add article ledger columns, `article_labels`, and article embeddings |
+| `d5e6f7a8b9c0` | `c4d5e6f7a8b9` | Add event graph columns, `threads`, and source health fields |
+| `e5f6a7b8c9d0` | `d5e6f7a8b9c0` | Add article claim queue fields (`ingest_status`, `claimed_at`, `attempt_count`) |
 | `f6a7b8c9d0e1` | `e5f6a7b8c9d0` | Add source feed metadata, provider enums, and `canonical_url_hash` |
 | `a3b4c5d6e7f8` | `f6a7b8c9d0e1` | Add `article_families` table, deferred `articles.embedding`, SimHash indexes |
 | `b4c5d6e7f8a9` | `a3b4c5d6e7f8` | Add `event_members`, `cluster_decisions`, `verification_status`, and `member_hash` |
 | `c5d6e7f8a9b0` | `b4c5d6e7f8a9` | Add unified `importance_score`, `selection_tier`, score breakdowns, timeline provenance |
 | `d6e7f8a9b0c1` | `c5d6e7f8a9b0` | Add thread `HALFVEC(2048)` embeddings, `name_norm`, and event counters |
 | `e7f8a9b0c1d2` | `d6e7f8a9b0c1` | Add `events.merged_into_id`, `EventStatus.MERGED` enum value, and redirect indexes |
-| `f8a9b0c1d2e3` | `e7f8a9b0c1d2` | **Phase 9 Cleanup**: Drop legacy ranking columns (`trending_score`, `popularity_score`, `velocity`, `confidence`, `threads.confidence`, `articles.feed_content`) |
+| `f8a9b0c1d2e3` | `e7f8a9b0c1d2` | Drop legacy ranking columns (`trending_score`, `popularity_score`, `velocity`, `confidence`, `threads.confidence`, `articles.feed_content`) |
+| `33ae8a869e4e` | `f8a9b0c1d2e3` | Create `event_relationships` table, constraints, and unordered-pair index |
+| `219faff153a6` | `33ae8a869e4e` | Add `events.actors` JSONB column |
 
 ---
 
@@ -616,11 +640,12 @@ src/hermes_db/services/
 ├── article_family.py      # Syndication family creation, attachment, and lookup
 ├── article_label.py       # Article label persistence
 ├── cluster_decision.py    # Pairwise cluster decision caching (pair_hash)
-├── event.py               # Read-side event queries (bounding box, FTS, hybrid search)
+├── event.py               # Read-side event queries (bounding box, FTS, detail)
 ├── event_assignment.py    # Event candidate loading for article assignment
 ├── event_lifecycle.py     # Deterministic ACTIVE -> STALE -> ARCHIVED state machine
 ├── event_membership.py    # Member attachment, detachment, aggregate recalculation
 ├── event_merge.py         # Non-destructive event merge and redirect resolution
+├── event_relationship.py  # Relationship candidate recall, upsert, bbox & detail queries
 ├── event_scoring.py       # Deterministic importance score formula and tier assignment
 ├── geocode.py             # Read/write access to geocode_cache
 ├── maintenance.py         # Count reconciliation, consistency reporting, retention sweeps
@@ -640,4 +665,4 @@ src/hermes_db/services/
    await service.rescore(event_id, now=datetime.now(UTC))
    ```
 3. **No Hidden Commits**: Services never invoke `session.commit()`. If an operation requires a database-generated ID (such as creating an `ArticleFamily` or `Event`), the service calls `await session.flush()`.
-4. **Read vs. Write Separation**: `EventService` in `event.py` is reserved exclusively for read-side queries, spatial projections, and API responses. Event mutations belong exclusively to `EventMembershipService`, `EventScoringService`, `EventMergeService`, or `EventLifecycleService`.
+4. **Read vs. Write Separation**: `EventService` in `event.py` is reserved exclusively for read-side queries, spatial projections, and API responses. Event mutations belong exclusively to `EventMembershipService`, `EventScoringService`, `EventMergeService`, `EventRelationshipService`, or `EventLifecycleService`.

@@ -9,7 +9,7 @@ Execute from the workspace root (see root `AGENTS.md` for lint, format, and test
 | Task               | Command                                     | Description                                                                     |
 | :----------------- | :------------------------------------------ | :------------------------------------------------------------------------------ |
 | **Ingest Articles**| `npx nx run hermes-worker:ingest-articles`  | Sync sources, fetch due feeds, write the ledger, then label, embed, and assign syndication families |
-| **Build Events**   | `npx nx run hermes-worker:build-events`     | Cluster articles into events, synthesize descriptions, score, assign threads, and reconcile/merge duplicate events |
+| **Build Events**   | `npx nx run hermes-worker:build-events`     | Cluster articles into events, synthesize descriptions, score, reconcile/merge duplicate events, discover pairwise relationships, and assign threads |
 | **Audit Sources**  | `npx nx run hermes-worker:audit-sources`    | Probe configured feeds and sample articles read-only                            |
 | **Maintain Events**| `npx nx run hermes-worker:maintain-events`  | Requeue stale claims, apply event and thread lifecycle transitions, reconcile aggregate counts, and apply retention |
 | **Healthcheck**    | `npx nx run hermes-worker:healthcheck`      | Check database connectivity, schema, queue depth, and stale claims               |
@@ -55,7 +55,8 @@ Changing any of these requires explaining the expected effect and obtaining appr
 - Event description: `EVENT_DESCRIBE_BATCH_SIZE`, `EVENT_DESCRIBE_MAX_FAMILIES` in `apps/hermes-worker/src/hermes_worker/core/config.py`
 - Event scoring: `EVENT_SCORE_PAGE_SIZE` in `apps/hermes-worker/src/hermes_worker/core/config.py`; scoring weights and thresholds in `libs/shared/hermes-db/src/hermes_db/services/event_scoring.py`
 - Story threads: `THREAD_EVENT_LIMIT`, `THREAD_CANDIDATE_LIMIT`, `THREAD_ADJUDICATION_BATCH_SIZE`, `THREAD_LLM_PAIRS_PER_RUN`, `THREAD_MIN_GROUP` in `apps/hermes-worker/src/hermes_worker/core/config.py`; `THREAD_DORMANT_DAYS = 7`, `THREAD_ENDED_DAYS = 30`, `THREAD_IMPORTANCE_HALF_LIFE_HOURS = 168.0` in `libs/shared/hermes-db/src/hermes_db/services/thread.py`
-- Event merge & reconciliation: `EVENT_RECONCILE_WINDOW_HOURS`, `EVENT_RECONCILE_LIMIT`, `EVENT_MERGE_LLM_PAIRS_PER_RUN` in `apps/hermes-worker/src/hermes_worker/core/config.py`; pair thresholds (`MERGE_AUTO_THRESHOLD = 0.92`, `MERGE_GRAY_THRESHOLD = 0.85`) in `apps/hermes-worker/src/hermes_worker/jobs/pair_score.py`
+- Event merge & reconciliation: `EVENT_RECONCILE_WINDOW_HOURS`, `EVENT_RECONCILE_LIMIT`, `EVENT_MERGE_LLM_PAIRS_PER_RUN` in `apps/hermes-worker/src/hermes_worker/core/config.py`; pair thresholds (`MERGE_AUTO_THRESHOLD = 0.90`, `MERGE_GRAY_THRESHOLD = 0.74`) in `apps/hermes-worker/src/hermes_worker/jobs/pair_score.py`
+- Event relationships: `RELATIONSHIP_EVENT_LIMIT`, `RELATIONSHIP_WINDOW_DAYS`, `RELATIONSHIP_NEIGHBORS_PER_EVENT`, `RELATIONSHIP_MIN_EMBEDDING_SIM`, `RELATIONSHIP_MIN_CONFIDENCE`, `RELATIONSHIP_BATCH_SIZE`, `RELATIONSHIP_LLM_PAIRS_PER_RUN` in `apps/hermes-worker/src/hermes_worker/core/config.py` and `apps/hermes-worker/src/hermes_worker/jobs/stages/relationship.py`
 - Lifecycle cutoffs: `DEFAULT_STALE_HOURS` and `DEFAULT_ARCHIVE_HOURS` in `libs/shared/hermes-db/src/hermes_db/services/event_lifecycle.py`; `EVENT_STALE_HOURS` and `EVENT_ARCHIVE_HOURS` in `apps/hermes-worker/src/hermes_worker/core/config.py`
 - Data retention: `cluster_decisions` (90d), removed `event_members` (180d), archived embeddings (30d) in `libs/shared/hermes-db/src/hermes_db/services/maintenance.py`
 - Per-run LLM budget: `MAX_LLM_CALLS_PER_RUN` in `apps/hermes-worker/src/hermes_worker/core/config.py`
@@ -63,8 +64,9 @@ Changing any of these requires explaining the expected effect and obtaining appr
 ## 6. Triggers (Code Modifications Only)
 
 - **When modifying stage order, claim semantics, thresholds, decay, or scheduling**: Read `apps/hermes-worker/docs/architecture.md`.
-- **When modifying clustering thresholds or pair-scoring weights**: Read `apps/hermes-worker/src/hermes_worker/jobs/pair_score.py` and `apps/hermes-worker/src/hermes_worker/jobs/cluster.py`.
+- **When modifying clustering thresholds or pair-scoring weights**: Read `apps/hermes-worker/src/hermes_worker/jobs/pair_score.py` and `apps/hermes-worker/src/hermes_worker/jobs/stages/cluster.py`.
 - **When modifying scoring formula, tiers, or lifecycle cutoffs**: Read `libs/shared/hermes-db/src/hermes_db/services/event_scoring.py` and `libs/shared/hermes-db/src/hermes_db/services/event_lifecycle.py`.
-- **When modifying thread assignment or lifecycle**: Read `libs/shared/hermes-db/src/hermes_db/services/thread.py` and `apps/hermes-worker/src/hermes_worker/jobs/thread_assignment.py`.
-- **When modifying merge policy or reconciliation**: Read `libs/shared/hermes-db/src/hermes_db/services/event_merge.py` and `apps/hermes-worker/src/hermes_worker/jobs/reconcile.py`.
+- **When modifying thread assignment or lifecycle**: Read `libs/shared/hermes-db/src/hermes_db/services/thread.py` and `apps/hermes-worker/src/hermes_worker/jobs/stages/thread.py`.
+- **When modifying merge policy or reconciliation**: Read `libs/shared/hermes-db/src/hermes_db/services/event_merge.py` and `apps/hermes-worker/src/hermes_worker/jobs/stages/reconcile.py`.
+- **When modifying relationship discovery or actor vectors**: Read `libs/shared/hermes-db/src/hermes_db/services/event_relationship.py` and `apps/hermes-worker/src/hermes_worker/jobs/stages/relationship.py`.
 - **When modifying geocoding logic, rate limits, or caches**: Read `libs/shared/hermes-ai/AGENTS.md`.

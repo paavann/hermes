@@ -6,17 +6,19 @@ Shared TypeScript contracts for the Hermes REST API and chat SSE stream. The pac
 
 | Area | Types |
 | :--- | :--- |
-| Map and events | `MapEventResponse`, `EventResponse`, `EventDetailResponse`, `ArticleResponse` |
+| Map and events | `MapEventResponse`, `EventResponse`, `EventDetailResponse`, `ArticleResponse`, `EventActorItem`, `EventActorKind`, `EventActorRole` |
+| Event relationships | `EventRelationshipType`, `RelationshipDirection`, `EventRelationshipItem`, `MapRelationshipEdgeResponse` |
+| Story threads | `ThreadKind`, `ThreadStatus`, `ThreadResponse`, `ThreadEventResponse`, `ThreadDetailResponse` |
 | Timelines | `TlResponse`, `TlNodeResponse`, `TlEdgeResponse` |
-| Chat requests | `ChatRequest`, `ChatScope` (`event`, `viewport`, `global`), `ChatBoundingBox` |
+| Chat requests | `ChatRequest`, `ChatMapContext`, `ChatScope` (`event`, `viewport`, `global`), `ChatBoundingBox` |
 | Chat stream | `ChatStreamEvent` discriminated union of `status`, `token`, `sources`, `done`, and `error` events |
-| Chat metadata | `ChatSource`, `ChatProvenance`, `ChatCoverage`, `ChatUsage`, `ChatDegradedFlag`, `ChatErrorCode` |
+| Chat metadata | `ChatSource`, `ChatProvenance`, `ChatCoverage`, `ChatUsage`, `ChatGroundingFlag`, `ChatDegradedFlag`, `ChatErrorCode` |
 
 The chat fixtures in [`fixtures/chat/`](fixtures/chat/) are shared examples for each request/event variant. `api-types.spec.ts` asserts that every fixture still matches the declared types and that the stream union narrows correctly.
 
 ## Contract Synchronization
 
-These interfaces are hand-mirrored from the Pydantic response models in `apps/hermes-api/src/hermes_api/schemas/events.py` (and the chat models it references). When a Pydantic response schema changes, update `libs/shared/util-types/src/lib/api-types.ts` in the same task. There is no code generation step.
+These interfaces are hand-mirrored from the Pydantic response models in `apps/hermes-api/src/hermes_api/schemas/` (`events.py`, `threads.py`, and `chat.py`). When a Pydantic response or request schema changes, update `libs/shared/util-types/src/lib/api-types.ts` in the same task. There is no code generation step.
 
 ## Commands
 
